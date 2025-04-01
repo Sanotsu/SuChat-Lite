@@ -72,7 +72,7 @@ class _BriefVideoScreenState
 - 部分模型可以选择是否上传参考图片
 - 视频生成耗时较长，可稍后查询任务状态
 - 生成的视频会自动保存在设备的以下目录:
-  - /SWMate/brief_video_generation
+  - /SuChat/brief_video_generation
 - 视频生成任务记录可以长按删除
 ''';
 

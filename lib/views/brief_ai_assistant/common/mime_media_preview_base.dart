@@ -108,66 +108,38 @@ abstract class MimeMediaPreviewBase extends StatelessWidget {
 }
 
 // 显示文件简单信息弹窗
-showFileSimpleInfoDialog(File asset, BuildContext context) {
-  return showDialog<void>(
+void showFileSimpleInfoDialog(File asset, BuildContext context) {
+  showDialog<void>(
     context: context,
     builder:
         (BuildContext context) => AlertDialog(
           title: const Text('详情'),
-          content: SingleChildScrollView(
-            child: SizedBox(
-              height: 250.sp,
-              child: ListView(
-                shrinkWrap: true,
-                padding: EdgeInsets.symmetric(horizontal: 5.sp),
-                // itemExtent: 50.sp,
+          content: SizedBox(
+            width: double.maxFinite, // 添加宽度约束
+            height: 250.sp, // 明确高度
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min, // 使用Column替代ListView
                 children: <Widget>[
-                  ListTile(
-                    title: const Text("文件名称"),
-                    subtitle: Text(
-                      asset.path.split('/').last,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    dense: true,
+                  _buildListTile(
+                    "文件名称",
+                    asset.path.split('/').last,
+                    maxLines: 2,
                   ),
-                  ListTile(
-                    title: const Text("文件类型"),
-                    subtitle: Text(lookupMimeType(asset.path) ?? '未知'),
-                    dense: true,
+                  _buildListTile("文件类型", lookupMimeType(asset.path) ?? '未知'),
+                  _buildListTile("文件大小", formatFileSize(asset.lengthSync())),
+                  _buildListTile(
+                    "文件路径",
+                    asset.path.replaceAll("/storage/emulated/0", "内部存储"),
+                    maxLines: 4,
                   ),
-                  ListTile(
-                    title: const Text("文件大小"),
-                    subtitle: Text(
-                      formatFileSize(asset.lengthSync()),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    dense: true,
+                  _buildListTile(
+                    "最后修改时间",
+                    asset.lastModifiedSync().toString().substring(0, 19),
                   ),
-                  ListTile(
-                    title: const Text("文件路径"),
-                    subtitle: Text(
-                      asset.path.replaceAll("/storage/emulated/0", "内部存储"),
-                      maxLines: 4,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    dense: true,
-                  ),
-                  ListTile(
-                    title: const Text("最后修改时间"),
-                    subtitle: Text(
-                      asset.lastModifiedSync().toString().substring(0, 19),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    dense: true,
-                  ),
-                  ListTile(
-                    title: const Text("最后访问时间"),
-                    subtitle: Text(
-                      asset.lastAccessedSync().toString().substring(0, 19),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    dense: true,
+                  _buildListTile(
+                    "最后访问时间",
+                    asset.lastAccessedSync().toString().substring(0, 19),
                   ),
                 ],
               ),
@@ -180,5 +152,18 @@ showFileSimpleInfoDialog(File asset, BuildContext context) {
             ),
           ],
         ),
+  );
+}
+
+// 辅助方法：构建ListTile
+Widget _buildListTile(String title, String subtitle, {int? maxLines}) {
+  return ListTile(
+    title: Text(title),
+    subtitle: Text(
+      subtitle,
+      maxLines: maxLines,
+      overflow: TextOverflow.ellipsis,
+    ),
+    dense: true,
   );
 }

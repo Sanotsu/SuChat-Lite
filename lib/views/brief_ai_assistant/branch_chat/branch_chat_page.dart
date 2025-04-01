@@ -29,6 +29,7 @@ import '../_chat_components/model_filter.dart';
 import '../_chat_components/model_selector.dart';
 import '../../../common/components/cus_markdown_renderer.dart';
 
+import '../index.dart';
 import 'components/branch_message_item.dart';
 import 'components/branch_tree_dialog.dart';
 import '../_chat_components/chat_input_bar.dart';
@@ -443,6 +444,18 @@ class _BranchChatPageState extends State<BranchChatPage>
           //   },
           // ),
           buildPopupMenuButton(),
+          IconButton(
+            icon: const Icon(Icons.grid_view),
+            onPressed:
+                isStreaming
+                    ? null
+                    : () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => BriefAITools()),
+                      );
+                    },
+          ),
         ],
       ),
       drawer: buildChatHistoryDrawer(),

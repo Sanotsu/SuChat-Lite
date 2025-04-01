@@ -198,14 +198,14 @@ class _UserAndSettingsState extends State<UserAndSettings> {
               onTap: () {
                 showAboutDialog(
                   context: context,
-                  applicationName: 'SWMate',
+                  applicationName: 'SuChat',
                   children: [
                     const Center(child: Text("author & wechat: SanotSu")),
                     TextButton(
                       onPressed: () {
-                        launchStringUrl("https://github.com/Sanotsu/swmate");
+                        launchStringUrl("https://github.com/Sanotsu/SuChat-Lit");
                       },
-                      child: const Text("Github: Sanotsu/swmate"),
+                      child: const Text("Github: Sanotsu/SuChat-Lit"),
                     ),
                   ],
                 );

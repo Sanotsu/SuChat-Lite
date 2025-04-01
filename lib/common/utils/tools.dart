@@ -371,7 +371,7 @@ Future<String?> saveVideoToLocal(
     }
     await Dio().download(netVideoUrl, filePath);
 
-    // 保存的地址在 /storage/emulated/0/SWMate/…… 前面一节就不显示了
+    // 保存的地址在 /storage/emulated/0/SuChat/…… 前面一节就不显示了
     if (showSaveHint) {
       EasyLoading.showToast("视频已保存在手机下/${filePath.split("/0/").last}");
     }
@@ -443,7 +443,7 @@ savevgVideoToLocal(String netVideoUrl, {String? prefix}) async {
     EasyLoading.show(status: '【视频保存中...】');
     await Dio().download(netVideoUrl, filePath);
 
-    // 保存的地址在 /storage/emulated/0/SWMate/…… 前面一节就不显示了
+    // 保存的地址在 /storage/emulated/0/SuChat/…… 前面一节就不显示了
     EasyLoading.showToast("视频已保存在手机下/${filePath.split("/0/").last}");
   } finally {
     EasyLoading.dismiss();

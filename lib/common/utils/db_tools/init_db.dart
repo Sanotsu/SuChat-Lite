@@ -17,12 +17,12 @@ import 'ddl_brief_ai_tool.dart';
 // 导出表文件临时存放的文件夹
 const DB_EXPORT_DIR = "db_export";
 // 导出的表前缀
-const DB_TABLE_PREFIX = "swmate_";
+const DB_TABLE_PREFIX = "suchat_";
 
 /// 数据库中一下基本内容
 class DBInitConfig {
   // db名称
-  static String databaseName = "embedded_swmate.db";
+  static String databaseName = "embedded_suchat.db";
 }
 
 class DBInit {

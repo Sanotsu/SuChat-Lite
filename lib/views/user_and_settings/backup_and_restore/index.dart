@@ -33,9 +33,9 @@ const ZIP_TEMP_DIR_AT_UNZIP = "temp_de_zip";
 const ZIP_TEMP_DIR_AT_RESTORE = "temp_auto_zip";
 
 // 2025-03-26 角色会话和分支会话的文件名
-const CHARACTER_CARD_LIST_FILE_NAME = 'swmate_character_card_list.json';
-const CHARACTER_CHAT_HISTORY_FILE_NAME = 'swmate_character_chat_history.json';
-const BRANCH_CHAT_HISTORY_FILE_NAME = 'swmate_branch_chat_history.json';
+const CHARACTER_CARD_LIST_FILE_NAME = 'suchat_character_card_list.json';
+const CHARACTER_CHAT_HISTORY_FILE_NAME = 'suchat_character_chat_history.json';
+const BRANCH_CHAT_HISTORY_FILE_NAME = 'suchat_branch_chat_history.json';
 
 class BackupAndRestore extends StatefulWidget {
   const BackupAndRestore({super.key});
