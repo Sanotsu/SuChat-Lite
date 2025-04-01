@@ -17,16 +17,37 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.swm.suchat_lite"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // compileSdk = flutter.compileSdkVersion
+    // ndkVersion = flutter.ndkVersion
+
+    // compileOptions {
+    //     sourceCompatibility = JavaVersion.VERSION_11
+    //     targetCompatibility = JavaVersion.VERSION_11
+    // }
+
+    // kotlinOptions {
+    //     jvmTarget = JavaVersion.VERSION_11.toString()
+    // }
+
+       // Android 15(API 35)
+    compileSdk = 35
+    ndkVersion = "27.2.12479018"
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = JavaVersion.VERSION_17.toString()
+    }
+
+    // 在构建应用时打包压缩的原生库
+    // https://developer.android.com/build/releases/past-releases/agp-4-2-0-release-notes?hl=zh-cn#compress-native-libs-dsl
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 
     defaultConfig {
@@ -34,7 +55,9 @@ android {
         applicationId = "com.swm.suchat_lite"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // minSdk = flutter.minSdkVersion
+
+        minSdk = 26
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
