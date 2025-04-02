@@ -211,9 +211,8 @@ class _BriefImageScreenState
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('生成失败: $e')));
+      commonExceptionDialog(context, "异常提示", "AI图片生成失败: $e");
+      rethrow;
     } finally {
       if (mounted) {
         setState(() => isGenerating = false);

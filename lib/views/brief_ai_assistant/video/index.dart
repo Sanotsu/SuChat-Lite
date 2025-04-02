@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../common/components/toast_utils.dart';
 import '../../../common/components/tool_widget.dart';
 import '../../../common/constants/constants.dart';
 import '../../../common/llm_spec/constant_llm_enum.dart';
@@ -304,7 +304,7 @@ class _BriefVideoScreenState
 
       await dbHelper.insertMediaGenerationHistory(history);
 
-      EasyLoading.showSuccess('视频生成任务已提交成功');
+      ToastUtils.showSuccess('视频生成任务已提交成功');
 
       // 提交新任务之后，重新查询所有任务并更新UI
       await _queryAllTasks();

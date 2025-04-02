@@ -23,7 +23,7 @@ class FeatureGridCard extends StatelessWidget {
     final color = accentColor ?? theme.primaryColor;
 
     return Card(
-      elevation: 3,
+      elevation: 1,
       shadowColor: color.withValues(alpha: 0.3),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.sp)),
       child: InkWell(

@@ -11,8 +11,8 @@ import 'package:get_thumbnail_video/video_thumbnail.dart';
 import 'package:mime/mime.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:flutter_easyloading/flutter_easyloading.dart';
 
+import '../../../common/components/toast_utils.dart';
 import '../../../common/components/tool_widget.dart';
 import '../../../common/constants/constants.dart';
 
@@ -93,7 +93,7 @@ abstract class MimeMediaManagerBaseState<T extends MimeMediaManagerBase>
       final result = await Share.shareXFiles(xFiles, text: '思文智能助手');
 
       if (result.status == ShareResultStatus.success) {
-        EasyLoading.showSuccess('分享成功!');
+        ToastUtils.showSuccess('分享成功!');
       }
     } catch (e) {
       if (!mounted) return;
@@ -140,7 +140,7 @@ abstract class MimeMediaManagerBaseState<T extends MimeMediaManagerBase>
         }
       }
 
-      EasyLoading.showSuccess('删除成功!');
+      ToastUtils.showSuccess('删除成功!');
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(

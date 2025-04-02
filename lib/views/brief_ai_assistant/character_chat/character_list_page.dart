@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:file_picker/file_picker.dart';
+import '../../../common/components/toast_utils.dart';
 import '../../../common/components/tool_widget.dart';
 import '../../../common/utils/tools.dart';
 import '../../../models/brief_ai_tools/character_chat/character_card.dart';
@@ -201,7 +201,7 @@ class _CharacterListPageState extends State<CharacterListPage> {
     // 创建一个新会话
     Future<CharacterChatSession?> buildNewSession() async {
       if (character.preferredModel == null) {
-        EasyLoading.showToast('请先为该角色设置偏好模型\n长按角色卡点击"编辑角色"');
+        ToastUtils.showToast('请先为该角色设置偏好模型\n长按角色卡点击"编辑角色"');
         return null;
       }
       return await _store.createSession(

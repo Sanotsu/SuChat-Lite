@@ -8,7 +8,6 @@ import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -20,6 +19,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../constants/constants.dart';
 import '../utils/tools.dart';
+import 'toast_utils.dart';
 
 // 绘制转圈圈
 Widget buildLoader(bool isLoading) {
@@ -279,7 +279,7 @@ buildImageList(
         // 长按保存到相册
         onLongPress: () async {
           if (urls[index].startsWith("/storage/")) {
-            EasyLoading.showToast("图片已保存到${urls[index]}");
+            ToastUtils.showToast("图片已保存到${urls[index]}");
             return;
           }
 
@@ -332,7 +332,7 @@ buildImageGridTile(
               // 长按保存到相册
               onLongPress: () async {
                 if (url.startsWith("/storage/")) {
-                  EasyLoading.showToast("图片已保存到$url");
+                  ToastUtils.showToast("图片已保存到$url");
                   return;
                 }
 
@@ -822,7 +822,7 @@ _buildImageCarouselSliderType(
     // 长按保存到相册
     onLongPress: () async {
       if (imageUrl.startsWith("/storage/")) {
-        EasyLoading.showToast("图片已保存到$imageUrl");
+        ToastUtils.showToast("图片已保存到$imageUrl");
         return;
       }
 

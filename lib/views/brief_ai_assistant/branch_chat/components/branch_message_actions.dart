@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../../common/components/toast_utils.dart';
 import '../../../../common/constants/constants.dart';
 import '../../../../models/brief_ai_tools/branch_chat/branch_chat_message.dart';
 
@@ -86,7 +86,7 @@ class BranchMessageActions extends StatelessWidget {
             tooltip: '复制内容',
             onPressed: () {
               Clipboard.setData(ClipboardData(text: message.content));
-              EasyLoading.showSuccess('已复制到剪贴板');
+              ToastUtils.showSuccess("已复制到剪贴板");
             },
           ),
 

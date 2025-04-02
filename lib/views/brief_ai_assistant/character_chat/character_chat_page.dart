@@ -5,11 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../common/components/cus_markdown_renderer.dart';
 import '../../../common/components/simple_marquee_or_text.dart';
+import '../../../common/components/toast_utils.dart';
 import '../../../common/components/tool_widget.dart';
 import '../../../common/constants/constants.dart';
 import '../../../common/llm_spec/constant_llm_enum.dart';
@@ -344,18 +344,22 @@ class _CharacterChatPageState extends State<CharacterChatPage>
       ),
     );
 
-    return Stack(
-      children: [
-        // 背景图片
-        buildBackground(),
+    // 2025-04-02 在使用bot toast后，不添加这个背景色，修改透明度的背景图片效果不对
+    return Container(
+      color: Colors.white,
+      child: Stack(
+        children: [
+          // 背景图片
+          buildBackground(),
 
-        // 主页面
-        mainScaffold,
+          // 主页面
+          mainScaffold,
 
-        // 角色头像预览 - 使用可复用的组件
-        if (_currentCharacter.avatar.isNotEmpty)
-          CharacterAvatarPreview(character: _currentCharacter),
-      ],
+          // 角色头像预览 - 使用可复用的组件
+          if (_currentCharacter.avatar.isNotEmpty)
+            CharacterAvatarPreview(character: _currentCharacter),
+        ],
+      ),
     );
   }
 
@@ -516,7 +520,7 @@ class _CharacterChatPageState extends State<CharacterChatPage>
     final character = _currentCharacter;
 
     if (character.preferredModel == null) {
-      EasyLoading.showInfo('请先为该角色设置偏好模型');
+      ToastUtils.showInfo('请先为该角色设置偏好模型');
       return;
     }
 
@@ -665,6 +669,7 @@ class _CharacterChatPageState extends State<CharacterChatPage>
 
   // 从会话中移除角色
   Future<void> removeCharacterFromSession(CharacterCard character) async {
+    dynamic closeToast;
     try {
       // 确认对话框
       final confirmed = await showDialog<bool>(
@@ -695,7 +700,7 @@ class _CharacterChatPageState extends State<CharacterChatPage>
       if (mounted) Navigator.pop(context);
 
       // 显示加载指示器
-      EasyLoading.show(status: '移除中...');
+      closeToast = ToastUtils.showLoading('移除中...');
 
       // 从会话中移除角色
       final updatedSession = await store.removeCharacterFromSession(
@@ -714,12 +719,12 @@ class _CharacterChatPageState extends State<CharacterChatPage>
       });
 
       // 显示成功提示
-      EasyLoading.showSuccess('已移除角色"${character.name}"');
+      ToastUtils.showSuccess('已移除角色"${character.name}"');
     } catch (e) {
       // 显示错误提示
-      EasyLoading.showError('移除角色失败: $e');
+      ToastUtils.showError('移除角色失败: $e');
     } finally {
-      EasyLoading.dismiss();
+      closeToast();
     }
   }
 
@@ -1071,7 +1076,7 @@ class _CharacterChatPageState extends State<CharacterChatPage>
     // 处理选择结果
     if (result == 'copy') {
       Clipboard.setData(ClipboardData(text: message.content));
-      EasyLoading.showToast('已复制到剪贴板');
+      ToastUtils.showToast('已复制到剪贴板');
     } else if (result == 'select') {
       if (!mounted) return;
       await showDialog(
@@ -1149,7 +1154,7 @@ class _CharacterChatPageState extends State<CharacterChatPage>
       // 处理AI响应
       await _commonGenerateResponse(character, message);
     } catch (e) {
-      EasyLoading.showError('重新生成失败: $e');
+      ToastUtils.showError('重新生成失败: $e');
     } finally {
       setState(() {
         isLoading = false;
@@ -1209,7 +1214,7 @@ class _CharacterChatPageState extends State<CharacterChatPage>
       // 生成AI回复
       await _generateAIResponses();
     } catch (e) {
-      EasyLoading.showError('发送消息失败: $e');
+      ToastUtils.showError('发送消息失败: $e');
     } finally {
       setState(() {
         isLoading = false;
@@ -1266,7 +1271,7 @@ class _CharacterChatPageState extends State<CharacterChatPage>
       // 重新生成AI回复，但不添加新的用户消息
       await _generateAIResponses();
     } catch (e) {
-      EasyLoading.showError('编辑消息失败: $e');
+      ToastUtils.showError('编辑消息失败: $e');
     } finally {
       setState(() {
         isLoading = false;
@@ -1322,7 +1327,7 @@ class _CharacterChatPageState extends State<CharacterChatPage>
       // 刷新会话列表，确保UI显示所有空消息
       loadAllSessions();
     } catch (e) {
-      EasyLoading.showError('生成回复失败: $e');
+      ToastUtils.showError('生成回复失败: $e');
     } finally {
       setState(() {
         isStreaming = false;
@@ -1395,7 +1400,7 @@ class _CharacterChatPageState extends State<CharacterChatPage>
         }
       }
     } catch (e) {
-      EasyLoading.showError('生成${character.name}的回复失败: $e');
+      ToastUtils.showError('生成${character.name}的回复失败: $e');
 
       // 更新消息，显示错误
       await store.updateMessage(
@@ -1428,7 +1433,7 @@ class _CharacterChatPageState extends State<CharacterChatPage>
         isStreaming = false;
       });
 
-      EasyLoading.showToast('已停止生成');
+      ToastUtils.showToast('已停止生成');
     }
   }
 

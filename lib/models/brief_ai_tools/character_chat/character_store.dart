@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter_easyloading/flutter_easyloading.dart';
+
 import 'package:path_provider/path_provider.dart';
 import 'package:proste_logger/proste_logger.dart';
+import '../../../common/components/toast_utils.dart';
 import '../../../common/constants/constants.dart';
 import '../../../common/llm_spec/cus_brief_llm_model.dart';
 import 'character_card.dart';
@@ -718,14 +719,14 @@ class CharacterStore {
         try {
           // 角色的名称、描述不能为空
           if (json['name'] == null || json['name'].toString().trim().isEmpty) {
-            EasyLoading.showToast('角色名称不能为空');
+            ToastUtils.showToast('角色名称不能为空');
             skippedCount++;
             continue;
           }
 
           if (json['description'] == null ||
               json['description'].toString().trim().isEmpty) {
-            EasyLoading.showToast('角色描述不能为空');
+            ToastUtils.showToast('角色描述不能为空');
             skippedCount++;
             continue;
           }

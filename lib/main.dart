@@ -1,16 +1,17 @@
 // ignore_for_file: avoid_print
 
 import 'dart:async';
+import 'package:bot_toast/bot_toast.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:proste_logger/proste_logger.dart';
 
+import 'common/components/toast_utils.dart';
 import 'services/model_manager_service.dart';
 import 'services/network_service.dart';
 import 'views/home.dart';
@@ -80,10 +81,9 @@ class AppCatchError {
     debugPrint('AppCatchError>>>>>>>>>> [ Stack ] \n$stack');
 
     // 弹窗提醒用户
-    EasyLoading.showToast(
+    ToastUtils.showError(
       error.toString(),
       duration: const Duration(seconds: 5),
-      toastPosition: EasyLoadingToastPosition.top,
     );
 
     // 判断返回数据中是否包含"token失效"的信息
@@ -158,10 +158,37 @@ class SuChatApp extends StatelessWidget {
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
             useMaterial3: true,
           ),
+
           home: const HomePage(),
-          builder: EasyLoading.init(),
+
+          builder: (context, child) {
+            // 1 先初始化 bot_toast
+            child = BotToastInit()(context, child);
+            // 再初始化 flutter_easyloading
+            // ？？？2025-04-02 我完全不使用EasyLoading，准备删除
+            // 但是如果这里不初始化EasyLoading，BotToast无法正常使用，默认就有一层遮罩，屏幕黑的？
+            // child = EasyLoading.init()(context, child);
+
+            // ？？？2025-04-02 实测分析，只有分支对话和角色对话主页面有问题
+            // 进一步测试，自定义builder给子组件添加了白色，对话主页面效果和之前类似了，
+            // 但其他地方有没有受影响还不清楚
+            // 2025-04-02 实测只有设置了透明度的分支对话角色对话背景的对话主页面有问题
+            // 强制给主页面加上默认白色容器后，看起来就正常了。
+            // child = myBuilder(context, child);
+
+            return child;
+          },
+
+          // 2. registered route observer
+          navigatorObservers: [BotToastNavigatorObserver()],
         );
       },
     );
   }
+}
+
+// 2025-04-02 实测发现，如果不添加这个定义字widget默认背景色为白色
+// 在使用了 bot_toast 后，分支对话和角色对话主页，背景会像是有一层遮罩一样黑的，实际就是没有背景
+Widget myBuilder(BuildContext context, Widget? child) {
+  return Container(color: Colors.white, child: child);
 }

@@ -8,11 +8,11 @@ import 'dart:math';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../components/toast_utils.dart';
 import '../constants/constants.dart';
 
 /// 请求各种权限
@@ -199,7 +199,7 @@ Future<void> saveTextFileToStorage(
   try {
     // 首先获取设备外部存储管理权限
     if (!(await requestStoragePermission())) {
-      return EasyLoading.showError("未授权访问设备外部存储，无法保存文档");
+      return ToastUtils.showError("未授权访问设备外部存储，无法保存文档");
     }
 
     // 翻译保存的文本，放到设备外部存储固定位置，不存在文件夹则先创建
@@ -214,12 +214,12 @@ Future<void> saveTextFileToStorage(
     await file.writeAsString(text);
 
     // 保存成功/失败弹窗提示
-    EasyLoading.showSuccess(
+    ToastUtils.showSuccess(
       '文档已保存到 ${file.path}',
       duration: const Duration(seconds: 5),
     );
   } catch (e) {
-    return EasyLoading.showError(
+    return ToastUtils.showError(
       "保存文档失败: ${e.toString()}",
       duration: const Duration(seconds: 5),
     );
@@ -278,7 +278,7 @@ Future<String?> saveImageToLocal(
 }) async {
   // 首先获取设备外部存储管理权限
   if (!(await requestStoragePermission())) {
-    EasyLoading.showError("未授权访问设备外部存储，无法保存图片");
+    ToastUtils.showError("未授权访问设备外部存储，无法保存图片");
 
     return null;
   }
@@ -291,8 +291,9 @@ Future<String?> saveImageToLocal(
   // 2024-11-04 如果有指定保存的图片名称，则不用从url获取
   imageName ??= netImageUrl.split("?").first.split('/').last;
 
-  // print("新获取的图片地址---$saveImageUrl");
+  // print("新获取的图片地址---$imageName");
 
+  dynamic closeToast;
   try {
     // 2024-09-14 支持自定义下载的文件夹
     var dir = dlDir ?? LLM_IG_DIR;
@@ -306,7 +307,7 @@ Future<String?> saveImageToLocal(
     final file = File('${dir.path}/${prefix ?? ""}$imageName');
 
     if (showSaveHint) {
-      EasyLoading.show(status: '【图片保存中...】');
+      closeToast = ToastUtils.showLoading('【图片保存中...】');
     }
 
     var response = await Dio().get(
@@ -316,14 +317,15 @@ Future<String?> saveImageToLocal(
 
     await file.writeAsBytes(response.data);
 
-    if (showSaveHint) {
-      EasyLoading.showToast("图片已保存在手机下/${file.path.split("/0/").last}");
+    if (showSaveHint && closeToast != null) {
+      closeToast();
+      ToastUtils.showToast("图片已保存在手机下/${file.path.split("/0/").last}");
     }
 
     return file.path;
   } finally {
-    if (showSaveHint) {
-      EasyLoading.dismiss();
+    if (showSaveHint && closeToast != null) {
+      closeToast();
     }
   }
 
@@ -335,7 +337,7 @@ Future<String?> saveImageToLocal(
   // );
 
   // await file.writeAsBytes(respData);
-  // EasyLoading.showToast("图片已保存${file.path}");
+  // ToastUtils.showToast("图片已保存${file.path}");
 }
 
 // 保存文生视频的视频到本地
@@ -350,12 +352,13 @@ Future<String?> saveVideoToLocal(
 }) async {
   // 首先获取设备外部存储管理权限
   if (!(await requestStoragePermission())) {
-    EasyLoading.showError("未授权访问设备外部存储，无法保存视频");
+    ToastUtils.showError("未授权访问设备外部存储，无法保存视频");
     return null;
   }
 
   videoName ??= netVideoUrl.split("?").first.split('/').last;
 
+  dynamic closeToast;
   try {
     var dir = dlDir ?? LLM_VG_DIR;
 
@@ -367,19 +370,20 @@ Future<String?> saveVideoToLocal(
     final filePath = '${dir.path}/${prefix ?? ""}$videoName';
 
     if (showSaveHint) {
-      EasyLoading.show(status: '【视频保存中...】');
+      closeToast = ToastUtils.showLoading('【视频保存中...】');
     }
     await Dio().download(netVideoUrl, filePath);
 
     // 保存的地址在 /storage/emulated/0/SuChat/…… 前面一节就不显示了
-    if (showSaveHint) {
-      EasyLoading.showToast("视频已保存在手机下/${filePath.split("/0/").last}");
+    if (showSaveHint && closeToast != null) {
+      closeToast();
+      ToastUtils.showToast("视频已保存在手机下/${filePath.split("/0/").last}");
     }
 
     return filePath;
   } finally {
-    if (showSaveHint) {
-      EasyLoading.dismiss();
+    if (showSaveHint && closeToast != null) {
+      closeToast();
     }
   }
 
@@ -391,7 +395,7 @@ Future<String?> saveVideoToLocal(
   // );
 
   // await file.writeAsBytes(respData);
-  // EasyLoading.showToast("图片已保存${file.path}");
+  // ToastUtils.showToast("图片已保存${file.path}");
 }
 
 /// 获取网络图片的base64字符串
@@ -428,9 +432,10 @@ Future<String> getBase64FromNetworkImage(String imageUrl) async {
 savevgVideoToLocal(String netVideoUrl, {String? prefix}) async {
   // 首先获取设备外部存储管理权限
   if (!(await requestStoragePermission())) {
-    return EasyLoading.showError("未授权访问设备外部存储，无法保存视频");
+    return ToastUtils.showError("未授权访问设备外部存储，无法保存视频");
   }
 
+  dynamic closeToast;
   try {
     // 2024-08-17 直接保存文件到指定位置
     if (!await LLM_VG_DIR.exists()) {
@@ -440,13 +445,16 @@ savevgVideoToLocal(String netVideoUrl, {String? prefix}) async {
     final filePath =
         '${LLM_VG_DIR.path}/${prefix ?? ""}_${netVideoUrl.split('/').last}';
 
-    EasyLoading.show(status: '【视频保存中...】');
+    closeToast = ToastUtils.showLoading('【视频保存中...】');
     await Dio().download(netVideoUrl, filePath);
 
+    closeToast();
     // 保存的地址在 /storage/emulated/0/SuChat/…… 前面一节就不显示了
-    EasyLoading.showToast("视频已保存在手机下/${filePath.split("/0/").last}");
+    ToastUtils.showToast("视频已保存在手机下/${filePath.split("/0/").last}");
   } finally {
-    EasyLoading.dismiss();
+    if (closeToast != null) {
+      closeToast();
+    }
   }
 
   // 用这个自定义的，阿里云地址会报403错误，原因不清楚
@@ -457,7 +465,7 @@ savevgVideoToLocal(String netVideoUrl, {String? prefix}) async {
   // );
 
   // await file.writeAsBytes(respData);
-  // EasyLoading.showToast("图片已保存${file.path}");
+  // ToastUtils.showToast("图片已保存${file.path}");
 }
 
 /// 获取图片的base64编码
@@ -561,7 +569,7 @@ Future<T?> timedTaskStatus<T>(
   Timer timer = Timer(maxWaitDuration, () {
     onTimeOut();
 
-    EasyLoading.showError("生成超时，请稍候重试！", duration: const Duration(seconds: 5));
+    ToastUtils.showError("生成超时，请稍候重试！", duration: const Duration(seconds: 5));
 
     isMaxWaitTimeExceeded = true;
     debugPrint('任务处理耗时，状态查询终止。');

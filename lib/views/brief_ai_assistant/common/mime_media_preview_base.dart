@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mime/mime.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:flutter_easyloading/flutter_easyloading.dart';
 
+import '../../../common/components/toast_utils.dart';
 import '../../../common/utils/tools.dart';
 
 abstract class MimeMediaPreviewBase extends StatelessWidget {
@@ -26,7 +26,7 @@ abstract class MimeMediaPreviewBase extends StatelessWidget {
       ], text: '思文AI助手');
 
       if (result.status == ShareResultStatus.success) {
-        EasyLoading.showSuccess('分享成功!');
+        ToastUtils.showSuccess('分享成功!');
       }
     } catch (e) {
       if (!context.mounted) return;
@@ -65,7 +65,7 @@ abstract class MimeMediaPreviewBase extends StatelessWidget {
       final list = [1];
       // 实际删除成功后，才执行传入的删除回调
       if (list.isNotEmpty) {
-        EasyLoading.showSuccess('删除成功!');
+        ToastUtils.showSuccess('删除成功!');
         onDelete?.call();
       }
 

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+
+import '../../../common/components/toast_utils.dart';
 
 class TextSelectionDialog extends StatelessWidget {
   final String text;
@@ -23,7 +24,7 @@ class TextSelectionDialog extends StatelessWidget {
               icon: const Icon(Icons.copy),
               onPressed: () {
                 Clipboard.setData(ClipboardData(text: text));
-                EasyLoading.showToast('已复制到剪贴板');
+                ToastUtils.showToast('已复制到剪贴板');
                 Navigator.pop(context);
               },
             ),

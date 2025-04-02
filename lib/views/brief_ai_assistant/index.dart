@@ -21,8 +21,6 @@ class _BriefAIToolsState extends State<BriefAITools> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      // 避免搜索时弹出键盘，让底部的minibar位置移动到tab顶部导致溢出的问题
-      resizeToAvoidBottomInset: false,
       body: SafeArea(
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
@@ -30,7 +28,7 @@ class _BriefAIToolsState extends State<BriefAITools> {
             // 顶部横幅
             SliverToBoxAdapter(
               child: Container(
-                margin: EdgeInsets.fromLTRB(16.sp, 16.sp, 16.sp, 8.sp),
+                margin: EdgeInsets.all(8.sp),
                 padding: EdgeInsets.all(16.sp),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -59,6 +57,13 @@ class _BriefAIToolsState extends State<BriefAITools> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
+                              IconButton(
+                                icon: Icon(
+                                  Icons.arrow_back,
+                                  color: Colors.white,
+                                ),
+                                onPressed: () => Navigator.pop(context),
+                              ),
                               Text(
                                 "SuChat",
                                 style: TextStyle(
@@ -67,6 +72,7 @@ class _BriefAIToolsState extends State<BriefAITools> {
                                   color: Colors.white,
                                 ),
                               ),
+                              Spacer(),
                               IconButton(
                                 onPressed: () async {
                                   await Navigator.push(

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:math';
 
+import '../../../common/components/toast_utils.dart';
 import '../../../common/constants/constants.dart';
 import '../../../common/utils/tools.dart';
 import '../../../services/model_manager_service.dart';
@@ -281,7 +281,7 @@ class _BranchChatPageState extends State<BranchChatPage>
       });
 
       if (selectedModel == null) {
-        EasyLoading.showInfo(
+        ToastUtils.showInfo(
           '最新对话所用模型已被删除，将使用默认模型构建全新对话。',
           duration: const Duration(seconds: 5),
         );
@@ -511,14 +511,18 @@ class _BranchChatPageState extends State<BranchChatPage>
       ),
     );
 
-    return Stack(
-      children: [
-        // 背景图片(若不需要全屏背景，可在上方scaffold的body中覆盖背景即可)
-        buildBackground(),
+    // 2025-04-02 在使用bot toast后，不添加这个背景色，修改透明度的背景图片效果不对
+    return Container(
+      color: Colors.white,
+      child: Stack(
+        children: [
+          // 背景图片(若不需要全屏背景，可在上方scaffold的body中覆盖背景即可)
+          buildBackground(),
 
-        // 主页面
-        mainScaffold,
-      ],
+          // 主页面
+          mainScaffold,
+        ],
+      ),
     );
   }
 
@@ -730,7 +734,7 @@ class _BranchChatPageState extends State<BranchChatPage>
         // 2.2. 创建新对话
         createNewChat();
 
-        EasyLoading.showSuccess('添加模型成功');
+        ToastUtils.showSuccess('添加模型成功');
       } catch (e) {
         if (mounted) {
           pl.e('添加模型失败: $e');
@@ -804,7 +808,7 @@ class _BranchChatPageState extends State<BranchChatPage>
     final session = store.sessionBox.get(sessionId);
 
     if (session == null) {
-      EasyLoading.showInfo(
+      ToastUtils.showInfo(
         '该对话记录已不存在，将使用默认模型构建全新对话。',
         duration: const Duration(seconds: 5),
       );
@@ -834,7 +838,7 @@ class _BranchChatPageState extends State<BranchChatPage>
     });
 
     if (selectedModel == null) {
-      EasyLoading.showInfo(
+      ToastUtils.showInfo(
         '该历史对话所用模型已被删除，将使用默认模型构建全新对话。',
         duration: const Duration(seconds: 3),
       );
@@ -1105,7 +1109,7 @@ class _BranchChatPageState extends State<BranchChatPage>
     ).then((value) async {
       if (value == 'copy') {
         Clipboard.setData(ClipboardData(text: message.content));
-        EasyLoading.showToast('已复制到剪贴板');
+        ToastUtils.showToast('已复制到剪贴板');
       } else if (value == 'select') {
         if (!mounted) return;
         await showDialog(

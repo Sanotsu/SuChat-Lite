@@ -5,9 +5,8 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
-import 'package:flutter_easyloading/flutter_easyloading.dart';
 
-//辅助配置
+import '../../components/toast_utils.dart';
 import 'cus_http_options.dart';
 import 'intercepter_response.dart';
 import 'interceptor_error.dart';
@@ -93,9 +92,10 @@ class HttpRequest {
       responseType: responseTypeValues[responseType],
     );
 
+    dynamic closeToast;
     try {
       if (showLoading) {
-        EasyLoading.show(status: '【等待响应中...】');
+        closeToast = ToastUtils.showLoading('【等待响应中...】');
       }
       Response response = await HttpRequest.dio.request(
         path,
@@ -118,7 +118,7 @@ class HttpRequest {
       print("========================");
 
       if (showErrorMessage) {
-        EasyLoading.showToast(cusHttpException.cusMsg);
+        ToastUtils.showToast(cusHttpException.cusMsg);
       }
 
       // 2024-06-20 这里还是要把错误抛出去，在请求的API处方便trycatch拦截处理
@@ -126,7 +126,7 @@ class HttpRequest {
       throw cusHttpException;
     } finally {
       if (showLoading) {
-        EasyLoading.dismiss();
+        closeToast();
       }
     }
   }
