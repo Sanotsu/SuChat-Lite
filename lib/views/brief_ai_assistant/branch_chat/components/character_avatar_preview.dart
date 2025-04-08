@@ -1,9 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../models/brief_ai_tools/character_chat/character_card.dart';
+import '../../../../models/brief_ai_tools/branch_chat/character_card.dart';
 import '../../_chat_components/_small_tool_widgets.dart';
 
-class CharacterAvatarPreview extends StatelessWidget {
+class CharacterAvatarPreview extends StatefulWidget {
   final CharacterCard character;
   // 头像宽度
   final double width;
@@ -25,15 +27,54 @@ class CharacterAvatarPreview extends StatelessWidget {
   });
 
   @override
+  State<CharacterAvatarPreview> createState() => _CharacterAvatarPreviewState();
+}
+
+class _CharacterAvatarPreviewState extends State<CharacterAvatarPreview> {
+  double? _imageWidth; // 图片宽度
+  double? _imageHeight; // 图片高度
+
+  @override
+  void initState() {
+    super.initState();
+
+    _loadImageDimensions(); // 初始化时加载图片尺寸
+  }
+
+  // 加载图片尺寸
+  void _loadImageDimensions() {
+    final imageProvider =
+        widget.character.avatar.startsWith('http')
+            ? NetworkImage(widget.character.avatar) // 网络图片
+            : FileImage(File(widget.character.avatar)) as ImageProvider; // 本地图片
+
+    final stream = imageProvider.resolve(ImageConfiguration.empty);
+    stream.addListener(
+      ImageStreamListener(
+        (ImageInfo info, bool _) {
+          if (!mounted) return; // 防止组件被销毁后调用 setState
+          setState(() {
+            _imageWidth = info.image.width.toDouble();
+            _imageHeight = info.image.height.toDouble();
+          });
+        },
+        onError: (exception, stackTrace) {
+          debugPrint('Failed to load image dimensions: $exception');
+        },
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Positioned(
-      left: left.sp,
-      bottom: bottom.sp,
+      left: widget.left.sp,
+      bottom: widget.bottom.sp,
       child: GestureDetector(
         onTap: () => _showFullScreenPreview(context),
         child: Container(
-          width: width.sp,
-          height: height.sp,
+          width: widget.width.sp,
+          height: widget.height.sp,
           decoration: BoxDecoration(
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(2.sp),
@@ -46,7 +87,10 @@ class CharacterAvatarPreview extends StatelessWidget {
             ],
             border: Border.all(color: Colors.white, width: 2.sp),
           ),
-          child: buildAvatarClipOval(character.avatar, clipBehavior: Clip.none),
+          child: buildAvatarClipOval(
+            widget.character.avatar,
+            clipBehavior: Clip.none,
+          ),
         ),
       ),
     );
@@ -56,9 +100,16 @@ class CharacterAvatarPreview extends StatelessWidget {
     // 获取屏幕尺寸
     final screenSize = MediaQuery.of(context).size;
 
-    // 计算预览窗口的尺寸和位置
+    // // 计算预览窗口的尺寸和位置
+    // final previewWidth = screenSize.width * 0.66;
+    // final previewHeight = 16 / 9 * previewWidth;
+
+    // 如果图片尺寸未加载完成，使用默认宽高
     final previewWidth = screenSize.width * 0.66;
-    final previewHeight = 16 / 9 * previewWidth;
+    final previewHeight =
+        (_imageHeight != null && _imageWidth != null)
+            ? (_imageHeight! / _imageWidth!) * previewWidth
+            : 16 / 9 * previewWidth;
 
     // 使用Overlay而不是Dialog，以便可以自定义位置
     final overlayState = Overlay.of(context);
@@ -83,25 +134,25 @@ class CharacterAvatarPreview extends StatelessWidget {
 
               // 预览窗口，放置在左下角
               Positioned(
-                left: left.sp,
-                bottom: bottom.sp,
+                left: widget.left.sp,
+                bottom: widget.bottom.sp,
                 child: Container(
                   width: previewWidth,
                   height: previewHeight,
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.8),
-                    borderRadius: BorderRadius.only(
-                      topRight: Radius.circular(16.sp),
-                    ),
+                    // borderRadius: BorderRadius.only(
+                    //   topRight: Radius.circular(16.sp),
+                    // ),
                   ),
                   child: Stack(
                     children: [
                       Center(
                         child: Padding(
                           // 为上面关闭按钮和下面名称留出空间
-                          padding: EdgeInsets.symmetric(vertical: 36.sp),
+                          padding: EdgeInsets.symmetric(vertical: 3.sp),
                           child: buildAvatarClipOval(
-                            character.avatar,
+                            widget.character.avatar,
                             clipBehavior: Clip.none,
                           ),
                         ),
@@ -119,12 +170,17 @@ class CharacterAvatarPreview extends StatelessWidget {
                       ),
 
                       // 角色名称
-                      Positioned(
-                        bottom: 8.sp,
-                        left: 0,
-                        right: 0,
-                        child: Center(child: Text(character.name)),
-                      ),
+                      // Positioned(
+                      //   bottom: 8.sp,
+                      //   left: 0,
+                      //   right: 0,
+                      //   child: Center(
+                      //     child: Text(
+                      //       widget.character.name,
+                      //       style: TextStyle(fontSize: 12),
+                      //     ),
+                      //   ),
+                      // ),
                     ],
                   ),
                 ),

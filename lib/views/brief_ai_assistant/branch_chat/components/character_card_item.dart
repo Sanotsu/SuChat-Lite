@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../models/brief_ai_tools/character_chat/character_card.dart';
+import '../../../../models/brief_ai_tools/branch_chat/character_card.dart';
 import '../../_chat_components/_small_tool_widgets.dart';
 
 class CharacterCardItem extends StatelessWidget {

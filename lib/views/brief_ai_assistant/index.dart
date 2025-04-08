@@ -3,7 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../common/components/feature_grid_card.dart';
 
-import 'character_chat/character_list_page.dart';
+import 'branch_chat/pages/character_list_page.dart';
 import 'image/index.dart';
 import 'model_config/index.dart';
 import 'video/index.dart';
@@ -21,6 +21,7 @@ class _BriefAIToolsState extends State<BriefAITools> {
     final theme = Theme.of(context);
 
     return Scaffold(
+      appBar: AppBar(title: const Text('更多功能')),
       body: SafeArea(
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
@@ -57,13 +58,6 @@ class _BriefAIToolsState extends State<BriefAITools> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              IconButton(
-                                icon: Icon(
-                                  Icons.arrow_back,
-                                  color: Colors.white,
-                                ),
-                                onPressed: () => Navigator.pop(context),
-                              ),
                               Text(
                                 "SuChat",
                                 style: TextStyle(
@@ -73,22 +67,22 @@ class _BriefAIToolsState extends State<BriefAITools> {
                                 ),
                               ),
                               Spacer(),
-                              IconButton(
-                                onPressed: () async {
-                                  await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (context) => const BriefModelConfig(),
-                                    ),
-                                  );
-                                },
-                                icon: const Icon(
-                                  Icons.settings,
-                                  color: Colors.white,
-                                ),
-                                tooltip: '模型配置',
-                              ),
+                              // IconButton(
+                              //   onPressed: () async {
+                              //     await Navigator.push(
+                              //       context,
+                              //       MaterialPageRoute(
+                              //         builder:
+                              //             (context) => const BriefModelConfig(),
+                              //       ),
+                              //     );
+                              //   },
+                              //   icon: const Icon(
+                              //     Icons.settings,
+                              //     color: Colors.white,
+                              //   ),
+                              //   tooltip: '模型配置',
+                              // ),
                             ],
                           ),
                           SizedBox(height: 8.sp),
@@ -148,7 +142,7 @@ class _BriefAIToolsState extends State<BriefAITools> {
                     ),
                     SizedBox(width: 8.sp),
                     Text(
-                      "更多功能",
+                      "功能列表",
                       style: TextStyle(
                         fontSize: 18.sp,
                         fontWeight: FontWeight.bold,

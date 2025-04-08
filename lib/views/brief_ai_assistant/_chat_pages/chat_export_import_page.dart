@@ -8,12 +8,9 @@ import 'package:path_provider/path_provider.dart';
 import '../../../../models/brief_ai_tools/branch_chat/branch_chat_export_data.dart';
 import '../../../../models/brief_ai_tools/branch_chat/branch_store.dart';
 import '../../../common/components/tool_widget.dart';
-import '../../../models/brief_ai_tools/character_chat/character_store.dart';
 
 class ChatExportImportPage extends StatefulWidget {
-  const ChatExportImportPage({super.key, required this.chatType});
-
-  final String chatType;
+  const ChatExportImportPage({super.key});
 
   @override
   State<ChatExportImportPage> createState() => _ChatExportImportPageState();
@@ -26,10 +23,7 @@ class _ChatExportImportPageState extends State<ChatExportImportPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.chatType == 'branch' ? '助手对话' : '角色对话'}导入导出'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: Text('对话记录导入导出'), centerTitle: true),
       body: Padding(
         padding: EdgeInsets.all(16.sp),
         child: Column(
@@ -56,12 +50,7 @@ class _ChatExportImportPageState extends State<ChatExportImportPage> {
                 Text('导出对话', style: TextStyle(fontSize: 18.sp)),
                 Spacer(),
                 ElevatedButton.icon(
-                  onPressed:
-                      isExporting
-                          ? null
-                          : (widget.chatType == 'branch'
-                              ? _handleBranchChatExport
-                              : _handleCharacterChatExport),
+                  onPressed: isExporting ? null : _handleBranchChatExport,
                   icon:
                       isExporting
                           ? SizedBox(
@@ -102,12 +91,7 @@ class _ChatExportImportPageState extends State<ChatExportImportPage> {
                 Text('导入对话', style: TextStyle(fontSize: 18.sp)),
                 Spacer(),
                 ElevatedButton.icon(
-                  onPressed:
-                      isImporting
-                          ? null
-                          : (widget.chatType == 'branch'
-                              ? _handleBranchChatImport
-                              : _handleCharacterChatImport),
+                  onPressed: isImporting ? null : _handleBranchChatImport,
                   icon:
                       isImporting
                           ? SizedBox(
@@ -153,7 +137,7 @@ class _ChatExportImportPageState extends State<ChatExportImportPage> {
       );
 
       // 3. 获取下载目录并创建文件
-      final fileName = '高级助手对话记录_${DateTime.now().millisecondsSinceEpoch}.json';
+      final fileName = 'SuChat对话记录_${DateTime.now().millisecondsSinceEpoch}.json';
 
       try {
         // 先尝试使用 FilePicker 选择保存位置
@@ -207,33 +191,6 @@ class _ChatExportImportPageState extends State<ChatExportImportPage> {
     }
   }
 
-  // 导出所有会话历史
-  Future<void> _handleCharacterChatExport() async {
-    setState(() => isExporting = true);
-
-    try {
-      // 先让用户选择保存位置
-      final directoryResult = await FilePicker.platform.getDirectoryPath();
-      if (directoryResult == null) return; // 用户取消了选择
-
-      final store = CharacterStore();
-      final filePath = await store.exportAllSessionsHistory(
-        customPath: directoryResult,
-      );
-
-      if (!mounted) return;
-
-      commonHintDialog(context, '导出会话历史', '所有会话历史已导出到: $filePath');
-    } catch (e) {
-      if (!mounted) return;
-      commonExceptionDialog(context, '导出会话历史', '导出失败: $e');
-    } finally {
-      if (mounted) {
-        setState(() => isExporting = false);
-      }
-    }
-  }
-
   Future<void> _handleBranchChatImport() async {
     setState(() => isImporting = true);
 
@@ -273,46 +230,6 @@ class _ChatExportImportPageState extends State<ChatExportImportPage> {
     } catch (e) {
       if (!mounted) return;
       commonExceptionDialog(context, '导入失败', e.toString());
-    } finally {
-      if (mounted) {
-        setState(() => isImporting = false);
-      }
-    }
-  }
-
-  // 导入会话历史
-  Future<void> _handleCharacterChatImport() async {
-    setState(() => isImporting = true);
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['json'],
-      );
-
-      if (result == null || result.files.isEmpty) return;
-
-      final filePath = result.files.first.path;
-      if (filePath == null) return;
-
-      final store = CharacterStore();
-      final importResult = await store.importSessionHistory(filePath);
-
-      if (!mounted) return;
-
-      String message;
-      if (importResult.importedSessions > 0) {
-        message = '成功导入 ${importResult.importedSessions} 个会话';
-        if (importResult.skippedSessions > 0) {
-          message += '，跳过 ${importResult.skippedSessions} 个已存在的会话';
-        }
-      } else {
-        message = '没有导入任何会话，所有会话已存在';
-      }
-
-      commonHintDialog(context, '导入会话历史', message);
-    } catch (e) {
-      if (!mounted) return;
-      commonExceptionDialog(context, '导入会话历史', '导入失败: $e');
     } finally {
       if (mounted) {
         setState(() => isImporting = false);

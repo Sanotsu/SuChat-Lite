@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:file_picker/file_picker.dart';
-import '../../../common/components/toast_utils.dart';
-import '../../../common/components/tool_widget.dart';
-import '../../../common/utils/tools.dart';
-import '../../../models/brief_ai_tools/character_chat/character_card.dart';
-import '../../../models/brief_ai_tools/character_chat/character_chat_session.dart';
-import '../../../models/brief_ai_tools/character_chat/character_store.dart';
-import '../../../services/cus_get_storage.dart';
-import '../_chat_pages/chat_export_import_page.dart';
-import 'components/character_card_item.dart';
-import 'character_chat_page.dart';
+import '../../../../common/components/tool_widget.dart';
+import '../../../../common/utils/tools.dart';
+import '../../../../models/brief_ai_tools/branch_chat/character_card.dart';
+import '../../../../models/brief_ai_tools/branch_chat/character_store.dart';
+import '../../../../services/cus_get_storage.dart';
+import '../../../home.dart';
+import '../../_chat_pages/chat_background_picker_page.dart';
+import '../components/character_card_item.dart';
 import 'character_editor_page.dart';
-import '../_chat_pages/chat_background_picker_page.dart';
 
 class CharacterListPage extends StatefulWidget {
   const CharacterListPage({super.key});
@@ -22,7 +19,7 @@ class CharacterListPage extends StatefulWidget {
 }
 
 class _CharacterListPageState extends State<CharacterListPage> {
-  final CharacterStore _store = CharacterStore();
+  late final CharacterStore _store;
   List<CharacterCard> _characters = [];
   List<CharacterCard> _filteredCharacters = [];
   bool _isLoading = true;
@@ -31,13 +28,17 @@ class _CharacterListPageState extends State<CharacterListPage> {
   @override
   void initState() {
     super.initState();
+    _initStore();
+  }
+
+  Future<void> _initStore() async {
+    _store = await CharacterStore.create();
     _loadCharacters();
   }
 
   Future<void> _loadCharacters() async {
     setState(() => _isLoading = true);
 
-    await _store.initialize();
     _characters = _store.characters;
     _applyFilter();
 
@@ -74,18 +75,7 @@ class _CharacterListPageState extends State<CharacterListPage> {
             icon: const Icon(Icons.add),
             onPressed: _navigateToCharacterEditor,
           ),
-          // IconButton(
-          //   icon: const Icon(Icons.history),
-          //   onPressed: navigateToChatExportImportPage,
-          // ),
-          // IconButton(
-          //   icon: const Icon(Icons.wallpaper),
-          //   onPressed: _showBackgroundPicker,
-          // ),
-          // IconButton(
-          //   icon: const Icon(Icons.import_export),
-          //   onPressed: _showImportExportDialog,
-          // ),
+
           buildPopupMenuButton(),
         ],
       ),
@@ -165,8 +155,6 @@ class _CharacterListPageState extends State<CharacterListPage> {
         // 处理选中的菜单项
         if (value == 'background') {
           _showBackgroundPicker();
-        } else if (value == 'chat_export_import') {
-          navigateToChatExportImportPage();
         } else if (value == 'character_export_import') {
           _showImportExportDialog();
         }
@@ -179,12 +167,7 @@ class _CharacterListPageState extends State<CharacterListPage> {
               "对话背景",
               Icons.wallpaper,
             ),
-            buildCusPopupMenuItem(
-              context,
-              "chat_export_import",
-              "对话备份",
-              Icons.import_export,
-            ),
+
             buildCusPopupMenuItem(
               context,
               "character_export_import",
@@ -196,72 +179,24 @@ class _CharacterListPageState extends State<CharacterListPage> {
   }
 
   Future<void> _handleCharacterTap(CharacterCard character) async {
-    await _store.initialize();
-
-    // 创建一个新会话
-    Future<CharacterChatSession?> buildNewSession() async {
-      if (character.preferredModel == null) {
-        ToastUtils.showToast('请先为该角色设置偏好模型\n长按角色卡点击"编辑角色"');
-        return null;
-      }
-      return await _store.createSession(
-        title: '与${character.name}的对话',
-        characters: [character],
-        activeModel: character.preferredModel,
+    if (character.preferredModel == null) {
+      if (!mounted) return;
+      commonHintDialog(
+        context,
+        '异常提示',
+        '角色"${character.name}"未设置偏好模型，长按该角色卡点击"编辑角色"',
       );
+
+      return;
     }
 
-    // 获取使用该角色、且作为主要角色的会话，并按更新时间排序
-    final characterSessions =
-        _store.sessions
-            .where(
-              (s) =>
-                  // s.characters.isNotEmpty &&
-                  // s.messages.isNotEmpty &&
-                  s.characters.any((c) => c.id == character.id) &&
-                  s.characters.first.id == character.id,
-            )
-            .toList()
-          ..sort((a, b) => b.updateTime.compareTo(a.updateTime));
-
-    CharacterChatSession? session;
-    if (characterSessions.isNotEmpty) {
-      session = characterSessions.first;
-
-      // 更新会话中的角色信息，确保使用最新的角色卡
-      await _store.updateSessionCharacters(session);
-
-      // 2025-03-26 如果该会话中有角色，则每个角色都需要设置偏好模型
-      for (var character in session.characters) {
-        if (character.preferredModel == null) {
-          if (!mounted) return;
-          commonHintDialog(
-            context,
-            '异常提示',
-            '角色“${character.name}”未设置偏好模型，长按该角色卡点击"编辑角色"',
-          );
-
-          return;
-        }
-      }
-
-      // 重新获取更新后的会话
-      session = _store.sessions.firstWhere((s) => s.id == session!.id);
-    } else {
-      // 没有使用该角色的会话(不管是否是主要角色)，则创建一个新会话
-      session = await buildNewSession();
-      if (session == null) return;
-    }
-
-    if (!mounted) return;
-    Navigator.push(
+    // 导航到HomePage并传递角色卡，保持与首页相同的结构以触发PopScope
+    // 其实homepage就是带了character的branchchatpage
+    Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(
-        builder: (context) => CharacterChatPage(session: session!),
-      ),
-    ).then((_) {
-      _loadCharacters();
-    });
+      MaterialPageRoute(builder: (context) => HomePage(character: character)),
+      (route) => false, // 完全清空路由栈
+    );
   }
 
   // 长按删除角色卡
@@ -286,7 +221,7 @@ class _CharacterListPageState extends State<CharacterListPage> {
     );
 
     if (confirmed == true) {
-      await _store.deleteCharacter(character.id);
+      await _store.deleteCharacter(character.characterId);
       _loadCharacters();
     }
   }
@@ -303,24 +238,6 @@ class _CharacterListPageState extends State<CharacterListPage> {
     if (result == true) {
       _loadCharacters();
     }
-  }
-
-  // 角色对话记录的导入导出页面的跳转方法
-  void navigateToChatExportImportPage() async {
-    bool isGranted = await requestStoragePermission();
-
-    if (!mounted) return;
-    if (!isGranted) {
-      commonExceptionDialog(context, "异常提示", "无存储访问授权");
-      return;
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ChatExportImportPage(chatType: 'character'),
-      ),
-    );
   }
 
   // 角色列表的导入导出对话框
@@ -369,8 +286,7 @@ class _CharacterListPageState extends State<CharacterListPage> {
       final directoryResult = await FilePicker.platform.getDirectoryPath();
       if (directoryResult == null) return; // 用户取消了选择
 
-      final store = CharacterStore();
-      final filePath = await store.exportCharacters(
+      final filePath = await _store.exportCharacters(
         customPath: directoryResult,
       );
 
@@ -396,8 +312,7 @@ class _CharacterListPageState extends State<CharacterListPage> {
       final filePath = result.files.first.path;
       if (filePath == null) return;
 
-      final store = CharacterStore();
-      final importResult = await store.importCharacters(filePath);
+      final importResult = await _store.importCharacters(filePath);
 
       if (!mounted) return;
 

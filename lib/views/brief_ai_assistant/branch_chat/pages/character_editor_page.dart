@@ -4,14 +4,15 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
-import '../../../common/components/tool_widget.dart';
-import '../../../common/llm_spec/constant_llm_enum.dart';
-import '../../../models/brief_ai_tools/character_chat/character_card.dart';
-import '../../../models/brief_ai_tools/character_chat/character_store.dart';
-import '../../../common/llm_spec/cus_brief_llm_model.dart';
-import '../../../services/model_manager_service.dart';
-import '../_chat_components/_small_tool_widgets.dart';
-import 'components/model_selector_dialog.dart';
+import '../../../../common/components/tool_widget.dart';
+import '../../../../common/llm_spec/constant_llm_enum.dart';
+import '../../../../models/brief_ai_tools/branch_chat/branch_store.dart';
+import '../../../../models/brief_ai_tools/branch_chat/character_card.dart';
+import '../../../../models/brief_ai_tools/branch_chat/character_store.dart';
+import '../../../../common/llm_spec/cus_brief_llm_model.dart';
+import '../../../../services/model_manager_service.dart';
+import '../../_chat_components/_small_tool_widgets.dart';
+import '../components/model_selector_dialog.dart';
 
 class CharacterEditorPage extends StatefulWidget {
   final CharacterCard? character;
@@ -107,7 +108,7 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
     setState(() => isSaving = true);
 
     try {
-      final store = CharacterStore();
+      final store = await CharacterStore.create();
 
       // 解析标签
       final tags =
@@ -137,11 +138,15 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
         );
 
         await store.updateCharacter(updatedCharacter);
+
+        // 注意，如果是修改，还要修改已经存在的对话记录中涉及到相关角色对话的相关栏位
+        final branchStore = await BranchStore.create();
+        branchStore.updateSessionCharacters(updatedCharacter);
       } else {
         // 创建新角色
         await store.createCharacter(
           CharacterCard(
-            id: identityHashCode(_nameController.text).toString(),
+            id: identityHashCode(_nameController.text),
             name: _nameController.text,
             avatar: _avatarPath,
             background: _backgroundPath,

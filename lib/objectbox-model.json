@@ -5,7 +5,7 @@
   "entities": [
     {
       "id": "1:2148325011734090399",
-      "lastPropertyId": "20:8767197987604157500",
+      "lastPropertyId": "22:7414314221072378309",
       "name": "BranchChatMessage",
       "properties": [
         {
@@ -114,13 +114,23 @@
           "id": "20:8767197987604157500",
           "name": "branchPath",
           "type": 9
+        },
+        {
+          "id": "21:6763133177635660546",
+          "name": "characterId",
+          "type": 9
+        },
+        {
+          "id": "22:7414314221072378309",
+          "name": "characterJson",
+          "type": 9
         }
       ],
       "relations": []
     },
     {
       "id": "2:6884003956670739939",
-      "lastPropertyId": "6:6447203546370324910",
+      "lastPropertyId": "8:454611041401628212",
       "name": "BranchChatSession",
       "properties": [
         {
@@ -153,12 +163,121 @@
           "id": "6:6447203546370324910",
           "name": "modelTypeStr",
           "type": 9
+        },
+        {
+          "id": "7:3070267523430441824",
+          "name": "characterId",
+          "type": 9
+        },
+        {
+          "id": "8:454611041401628212",
+          "name": "characterJson",
+          "type": 9
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "3:2476337562814138934",
+      "lastPropertyId": "18:4752564430506564205",
+      "name": "CharacterCard",
+      "properties": [
+        {
+          "id": "1:7905183625245084659",
+          "name": "id",
+          "type": 6,
+          "flags": 129
+        },
+        {
+          "id": "2:2118193985833035485",
+          "name": "characterId",
+          "type": 9
+        },
+        {
+          "id": "3:1962502189971408621",
+          "name": "name",
+          "type": 9
+        },
+        {
+          "id": "4:7991414417839684061",
+          "name": "avatar",
+          "type": 9
+        },
+        {
+          "id": "5:7398484974634726163",
+          "name": "description",
+          "type": 9
+        },
+        {
+          "id": "6:3156464743556249391",
+          "name": "personality",
+          "type": 9
+        },
+        {
+          "id": "7:5451558760863855311",
+          "name": "scenario",
+          "type": 9
+        },
+        {
+          "id": "8:6946937928603335356",
+          "name": "firstMessage",
+          "type": 9
+        },
+        {
+          "id": "9:3133247597258573375",
+          "name": "exampleDialogue",
+          "type": 9
+        },
+        {
+          "id": "10:8760209882348157906",
+          "name": "tagsJson",
+          "type": 9
+        },
+        {
+          "id": "11:4745855787409107346",
+          "name": "preferredModelJson",
+          "type": 9
+        },
+        {
+          "id": "12:3808880762256886341",
+          "name": "createTime",
+          "type": 10
+        },
+        {
+          "id": "13:4793433191072630740",
+          "name": "updateTime",
+          "type": 10
+        },
+        {
+          "id": "14:5375989681421657847",
+          "name": "isSystem",
+          "type": 1
+        },
+        {
+          "id": "15:7017034716535273107",
+          "name": "background",
+          "type": 9
+        },
+        {
+          "id": "16:7432739275924460818",
+          "name": "backgroundOpacity",
+          "type": 8
+        },
+        {
+          "id": "17:6907875138662209457",
+          "name": "additionalSettingsJson",
+          "type": 9
+        },
+        {
+          "id": "18:4752564430506564205",
+          "name": "tags",
+          "type": 30
         }
       ],
       "relations": []
     }
   ],
-  "lastEntityId": "2:6884003956670739939",
+  "lastEntityId": "3:2476337562814138934",
   "lastIndexId": "2:5804341374734258898",
   "lastRelationId": "0:0",
   "lastSequenceId": "0:0",

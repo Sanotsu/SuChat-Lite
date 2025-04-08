@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../common/constants/constants.dart';
+import '../../../models/brief_ai_tools/branch_chat/character_card.dart';
 
 // 构建空提示
 Widget buildEmptyHint() {
@@ -21,6 +22,36 @@ Widget buildEmptyHint() {
             style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w500),
           ),
           Text('我可以帮您完成很多任务，让我们开始吧！', style: TextStyle(color: Colors.grey)),
+        ],
+      ),
+    ),
+  );
+}
+
+/// 构建空提示
+Widget buildEmptyMessageHint(CharacterCard? character) {
+  return Padding(
+    padding: EdgeInsets.all(8.sp),
+    child: Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 60.sp,
+            height: 60.sp,
+            child:
+                character != null
+                    ? buildAvatarClipOval(character.avatar)
+                    : Icon(Icons.chat, size: 36.sp, color: Colors.blue),
+          ),
+          Text(
+            '嗨，我是${character?.name ?? "SuChat"}',
+            style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w500),
+          ),
+          Text(
+            character != null ? '让我们开始聊天吧！' : '我可以帮您完成很多任务，让我们开始吧！',
+            style: TextStyle(color: Colors.grey),
+          ),
         ],
       ),
     ),

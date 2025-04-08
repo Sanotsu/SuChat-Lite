@@ -13,7 +13,8 @@ class BranchMessageItem extends StatefulWidget {
   // 用于展示的消息
   final BranchChatMessage message;
   final bool? isUseBgImage;
-
+  // 是否显示头像
+  final bool? isShowAvatar;
   // 长按消息后，点击了消息体处的回调
   final Function(BranchChatMessage, LongPressStartDetails)? onLongPress;
 
@@ -22,6 +23,7 @@ class BranchMessageItem extends StatefulWidget {
     required this.message,
     this.onLongPress,
     this.isUseBgImage = false,
+    this.isShowAvatar = true,
   });
 
   @override
@@ -36,6 +38,8 @@ class _BranchMessageItemState extends State<BranchMessageItem>
 
   // 添加状态缓存变量，避免重复计算
   late final bool _isUser;
+  late final CrossAxisAlignment _crossAxisAlignment;
+  late final MainAxisAlignment _mainAxisAlignment;
 
   @override
   void initState() {
@@ -43,6 +47,12 @@ class _BranchMessageItemState extends State<BranchMessageItem>
     _isUser =
         widget.message.role == CusRole.user.name ||
         widget.message.role == CusRole.system.name;
+
+    _crossAxisAlignment =
+        _isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+
+    _mainAxisAlignment =
+        _isUser ? MainAxisAlignment.end : MainAxisAlignment.start;
   }
 
   @override
@@ -53,17 +63,28 @@ class _BranchMessageItemState extends State<BranchMessageItem>
       margin: EdgeInsets.all(4.sp),
       color: Colors.transparent,
       child: Column(
-        crossAxisAlignment:
-            _isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: _crossAxisAlignment,
         children: [
           // 头像、模型名、时间戳(头像旁边的时间和模型名不缩放，避免显示溢出)
-          // buildHorizontalAvatar 横向排版时不必，因为Flexible有缩放会换行
-          MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: const TextScaler.linear(1)),
-            child: _buildAvatarAndTimestamp(),
-          ),
+          (widget.isShowAvatar == true)
+              ? MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(textScaler: const TextScaler.linear(1)),
+                child: _buildAvatarAndTimestamp(),
+              )
+              : Row(
+                mainAxisAlignment: _mainAxisAlignment,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4.sp),
+                    child: Text(
+                      _formatBriefTime(widget.message.createTime),
+                      style: TextStyle(fontSize: 12.sp),
+                    ),
+                  ),
+                ],
+              ),
 
           // 显示消息内容
           _buildMessageContent(context),
@@ -83,8 +104,7 @@ class _BranchMessageItemState extends State<BranchMessageItem>
   // 头像和时间戳
   Widget _buildAvatarAndTimestamp() {
     return Row(
-      mainAxisAlignment:
-          _isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+      mainAxisAlignment: _mainAxisAlignment,
       children: [
         if (!_isUser) _buildAvatar(),
         Padding(
@@ -93,8 +113,17 @@ class _BranchMessageItemState extends State<BranchMessageItem>
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 显示模型标签
-              if (!_isUser && widget.message.modelLabel != null)
+              // 显示角色名
+              if (!_isUser && widget.message.character != null)
+                Text(
+                  widget.message.character!.name,
+                  style: TextStyle(fontSize: 12.sp, color: Colors.grey),
+                ),
+
+              // 如果角色名为空，显示模型标签
+              if (!_isUser &&
+                  widget.message.character?.name == null &&
+                  widget.message.modelLabel != null)
                 Text(
                   widget.message.modelLabel!,
                   style: TextStyle(fontSize: 12.sp, color: Colors.grey),
@@ -154,8 +183,7 @@ class _BranchMessageItemState extends State<BranchMessageItem>
         ),
       ),
       child: Column(
-        crossAxisAlignment:
-            _isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: _crossAxisAlignment,
         children: [
           // 联网搜索结果 - 懒加载，只在有引用时才构建
           if (widget.message.references?.isNotEmpty == true)
@@ -200,7 +228,10 @@ class _BranchMessageItemState extends State<BranchMessageItem>
             padding: EdgeInsets.only(left: 24.sp),
             // 使用高性能MarkdownRenderer来渲染深度思考内容，可以利用缓存机制
             child: RepaintBoundary(
-              child: buildCusMarkdown(widget.message.reasoningContent ?? ''),
+              child: buildCusMarkdown(
+                widget.message.reasoningContent ?? '',
+                textColor: Colors.grey,
+              ),
             ),
           ),
         ],
@@ -233,5 +264,19 @@ class _BranchMessageItemState extends State<BranchMessageItem>
         ),
       ),
     );
+  }
+}
+
+String _formatBriefTime(DateTime time) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final messageDate = DateTime(time.year, time.month, time.day);
+
+  if (messageDate == today) {
+    return DateFormat('HH:mm').format(time);
+  } else if (messageDate == today.subtract(const Duration(days: 1))) {
+    return '昨天 ${DateFormat('HH:mm').format(time)}';
+  } else {
+    return DateFormat('MM-dd HH:mm').format(time);
   }
 }

@@ -27,6 +27,7 @@ class BranchChatSessionExport {
   final CusBriefLLMSpec llmSpec;
   final LLModelType modelType;
   final List<BranchChatMessageExport> messages;
+  final String? characterId;
 
   BranchChatSessionExport({
     required this.id,
@@ -36,6 +37,7 @@ class BranchChatSessionExport {
     required this.llmSpec,
     required this.modelType,
     required this.messages,
+    this.characterId,
   });
 
   factory BranchChatSessionExport.fromSession(BranchChatSession session) {
@@ -46,6 +48,7 @@ class BranchChatSessionExport {
       updateTime: session.updateTime,
       llmSpec: session.llmSpec,
       modelType: session.modelType,
+      characterId: session.characterId,
       messages:
           session.messages
               .map((msg) => BranchChatMessageExport.fromMessage(msg))
@@ -79,6 +82,7 @@ class BranchChatMessageExport {
   final int depth;
   final String branchPath;
   final String? parentMessageId;
+  final String? characterId;
 
   BranchChatMessageExport({
     required this.messageId,
@@ -99,6 +103,7 @@ class BranchChatMessageExport {
     required this.depth,
     required this.branchPath,
     this.parentMessageId,
+    this.characterId,
   });
 
   factory BranchChatMessageExport.fromMessage(BranchChatMessage message) {
@@ -121,6 +126,7 @@ class BranchChatMessageExport {
       depth: message.depth,
       branchPath: message.branchPath,
       parentMessageId: message.parent.target?.messageId,
+      characterId: message.characterId,
     );
   }
 

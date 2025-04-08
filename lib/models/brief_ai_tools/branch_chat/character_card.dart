@@ -1,7 +1,14 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:objectbox/objectbox.dart';
 import '../../../common/llm_spec/cus_brief_llm_model.dart';
 
+@Entity()
 class CharacterCard {
-  final String id;
+  @Id(assignable: true)
+  int id;
+
+  String characterId;
   String name;
   String avatar;
   String description;
@@ -9,8 +16,13 @@ class CharacterCard {
   String scenario;
   String firstMessage;
   String exampleDialogue;
-  List<String> tags;
-  CusBriefLLMSpec? preferredModel; // 角色偏好的模型
+  
+  // 标签以JSON字符串形式存储
+  String tagsJson;
+  
+  // 角色偏好的模型，序列化为JSON字符串存储
+  String? preferredModelJson;
+
   DateTime createTime;
   DateTime updateTime;
   bool isSystem; // 是否是系统预设角色
@@ -20,11 +32,113 @@ class CharacterCard {
   // 新增角色专属背景透明度
   double? backgroundOpacity;
 
-  // 可选的额外设置
-  Map<String, dynamic> additionalSettings;
+  // 可选的额外设置以JSON字符串形式存储
+  String? additionalSettingsJson;
+
+  // 非持久化字段，仅用于运行时
+  @Transient()
+  List<String>? _tags;
+
+  @Transient()
+  CusBriefLLMSpec? _preferredModel;
+
+  @Transient()
+  Map<String, dynamic>? _additionalSettings;
+
+  // 获取标签
+  List<String> get tags {
+    if (_tags == null && tagsJson.isNotEmpty) {
+      try {
+        final List<dynamic> decoded = jsonDecode(tagsJson);
+        _tags = decoded.cast<String>();
+      } catch (e) {
+        if (kDebugMode) {
+          print('解析tags失败: $e');
+        }
+        _tags = [];
+      }
+    }
+    return _tags ?? [];
+  }
+
+  // 设置标签
+  set tags(List<String> value) {
+    _tags = value;
+    try {
+      tagsJson = jsonEncode(value);
+    } catch (e) {
+      if (kDebugMode) {
+        print('序列化tags失败: $e');
+      }
+      tagsJson = '[]';
+    }
+  }
+
+  // 获取偏好模型
+  CusBriefLLMSpec? get preferredModel {
+    if (_preferredModel == null && preferredModelJson != null && preferredModelJson!.isNotEmpty) {
+      try {
+        final Map<String, dynamic> decoded = jsonDecode(preferredModelJson!);
+        _preferredModel = CusBriefLLMSpec.fromJson(decoded);
+      } catch (e) {
+        if (kDebugMode) {
+          print('解析preferredModel失败: $e');
+        }
+        _preferredModel = null;
+      }
+    }
+    return _preferredModel;
+  }
+
+  // 设置偏好模型
+  set preferredModel(CusBriefLLMSpec? value) {
+    _preferredModel = value;
+    if (value != null) {
+      try {
+        preferredModelJson = jsonEncode(value.toJson());
+      } catch (e) {
+        if (kDebugMode) {
+          print('序列化preferredModel失败: $e');
+        }
+        preferredModelJson = null;
+      }
+    } else {
+      preferredModelJson = null;
+    }
+  }
+
+  // 获取额外设置
+  Map<String, dynamic> get additionalSettings {
+    if (_additionalSettings == null && additionalSettingsJson != null && additionalSettingsJson!.isNotEmpty) {
+      try {
+        final Map<String, dynamic> decoded = jsonDecode(additionalSettingsJson!);
+        _additionalSettings = decoded;
+      } catch (e) {
+        if (kDebugMode) {
+          print('解析additionalSettings失败: $e');
+        }
+        _additionalSettings = {};
+      }
+    }
+    return _additionalSettings ?? {};
+  }
+
+  // 设置额外设置
+  set additionalSettings(Map<String, dynamic> value) {
+    _additionalSettings = value;
+    try {
+      additionalSettingsJson = jsonEncode(value);
+    } catch (e) {
+      if (kDebugMode) {
+        print('序列化additionalSettings失败: $e');
+      }
+      additionalSettingsJson = '{}';
+    }
+  }
 
   CharacterCard({
-    String? id,
+    this.id = 0,
+    String? characterId,
     required this.name,
     required this.avatar,
     required this.description,
@@ -33,18 +147,25 @@ class CharacterCard {
     this.firstMessage = '',
     this.exampleDialogue = '',
     List<String>? tags,
-    this.preferredModel,
+    CusBriefLLMSpec? preferredModel,
     DateTime? createTime,
     DateTime? updateTime,
     this.isSystem = false,
     this.background,
     this.backgroundOpacity,
     Map<String, dynamic>? additionalSettings,
-  }) : id = id ?? identityHashCode(name).toString(),
-       tags = tags ?? [],
+  }) : 
+       characterId = characterId ?? identityHashCode(name).toString(),
+       tagsJson = '[]',
        createTime = createTime ?? DateTime.now(),
        updateTime = updateTime ?? DateTime.now(),
-       additionalSettings = additionalSettings ?? {};
+       preferredModelJson = null,
+       additionalSettingsJson = null {
+    // 使用setter来正确处理JSON序列化
+    this.tags = tags ?? [];
+    this.preferredModel = preferredModel;
+    this.additionalSettings = additionalSettings ?? {};
+  }
 
   // 生成系统提示词
   String generateSystemPrompt() {
@@ -116,10 +237,11 @@ class CharacterCard {
   // 添加角色特定的额外指导
   void _addCharacterSpecificGuidelines(StringBuffer buffer) {}
 
-  // JSON序列化和反序列化方法
+  // JSON序列化方法
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'characterId': characterId,
       'name': name,
       'avatar': avatar,
       'description': description,
@@ -138,9 +260,11 @@ class CharacterCard {
     };
   }
 
+  // 从JSON创建对象 - 主要用于导入导出功能
   factory CharacterCard.fromJson(Map<String, dynamic> json) {
-    return CharacterCard(
-      id: json['id'],
+    final card = CharacterCard(
+      id: json['id'] != null ? (json['id'] as num).toInt() : 0,
+      characterId: json['characterId'] ?? json['id']?.toString(),
       name: json['name'],
       avatar: json['avatar'],
       description: json['description'],
@@ -169,5 +293,6 @@ class CharacterCard {
               : null,
       additionalSettings: json['additionalSettings'] ?? {},
     );
+    return card;
   }
 }

@@ -368,5 +368,5 @@ class CusMarkdownRenderer {
 }
 
 /// 向后兼容的API，调用单例的render方法
-Widget buildCusMarkdown(String text) =>
-    CusMarkdownRenderer.instance.render(text);
+Widget buildCusMarkdown(String text, {Color? textColor}) =>
+    CusMarkdownRenderer.instance.render(text, textColor: textColor);

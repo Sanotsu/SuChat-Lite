@@ -13,6 +13,8 @@ import '../../../common/llm_spec/constant_llm_enum.dart';
 import 'branch_chat_export_data.dart';
 import 'branch_chat_message.dart';
 import 'branch_chat_session.dart';
+import 'character_store.dart';
+import 'character_card.dart';
 
 final pl = ProsteLogger();
 
@@ -25,6 +27,9 @@ class BranchStore {
 
   /// 会话 Box
   late final Box<BranchChatSession> sessionBox;
+
+  /// 角色存储
+  late final CharacterStore characterStore;
 
   /// 单例实例
   static BranchStore? _instance;
@@ -54,17 +59,31 @@ class BranchStore {
       store = await openStore(directory: dbDirectory);
       messageBox = store.box<BranchChatMessage>();
       sessionBox = store.box<BranchChatSession>();
+
+      // 初始化角色存储
+      characterStore = await CharacterStore.create();
     } catch (e) {
       pl.e('初始化 ObjectBox 失败: $e');
       rethrow;
     }
   }
 
-  /// 创建新会话
+  /// 获取角色卡
+  CharacterCard? getCharacterById(String characterId) {
+    return characterStore.getCharacterById(characterId);
+  }
+
+  /// 获取所有角色卡
+  List<CharacterCard> getAllCharacters() {
+    return characterStore.characters;
+  }
+
+  /// 创建新会话 - 添加角色参数
   Future<BranchChatSession> createSession(
     String title, {
     required CusBriefLLMSpec llmSpec,
     required LLModelType modelType,
+    CharacterCard? character,
     DateTime? createTime,
     DateTime? updateTime,
   }) async {
@@ -72,6 +91,7 @@ class BranchStore {
       title: title,
       llmSpec: llmSpec,
       modelType: modelType,
+      character: character,
       createTime: createTime,
       updateTime: updateTime,
     );
@@ -80,7 +100,23 @@ class BranchStore {
     return sessionBox.get(id)!;
   }
 
-  /// 添加消息
+  // 更新会话中的角色信息
+  Future<void> updateSessionCharacters(CharacterCard character) async {
+    final sessions = sessionBox.getAll().toList();
+
+    var filteredSessions =
+        sessions.where((s) => s.character?.id == character.id).map((e) {
+          e.character = character;
+          return e;
+        }).toList();
+
+    // 将更新的会话保存回数据库
+    if (filteredSessions.isNotEmpty) {
+      sessionBox.putMany(filteredSessions);
+    }
+  }
+
+  /// 添加消息 - 添加角色参数
   Future<BranchChatMessage> addMessage({
     required BranchChatSession session,
     required String content,
@@ -94,6 +130,7 @@ class BranchStore {
     String? imagesUrl,
     String? videosUrl,
     List<Map<String, dynamic>>? references,
+    CharacterCard? character,
   }) async {
     try {
       final message = BranchChatMessage(
@@ -108,6 +145,7 @@ class BranchStore {
         imagesUrl: imagesUrl,
         videosUrl: videosUrl,
         references: references,
+        character: character,
       );
 
       if (parent != null) {
@@ -237,12 +275,20 @@ class BranchStore {
           continue;
         }
 
+        // 检查会话是否有关联的角色卡
+        CharacterCard? character;
+        if (sessionExport.characterId != null) {
+          // 尝试查找角色卡
+          character = store.getCharacterById(sessionExport.characterId!);
+        }
+
         // 创建新会话(注意，因为用于判断是否重复的逻辑里面有创建时间，所以这里需要传入创建时间)
         // 不传入更新时间，因为导入会话的消息列表时，会更新会话的更新时间
         final session = await store.createSession(
           sessionExport.title,
           llmSpec: sessionExport.llmSpec,
           modelType: sessionExport.modelType,
+          character: character,
           createTime: sessionExport.createTime,
         );
 
@@ -261,6 +307,13 @@ class BranchStore {
                   ? messageMap[msgExport.parentMessageId]
                   : null;
 
+          // 检查消息是否有关联的角色卡
+          CharacterCard? messageCharacter;
+          if (msgExport.characterId != null) {
+            // 尝试查找角色卡
+            messageCharacter = store.getCharacterById(msgExport.characterId!);
+          }
+
           // 因为对会话记录添加消息也是修改了会话，所以导入会话记录成功后，会话的修改时间也会更新
           final message = await store.addMessage(
             session: session,
@@ -274,6 +327,7 @@ class BranchStore {
             contentVoicePath: msgExport.contentVoicePath,
             imagesUrl: msgExport.imagesUrl,
             videosUrl: msgExport.videosUrl,
+            character: messageCharacter ?? character, // 优先使用消息级别的角色卡
           );
 
           messageMap[msgExport.messageId] = message;

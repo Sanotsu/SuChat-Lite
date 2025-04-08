@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:suchat_lite/common/components/tool_widget.dart';
 import '../../../../common/llm_spec/constant_llm_enum.dart';
+import '../../../../common/utils/tools.dart';
 import '../../../../models/brief_ai_tools/branch_chat/branch_chat_session.dart';
 import '../../../user_and_settings/index.dart';
 import '../../_chat_pages/chat_export_import_page.dart';
-import '../../index.dart';
 
 class BranchChatHistoryDrawer extends StatefulWidget {
   // 历史对话列表
@@ -14,7 +15,7 @@ class BranchChatHistoryDrawer extends StatefulWidget {
   // 选中对话的回调
   final Function(BranchChatSession) onSessionSelected;
   // 删除或重命名对话后，要刷新对话列表
-  final Function(BranchChatSession, String) onRefresh;
+  final Function({BranchChatSession? session, String? action}) onRefresh;
 
   const BranchChatHistoryDrawer({
     super.key,
@@ -33,12 +34,39 @@ class _BranchChatHistoryDrawerState extends State<BranchChatHistoryDrawer> {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      child: SafeArea(
+      child: Container(
+        // decoration: BoxDecoration(
+        //   gradient: LinearGradient(
+        //     colors: [Colors.grey, Colors.green], // 渐变色列表
+        //     begin: Alignment.topLeft, // 渐变起点
+        //     end: Alignment.topRight, // 渐变终点
+        //     stops: [0.0, 1.0], // 控制渐变位置（可选）
+        //     tileMode: TileMode.clamp, // 渐变模式（可选）
+        //   ),
+        // ),
+        decoration: BoxDecoration(
+          gradient: SweepGradient(
+            colors: [
+              Colors.lightBlue.shade100, // 浅蓝色
+              Colors.purple.shade50, // 浅紫色
+              Colors.pink.shade100, // 浅粉色
+            ],
+            center: Alignment.topCenter, // 渐变中心点
+            startAngle: 0.0, // 起始角度（0.0 表示从正右方开始）
+            endAngle: 3.14, // 结束角度（3.14 ≈ π，即180°）
+          ),
+        ),
+
         child: Column(
           children: [
-            Container(color: Colors.white, child: _buildMoreFeatures()),
+            // 使用 SizedBox 来占位状态栏的高度
+            SizedBox(height: MediaQuery.of(context).padding.top),
 
-            Expanded(child: buildItemList()),
+            _buildMoreFeatures(),
+
+            Expanded(
+              child: Container(color: Colors.white, child: buildItemList()),
+            ),
           ],
         ),
       ),
@@ -50,41 +78,52 @@ class _BranchChatHistoryDrawerState extends State<BranchChatHistoryDrawer> {
     return Column(
       children: [
         ListTile(
-          leading: const Icon(Icons.person),
-          title: const Text('用户设置'),
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => UserAndSettings()),
-            );
-          },
+          leading: const Icon(Icons.history),
+          title: const Text('对话记录与设置'),
+          // onTap: () {
+          //   Navigator.pop(context);
+          //   Navigator.push(
+          //     context,
+          //     MaterialPageRoute(builder: (context) => UserAndSettings()),
+          //   );
+          // },
         ),
 
         Row(
           children: [
             Expanded(
               child: InkWell(
-                onTap: () {
+                onTap: () async {
+                  bool flag = await requestStoragePermission();
+
+                  if (!mounted) return;
+                  if (!flag) {
+                    commonHintDialog(context, "提示", "无存储权限，无法备份");
+                    return;
+                  }
+
                   Navigator.pop(context);
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder:
-                          (context) => ChatExportImportPage(chatType: "branch"),
+                      builder: (context) => ChatExportImportPage(),
                     ),
-                  );
+                  ).then((value) {
+                    // 导入后要重新加载会话，这里的参数其实没有实际用到，只是兼容写法
+                    widget.onRefresh(action: 'import');
+                  });
                 },
                 child: Card(
                   elevation: 0,
                   child: ListTile(
                     leading: const Icon(Icons.import_export),
                     title: Text(
-                      '对话备份',
+                      '备份',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                 ),
@@ -97,19 +136,20 @@ class _BranchChatHistoryDrawerState extends State<BranchChatHistoryDrawer> {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => BriefAITools()),
+                    MaterialPageRoute(builder: (context) => UserAndSettings()),
                   );
                 },
                 child: Card(
                   elevation: 0,
                   child: ListTile(
-                    leading: const Icon(Icons.more_horiz),
+                    leading: const Icon(Icons.settings),
                     title: Text(
-                      '更多功能',
+                      '设置',
                       style: TextStyle(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.bold,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                 ),
@@ -118,7 +158,8 @@ class _BranchChatHistoryDrawerState extends State<BranchChatHistoryDrawer> {
           ],
         ),
 
-        Divider(),
+        // Divider(),
+        SizedBox(height: 10.sp),
       ],
     );
   }
@@ -148,6 +189,11 @@ class _BranchChatHistoryDrawerState extends State<BranchChatHistoryDrawer> {
 
   // 历史对话列表项
   Widget _buildChatHistoryItem(BranchChatSession session, bool isSelected) {
+    var subtitle =
+        session.character != null
+            ? session.character!.name
+            : "${CP_NAME_MAP[session.llmSpec.platform]!} > ${session.llmSpec.name}";
+
     return GestureDetector(
       child: Builder(
         builder:
@@ -192,7 +238,7 @@ class _BranchChatHistoryDrawerState extends State<BranchChatHistoryDrawer> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 subtitle: Text(
-                  "${session.updateTime.toString().substring(0, 19)}\n${CP_NAME_MAP[session.llmSpec.platform]!} > ${session.llmSpec.name}",
+                  "${session.updateTime.toString().substring(0, 19)}\n$subtitle",
                   style: TextStyle(fontSize: 12.sp),
                 ),
                 selected: isSelected,
@@ -255,7 +301,7 @@ class _BranchChatHistoryDrawerState extends State<BranchChatHistoryDrawer> {
       session.title = newTitle;
       session.updateTime = DateTime.now();
 
-      widget.onRefresh(session, 'edit');
+      widget.onRefresh(session: session, action: 'edit');
     }
   }
 
@@ -284,7 +330,7 @@ class _BranchChatHistoryDrawerState extends State<BranchChatHistoryDrawer> {
     );
 
     if (confirmed == true) {
-      widget.onRefresh(session, 'delete');
+      widget.onRefresh(session: session, action: 'delete');
     }
   }
 }

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:objectbox/objectbox.dart';
 import 'branch_chat_session.dart';
+import 'character_card.dart';
 
 @Entity()
 class BranchChatMessage {
@@ -12,6 +13,13 @@ class BranchChatMessage {
   String role;
   String content;
   DateTime createTime;
+
+  // 角色相关字段
+  String? characterId; // 角色ID，如果不是角色消息则为null
+  String? characterJson; // 序列化后的角色数据，用于存储角色信息
+
+  @Transient()
+  CharacterCard? _character; // 运行时角色对象
 
   // 可选字段
   String? reasoningContent;
@@ -44,6 +52,39 @@ class BranchChatMessage {
   int branchIndex; // 当前分支在同级分支中的索引
   int depth; // 分支深度，根节点为0
   String branchPath; // 存储从根到当前节点的分支路径，如 "0/1/0"
+
+  // 角色的Getter和Setter
+  CharacterCard? get character {
+    if (_character == null && characterJson != null) {
+      try {
+        final Map<String, dynamic> decoded = jsonDecode(characterJson!);
+        _character = CharacterCard.fromJson(decoded);
+      } catch (e) {
+        if (kDebugMode) {
+          print('解析character失败: $e');
+        }
+        _character = null;
+      }
+    }
+    return _character;
+  }
+
+  set character(CharacterCard? value) {
+    _character = value;
+    characterId = value?.characterId;
+    if (value != null) {
+      try {
+        characterJson = jsonEncode(value.toJson());
+      } catch (e) {
+        if (kDebugMode) {
+          print('序列化character失败: $e');
+        }
+        characterJson = null;
+      }
+    } else {
+      characterJson = null;
+    }
+  }
 
   // Getter和Setter用于处理references字段
   List<Map<String, dynamic>>? get references {
@@ -96,7 +137,13 @@ class BranchChatMessage {
     this.completionTokens,
     this.totalTokens,
     this.modelLabel,
+    this.characterId,
+    this.characterJson,
+    CharacterCard? character,
   }) {
     this.references = references; // 使用setter来设置references和referencesJson
+    if (character != null) {
+      this.character = character; // 使用setter来设置character相关字段
+    }
   }
 }

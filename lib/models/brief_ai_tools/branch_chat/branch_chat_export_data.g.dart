@@ -35,6 +35,7 @@ BranchChatSessionExport _$BranchChatSessionExportFromJson(
           .map((e) =>
               BranchChatMessageExport.fromJson(e as Map<String, dynamic>))
           .toList(),
+      characterId: json['characterId'] as String?,
     );
 
 Map<String, dynamic> _$BranchChatSessionExportToJson(
@@ -47,6 +48,7 @@ Map<String, dynamic> _$BranchChatSessionExportToJson(
       'llmSpec': instance.llmSpec.toJson(),
       'modelType': _$LLModelTypeEnumMap[instance.modelType]!,
       'messages': instance.messages.map((e) => e.toJson()).toList(),
+      'characterId': instance.characterId,
     };
 
 const _$LLModelTypeEnumMap = {
@@ -88,6 +90,7 @@ BranchChatMessageExport _$BranchChatMessageExportFromJson(
       depth: (json['depth'] as num).toInt(),
       branchPath: json['branchPath'] as String,
       parentMessageId: json['parentMessageId'] as String?,
+      characterId: json['characterId'] as String?,
     );
 
 Map<String, dynamic> _$BranchChatMessageExportToJson(
@@ -111,4 +114,5 @@ Map<String, dynamic> _$BranchChatMessageExportToJson(
       'depth': instance.depth,
       'branchPath': instance.branchPath,
       'parentMessageId': instance.parentMessageId,
+      'characterId': instance.characterId,
     };

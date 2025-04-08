@@ -3,6 +3,7 @@ import 'package:objectbox/objectbox.dart';
 import '../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../common/llm_spec/constant_llm_enum.dart';
 import 'branch_chat_message.dart';
+import 'character_card.dart';
 
 @Entity()
 class BranchChatSession {
@@ -17,11 +18,18 @@ class BranchChatSession {
   String? llmSpecJson;
   String? modelTypeStr;
 
+  // 角色相关字段
+  String? characterId; // 会话使用的角色ID，如果不是角色会话则为null
+  String? characterJson; // 序列化后的角色数据，用于存储角色信息
+
   @Transient() // 标记为非持久化字段
   CusBriefLLMSpec? _llmSpec;
 
   @Transient() // 标记为非持久化字段
   LLModelType? _modelType;
+
+  @Transient() // 标记为非持久化字段
+  CharacterCard? _character; // 运行时角色对象
 
   // Getter 和 Setter
   CusBriefLLMSpec get llmSpec {
@@ -54,6 +62,33 @@ class BranchChatSession {
     modelTypeStr = value.toString();
   }
 
+  // 角色的Getter和Setter
+  CharacterCard? get character {
+    if (_character == null && characterJson != null) {
+      try {
+        final Map<String, dynamic> decoded = jsonDecode(characterJson!);
+        _character = CharacterCard.fromJson(decoded);
+      } catch (e) {
+        _character = null;
+      }
+    }
+    return _character;
+  }
+
+  set character(CharacterCard? value) {
+    _character = value;
+    characterId = value?.characterId;
+    if (value != null) {
+      try {
+        characterJson = jsonEncode(value.toJson());
+      } catch (e) {
+        characterJson = null;
+      }
+    } else {
+      characterJson = null;
+    }
+  }
+
   @Backlink('session')
   final messages = ToMany<BranchChatMessage>();
 
@@ -65,13 +100,21 @@ class BranchChatSession {
     required this.updateTime,
     this.llmSpecJson,
     this.modelTypeStr,
-  });
+    this.characterId,
+    this.characterJson,
+    CharacterCard? character,
+  }) {
+    if (character != null) {
+      this.character = character;
+    }
+  }
 
   // 添加命名构造函数用于创建新会话
   factory BranchChatSession.create({
     required String title,
     required CusBriefLLMSpec llmSpec,
     required LLModelType modelType,
+    CharacterCard? character,
     DateTime? createTime,
     DateTime? updateTime,
   }) {
@@ -79,6 +122,7 @@ class BranchChatSession {
       title: title,
       createTime: createTime ?? DateTime.now(),
       updateTime: updateTime ?? DateTime.now(),
+      character: character,
     );
     session.llmSpec = llmSpec;
     session.modelType = modelType;
