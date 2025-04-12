@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:get_storage/get_storage.dart';
 
 import '../common/llm_spec/constant_llm_enum.dart';
 import '../common/llm_spec/cus_brief_llm_model.dart';
+import '../views/brief_ai_assistant/branch_chat/components/message_color_config.dart';
 
 final box = GetStorage();
 
@@ -183,5 +186,26 @@ class MyGetStorage {
   // 获取缓存的背景透明度
   double? getCachedBackgroundOpacity() {
     return _cachedBackgroundOpacity;
+  }
+
+  // 2025-04-11 用户自行配置的消息体颜色
+  static const _key = 'message_color_config';
+
+  Future<void> saveConfig(MessageColorConfig config) async {
+    await box.write(_key, json.encode(config.toMap()));
+  }
+
+  Future<MessageColorConfig> loadConfig() async {
+    final configString = box.read(_key);
+
+    if (configString != null) {
+      try {
+        return MessageColorConfig.fromMap(json.decode(configString));
+      } catch (e) {
+        return MessageColorConfig.defaultConfig();
+      }
+    }
+
+    return MessageColorConfig.defaultConfig();
   }
 }

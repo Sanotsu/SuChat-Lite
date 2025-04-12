@@ -237,10 +237,23 @@ class CusMarkdownRenderer {
       return _buildLatexTable(tex);
     }
 
+    final controller = ScrollController();
+
     final child =
         inline
             ? Math.tex(tex, textStyle: textStyle)
-            : _buildMultiLineLatex(context, tex, textStyle);
+            // : _buildMultiLineLatex(context, tex, textStyle);
+            : Padding(
+              padding: EdgeInsets.all(8.sp),
+              child: Scrollbar(
+                controller: controller,
+                child: SingleChildScrollView(
+                  controller: controller,
+                  scrollDirection: Axis.horizontal,
+                  child: Math.tex(tex, textStyle: textStyle),
+                ),
+              ),
+            );
 
     return InkWell(
       onTap: () => debugPrint("LaTeX content: $tex"),
@@ -251,30 +264,24 @@ class CusMarkdownRenderer {
     );
   }
 
-  Widget _buildMultiLineLatex(
-    BuildContext context,
-    String tex,
-    TextStyle? textStyle,
-  ) {
-    final controller = ScrollController();
-    return Padding(
-      padding: EdgeInsets.all(0.sp),
-      child: Material(
-        color: Theme.of(context).colorScheme.onInverseSurface,
-        child: Padding(
-          padding: EdgeInsets.all(8.sp),
-          child: Scrollbar(
-            controller: controller,
-            child: SingleChildScrollView(
-              controller: controller,
-              scrollDirection: Axis.horizontal,
-              child: Math.tex(tex, textStyle: textStyle),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  // Widget _buildMultiLineLatex(
+  //   BuildContext context,
+  //   String tex,
+  //   TextStyle? textStyle,
+  // ) {
+  //   final controller = ScrollController();
+  //   return Padding(
+  //     padding: EdgeInsets.all(8.sp),
+  //     child: Scrollbar(
+  //       controller: controller,
+  //       child: SingleChildScrollView(
+  //         controller: controller,
+  //         scrollDirection: Axis.horizontal,
+  //         child: Math.tex(tex, textStyle: textStyle),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildLatexTable(String tex) {
     final tableString =

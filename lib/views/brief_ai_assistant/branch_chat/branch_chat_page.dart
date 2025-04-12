@@ -27,6 +27,7 @@ import '../../../services/chat_service.dart';
 import '../../../services/cus_get_storage.dart';
 
 import 'components/draggable_character_avatar_preview.dart';
+import 'components/message_color_config.dart';
 import 'pages/character_list_page.dart';
 import '../_chat_components/_small_tool_widgets.dart';
 import '../_chat_pages/chat_export_import_page.dart';
@@ -148,6 +149,8 @@ class _BranchChatPageState extends State<BranchChatPage>
   // 桌面端侧边栏状态
   bool isSidebarVisible = false;
 
+  late MessageColorConfig _colorConfig;
+
   ///******************************************* */
   ///
   /// 在构建UI前，都是初始化和工具的方法
@@ -242,6 +245,9 @@ class _BranchChatPageState extends State<BranchChatPage>
   /// 初始化方法(初始化模型列表、最新会话)
   Future<void> initialize() async {
     try {
+      // 初始化消息体颜色
+      await _loadColorConfig();
+
       // 初始化模型列表
       await initModels();
 
@@ -257,6 +263,18 @@ class _BranchChatPageState extends State<BranchChatPage>
         setState(() => isLoading = false);
       }
     }
+  }
+
+  Future<void> _loadColorConfig() async {
+    final config = await MyGetStorage().loadConfig();
+
+    print("加载颜色配置-aiNormalTextColor :${config.aiNormalTextColor}");
+    print("加载颜色配置-aiThinkingTextColor:${config.aiThinkingTextColor}");
+    print("加载颜色配置-userTextColor:${config.userTextColor}");
+
+    setState(() {
+      _colorConfig = config;
+    });
   }
 
   initModels() async {
@@ -516,12 +534,17 @@ class _BranchChatPageState extends State<BranchChatPage>
         buildPopupMenuButton(),
 
         IconButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => CharacterListPage()),
-            );
-          },
+          onPressed:
+              !isStreaming
+                  ? () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CharacterListPage(),
+                      ),
+                    );
+                  }
+                  : null,
           tooltip: '角色管理',
           icon: Icon(Icons.people),
         ),
@@ -686,6 +709,17 @@ class _BranchChatPageState extends State<BranchChatPage>
           handleAddModel();
         } else if (value == 'export_import') {
           navigateToExportImportPage();
+        } else if (value == 'message_color') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const MessageColorSettingsPage(),
+            ),
+          ).then((value) async {
+            await _loadColorConfig(); // 返回时重新加载配置
+
+            await initialize();
+          });
         }
       },
       itemBuilder:
@@ -727,6 +761,12 @@ class _BranchChatPageState extends State<BranchChatPage>
               "export_import",
               "对话备份",
               Icons.import_export,
+            ),
+            buildCusPopupMenuItem(
+              context,
+              "message_color",
+              "字体颜色",
+              Icons.three_mp,
             ),
           ],
     );
@@ -1145,6 +1185,7 @@ class _BranchChatPageState extends State<BranchChatPage>
                   // 简洁模式不显示头像
                   isShowAvatar: !isBriefDisplay,
                   character: currentCharacter,
+                  colorConfig: _colorConfig,
                 ),
               ),
               // 为分支操作添加条件渲染，避免不必要的构建
@@ -2002,7 +2043,7 @@ class _BranchChatPageState extends State<BranchChatPage>
                 icon: Icon(Icons.arrow_circle_down_outlined),
                 onPressed: resetContentHeight,
               ),
-              // 2025-04-11？？？这个桌面的不设小一点显示滚动到底部按钮后新开对话按钮位置会变化
+            // 2025-04-11？？？这个桌面的不设小一点显示滚动到底部按钮后新开对话按钮位置会变化
             if (!showScrollToBottom)
               SizedBox(width: ScreenHelper.isDesktop() ? 40 : 48),
           ],

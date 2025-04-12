@@ -10,6 +10,7 @@ import '../../../../models/brief_ai_tools/branch_chat/branch_chat_message.dart';
 import '../../../../models/brief_ai_tools/branch_chat/character_card.dart';
 import '../../_chat_components/_small_tool_widgets.dart';
 import '../../../../common/components/cus_markdown_renderer.dart';
+import 'message_color_config.dart';
 
 class BranchMessageItem extends StatefulWidget {
   // 用于展示的消息
@@ -23,6 +24,8 @@ class BranchMessageItem extends StatefulWidget {
   // 长按消息后，点击了消息体处的回调
   final Function(BranchChatMessage, Offset)? onLongPress;
 
+  final MessageColorConfig? colorConfig;
+
   const BranchMessageItem({
     super.key,
     required this.message,
@@ -30,6 +33,7 @@ class BranchMessageItem extends StatefulWidget {
     this.isUseBgImage = false,
     this.isShowAvatar = true,
     this.character,
+    this.colorConfig, // 新增颜色配置参数
   });
 
   @override
@@ -59,6 +63,25 @@ class _BranchMessageItemState extends State<BranchMessageItem>
 
     _mainAxisAlignment =
         _isUser ? MainAxisAlignment.end : MainAxisAlignment.start;
+  }
+
+  // 获取文本颜色
+  Color _getTextColor() {
+    // 如果有传入的配置，优先使用
+    if (widget.colorConfig != null) {
+      if (_isUser) {
+        return widget.colorConfig!.userTextColor;
+      } else {
+        return widget.colorConfig!.aiNormalTextColor;
+      }
+    }
+
+    // 否则使用默认逻辑
+    return widget.message.role == CusRole.user.name
+        ? (widget.isUseBgImage == true ? Colors.blue : Colors.white)
+        : widget.message.role == CusRole.system.name
+        ? Colors.grey
+        : Colors.black;
   }
 
   @override
@@ -177,14 +200,7 @@ class _BranchMessageItemState extends State<BranchMessageItem>
 
   // 对话消息正文部分
   Widget _buildMessageContent(BuildContext context) {
-    Color textColor =
-        widget.message.role == CusRole.user.name
-            ? widget.isUseBgImage == true
-                ? Colors.blue
-                : Colors.white
-            : widget.message.role == CusRole.system.name
-            ? Colors.grey
-            : Colors.black;
+    final textColor = _getTextColor();
     Color bgColor = _isUser ? Colors.blue : Colors.grey.shade100;
 
     return Container(
@@ -225,7 +241,10 @@ class _BranchMessageItemState extends State<BranchMessageItem>
                     )
                     : null,
             child: RepaintBoundary(
-              child: buildCusMarkdown(widget.message.content),
+              child: buildCusMarkdown(
+                widget.message.content,
+                textColor: textColor,
+              ),
             ),
           ),
         ],
@@ -235,6 +254,9 @@ class _BranchMessageItemState extends State<BranchMessageItem>
 
   // DS 的 R 系列有深度思考部分，单独展示
   Widget _buildThinkingProcess() {
+    final thinkingColor =
+        widget.colorConfig?.aiThinkingTextColor ?? Colors.grey;
+
     return Container(
       padding: EdgeInsets.only(bottom: 8),
       child: ExpansionTile(
@@ -255,7 +277,7 @@ class _BranchMessageItemState extends State<BranchMessageItem>
             child: RepaintBoundary(
               child: buildCusMarkdown(
                 widget.message.reasoningContent ?? '',
-                textColor: Colors.grey,
+                textColor: thinkingColor,
               ),
             ),
           ),
