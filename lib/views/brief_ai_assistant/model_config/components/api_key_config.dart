@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../../common/utils/screen_helper.dart';
 import '../../../../services/cus_get_storage.dart';
 
 class ApiKeyConfig extends StatefulWidget {
@@ -95,63 +95,301 @@ class _ApiKeyConfigState extends State<ApiKeyConfig> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: EdgeInsets.symmetric(vertical: 16.sp),
+    return ScreenHelper.isDesktop()
+        ? _buildDesktopLayout()
+        : _buildMobileLayout();
+  }
+
+  // 桌面端布局
+  Widget _buildDesktopLayout() {
+    return Padding(
+      padding: EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(),
+          SizedBox(height: 16),
+          Expanded(
+            child: Card(
+              elevation: 2,
+              color: Colors.white,
+              shadowColor: Colors.black.withValues(alpha: 0.05),
+              child:
+                  _apiKeys.isEmpty
+                      ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.vpn_key_outlined,
+                              size: 64,
+                              color: Colors.grey.withValues(alpha: 0.5),
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              '暂无配置的 API Key',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            SizedBox(height: 24),
+                            ElevatedButton.icon(
+                              icon: Icon(Icons.upload_file),
+                              label: Text('导入配置'),
+                              onPressed: _importFromJson,
+                            ),
+                          ],
+                        ),
+                      )
+                      : ListView(
+                        padding: EdgeInsets.all(12),
+                        children: _buildApiKeyList(),
+                      ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 移动端布局
+  Widget _buildMobileLayout() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text(
-              'API Key 配置',
-              style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
-            ),
-            const Spacer(),
-            IconButton(
-              icon: Icon(
-                _obscureText ? Icons.visibility_off : Icons.visibility,
-              ),
-              onPressed: () => setState(() => _obscureText = !_obscureText),
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
-              onPressed: _clearAllKeys,
-            ),
-            IconButton(
-              icon: const Icon(Icons.upload_file),
-              onPressed: _importFromJson,
-            ),
-          ],
+        _buildHeader(),
+        SizedBox(height: 16),
+        Expanded(
+          child: ListView(
+            padding: EdgeInsets.symmetric(vertical: 1),
+            children: [
+              if (_apiKeys.isEmpty)
+                Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.vpn_key_outlined,
+                          size: 48,
+                          color: Colors.grey.withValues(alpha: 0.5),
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          '暂无配置的 API Key',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                ..._buildApiKeyList(),
+            ],
+          ),
         ),
-        if (_apiKeys.isEmpty)
-          Padding(
-            padding: EdgeInsets.all(32.sp),
-            child: const Center(child: Text('暂无配置的 API Key')),
-          )
-        else
-          ..._buildApiKeyList(),
+      ],
+    );
+  }
+
+  // 标题栏
+  Widget _buildHeader() {
+    return Row(
+      children: [
+        Padding(
+          padding: EdgeInsets.all(8),
+          child: Text(
+            'API Key 配置',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+        ),
+        const Spacer(),
+        IconButton(
+          icon: const Icon(Icons.add_circle_outline),
+          onPressed: () => _showAddEditKeyDialog(context),
+          tooltip: '添加新密钥',
+        ),
+        IconButton(
+          icon: Icon(_obscureText ? Icons.visibility_off : Icons.visibility),
+          onPressed: () => setState(() => _obscureText = !_obscureText),
+          tooltip: _obscureText ? '显示密钥' : '隐藏密钥',
+        ),
+        IconButton(
+          icon: const Icon(Icons.delete_outline),
+          onPressed: _clearAllKeys,
+          tooltip: '清除所有密钥',
+        ),
+        IconButton(
+          icon: const Icon(Icons.upload_file),
+          onPressed: _importFromJson,
+          tooltip: '导入配置',
+        ),
       ],
     );
   }
 
   List<Widget> _buildApiKeyList() {
     return _apiKeys.entries.map((entry) {
-      return Card(
+      return Container(
+        decoration: BoxDecoration(
+          // 仅顶部边框
+          border: Border(top: BorderSide(color: Colors.grey[300]!, width: 1)),
+        ),
         child: ListTile(
-          title: Text(entry.key),
-          subtitle: Text(
-            _obscureText ? '••••••••' : entry.value,
-            style: const TextStyle(color: Colors.green),
+          contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          title: Text(
+            entry.key,
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
           ),
-          trailing: IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: () async {
-              final newKeys = Map<String, String>.from(_apiKeys)
-                ..remove(entry.key);
-              await MyGetStorage().setUserAKMap(newKeys);
-              _loadApiKeys();
-            },
+          subtitle: Padding(
+            padding: EdgeInsets.only(top: 4),
+            child: Text(
+              _obscureText ? '••••••••••••••••' : entry.value,
+              style: TextStyle(
+                color: Colors.green.shade700,
+                fontFamily: 'monospace',
+                fontSize: 13,
+              ),
+            ),
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: Icon(Icons.edit, color: Colors.blue.shade300, size: 20),
+                onPressed:
+                    () => _showAddEditKeyDialog(
+                      context,
+                      existingPlatform: entry.key,
+                      existingKey: entry.value,
+                    ),
+                tooltip: '编辑此密钥',
+              ),
+              IconButton(
+                icon: Icon(Icons.delete, color: Colors.red.shade300, size: 20),
+                onPressed: () async {
+                  final newKeys = Map<String, String>.from(_apiKeys)
+                    ..remove(entry.key);
+                  await MyGetStorage().setUserAKMap(newKeys);
+                  _loadApiKeys();
+                },
+                tooltip: '删除此密钥',
+              ),
+            ],
           ),
         ),
       );
     }).toList();
+  }
+
+  // 显示添加/编辑API Key的对话框
+  Future<void> _showAddEditKeyDialog(
+    BuildContext context, {
+    String? existingPlatform,
+    String? existingKey,
+  }) async {
+    final isDesktop = ScreenHelper.isDesktop();
+    final isEditing = existingPlatform != null;
+
+    final platformController = TextEditingController(
+      text: existingPlatform ?? '',
+    );
+    final keyController = TextEditingController(text: existingKey ?? '');
+    bool showKey = false;
+
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text(isEditing ? '编辑 API Key' : '添加新 API Key'),
+              content: SizedBox(
+                width: isDesktop ? 640 : double.infinity,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: platformController,
+                      decoration: InputDecoration(
+                        labelText: '平台名称',
+                        hintText: '例如: openai, anthropic, gemini',
+                        border: OutlineInputBorder(),
+                        enabled: !isEditing, // 编辑时不允许修改平台名称
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    TextField(
+                      controller: keyController,
+                      obscureText: !showKey,
+
+                      minLines: 1,
+                      decoration: InputDecoration(
+                        labelText: 'API Key',
+                        border: OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            showKey ? Icons.visibility_off : Icons.visibility,
+                          ),
+                          onPressed: () => setState(() => showKey = !showKey),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('取消'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final platform = platformController.text.trim();
+                    final key = keyController.text.trim();
+
+                    if (platform.isEmpty || key.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('平台名称和API Key不能为空')),
+                      );
+                      return;
+                    }
+
+                    Navigator.pop(context, {platform: key});
+                  },
+                  child: Text(isEditing ? '保存' : '添加'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result != null && result.isNotEmpty) {
+      final platform = result.keys.first;
+      final key = result.values.first;
+
+      // 更新或添加新的API Key
+      final newKeys = Map<String, String>.from(_apiKeys);
+
+      if (isEditing && platform != existingPlatform) {
+        // 如果编辑时更改了平台名称（虽然UI禁止了这种情况），则先删除旧的
+        newKeys.remove(existingPlatform);
+      }
+
+      newKeys[platform] = key;
+      await MyGetStorage().setUserAKMap(newKeys);
+      _loadApiKeys();
+
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(isEditing ? 'API Key已更新' : '新API Key已添加')),
+      );
+    }
   }
 }

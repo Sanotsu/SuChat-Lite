@@ -5,6 +5,7 @@ import 'package:docx_to_text/docx_to_text.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_charset_detector/flutter_charset_detector.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -18,6 +19,7 @@ import '../../../common/components/tool_widget.dart';
 import '../../../common/llm_spec/constant_llm_enum.dart';
 import '../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../common/utils/document_parser.dart';
+import '../../../common/utils/screen_helper.dart';
 import '../../../common/utils/tools.dart';
 
 // 定义消息数据类
@@ -40,6 +42,8 @@ class MessageData {
   });
 }
 
+/// 输入栏组件
+/// 2025-04-10 桌面端不支持语音输入和拍照
 class ChatInputBar extends StatefulWidget {
   final TextEditingController controller;
   final Function(MessageData) onSend;
@@ -111,12 +115,13 @@ class _ChatInputBarState extends State<ChatInputBar> {
             type: 'upload_image',
             onTap: () => _handleImagePick(ImageSource.gallery),
           ),
-          ToolItem(
-            icon: Icons.camera_alt,
-            label: '拍照',
-            type: 'take_photo',
-            onTap: () => _handleImagePick(ImageSource.camera),
-          ),
+          if (!ScreenHelper.isDesktop())
+            ToolItem(
+              icon: Icons.camera_alt,
+              label: '拍照',
+              type: 'take_photo',
+              onTap: () => _handleImagePick(ImageSource.camera),
+            ),
         ]);
         break;
       case LLModelType.audio:
@@ -323,27 +328,17 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
         if (isLoadingDocument || _selectedFile != null)
           Container(
-            height: 100.sp,
+            height: 100,
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey, width: 1.sp),
+              border: Border.all(color: Colors.grey, width: 1),
             ),
             child: buildFilePreviewArea(),
           ),
 
         /// 输入栏
         Container(
-          padding: EdgeInsets.symmetric(vertical: 4.sp),
-          decoration: BoxDecoration(
-            color: Colors.transparent,
-            // color: Colors.white,
-            // boxShadow: [
-            //   BoxShadow(
-            //     color: Colors.grey.withOpacity(0.2),
-            //     blurRadius: 4,
-            //     offset: const Offset(0, -2),
-            //   ),
-            // ],
-          ),
+          padding: EdgeInsets.symmetric(vertical: 4),
+          decoration: BoxDecoration(color: Colors.transparent),
           child: Row(
             children: [
               /// 工具栏切换按钮
@@ -383,7 +378,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
         /// 工具栏
         if (_showToolbar && _toolItems.isNotEmpty)
           Container(
-            padding: EdgeInsets.symmetric(vertical: 4.sp),
+            padding: EdgeInsets.symmetric(vertical: 4),
             decoration: BoxDecoration(
               color: Colors.transparent,
               border: Border(top: BorderSide(color: Colors.grey[300]!)),
@@ -392,18 +387,6 @@ class _ChatInputBarState extends State<ChatInputBar> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [..._toolItems.map((tool) => _buildToolButton(tool))],
             ),
-            // child: SingleChildScrollView(
-            //   scrollDirection: Axis.horizontal,
-            //   child: Row(
-            //     mainAxisAlignment: MainAxisAlignment.start,
-            //     children:
-            //         _toolItems.map((tool) => _buildToolButton(tool)).toList(),
-            //     // [
-            //     //   _buildVoiceModeButton(),
-            //     //   ..._toolItems.map((tool) => _buildToolButton(tool)),
-            //     // ],
-            //   ),
-            // ),
           ),
       ],
     );
@@ -414,27 +397,27 @@ class _ChatInputBarState extends State<ChatInputBar> {
     _notifyHeightChange();
 
     return Container(
-      height: 100.sp,
-      padding: EdgeInsets.symmetric(vertical: 8.sp),
+      height: 100,
+      padding: EdgeInsets.symmetric(vertical: 8),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: _selectedImages!.length,
         itemBuilder: (context, index) {
           return Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4.sp),
+            padding: EdgeInsets.symmetric(horizontal: 4),
             child: Stack(
               children: [
                 Image.file(
                   File(_selectedImages![index].path),
-                  height: 80.sp,
-                  width: 80.sp,
+                  height: 80,
+                  width: 80,
                   fit: BoxFit.cover,
                 ),
                 Positioned(
                   right: -16,
                   top: -16,
                   child: IconButton(
-                    icon: Icon(Icons.close, size: 20.sp, color: Colors.blue),
+                    icon: Icon(Icons.close, size: 20, color: Colors.blue),
                     onPressed: () {
                       setState(() {
                         _selectedImages!.removeAt(index);
@@ -479,7 +462,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                         Text(
                           _selectedFile?.name ?? "",
                           maxLines: 2,
-                          style: TextStyle(fontSize: 12.sp),
+                          style: TextStyle(fontSize: 12),
                         ),
                         RichText(
                           softWrap: true,
@@ -491,21 +474,21 @@ class _ChatInputBarState extends State<ChatInputBar> {
                                 text: formatFileSize(_selectedFile?.size ?? 0),
                                 style: TextStyle(
                                   color: Colors.black,
-                                  fontSize: 12.sp,
+                                  fontSize: 12,
                                 ),
                               ),
                               TextSpan(
                                 text: " 文档解析完成 ",
                                 style: TextStyle(
                                   color: Colors.blue,
-                                  fontSize: 15.sp,
+                                  fontSize: 15,
                                 ),
                               ),
                               TextSpan(
                                 text: "共有 ${fileContent.length} 字符",
                                 style: TextStyle(
                                   color: Colors.black,
-                                  fontSize: 12.sp,
+                                  fontSize: 12,
                                 ),
                               ),
                             ],
@@ -523,7 +506,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
         ),
         if (_selectedFile != null)
           SizedBox(
-            width: 48.sp,
+            width: 48,
             child: IconButton(
               onPressed: () {
                 setState(() {
@@ -552,11 +535,11 @@ class _ChatInputBarState extends State<ChatInputBar> {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20.sp),
+                padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('解析后文档内容预览', style: TextStyle(fontSize: 18.sp)),
+                    Text('解析后文档内容预览', style: TextStyle(fontSize: 18)),
                     TextButton(
                       child: const Text('关闭'),
                       onPressed: () {
@@ -567,11 +550,11 @@ class _ChatInputBarState extends State<ChatInputBar> {
                   ],
                 ),
               ),
-              Divider(height: 2.sp, thickness: 2.sp),
+              Divider(height: 2, thickness: 2),
               Expanded(
                 child: SingleChildScrollView(
                   child: Padding(
-                    padding: EdgeInsets.all(10.sp),
+                    padding: EdgeInsets.all(10),
                     // 2025-03-22 这里解析出来的内容可能包含非法字符，所以就算使用Text或者Text.rich，都会报错
                     // 使用MarkdownBody也会报错，但能显示出来，上面是无法显示
                     child:
@@ -593,23 +576,25 @@ class _ChatInputBarState extends State<ChatInputBar> {
     );
   }
 
-  // 切换语音输入或文本输入按钮
+  // 切换语音输入或文本输入按钮（桌面端显示键盘图标，不支持切换）
   Widget _buildVoiceModeButton() {
-    return IconButton(
-      icon: Icon(
-        _isVoiceMode ? Icons.keyboard : Icons.keyboard_voice,
-        size: 20.sp,
-      ),
-      onPressed:
-          widget.isStreaming
-              ? null
-              : () async {
-                if (!_isVoiceMode && !await _checkPermissions()) {
-                  return;
-                }
-                setState(() => _isVoiceMode = !_isVoiceMode);
-              },
-    );
+    return ScreenHelper.isMobile()
+        ? IconButton(
+          icon: Icon(
+            _isVoiceMode ? Icons.keyboard : Icons.keyboard_voice,
+            size: 20,
+          ),
+          onPressed:
+              widget.isStreaming
+                  ? null
+                  : () async {
+                    if (!_isVoiceMode && !await _checkPermissions()) {
+                      return;
+                    }
+                    setState(() => _isVoiceMode = !_isVoiceMode);
+                  },
+        )
+        : Icon(Icons.keyboard, size: 20);
   }
 
   // 输入区域
@@ -669,48 +654,67 @@ class _ChatInputBarState extends State<ChatInputBar> {
       );
 
       return Container(
-        height: 58.sp,
+        height: 58,
         decoration: BoxDecoration(
           // color: Colors.white,
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.grey, width: 1.sp),
+          border: Border.all(color: Colors.grey, width: 1),
         ),
         child: Row(
           children: [
             _buildVoiceModeButton(),
             Expanded(child: smButton),
-            // 占位宽度，眼睛看的，大概让“按住说话”几个字居中显示
-            SizedBox(width: 40.sp),
+            // 占位宽度，眼睛看的，大概让"按住说话"几个字居中显示
+            SizedBox(width: 40),
           ],
         ),
       );
     } else {
-      return TextField(
-        controller: widget.controller,
-        focusNode: widget.focusNode,
-        enabled: !widget.isStreaming,
-        maxLines: 3,
-        minLines: 1,
-        onChanged: (value) {
-          _notifyHeightChange();
+      return Focus(
+        onKeyEvent: (node, event) {
+          // 仅在桌面平台上处理特殊的键盘事件
+          if (ScreenHelper.isDesktop() &&
+              event is KeyDownEvent &&
+              event.logicalKey == LogicalKeyboardKey.enter) {
+            // 检查是否按下了Shift键
+            final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+
+            // 如果按下Shift键则执行换行（让事件继续传递）
+            // 如果未按下Shift键则发送消息
+            if (!isShiftPressed) {
+              _handleSend();
+              return KeyEventResult.handled; // 阻止默认换行
+            }
+          }
+          return KeyEventResult.ignored; // 其他情况或移动平台上忽略
         },
-        decoration: InputDecoration(
-          hintText: widget.isEditing ? '编辑消息...' : '输入消息...',
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
-          prefixIcon:
-              (widget.isEditing && widget.onCancel != null)
-                  ? IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () {
-                      setState(() {
-                        _clearSelectedMedia();
-                      });
-                      widget.onCancel?.call();
-                    },
-                    tooltip: '取消编辑',
-                  )
-                  : _buildVoiceModeButton(),
+        child: TextField(
+          controller: widget.controller,
+          focusNode: widget.focusNode,
+          enabled: !widget.isStreaming,
+          maxLines: 3,
+          minLines: 1,
+          onChanged: (value) {
+            _notifyHeightChange();
+          },
+          decoration: InputDecoration(
+            hintText: widget.isEditing ? '编辑消息...' : '输入消息...',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
+            prefixIcon:
+                (widget.isEditing && widget.onCancel != null)
+                    ? IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () {
+                        setState(() {
+                          _clearSelectedMedia();
+                        });
+                        widget.onCancel?.call();
+                      },
+                      tooltip: '取消编辑',
+                    )
+                    : _buildVoiceModeButton(),
+          ),
         ),
       );
     }
@@ -719,21 +723,21 @@ class _ChatInputBarState extends State<ChatInputBar> {
   // 工具项按钮
   Widget _buildToolButton(ToolItem tool) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 8.sp),
+      padding: EdgeInsets.symmetric(horizontal: 8),
       child: InkWell(
         onTap: tool.onTap,
-        borderRadius: BorderRadius.circular(8.sp),
+        borderRadius: BorderRadius.circular(8),
         child: Container(
           color: Colors.transparent,
-          padding: EdgeInsets.symmetric(horizontal: 12.sp, vertical: 6.sp),
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(tool.icon, size: 24.sp, color: tool.color),
-              SizedBox(height: 4.sp),
+              Icon(tool.icon, size: 24, color: tool.color),
+              SizedBox(height: 4),
               Text(
                 tool.label,
-                style: TextStyle(fontSize: 12.sp, color: tool.color),
+                style: TextStyle(fontSize: 12, color: tool.color),
               ),
             ],
           ),

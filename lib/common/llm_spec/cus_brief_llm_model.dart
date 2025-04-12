@@ -23,19 +23,14 @@ class CusBriefLLMSpec {
   String? name;
   // 是否免费
   bool? isFree;
-  // 每百万token单价，免费没写价格就先写0
-  double? inputPrice;
-  double? outputPrice;
-  // 每张图、每个视频等单个的花费
-  double? costPer;
-  // 上下文长度数值
-  int? contextLength;
-  // 模型发布时间
-  DateTime? gmtRelease;
   // 数据创建的时候(一般排序用)
   DateTime? gmtCreate;
   // 是否是内置模型(内置模型不允许删除)
   bool isBuiltin;
+
+  // 2025-04-11 用户自定义平台模型，直接存入url、model、apikey等关键信息
+  String? baseUrl;
+  String? apiKey;
 
   CusBriefLLMSpec(
     this.platform,
@@ -43,14 +38,11 @@ class CusBriefLLMSpec {
     this.modelType, {
     this.name,
     this.isFree,
-    this.inputPrice,
-    this.outputPrice,
-    this.costPer,
-    this.contextLength,
     required this.cusLlmSpecId,
-    this.gmtRelease,
     this.gmtCreate,
     this.isBuiltin = false,
+    this.baseUrl,
+    this.apiKey,
   });
 
   // 从字符串转
@@ -71,16 +63,12 @@ class CusBriefLLMSpec {
       LLModelType.values.firstWhere((e) => e.toString() == map['modelType']),
       name: map['name'],
       isFree: map['isFree'] == 1 ? true : false,
-      inputPrice: map['inputPrice'],
-      outputPrice: map['outputPrice'],
-      costPer: map['costPer'],
-      contextLength: map['contextLength'],
       cusLlmSpecId: map['cusLlmSpecId'],
-      gmtRelease:
-          map['gmtRelease'] != null ? DateTime.parse(map['gmtRelease']) : null,
       gmtCreate:
           map['gmtCreate'] != null ? DateTime.parse(map['gmtCreate']) : null,
       isBuiltin: map['isBuiltin'] == 1 ? true : false,
+      baseUrl: map['baseUrl'],
+      apiKey: map['apiKey'],
     );
   }
 
@@ -92,13 +80,10 @@ class CusBriefLLMSpec {
       'modelType': modelType.toString(),
       'name': name,
       'isFree': isFree ?? false ? 1 : 0,
-      'inputPrice': inputPrice,
-      'outputPrice': outputPrice,
-      'costPer': costPer,
-      'contextLength': contextLength,
-      'gmtRelease': gmtRelease?.toIso8601String(),
       'gmtCreate': gmtCreate?.toIso8601String(),
       'isBuiltin': isBuiltin ? 1 : 0,
+      'baseUrl': baseUrl,
+      'apiKey': apiKey,
     };
   }
 
@@ -122,13 +107,10 @@ class CusBriefLLMSpec {
           modelType == other.modelType &&
           name == other.name &&
           isFree == other.isFree &&
-          inputPrice == other.inputPrice &&
-          outputPrice == other.outputPrice &&
-          costPer == other.costPer &&
-          contextLength == other.contextLength &&
-          gmtRelease == other.gmtRelease &&
           gmtCreate == other.gmtCreate &&
-          isBuiltin == other.isBuiltin;
+          isBuiltin == other.isBuiltin &&
+          baseUrl == other.baseUrl &&
+          apiKey == other.apiKey;
 
   @override
   int get hashCode =>
@@ -138,11 +120,8 @@ class CusBriefLLMSpec {
       modelType.hashCode ^
       name.hashCode ^
       isFree.hashCode ^
-      inputPrice.hashCode ^
-      outputPrice.hashCode ^
-      costPer.hashCode ^
-      contextLength.hashCode ^
-      gmtRelease.hashCode ^
       gmtCreate.hashCode ^
-      isBuiltin.hashCode;
+      isBuiltin.hashCode ^
+      baseUrl.hashCode ^
+      apiKey.hashCode;
 }

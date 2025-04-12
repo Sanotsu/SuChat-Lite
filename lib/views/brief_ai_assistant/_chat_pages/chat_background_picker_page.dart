@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../services/cus_get_storage.dart';
+import '../../../common/utils/screen_helper.dart';
 import '../_chat_components/_small_tool_widgets.dart';
 
 class ChatBackgroundPickerPage extends StatefulWidget {
@@ -66,6 +66,19 @@ class _ChatBackgroundPickerPageState extends State<ChatBackgroundPickerPage> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    // 获取屏幕尺寸
+    final size = MediaQuery.of(context).size;
+    final isDesktop = ScreenHelper.isDesktop();
+
+    // 计算预览区域高度 - 添加最小/最大高度限制
+    // 最小高度确保在极小窗口也能显示
+    // 最大高度避免在大屏幕上过大
+    final calculatedHeight = isDesktop ? size.height * 0.33 : size.height * 0.3;
+    final previewHeight = calculatedHeight.clamp(
+      150.0, // 最小高度
+      400.0, // 最大高度
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
@@ -95,43 +108,40 @@ class _ChatBackgroundPickerPageState extends State<ChatBackgroundPickerPage> {
           ),
         ],
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 背景预览区域
-          if (_selectedBackground != null)
-            Expanded(
-              child: Container(
+      // 使用SingleChildScrollView包裹内容，处理可能的溢出问题
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 背景预览区域 - 使用固定高度而非Expanded
+            if (_selectedBackground != null)
+              Container(
                 width: double.infinity,
-                margin: EdgeInsets.all(16.sp),
+                height: previewHeight,
+                margin: EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12.sp),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey.shade300),
                 ),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(12.sp),
+                      borderRadius: BorderRadius.circular(12),
                       child: Opacity(
                         opacity: _opacity,
                         child: buildCusImage(
                           _selectedBackground!,
-                          fit: BoxFit.scaleDown,
+                          fit: BoxFit.contain, // 改为contain以避免图片变形
                         ),
                       ),
                     ),
                     Center(
                       child: Container(
                         padding: EdgeInsets.symmetric(
-                          horizontal: 16.sp,
-                          vertical: 8.sp,
+                          horizontal: 16,
+                          vertical: 8,
                         ),
-                        // decoration: BoxDecoration(
-                        //   color: Colors.white.withOpacity(0.7),
-                        //   borderRadius: BorderRadius.circular(8.sp),
-                        // ),
-                        // 用户的字体颜色和AI响应的字体颜色不一样
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -144,6 +154,10 @@ class _ChatBackgroundPickerPageState extends State<ChatBackgroundPickerPage> {
                               '透明度: ${(_opacity * 100).toInt()}%',
                               style: TextStyle(color: Colors.blue),
                             ),
+                            Text(
+                              '透明度: ${(_opacity * 100).toInt()}%',
+                              style: TextStyle(color: Colors.grey),
+                            ),
                           ],
                         ),
                       ),
@@ -151,129 +165,202 @@ class _ChatBackgroundPickerPageState extends State<ChatBackgroundPickerPage> {
                   ],
                 ),
               ),
-            ),
-          Padding(
-            padding: EdgeInsets.all(16.sp),
-            child: Text(
-              '预设背景',
-              style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
-            ),
-          ),
-          SizedBox(
-            height: 120.sp,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: 16.sp),
-              children: [
-                // 无背景选项
-                GestureDetector(
-                  onTap: () => _selectBackground(null),
-                  child: Container(
-                    width: 67.sp, // 120:67 和16:9差不了多少
-                    margin: EdgeInsets.only(right: 12.sp),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(8.sp),
-                      border: Border.all(
-                        color:
-                            _selectedBackground == null
-                                ? Theme.of(context).primaryColor
-                                : Colors.transparent,
-                        width: 2.sp,
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '无背景',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                ),
-                // 默认背景选项
-                ..._defaultBackgrounds.map((bg) => _buildBackgroundItem(bg)),
-              ],
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.all(16.sp),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '自定义背景',
-                  style: TextStyle(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: _pickCustomBackground,
-                  icon: const Icon(Icons.add_photo_alternate),
-                  label: const Text('选择图片'),
-                ),
-              ],
-            ),
-          ),
-          if (_selectedBackground != null) ...[
+
+            // 预设背景部分
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.sp),
+              padding: EdgeInsets.all(16),
               child: Text(
-                '背景透明度',
-                style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
+                '预设背景',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
+            // 改为自适应高度的网格布局，更适合桌面端
+            isDesktop
+                ? _buildDesktopBackgroundGrid()
+                : _buildMobileBackgroundList(),
+
+            // 自定义背景部分 - 修改为更灵活的布局
             Padding(
-              padding: EdgeInsets.all(16.sp),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Slider(
-                      value: _opacity,
-                      min: 0.1,
-                      max: 1.0,
-                      onChanged: (value) {
-                        setState(() {
-                          _opacity = value;
-                        });
-                      },
-                    ),
-                  ),
-                  SizedBox(width: 8.sp),
-                  Text('${(_opacity * 100).toInt()}%'),
-                ],
-              ),
+              padding: EdgeInsets.all(16),
+              child: _buildCustomBackgroundSection(),
             ),
+
+            // 透明度调整部分
+            if (_selectedBackground != null) ...[
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  '背景透明度',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Slider(
+                        value: _opacity,
+                        min: 0.1,
+                        max: 1.0,
+                        onChanged: (value) {
+                          setState(() {
+                            _opacity = value;
+                          });
+                        },
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Text('${(_opacity * 100).toInt()}%'),
+                  ],
+                ),
+              ),
+            ],
+
+            // 为桌面端添加底部空间，避免内容太靠近底部
+            if (isDesktop) SizedBox(height: 32),
           ],
+        ),
+      ),
+    );
+  }
+
+  // 自定义背景部分 - 优化以适应窄屏
+  Widget _buildCustomBackgroundSection() {
+    final isNarrowScreen = MediaQuery.of(context).size.width < 360;
+
+    // 在窄屏上使用垂直布局
+    if (isNarrowScreen) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '自定义背景',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: _pickCustomBackground,
+              icon: const Icon(Icons.add_photo_alternate),
+              label: const Text('选择图片'),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // 在宽屏上使用水平布局
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            '自定义背景',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+        ),
+        ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+          ),
+          onPressed: _pickCustomBackground,
+          icon: const Icon(Icons.add_photo_alternate),
+          label: const Text('选择图片'),
+        ),
+      ],
+    );
+  }
+
+  // 移动端使用水平滚动列表
+  Widget _buildMobileBackgroundList() {
+    return SizedBox(
+      height: 120,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.symmetric(horizontal: 16),
+        children: [
+          // 无背景选项
+          _buildNoBackgroundOption(),
+          // 默认背景选项
+          ..._defaultBackgrounds.map((bg) => _buildBackgroundItem(bg)),
         ],
       ),
     );
   }
 
-  Widget _buildBackgroundItem(String background) {
+  // 桌面端使用网格布局
+  Widget _buildDesktopBackgroundGrid() {
+    final gridItems = [
+      _buildNoBackgroundOption(isGridItem: true),
+      ..._defaultBackgrounds.map(
+        (bg) => _buildBackgroundItem(bg, isGridItem: true),
+      ),
+    ];
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16),
+      child: Wrap(spacing: 16, runSpacing: 16, children: gridItems),
+    );
+  }
+
+  // 无背景选项
+  Widget _buildNoBackgroundOption({bool isGridItem = false}) {
+    final width = isGridItem ? 120.0 : 67.0;
+    final height = isGridItem ? 120.0 : 120.0;
+
+    return GestureDetector(
+      onTap: () => _selectBackground(null),
+      child: Container(
+        width: width,
+        height: height,
+        margin: isGridItem ? EdgeInsets.zero : EdgeInsets.only(right: 12),
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color:
+                _selectedBackground == null
+                    ? Theme.of(context).primaryColor
+                    : Colors.transparent,
+            width: 2,
+          ),
+        ),
+        child: Center(
+          child: Text('无背景', style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackgroundItem(String background, {bool isGridItem = false}) {
     final isSelected = _selectedBackground == background;
+    final width = isGridItem ? 120.0 : 67.0;
+    final height = isGridItem ? 120.0 : 120.0;
 
     return GestureDetector(
       onTap: () => _selectBackground(background),
       child: Container(
-        width: 67.sp,
-        margin: EdgeInsets.only(right: 12.sp),
+        width: width,
+        height: height,
+        margin: isGridItem ? EdgeInsets.zero : EdgeInsets.only(right: 12),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8.sp),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color:
                 isSelected
                     ? Theme.of(context).primaryColor
                     : Colors.transparent,
-            width: 2.sp,
+            width: 2,
           ),
           image: DecorationImage(
             image: AssetImage(background),
-            fit: BoxFit.scaleDown,
+            fit: BoxFit.cover,
           ),
         ),
       ),

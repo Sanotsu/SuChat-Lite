@@ -103,6 +103,9 @@ class ModelManagerService {
           return userKeys[ApiPlatformAKLabel.USER_VOLCESBOT_API_KEY.name]
                   ?.isNotEmpty ??
               false;
+        // 2025-04-11 默认就是自定义模型(云平台不在我预设中)，密钥和地址在模型规格中，直接返回true
+        default:
+          return true;
       }
     }).toList();
   }
@@ -152,23 +155,6 @@ class ModelManagerService {
           (json['modelType'] as String).trim().isEmpty) {
         return false;
       }
-
-      // // 验证必填字段
-      // if (json['model'] == null ||
-      //     json['modelType'] == null ||
-      //     json['name'] == null ||
-      //     json['isFree'] == null) {
-      //   return false;
-      // }
-
-      // // 验证价格字段
-      // if (json['isFree'] == false) {
-      //   if ((json['inputPrice'] == null &&
-      //       json['outputPrice'] == null &&
-      //       json['costPer'] == null)) {
-      //     return false;
-      //   }
-      // }
 
       return true;
     } catch (e) {

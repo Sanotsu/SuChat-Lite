@@ -3,7 +3,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:path/path.dart' as p;
 import 'package:archive/archive_io.dart';
 import 'package:file_picker/file_picker.dart';
@@ -15,6 +14,7 @@ import '../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../common/utils/db_tools/db_brief_ai_tool_helper.dart';
 import '../../../common/utils/db_tools/ddl_brief_ai_tool.dart';
 import '../../../common/utils/db_tools/init_db.dart';
+import '../../../common/utils/screen_helper.dart';
 import '../../../common/utils/tools.dart';
 import '../../../models/brief_ai_tools/branch_chat/branch_chat_export_data.dart';
 import '../../../models/brief_ai_tools/branch_chat/branch_store.dart';
@@ -476,68 +476,301 @@ class _BackupAndRestoreState extends State<BackupAndRestore> {
         actions: [
           IconButton(
             onPressed: () {
-              commonMDHintModalBottomSheet(
+              commonMarkdwonHintDialog(
                 context,
                 "备份恢复说明",
                 note,
-                msgFontSize: 15.sp,
+                msgFontSize: 15,
               );
             },
             icon: const Icon(Icons.info_outline),
+            tooltip: '帮助',
           ),
         ],
       ),
-      body: isLoading ? buildLoader(isLoading) : buildBackupButton(),
+      body:
+          isLoading
+              ? buildLoader(isLoading)
+              : Center(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        _buildHeaderSection(),
+                        const SizedBox(height: 40),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _buildBackupCard(),
+                              SizedBox(width: 20),
+                              _buildRestoreCard(),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                        _buildInfoSection(),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
     );
   }
 
-  buildBackupButton() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Text(tempPermMsg),
-          TextButton.icon(
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) {
-                  return AlertDialog(
-                    title: const Text("全量备份"),
-                    content: const Text("确认导出所有数据?"),
-                    actions: [
-                      TextButton(
-                        onPressed: () {
-                          if (!mounted) return;
-                          Navigator.pop(context, false);
-                        },
-                        child: const Text("取消"),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          if (!mounted) return;
-                          Navigator.pop(context, true);
-                        },
-                        child: const Text("确定"),
-                      ),
-                    ],
-                  );
+  Widget _buildHeaderSection() {
+    return Column(
+      children: [
+        Icon(
+          Icons.import_export,
+          size: 48,
+          color: Theme.of(context).primaryColor,
+        ),
+        const SizedBox(height: 16),
+        Text(
+          "数据备份与恢复",
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).primaryColorDark,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          "保护您的数据安全，随时备份和恢复",
+          style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBackupCard() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          _showBackupConfirmationDialog();
+        },
+        child: Padding(
+          padding: EdgeInsets.all(ScreenHelper.isDesktop() ? 32 : 16.0),
+          child: Column(
+            children: [
+              Icon(Icons.backup, size: 40, color: Colors.blue),
+              const SizedBox(height: 12),
+              Text(
+                "全量备份",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              if (ScreenHelper.isDesktop())
+                Text(
+                  "导出所有数据到备份文件",
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.save_alt, color: Colors.white),
+                label: const Text(
+                  "立即备份",
+                  style: TextStyle(color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.all(12),
+                ),
+                onPressed: () {
+                  _showBackupConfirmationDialog();
                 },
-              ).then((value) {
-                if (value != null && value) exportAllData();
-              });
-            },
-            icon: const Icon(Icons.backup),
-            label: Text("全量备份", style: TextStyle(fontSize: 20.sp)),
+              ),
+            ],
           ),
-          SizedBox(height: 10.sp),
-          TextButton.icon(
-            onPressed: restoreDataFromBackup,
-            icon: const Icon(Icons.restore),
-            label: Text("覆写恢复", style: TextStyle(fontSize: 20.sp)),
-          ),
-        ],
+        ),
       ),
     );
   }
+
+  Widget _buildRestoreCard() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: restoreDataFromBackup,
+        child: Padding(
+          padding: EdgeInsets.all(ScreenHelper.isDesktop() ? 32 : 16.0),
+          child: Column(
+            children: [
+              Icon(Icons.restore, size: 40, color: Colors.green),
+              const SizedBox(height: 12),
+              Text(
+                "覆写恢复",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              if (ScreenHelper.isDesktop())
+                Text(
+                  "从备份文件恢复所有数据",
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.upload_file, color: Colors.white),
+                label: const Text(
+                  "选择文件",
+                  style: TextStyle(color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.all(12),
+                ),
+                onPressed: restoreDataFromBackup,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoSection() {
+    return Column(
+      children: [
+        const Text(
+          "温馨提示",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          "1. 定期备份可防止数据丢失\n"
+          "2. 恢复操作将覆盖现有数据\n",
+          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  void _showBackupConfirmationDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("全量备份"),
+          content: const Text("确认导出所有数据到备份文件？"),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                if (!mounted) return;
+                Navigator.pop(context, false);
+              },
+              child: const Text("取消"),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                if (!mounted) return;
+                Navigator.pop(context, true);
+              },
+              child: const Text("确认备份"),
+            ),
+          ],
+        );
+      },
+    ).then((value) {
+      if (value != null && value) exportAllData();
+    });
+  }
+
+  // @override
+  // Widget build(BuildContext context) {
+  //   return Scaffold(
+  //     appBar: AppBar(
+  //       title: const Text("备份恢复"),
+  //       actions: [
+  //         IconButton(
+  //           onPressed: () {
+  //             commonMDHintModalBottomSheet(
+  //               context,
+  //               "备份恢复说明",
+  //               note,
+  //               msgFontSize: 15,
+  //             );
+  //           },
+  //           icon: const Icon(Icons.info_outline),
+  //         ),
+  //       ],
+  //     ),
+  //     body: isLoading ? buildLoader(isLoading) : buildBackupButton(),
+  //   );
+  // }
+
+  // buildBackupButton() {
+  //   return Center(
+  //     child: Column(
+  //       mainAxisAlignment: MainAxisAlignment.center,
+  //       children: [
+  //         // Text(tempPermMsg),
+  //         TextButton.icon(
+  //           onPressed: () {
+  //             showDialog(
+  //               context: context,
+  //               builder: (context) {
+  //                 return AlertDialog(
+  //                   title: const Text("全量备份"),
+  //                   content: const Text("确认导出所有数据?"),
+  //                   actions: [
+  //                     TextButton(
+  //                       onPressed: () {
+  //                         if (!mounted) return;
+  //                         Navigator.pop(context, false);
+  //                       },
+  //                       child: const Text("取消"),
+  //                     ),
+  //                     TextButton(
+  //                       onPressed: () {
+  //                         if (!mounted) return;
+  //                         Navigator.pop(context, true);
+  //                       },
+  //                       child: const Text("确定"),
+  //                     ),
+  //                   ],
+  //                 );
+  //               },
+  //             ).then((value) {
+  //               if (value != null && value) exportAllData();
+  //             });
+  //           },
+  //           icon: const Icon(Icons.backup),
+  //           label: Text("全量备份", style: TextStyle(fontSize: 20)),
+  //         ),
+  //         SizedBox(height: 10),
+  //         TextButton.icon(
+  //           onPressed: restoreDataFromBackup,
+  //           icon: const Icon(Icons.restore),
+  //           label: Text("覆写恢复", style: TextStyle(fontSize: 20)),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 }

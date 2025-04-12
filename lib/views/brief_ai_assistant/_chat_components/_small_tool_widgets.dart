@@ -2,7 +2,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../common/constants/constants.dart';
@@ -11,15 +10,15 @@ import '../../../models/brief_ai_tools/branch_chat/character_card.dart';
 // 构建空提示
 Widget buildEmptyHint() {
   return Padding(
-    padding: EdgeInsets.all(32.sp),
+    padding: EdgeInsets.all(32),
     child: Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.chat, size: 36.sp, color: Colors.blue),
+          Icon(Icons.chat, size: 36, color: Colors.blue),
           Text(
             '嗨！我是 SuChat',
-            style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w500),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
           ),
           Text('我可以帮您完成很多任务，让我们开始吧！', style: TextStyle(color: Colors.grey)),
         ],
@@ -31,22 +30,22 @@ Widget buildEmptyHint() {
 /// 构建空提示
 Widget buildEmptyMessageHint(CharacterCard? character) {
   return Padding(
-    padding: EdgeInsets.all(8.sp),
+    padding: EdgeInsets.all(8),
     child: Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           SizedBox(
-            width: 60.sp,
-            height: 60.sp,
+            width: 60,
+            height: 60,
             child:
                 character != null
                     ? buildAvatarClipOval(character.avatar)
-                    : Icon(Icons.chat, size: 36.sp, color: Colors.blue),
+                    : Icon(Icons.chat, size: 36, color: Colors.blue),
           ),
           Text(
             '嗨，我是${character?.name ?? "SuChat"}',
-            style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w500),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
           ),
           Text(
             character != null ? '让我们开始聊天吧！' : '我可以帮您完成很多任务，让我们开始吧！',
@@ -69,7 +68,7 @@ void adjustTextScale(
     context: context,
     builder: (BuildContext context) {
       return AlertDialog(
-        title: Text('调整对话列表中文字大小', style: TextStyle(fontSize: 18.sp)),
+        title: Text('调整对话列表中文字大小', style: TextStyle(fontSize: 18)),
         content: StatefulBuilder(
           builder: (BuildContext context, StateSetter setState) {
             return Column(
@@ -125,9 +124,9 @@ Widget buildMenuItemWithIcon({
     mainAxisSize: MainAxisSize.min,
     mainAxisAlignment: MainAxisAlignment.center, // 居中对齐
     children: [
-      Icon(icon, size: 16.sp, color: color),
-      SizedBox(width: 8.sp),
-      Text(text, style: TextStyle(fontSize: 14.sp, color: color)),
+      Icon(icon, size: 16, color: color),
+      SizedBox(width: 8),
+      Text(text, style: TextStyle(fontSize: 14, color: color)),
     ],
   );
 }
@@ -207,7 +206,7 @@ List<Widget> buildReferences(List<Map<String, dynamic>>? refs) {
                   ? _launchUrl(refs?[index]['url']!)
                   : null,
       child: Padding(
-        padding: EdgeInsets.only(top: 8.sp),
+        padding: EdgeInsets.only(top: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -218,11 +217,11 @@ List<Widget> buildReferences(List<Map<String, dynamic>>? refs) {
                 children: [
                   TextSpan(
                     text: '${index + 1}. ${refs?[index]['title']}\t\t\t\t',
-                    style: TextStyle(color: Colors.lightBlue, fontSize: 12.sp),
+                    style: TextStyle(color: Colors.lightBlue, fontSize: 12),
                   ),
                   TextSpan(
                     text: refs?[index]['publish_time'] ?? '',
-                    style: TextStyle(fontSize: 12.sp, color: Colors.grey),
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
               ),
@@ -230,7 +229,7 @@ List<Widget> buildReferences(List<Map<String, dynamic>>? refs) {
             // Text(
             //   '${index + 1}. ${refs?[index]['title']}',
             //   style: TextStyle(
-            //     fontSize: 12.sp,
+            //     fontSize: 12,
             //     color: Theme.of(context).primaryColor,
             //   ),
             //   maxLines: 2,
@@ -238,7 +237,7 @@ List<Widget> buildReferences(List<Map<String, dynamic>>? refs) {
             // ),
             // Text(
             //   refs?[index]['publish_time'] ?? '',
-            //   style: TextStyle(fontSize: 12.sp),
+            //   style: TextStyle(fontSize: 12),
             // ),
           ],
         ),
@@ -256,11 +255,11 @@ Widget buildReferencesExpansionTile(List<Map<String, dynamic>>? refs) {
         children: [
           TextSpan(
             text: '${index + 1}. ${refs?[index]['title']}\t\t\t\t',
-            style: TextStyle(color: Colors.lightBlue, fontSize: 12.sp),
+            style: TextStyle(color: Colors.lightBlue, fontSize: 12),
           ),
           TextSpan(
             text: refs?[index]['publish_time'] ?? '',
-            style: TextStyle(fontSize: 12.sp, color: Colors.grey),
+            style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
         ],
       ),
@@ -268,7 +267,7 @@ Widget buildReferencesExpansionTile(List<Map<String, dynamic>>? refs) {
   );
 
   return Container(
-    padding: EdgeInsets.only(bottom: 8.sp),
+    padding: EdgeInsets.only(bottom: 8),
     child: ExpansionTile(
       title: Text(
         '联网搜索结果',
@@ -287,25 +286,31 @@ Widget buildReferencesExpansionTile(List<Map<String, dynamic>>? refs) {
               _launchUrl(refs[index]['link']!);
             }
           },
-          child: Padding(
-            padding: EdgeInsets.only(top: 8.sp),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Builder(
-                  builder: (context) {
-                    // RichText 组件允许在文本中嵌入其他小部件，并应用文本缩放因子。
-                    // 因为richtext无法自动获取到缩放因子，所以需要手动获取全局的文本缩放因子
-                    return RichText(
-                      // 应用文本缩放因子
-                      textScaler: MediaQuery.of(context).textScaler,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      text: buildText(index),
-                    );
-                  },
-                ),
-              ],
+          child: Align(
+            // 强制左对齐
+            // 2025-04-11 不加这个align，在桌面端不会左对齐而是居中，但移动端却是左对齐的
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Builder(
+                    builder: (context) {
+                      // RichText 组件允许在文本中嵌入其他小部件，并应用文本缩放因子。
+                      // 因为richtext无法自动获取到缩放因子，所以需要手动获取全局的文本缩放因子
+                      return RichText(
+                        // 应用文本缩放因子
+                        textScaler: MediaQuery.of(context).textScaler,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        text: buildText(index),
+                        textAlign: TextAlign.left,
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         ),

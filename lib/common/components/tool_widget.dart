@@ -18,6 +18,7 @@ import 'package:photo_view/photo_view_gallery.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../constants/constants.dart';
+import '../utils/screen_helper.dart';
 import '../utils/tools.dart';
 import 'toast_utils.dart';
 
@@ -73,18 +74,26 @@ commonMarkdwonHintDialog(
   showDialog(
     context: context,
     builder: (context) {
+      // 获取屏幕尺寸
+      final size = MediaQuery.of(context).size;
+      // 计算显示最大宽度
+      final maxWidth = ScreenHelper.isDesktop() ? size.width * 0.6 : size.width;
+
       return AlertDialog(
         title: Text(title),
-        content: SingleChildScrollView(
-          child: MarkdownBody(
-            data: message,
-            selectable: true,
-            // 设置Markdown文本全局样式
-            styleSheet: MarkdownStyleSheet(
-              // 普通段落文本颜色(假定用户输入就是普通段落文本)
-              p: TextStyle(fontSize: msgFontSize, color: Colors.black),
-              // ... 其他级别的标题样式
-              // 可以继续添加更多Markdown元素的样式
+        content: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxWidth),
+          child: SingleChildScrollView(
+            child: MarkdownBody(
+              data: message,
+              selectable: true,
+              // 设置Markdown文本全局样式
+              styleSheet: MarkdownStyleSheet(
+                // 普通段落文本颜色(假定用户输入就是普通段落文本)
+                p: TextStyle(fontSize: msgFontSize, color: Colors.black),
+                // ... 其他级别的标题样式
+                // 可以继续添加更多Markdown元素的样式
+              ),
             ),
           ),
         ),

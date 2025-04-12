@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../common/components/toast_utils.dart';
 
@@ -31,8 +30,8 @@ class TextSelectionDialog extends StatelessWidget {
           ],
         ),
         body: SingleChildScrollView(
-          padding: EdgeInsets.all(16.sp),
-          child: SelectableText(text, style: TextStyle(fontSize: 16.sp)),
+          padding: EdgeInsets.all(16),
+          child: SelectableText(text, style: TextStyle(fontSize: 16)),
         ),
       ),
     );

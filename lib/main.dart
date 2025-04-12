@@ -1,6 +1,7 @@
 // ignore_for_file: avoid_print
 
 import 'dart:async';
+import 'dart:io';
 import 'package:bot_toast/bot_toast.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -12,11 +13,13 @@ import 'package:get_storage/get_storage.dart';
 import 'package:proste_logger/proste_logger.dart';
 
 import 'common/components/toast_utils.dart';
+import 'common/utils/screen_helper.dart';
 import 'services/model_manager_service.dart';
 import 'services/network_service.dart';
 import 'views/home.dart';
 import 'services/cus_get_storage.dart';
 import 'models/brief_ai_tools/branch_chat/branch_store.dart';
+import 'common/components/min_size_layout.dart';
 
 GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -43,33 +46,40 @@ class AppCatchError {
     runZonedGuarded(() {
       //受保护的代码块
       WidgetsFlutterBinding.ensureInitialized();
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.portraitUp,
-      ]).then((_) async {
-        await GetStorage.init();
 
-        // 只在首次启动时初始化内置模型
-        // if (MyGetStorage().isFirstLaunch()) {
-        await ModelManagerService.initBuiltinModelsTest();
-        await MyGetStorage().markLaunched();
-        // }
+      // 仅在移动端限制垂直方向
+      if (Platform.isAndroid || Platform.isIOS) {
+        SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+      }
 
-        // 初始化 ObjectBox
-        final store = await BranchStore.create();
-
-        // 在应用退出时关闭 Store
-        WidgetsBinding.instance.addObserver(
-          LifecycleEventHandler(
-            detached: () async {
-              store.store.close();
-            },
-          ),
-        );
-
-        NetworkStatusService().initialize();
-        runApp(const SuChatApp());
-      });
+      // 继续初始化...
+      initApp();
     }, (error, stack) => catchError(error, stack));
+  }
+
+  void initApp() async {
+    await GetStorage.init();
+
+    // 只在首次启动时初始化内置模型
+    // if (MyGetStorage().isFirstLaunch()) {
+    await ModelManagerService.initBuiltinModelsTest();
+    await MyGetStorage().markLaunched();
+    // }
+
+    // 初始化 ObjectBox
+    final store = await BranchStore.create();
+
+    // 在应用退出时关闭 Store
+    WidgetsBinding.instance.addObserver(
+      LifecycleEventHandler(
+        detached: () async {
+          store.store.close();
+        },
+      ),
+    );
+
+    NetworkStatusService().initialize();
+    runApp(const SuChatApp());
   }
 
   ///对搜集的 异常进行处理  上报等等
@@ -122,9 +132,12 @@ class SuChatApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 获取当前平台的设计尺寸
+    final designSize = ScreenHelper.getDesignSize();
+
     return ScreenUtilInit(
-      designSize: const Size(360, 640), // 1080p / 3 ,单位dp
-      minTextAdapt: true,
+      designSize: designSize,
+      // minTextAdapt: true,
       splitScreenMode: true,
       builder: (_, widget) {
         return MaterialApp(
@@ -133,11 +146,6 @@ class SuChatApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           // 应用导航的观察者，导航有变化的时候可以做一些事？
           // navigatorObservers: [routeObserver],
-          /// 旧版本不用默认3
-          // theme: ThemeData(
-          //   primarySwatch: Colors.blue,
-          //   useMaterial3: false,
-          // ),
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
@@ -162,19 +170,31 @@ class SuChatApp extends StatelessWidget {
           home: const HomePage(),
 
           builder: (context, child) {
+            // 根据平台调整字体缩放
+            child = MediaQuery(
+              ///设置文字大小不随系统设置改变
+              data: MediaQuery.of(context).copyWith(
+                textScaler: TextScaler.linear(
+                  ScreenHelper.isDesktop() ? 1.0 : 1.0,
+                ),
+              ),
+              child: child!,
+            );
+
             // 1 先初始化 bot_toast
             child = BotToastInit()(context, child);
-            // 再初始化 flutter_easyloading
-            // ？？？2025-04-02 我完全不使用EasyLoading，准备删除
-            // 但是如果这里不初始化EasyLoading，BotToast无法正常使用，默认就有一层遮罩，屏幕黑的？
-            // child = EasyLoading.init()(context, child);
 
-            // ？？？2025-04-02 实测分析，只有分支对话和角色对话主页面有问题
-            // 进一步测试，自定义builder给子组件添加了白色，对话主页面效果和之前类似了，
-            // 但其他地方有没有受影响还不清楚
-            // 2025-04-02 实测只有设置了透明度的分支对话角色对话背景的对话主页面有问题
-            // 强制给主页面加上默认白色容器后，看起来就正常了。
-            // child = myBuilder(context, child);
+            // 应用最小尺寸限制
+            child = MinSizeLayout(
+              minWidth: 640,
+              minHeight: 360,
+              child: child,
+            );
+
+            // 针对桌面平台的背景处理
+            if (ScreenHelper.isDesktop()) {
+              child = myBuilder(context, child);
+            }
 
             return child;
           },

@@ -1,7 +1,8 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../../common/utils/screen_helper.dart';
 import '../../../../models/brief_ai_tools/branch_chat/character_card.dart';
 import '../../_chat_components/_small_tool_widgets.dart';
 
@@ -68,24 +69,24 @@ class _CharacterAvatarPreviewState extends State<CharacterAvatarPreview> {
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      left: widget.left.sp,
-      bottom: widget.bottom.sp,
+      left: widget.left,
+      bottom: widget.bottom,
       child: GestureDetector(
         onTap: () => _showFullScreenPreview(context),
         child: Container(
-          width: widget.width.sp,
-          height: widget.height.sp,
+          width: widget.width,
+          height: widget.height,
           decoration: BoxDecoration(
             color: Colors.transparent,
-            borderRadius: BorderRadius.circular(2.sp),
+            borderRadius: BorderRadius.circular(2),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.2),
-                blurRadius: 8.sp,
-                offset: Offset(0, 2.sp),
+                blurRadius: 8,
+                offset: Offset(0, 2),
               ),
             ],
-            border: Border.all(color: Colors.white, width: 2.sp),
+            border: Border.all(color: Colors.white, width: 2),
           ),
           child: buildAvatarClipOval(
             widget.character.avatar,
@@ -97,34 +98,36 @@ class _CharacterAvatarPreviewState extends State<CharacterAvatarPreview> {
   }
 
   void _showFullScreenPreview(BuildContext context) {
-    // 获取屏幕尺寸
-    final screenSize = MediaQuery.of(context).size;
-
-    // // 计算预览窗口的尺寸和位置
-    // final previewWidth = screenSize.width * 0.66;
-    // final previewHeight = 16 / 9 * previewWidth;
-
-    // 如果图片尺寸未加载完成，使用默认宽高
-    final previewWidth = screenSize.width * 0.66;
-    final previewHeight =
-        (_imageHeight != null && _imageWidth != null)
+    // 使用OverlayPortal替代直接的Overlay，以便更好地处理窗口大小变化
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      useSafeArea: false, // 允许全屏显示
+      builder: (BuildContext dialogContext) {
+        // 实时获取屏幕尺寸，确保在窗口大小变化时能正确响应
+        final screenSize = MediaQuery.of(dialogContext).size;
+        
+        // 计算预览窗口的尺寸
+        var previewWidth = screenSize.width * 0.66;
+        var previewHeight = (_imageHeight != null && _imageWidth != null)
             ? (_imageHeight! / _imageWidth!) * previewWidth
             : 16 / 9 * previewWidth;
 
-    // 使用Overlay而不是Dialog，以便可以自定义位置
-    final overlayState = Overlay.of(context);
+        // 桌面端特殊处理
+        if (ScreenHelper.isDesktop()) {
+          previewWidth = min(screenSize.width - 280, screenSize.height) * 0.60;
+          previewHeight = (_imageHeight != null && _imageWidth != null)
+              ? (_imageHeight! / _imageWidth!) * previewWidth
+              : 16 / 9 * previewWidth;
+        }
 
-    // 先声明entry变量
-    late OverlayEntry entry;
-
-    // 然后定义entry
-    entry = OverlayEntry(
-      builder:
-          (context) => Stack(
+        return Material(
+          type: MaterialType.transparency,
+          child: Stack(
             children: [
               // 半透明背景，点击时关闭预览
               GestureDetector(
-                onTap: () => entry.remove(),
+                onTap: () => Navigator.of(dialogContext).pop(),
                 child: Container(
                   color: Colors.black.withValues(alpha: 0.5),
                   width: screenSize.width,
@@ -134,23 +137,19 @@ class _CharacterAvatarPreviewState extends State<CharacterAvatarPreview> {
 
               // 预览窗口，放置在左下角
               Positioned(
-                left: widget.left.sp,
-                bottom: widget.bottom.sp,
+                left: widget.left,
+                bottom: widget.bottom,
                 child: Container(
                   width: previewWidth,
                   height: previewHeight,
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.8),
-                    // borderRadius: BorderRadius.only(
-                    //   topRight: Radius.circular(16.sp),
-                    // ),
                   ),
                   child: Stack(
                     children: [
                       Center(
                         child: Padding(
-                          // 为上面关闭按钮和下面名称留出空间
-                          padding: EdgeInsets.symmetric(vertical: 3.sp),
+                          padding: EdgeInsets.symmetric(vertical: 3),
                           child: buildAvatarClipOval(
                             widget.character.avatar,
                             clipBehavior: Clip.none,
@@ -159,37 +158,22 @@ class _CharacterAvatarPreviewState extends State<CharacterAvatarPreview> {
                       ),
 
                       // 关闭按钮
-                      // ??? 2025-03-18 关闭按钮和角色名称是否可以不显示，改为其他互动？点击空白就关闭遮罩预览了。
                       Positioned(
-                        top: 0.sp,
-                        right: 0.sp,
+                        top: 0,
+                        right: 0,
                         child: IconButton(
                           icon: const Icon(Icons.close),
-                          onPressed: () => entry.remove(),
+                          onPressed: () => Navigator.of(dialogContext).pop(),
                         ),
                       ),
-
-                      // 角色名称
-                      // Positioned(
-                      //   bottom: 8.sp,
-                      //   left: 0,
-                      //   right: 0,
-                      //   child: Center(
-                      //     child: Text(
-                      //       widget.character.name,
-                      //       style: TextStyle(fontSize: 12),
-                      //     ),
-                      //   ),
-                      // ),
                     ],
                   ),
                 ),
               ),
             ],
           ),
+        );
+      },
     );
-
-    // 显示Overlay
-    overlayState.insert(entry);
   }
 }

@@ -88,8 +88,11 @@ Future<bool> requestStoragePermission() async {
         await [Permission.mediaLibrary, Permission.storage].request();
     return (statuses[Permission.mediaLibrary]!.isGranted &&
         statuses[Permission.storage]!.isGranted);
+  } else if (Platform.isLinux || Platform.isMacOS || Platform.isWindows) {
+    // 桌面应用根据系统权限来
+    return true;
   } else {
-    // 除了安卓和ios其他先不考虑
+    // 其他先不考虑
     return false;
   }
 }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../common/components/feature_grid_card.dart';
 
+import '../../common/utils/screen_helper.dart';
 import 'branch_chat/pages/character_list_page.dart';
 import 'image/index.dart';
 import 'model_config/index.dart';
@@ -29,8 +29,8 @@ class _BriefAIToolsState extends State<BriefAITools> {
             // 顶部横幅
             SliverToBoxAdapter(
               child: Container(
-                margin: EdgeInsets.all(8.sp),
-                padding: EdgeInsets.all(16.sp),
+                margin: EdgeInsets.all(8),
+                padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -40,7 +40,7 @@ class _BriefAIToolsState extends State<BriefAITools> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(20.sp),
+                  borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
                       color: theme.primaryColor.withValues(alpha: 0.2),
@@ -61,7 +61,7 @@ class _BriefAIToolsState extends State<BriefAITools> {
                               Text(
                                 "SuChat",
                                 style: TextStyle(
-                                  fontSize: 26.sp,
+                                  fontSize: 26,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                 ),
@@ -85,11 +85,11 @@ class _BriefAIToolsState extends State<BriefAITools> {
                               // ),
                             ],
                           ),
-                          SizedBox(height: 8.sp),
+                          SizedBox(height: 8),
                           Text(
                             "让创意与效率并存，探索AI的无限可能",
                             style: TextStyle(
-                              fontSize: 14.sp,
+                              fontSize: 14,
                               color: Colors.white.withValues(alpha: 0.9),
                             ),
                           ),
@@ -97,16 +97,16 @@ class _BriefAIToolsState extends State<BriefAITools> {
                       ),
                     ),
                     Container(
-                      width: 40.sp,
-                      height: 40.sp,
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(15.sp),
+                        borderRadius: BorderRadius.circular(15),
                       ),
                       child: Icon(
                         Icons.auto_awesome,
                         color: Colors.white,
-                        size: 30.sp,
+                        size: 30,
                       ),
                     ),
                   ],
@@ -117,10 +117,10 @@ class _BriefAIToolsState extends State<BriefAITools> {
             // 免责声明
             SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.sp),
+                padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
                   "所有内容均由人工智能模型生成，无法确保内容的真实性、准确性和完整性，仅供参考，且不代表开发者的态度和观点",
-                  style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -129,22 +129,22 @@ class _BriefAIToolsState extends State<BriefAITools> {
             // 所有功能网格
             SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(16.sp, 24.sp, 16.sp, 8.sp),
+                padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
                 child: Row(
                   children: [
                     Container(
-                      width: 4.sp,
-                      height: 20.sp,
+                      width: 4,
+                      height: 20,
                       decoration: BoxDecoration(
                         color: theme.primaryColor,
-                        borderRadius: BorderRadius.circular(2.sp),
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                    SizedBox(width: 8.sp),
+                    SizedBox(width: 8),
                     Text(
                       "功能列表",
                       style: TextStyle(
-                        fontSize: 18.sp,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -154,13 +154,13 @@ class _BriefAIToolsState extends State<BriefAITools> {
             ),
 
             SliverPadding(
-              padding: EdgeInsets.fromLTRB(16.sp, 16.sp, 16.sp, 0),
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
               sliver: SliverGrid(
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
+                  crossAxisCount: ScreenHelper.isDesktop() ? 4 : 2,
                   childAspectRatio: 0.9,
-                  crossAxisSpacing: 16.sp,
-                  mainAxisSpacing: 16.sp,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
                 ),
                 delegate: SliverChildListDelegate([
                   FeatureGridCard(
@@ -192,7 +192,7 @@ class _BriefAIToolsState extends State<BriefAITools> {
             ),
 
             // 底部间距
-            SliverToBoxAdapter(child: SizedBox(height: 24.sp)),
+            SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
       ),

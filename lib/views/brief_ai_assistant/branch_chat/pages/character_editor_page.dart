@@ -11,8 +11,9 @@ import '../../../../models/brief_ai_tools/branch_chat/character_card.dart';
 import '../../../../models/brief_ai_tools/branch_chat/character_store.dart';
 import '../../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../../services/model_manager_service.dart';
+import '../../../../common/utils/screen_helper.dart';
 import '../../_chat_components/_small_tool_widgets.dart';
-import '../components/model_selector_dialog.dart';
+import '../components/adaptive_model_selector.dart';
 
 class CharacterEditorPage extends StatefulWidget {
   final CharacterCard? character;
@@ -80,17 +81,13 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
     ]);
 
     if (!mounted) return;
-    final result = await showModalBottomSheet<CusBriefLLMSpec>(
+
+    // 使用自适应模型选择器
+    final result = await AdaptiveModelSelector.show(
       context: context,
-      isScrollControlled: true,
-      builder:
-          (context) => SizedBox(
-            height: MediaQuery.of(context).size.height * 0.8,
-            child: ModelSelectorDialog(
-              models: availableModels,
-              selectedModel: _preferredModel,
-            ),
-          ),
+      models: availableModels,
+      selectedModel: _preferredModel,
+      title: '选择角色偏好模型',
     );
 
     if (result != null) {
@@ -179,137 +176,248 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEditing ? '编辑角色' : '创建角色'),
-        actions: [TextButton(onPressed: _saveCharacter, child: Text('保存'))],
+        actions: [
+          if (isSaving)
+            Padding(
+              padding: EdgeInsets.all(10),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.sp,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+              ),
+            ),
+          TextButton(
+            onPressed: isSaving ? null : _saveCharacter,
+            child: Text('保存'),
+          ),
+        ],
       ),
       body: Form(
         key: _formKey,
-        child: ListView(
-          padding: EdgeInsets.all(16.sp),
-          children: [
-            // 头像选择
-            _buildAvatarSelector(),
-            SizedBox(height: 16.sp),
-
-            // 背景选择
-            _buildBackgroundSelector(),
-            SizedBox(height: 16.sp),
-
-            Padding(
-              padding: EdgeInsets.only(left: 8.sp, bottom: 16.sp),
-              child: Text('角色ID: ${widget.character?.id ?? '<等待创建>'}'),
-            ),
-
-            // 基本信息
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: '角色名称*',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return '请输入角色名称';
-                }
-                return null;
-              },
-            ),
-            SizedBox(height: 16.sp),
-
-            TextFormField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(
-                labelText: '角色描述*',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return '请输入角色描述';
-                }
-                return null;
-              },
-            ),
-            SizedBox(height: 16.sp),
-
-            // 模型选择
-            Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade600),
-                borderRadius: BorderRadius.circular(4.sp),
-              ),
-              child: ListTile(
-                title: const Text('偏好模型'),
-                subtitle: Text(_preferredModel?.name ?? '未设置'),
-                trailing: const Icon(Icons.arrow_forward_ios),
-                onTap: _selectModel,
-              ),
-            ),
-
-            SizedBox(height: 16.sp),
-
-            // 高级设置
-            ExpansionTile(
-              title: const Text('高级设置'),
-              initiallyExpanded: _isEditing,
-              children: [
-                TextFormField(
-                  controller: _personalityController,
-                  decoration: const InputDecoration(
-                    labelText: '性格特点',
-                    border: OutlineInputBorder(),
-                    hintText: '例如：友好、耐心、幽默...',
-                  ),
-                  maxLines: 2,
-                ),
-                SizedBox(height: 16.sp),
-                TextFormField(
-                  controller: _scenarioController,
-                  decoration: const InputDecoration(
-                    labelText: '场景设定',
-                    border: OutlineInputBorder(),
-                    hintText: '角色所处的环境或背景...',
-                  ),
-                  maxLines: 2,
-                ),
-                SizedBox(height: 16.sp),
-                TextFormField(
-                  controller: _firstMessageController,
-                  decoration: const InputDecoration(
-                    labelText: '首条消息',
-                    border: OutlineInputBorder(),
-                    hintText: '角色的第一句话...',
-                  ),
-                  maxLines: 2,
-                ),
-                SizedBox(height: 16.sp),
-                TextFormField(
-                  controller: _exampleDialogueController,
-                  decoration: const InputDecoration(
-                    labelText: '对话示例',
-                    border: OutlineInputBorder(),
-                    hintText: '示例对话，帮助AI理解角色的说话方式...',
-                  ),
-                  maxLines: 4,
-                ),
-                SizedBox(height: 16.sp),
-                TextFormField(
-                  controller: _tagsController,
-                  decoration: const InputDecoration(
-                    labelText: '标签',
-                    border: OutlineInputBorder(),
-                    hintText: '用逗号分隔，例如：幽默,科幻,助手',
-                  ),
-                ),
-                SizedBox(height: 16.sp),
-              ],
-            ),
-          ],
-        ),
+        child:
+            ScreenHelper.isDesktop()
+                ? _buildDesktopLayout()
+                : _buildMobileLayout(),
       ),
     );
   }
 
-  // 头像选择
+  // 桌面端布局 - 使用两列布局提供更好的空间利用
+  Widget _buildDesktopLayout() {
+    return Container(
+      padding: EdgeInsets.all(24),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 左侧 - 基本信息与预览
+          Container(
+            width: 320,
+            padding: EdgeInsets.only(right: 24),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 头像选择
+                  Center(child: _buildAvatarSelector()),
+                  SizedBox(height: 24),
+
+                  // 背景选择
+                  _buildBackgroundSelector(),
+                  SizedBox(height: 24),
+
+                  // 偏好模型选择
+                  _buildModelSelect(),
+                ],
+              ),
+            ),
+          ),
+
+          // 分隔线
+          Container(
+            width: 1,
+            height: double.infinity,
+            color: Colors.grey.shade300,
+            margin: EdgeInsets.symmetric(horizontal: 12),
+          ),
+
+          // 右侧 - 表单内容
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ..._buildBaseOptions(),
+
+                  SizedBox(height: 16),
+
+                  // 高级设置
+                  Text(
+                    '高级设置',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 16),
+
+                  // 将高级设置展开为独立表单项
+                  ..._buildAdvanceOptions(),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 移动端布局
+  Widget _buildMobileLayout() {
+    return ListView(
+      padding: EdgeInsets.all(8),
+      children: [
+        // 头像选择
+        _buildAvatarSelector(),
+        SizedBox(height: 16),
+
+        // 背景选择
+        _buildBackgroundSelector(),
+        SizedBox(height: 16),
+
+        // 基础设置
+        ..._buildBaseOptions(), SizedBox(height: 16),
+
+        // 偏好模型选择
+        _buildModelSelect(),
+        SizedBox(height: 16),
+
+        // 高级设置
+        ExpansionTile(
+          title: Text('高级设置', style: TextStyle(fontSize: 14)),
+          initiallyExpanded: _isEditing,
+          children: _buildAdvanceOptions(),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildBaseOptions() {
+    return [
+      Padding(
+        padding: EdgeInsets.only(left: 8, bottom: 16),
+        child: Text('角色ID: ${widget.character?.id ?? '<等待创建>'}'),
+      ),
+
+      // 基本信息
+      TextFormField(
+        controller: _nameController,
+        decoration: InputDecoration(
+          labelText: '角色名称*',
+          border: OutlineInputBorder(),
+        ),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return '请输入角色名称';
+          }
+          return null;
+        },
+      ),
+      SizedBox(height: 16),
+
+      TextFormField(
+        controller: _descriptionController,
+        decoration: InputDecoration(
+          labelText: '角色描述*',
+          border: OutlineInputBorder(),
+        ),
+        maxLines: 3,
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return '请输入角色描述';
+          }
+          return null;
+        },
+      ),
+      SizedBox(height: 16),
+    ];
+  }
+
+  Widget _buildModelSelect() {
+    return // 模型选择
+    Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade600),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: ListTile(
+        title: Text('偏好模型', style: TextStyle(fontSize: 14)),
+        subtitle: Text(
+          _preferredModel?.name ?? '未设置',
+          style: TextStyle(fontSize: 12),
+        ),
+        trailing: Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: _selectModel,
+      ),
+    );
+  }
+
+  List<Widget> _buildAdvanceOptions() {
+    return [
+      TextFormField(
+        controller: _personalityController,
+        decoration: InputDecoration(
+          labelText: '性格特点',
+          border: OutlineInputBorder(),
+          hintText: '例如：友好、耐心、幽默...',
+        ),
+        maxLines: 2,
+      ),
+      SizedBox(height: 16),
+      TextFormField(
+        controller: _scenarioController,
+        decoration: InputDecoration(
+          labelText: '场景设定',
+          border: OutlineInputBorder(),
+          hintText: '角色所处的环境或背景...',
+        ),
+        maxLines: 2,
+      ),
+      SizedBox(height: 16),
+      TextFormField(
+        controller: _firstMessageController,
+        decoration: InputDecoration(
+          labelText: '首条消息',
+          border: OutlineInputBorder(),
+          hintText: '角色的第一句话...',
+        ),
+        maxLines: 2,
+      ),
+      SizedBox(height: 16),
+      TextFormField(
+        controller: _exampleDialogueController,
+        decoration: InputDecoration(
+          labelText: '对话示例',
+          border: OutlineInputBorder(),
+          hintText: '示例对话，帮助AI理解角色的说话方式...',
+        ),
+        maxLines: 4,
+      ),
+      SizedBox(height: 16),
+      TextFormField(
+        controller: _tagsController,
+        decoration: InputDecoration(
+          labelText: '标签',
+          border: OutlineInputBorder(),
+          hintText: '用逗号分隔，例如：幽默,科幻,助手',
+        ),
+      ),
+      SizedBox(height: 16),
+    ];
+  }
+
+  // 头像选择器
   Widget _buildAvatarSelector() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -317,57 +425,73 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
         GestureDetector(
           onTap: () => _showAvatarOrBgOptions('avatar'),
           child: Container(
-            width: 80.sp,
-            height: 80.sp,
+            width: 80,
+            height: 80,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(color: Colors.grey.shade300),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 5,
+                  offset: Offset(0, 2),
+                ),
+              ],
             ),
             child: buildAvatarClipOval(_avatarPath),
           ),
         ),
+        SizedBox(height: 8),
         Text(
           '点击头像选择',
-          style: TextStyle(color: Colors.grey.shade600, fontSize: 12.sp),
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
         ),
       ],
     );
   }
 
-  // 背景选择
+  // 背景选择器
   Widget _buildBackgroundSelector() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           '角色专属背景',
-          style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
         ),
-        SizedBox(height: 8.sp),
+        SizedBox(height: 8),
+
         Row(
           children: [
             GestureDetector(
               onTap: () => _showAvatarOrBgOptions('bg'),
               child: Container(
-                width: 120.sp,
-                height: 80.sp,
+                width: 100,
+                height: 70,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8.sp),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.grey.shade300),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 3,
+                      offset: Offset(0, 1),
+                    ),
+                  ],
                 ),
                 child: _buildBgChild(),
               ),
             ),
-            SizedBox(width: 4.sp),
+            SizedBox(width: 8),
             Expanded(
               child: Text(
                 '点击图片设置角色专属背景',
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 12.sp),
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
               ),
             ),
             if (_backgroundPath != null)
               IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                icon: Icon(Icons.delete_outline, color: Colors.red, size: 20),
                 onPressed: () {
                   setState(() {
                     _backgroundPath = null;
@@ -378,8 +502,8 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
           ],
         ),
         if (_backgroundPath != null) ...[
-          SizedBox(height: 16.sp),
-          Text('背景透明度', style: TextStyle(fontSize: 14.sp)),
+          SizedBox(height: 12),
+          Text('背景透明度', style: TextStyle(fontSize: 13)),
           Row(
             children: [
               Expanded(
@@ -394,7 +518,10 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
                   },
                 ),
               ),
-              Text('${((_backgroundOpacity * 100).toInt())}%'),
+              Text(
+                '${((_backgroundOpacity * 100).toInt())}%',
+                style: TextStyle(fontSize: 12),
+              ),
             ],
           ),
         ],
@@ -405,17 +532,13 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
   Widget _buildBgChild() {
     return _backgroundPath == null
         ? Center(
-          child: Icon(
-            Icons.add_photo_alternate,
-            size: 32.sp,
-            color: Colors.grey,
-          ),
+          child: Icon(Icons.add_photo_alternate, size: 32, color: Colors.grey),
         )
         : Stack(
           fit: StackFit.expand,
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(8.sp),
+              borderRadius: BorderRadius.circular(8),
               child: Opacity(
                 opacity: _backgroundOpacity,
                 child: buildCusImage(_backgroundPath!, fit: BoxFit.cover),
@@ -423,7 +546,7 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
             ),
             Center(
               child: Container(
-                padding: EdgeInsets.all(8.sp),
+                padding: EdgeInsets.all(8),
                 // 用户的字体颜色和AI响应的字体颜色不一样
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -447,47 +570,50 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
 
   // 显示头像或背景选项
   void _showAvatarOrBgOptions(String type) {
-    showModalBottomSheet(
-      context: context,
-      builder:
-          (context) => Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('相册'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickImageFromGallery(type);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text('拍照'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickImageFromCamera(type);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.link),
-                title: const Text('网络图片地址'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _inputNetworkImageUrl(type);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.image),
-                title: const Text('选择预设图片'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showPresetAvatars(type);
-                },
-              ),
-            ],
+    Widget list = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(padding: EdgeInsets.all(24), child: Text("选择图片来源")),
+
+        ListTile(
+          leading: const Icon(Icons.photo_library),
+          title: const Text('相册'),
+          onTap: () {
+            Navigator.pop(context);
+            _pickImageFromGallery(type);
+          },
+        ),
+        if (ScreenHelper.isMobile())
+          ListTile(
+            leading: const Icon(Icons.camera_alt),
+            title: const Text('拍照'),
+            onTap: () {
+              Navigator.pop(context);
+              _pickImageFromCamera(type);
+            },
           ),
+        ListTile(
+          leading: const Icon(Icons.link),
+          title: const Text('网络图片地址'),
+          onTap: () {
+            Navigator.pop(context);
+            _inputNetworkImageUrl(type);
+          },
+        ),
+      ],
     );
+
+    ScreenHelper.isDesktop()
+        ? showDialog(
+          context: context,
+          builder: (context) {
+            final screenWidth = MediaQuery.of(context).size.width;
+            return AlertDialog(
+              content: SizedBox(width: screenWidth * 0.6, child: list),
+            );
+          },
+        )
+        : showModalBottomSheet(context: context, builder: (context) => list);
   }
 
   // 从相册选择图片
@@ -543,145 +669,101 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
   void _inputNetworkImageUrl(String type) {
     final textController = TextEditingController();
 
+    Widget imagePreview = Container(
+      width: 100,
+      height: 100,
+      margin: const EdgeInsets.only(top: 10),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.network(
+          textController.text,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Center(
+              child: CircularProgressIndicator(
+                value:
+                    loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                            loadingProgress.expectedTotalBytes!
+                        : null,
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error, color: Colors.red),
+                  Text('图片加载失败', style: TextStyle(color: Colors.red)),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('输入网络图片地址'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: textController,
-                  decoration: const InputDecoration(
-                    hintText: 'https://example.com/image.jpg',
-                    labelText: '图片URL',
-                  ),
-                  keyboardType: TextInputType.url,
-                ),
-                SizedBox(height: 16.sp),
-                // 预览区域
-                if (textController.text.isNotEmpty)
-                  Container(
-                    width: 100.sp,
-                    height: 100.sp,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(8.sp),
-                    ),
-                    child: Image.network(
-                      textController.text,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Center(
-                          child: Text(
-                            '图片加载失败',
-                            style: TextStyle(color: Colors.red),
-                          ),
-                        );
+      builder: (context) {
+        // 使用 StatefulBuilder 实现对话框内部状态管理
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('输入网络图片地址'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: textController,
+                      decoration: const InputDecoration(
+                        hintText: 'https://example.com/image.jpg',
+                        labelText: '图片URL',
+                      ),
+                      keyboardType: TextInputType.url,
+                      onChanged: (value) {
+                        // 文本变化时触发界面更新
+                        setState(() {});
                       },
                     ),
-                  ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('取消'),
+                    const SizedBox(height: 16),
+
+                    // 预览区域
+                    if (textController.text.isNotEmpty) imagePreview,
+                  ],
+                ),
               ),
-              TextButton(
-                onPressed: () {
-                  if (textController.text.isNotEmpty) {
-                    setState(() {
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('取消'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (textController.text.isNotEmpty) {
+                      // 更新外部状态
                       if (type == 'avatar') {
                         _avatarPath = textController.text;
                       } else {
                         _backgroundPath = textController.text;
                       }
-                    });
-                  }
-                  Navigator.pop(context);
-                },
-                child: const Text('确定'),
-              ),
-            ],
-          ),
-    );
-  }
-
-  // 显示预设头像或背景
-  void _showPresetAvatars(String type) {
-    final presetAvatars =
-        (type == 'avatar')
-            ? [
-              'assets/characters/default_avatar.png',
-              // ... 其他本地预设头像
-
-              // 添加一些网络预设头像
-              'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=256&auto=format&fit=crop',
-              'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=256&auto=format&fit=crop',
-              'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&auto=format&fit=crop',
-              'https://images.unsplash.com/photo-1564564321837-a57b7070ac4f?q=80&w=256&auto=format&fit=crop',
-              'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?q=80&w=256&auto=format&fit=crop',
-            ]
-            : [
-              'assets/chat_backgrounds/bg1.jpg',
-              'assets/chat_backgrounds/bg2.jpg',
-            ];
-
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text('预设${type == 'avatar' ? '头像' : '背景'}(示例)'),
-            content: SizedBox(
-              width: 0.8.sw,
-              height: 0.36.sh,
-              child: GridView.builder(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 8.sp,
-                  mainAxisSpacing: 8.sp,
-                ),
-                itemCount: presetAvatars.length,
-                itemBuilder: (context, index) {
-                  final avatar = presetAvatars[index];
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        if (type == 'avatar') {
-                          _avatarPath = avatar;
-                        } else {
-                          _backgroundPath = avatar;
-                        }
-                      });
                       Navigator.pop(context);
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child:
-                          (type == 'avatar')
-                              ? buildAvatarClipOval(avatar)
-                              : buildAvatarClipOval(
-                                avatar,
-                                clipBehavior: Clip.none,
-                                fit: BoxFit.scaleDown,
-                              ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('取消'),
-              ),
-            ],
-          ),
+                    }
+                  },
+                  child: const Text('确定'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }

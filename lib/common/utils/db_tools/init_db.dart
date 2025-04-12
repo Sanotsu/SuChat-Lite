@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'ddl_brief_ai_tool.dart';
@@ -48,19 +48,58 @@ class DBInit {
 
   // 初始化数据库
   Future<Database> initializeDB() async {
+    // 如果是桌面端（Windows/Linux/macOS），初始化 FFI
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      // 在任何平台操作之前首先初始化FFI
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi; // 设置全局 databaseFactory
+
+      // 针对Linux平台的特殊处理，这个不启用也应该正常
+      if (Platform.isLinux) {
+        try {
+          // 尝试使用自定义库路径
+          var options = OpenDatabaseOptions(readOnly: true);
+          // 可以尝试不同路径的SQLite库文件
+          final List<String> possiblePaths = [
+            'libsqlite3.so',
+            '/usr/lib/x86_64-linux-gnu/libsqlite3.so',
+            '/usr/lib/libsqlite3.so',
+          ];
+
+          // 尝试所有可能的库路径
+          for (var path in possiblePaths) {
+            try {
+              print("尝试加载SQLite库: $path");
+              await databaseFactoryFfi.openDatabase(
+                ":memory:",
+                options: options,
+              );
+              break; // 如果成功，跳出循环
+            } catch (e) {
+              print("无法加载 $path: $e");
+              // 继续尝试下一个路径
+            }
+          }
+        } catch (e) {
+          print("初始化SQLite FFI时出错: $e");
+        }
+      }
+    }
+
     // 获取Android和iOS存储数据库的目录路径(用户看不到，在Android/data/……里看不到)。
-    // Directory directory = await getApplicationDocumentsDirectory();
+    Directory directory = await getApplicationDocumentsDirectory();
+    String path = "${directory.path}/${DBInitConfig.databaseName}";
 
     // IOS不支持这个方法，所以可能取不到这个地址
-    Directory? directory2 = await getExternalStorageDirectory();
-    String path = "${directory2?.path}/${DBInitConfig.databaseName}";
+    // Directory? directory2 = await getExternalStorageDirectory();
+    // String path = "${directory2?.path}/${DBInitConfig.databaseName}";
 
     print("初始化 DB sqlite数据库存放的地址：$path");
 
     // 在给定路径上打开/创建数据库
-    var dietaryDb = await openDatabase(path, version: 1, onCreate: _createDb);
+    var db = await openDatabase(path, version: 1, onCreate: _createDb);
     dbFilePath = path;
-    return dietaryDb;
+    return db;
   }
 
   // 创建训练数据库相关表

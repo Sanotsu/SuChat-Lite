@@ -55,6 +55,8 @@ class ChatService {
         return 'https://ark.cn-beijing.volces.com/api/v3';
       case ApiPlatform.volcesBot:
         return 'https://ark.cn-beijing.volces.com/api/v3/bots';
+      default:
+        return "";
     }
   }
 
@@ -113,6 +115,8 @@ class ChatService {
         case ApiPlatform.volcesBot:
           apiKey = userKeys[ApiPlatformAKLabel.USER_VOLCESBOT_API_KEY.name];
           break;
+        default:
+          return "";
       }
 
       if (apiKey == null || apiKey.isEmpty) {
@@ -192,8 +196,19 @@ class ChatService {
     bool stream = true,
     Map<String, dynamic>? advancedOptions,
   }) async {
-    final headers = await _getHeaders(model);
-    final baseUrl = "${_getBaseUrl(model.platform)}/chat/completions";
+    // 如果是自定义平台模型，url、apikey等直接在模型规格中
+    Map<String, String> headers;
+    String baseUrl;
+    if (model.platform == ApiPlatform.custom) {
+      headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${model.apiKey}',
+      };
+      baseUrl = "${model.baseUrl}/chat/completions";
+    } else {
+      headers = await _getHeaders(model);
+      baseUrl = "${_getBaseUrl(model.platform)}/chat/completions";
+    }
 
     // 处理高级参数
     Map<String, dynamic>? additionalParams;

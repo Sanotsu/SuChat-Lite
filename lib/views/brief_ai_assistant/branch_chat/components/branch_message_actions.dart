@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../common/components/toast_utils.dart';
 import '../../../../common/constants/constants.dart';
 import '../../../../models/brief_ai_tools/branch_chat/branch_chat_message.dart';
@@ -74,14 +73,14 @@ class BranchMessageActions extends StatelessWidget {
         .reduce((a, b) => a > b ? a : b);
 
     return Container(
-      padding: EdgeInsets.all(4.sp),
+      padding: EdgeInsets.all(4),
       child: Row(
         mainAxisAlignment:
             isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
           // 复制按钮
           IconButton(
-            icon: Icon(Icons.copy, size: 20.sp),
+            icon: Icon(Icons.copy, size: 20),
             visualDensity: VisualDensity.compact,
             tooltip: '复制内容',
             onPressed: () {
@@ -93,7 +92,7 @@ class BranchMessageActions extends StatelessWidget {
           // 如果不是用户消息，且不是正在重新生成，则显示重新生成按钮
           if (!isUser && !isRegenerating)
             IconButton(
-              icon: Icon(Icons.refresh, size: 20.sp),
+              icon: Icon(Icons.refresh, size: 20),
               onPressed: onRegenerate,
               tooltip: '重新生成',
             ),
@@ -103,24 +102,24 @@ class BranchMessageActions extends StatelessWidget {
           // 理论上应该只是最后一条才对，现在这里不好处理，就改为流式响应中不显示重新生成图标
           // if (!isUser && isRegenerating)
           //   SizedBox(
-          //     width: 16.sp,
-          //     height: 16.sp,
-          //     child: CircularProgressIndicator(strokeWidth: 2.sp),
+          //     width: 16,
+          //     height: 16,
+          //     child: CircularProgressIndicator(strokeWidth: 2),
           //   ),
 
           // 分支切换按钮
           if (showBranchControls && onSwitchBranch != null) ...[
-            SizedBox(width: 16.sp),
+            SizedBox(width: 16),
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8.sp),
+              padding: EdgeInsets.symmetric(horizontal: 8),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   SizedBox(
-                    width: 36.sp,
-                    height: 36.sp,
+                    width: 36,
+                    height: 36,
                     child: IconButton(
-                      icon: Icon(Icons.arrow_back_ios, size: 20.sp),
+                      icon: Icon(Icons.arrow_back_ios, size: 20),
                       padding: EdgeInsets.zero, // 移除边距
                       onPressed:
                           currentBranchIndex > 0 && onSwitchBranch != null
@@ -133,13 +132,13 @@ class BranchMessageActions extends StatelessWidget {
                   ),
                   Text(
                     '${message.branchIndex + 1} / ${maxBranchIndex + 1} ($totalBranches)',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 14.sp),
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
                   ),
                   SizedBox(
-                    width: 36.sp,
-                    height: 36.sp,
+                    width: 36,
+                    height: 36,
                     child: IconButton(
-                      icon: Icon(Icons.arrow_forward_ios, size: 20.sp),
+                      icon: Icon(Icons.arrow_forward_ios, size: 20),
                       padding: EdgeInsets.zero, // 移除边距
                       onPressed:
                           currentBranchIndex < totalBranches - 1 &&

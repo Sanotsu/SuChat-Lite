@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../common/constants/constants.dart';
+import '../../../../common/utils/screen_helper.dart';
 import '../../../../models/brief_ai_tools/branch_chat/branch_chat_message.dart';
 
 class BranchTreeDialog extends StatefulWidget {
@@ -48,15 +48,15 @@ class _BranchTreeDialogState extends State<BranchTreeDialog> {
             ),
           ],
           bottom: PreferredSize(
-            preferredSize: Size.fromHeight(48.sp),
+            preferredSize: Size.fromHeight(48),
             child: Container(
-              padding: EdgeInsets.all(8.sp),
+              padding: EdgeInsets.all(8),
               child: Row(
                 children: [
                   _buildLegendItem(Colors.blue, '用户消息'),
-                  SizedBox(width: 16.sp),
+                  SizedBox(width: 16),
                   _buildLegendItem(Colors.green, 'AI响应'),
-                  SizedBox(width: 16.sp),
+                  SizedBox(width: 16),
                   _buildLegendItem(Colors.blue.withValues(alpha: 0.1), '当前选中'),
                 ],
               ),
@@ -75,43 +75,40 @@ class _BranchTreeDialogState extends State<BranchTreeDialog> {
                 title: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Icon(Icons.account_tree, size: 16.sp),
-                    SizedBox(width: 8.sp),
+                    Icon(Icons.account_tree, size: 16),
+                    SizedBox(width: 8),
                     Text(
                       '当前分支路径',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(width: 8.sp),
+                    SizedBox(width: 8),
                     Text(
                       '(${selectedPath.split('/').length ~/ 2} 轮对话)',
-                      style: TextStyle(fontSize: 12.sp, color: Colors.grey),
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                   ],
                 ),
                 children: [
                   Padding(
-                    padding: EdgeInsets.all(8.sp),
+                    padding: EdgeInsets.all(8),
                     child: _buildCurrentPathInfo(context),
                   ),
                 ],
               ),
             ),
             Padding(
-              padding: EdgeInsets.only(left: 16.sp, top: 8.sp, bottom: 8.sp),
+              padding: EdgeInsets.only(left: 16, top: 8, bottom: 8),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Icon(Icons.account_tree, size: 16.sp),
-                  SizedBox(width: 8.sp),
+                  Icon(Icons.account_tree, size: 16),
+                  SizedBox(width: 8),
                   Text(
                     '对话分支消息',
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -120,10 +117,10 @@ class _BranchTreeDialogState extends State<BranchTreeDialog> {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: SingleChildScrollView(
-                  padding: EdgeInsets.all(8.sp),
+                  padding: EdgeInsets.all(8),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
-                      minWidth: MediaQuery.of(context).size.width - 16.sp,
+                      minWidth: MediaQuery.of(context).size.width - 16,
                     ),
                     child: _buildBranchTree(context),
                   ),
@@ -201,23 +198,20 @@ class _BranchTreeDialogState extends State<BranchTreeDialog> {
                   children: [
                     if (depth > 0)
                       Positioned(
-                        left: (depth - 1) * 24.sp + 12.sp,
+                        left: (depth - 1) * 24 + 12,
                         top: 0,
                         bottom: 0,
-                        child: Container(
-                          width: 2.sp,
-                          color: Colors.grey.shade200,
-                        ),
+                        child: Container(width: 2, color: Colors.grey.shade200),
                       ),
                     InkWell(
                       onTap:
                           () => setState(() => selectedPath = node.branchPath),
                       child: Container(
-                        margin: EdgeInsets.only(left: depth * 24.sp),
-                        padding: EdgeInsets.all(8.sp),
+                        margin: EdgeInsets.only(left: depth * 24),
+                        padding: EdgeInsets.all(8),
                         constraints: BoxConstraints(
-                          maxWidth: 300.sp,
-                          minWidth: 300.sp,
+                          maxWidth: ScreenHelper.isDesktop() ? 640 : 300,
+                          minWidth: ScreenHelper.isDesktop() ? 640 : 300,
                         ),
                         decoration: BoxDecoration(
                           color:
@@ -233,7 +227,7 @@ class _BranchTreeDialogState extends State<BranchTreeDialog> {
                                     : Colors.green,
                             width: 1,
                           ),
-                          borderRadius: BorderRadius.circular(8.sp),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,13 +238,13 @@ class _BranchTreeDialogState extends State<BranchTreeDialog> {
                                   node.role == CusRole.user.name
                                       ? Icons.person
                                       : Icons.smart_toy,
-                                  size: 16.sp,
+                                  size: 16,
                                   color:
                                       node.role == CusRole.user.name
                                           ? Colors.blue
                                           : Colors.green,
                                 ),
-                                SizedBox(width: 8.sp),
+                                SizedBox(width: 8),
                                 Text(
                                   node.role == CusRole.user.name ? '用户' : 'AI',
                                   style: TextStyle(
@@ -264,76 +258,76 @@ class _BranchTreeDialogState extends State<BranchTreeDialog> {
                                 const Spacer(),
                                 Container(
                                   padding: EdgeInsets.symmetric(
-                                    horizontal: 6.sp,
-                                    vertical: 2.sp,
+                                    horizontal: 6,
+                                    vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
                                     color: Colors.grey.shade100,
-                                    borderRadius: BorderRadius.circular(4.sp),
+                                    borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(
                                         Icons.layers,
-                                        size: 12.sp,
+                                        size: 12,
                                         color: Colors.grey[600],
                                       ),
-                                      SizedBox(width: 4.sp),
+                                      SizedBox(width: 4),
                                       Text(
                                         '${depth + 1}',
                                         style: TextStyle(
                                           color: Colors.grey[600],
-                                          fontSize: 12.sp,
+                                          fontSize: 12,
                                         ),
                                       ),
                                       Container(
                                         margin: EdgeInsets.symmetric(
-                                          horizontal: 4.sp,
+                                          horizontal: 4,
                                         ),
-                                        width: 1.sp,
-                                        height: 10.sp,
+                                        width: 1,
+                                        height: 10,
                                         color: Colors.grey[300],
                                       ),
                                       Icon(
                                         Icons.account_tree,
-                                        size: 12.sp,
+                                        size: 12,
                                         color: Colors.grey[600],
                                       ),
-                                      SizedBox(width: 4.sp),
+                                      SizedBox(width: 4),
                                       Text(
                                         '${node.branchIndex + 1}',
                                         style: TextStyle(
                                           color: Colors.grey[600],
-                                          fontSize: 12.sp,
+                                          fontSize: 12,
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
                                 if (isCurrentPath) ...[
-                                  SizedBox(width: 8.sp),
+                                  SizedBox(width: 8),
                                   Icon(
                                     Icons.check_circle,
                                     color: Colors.blue,
-                                    size: 16.sp,
+                                    size: 16,
                                   ),
                                 ],
                               ],
                             ),
-                            SizedBox(height: 8.sp),
+                            SizedBox(height: 8),
                             Text(
                               node.content,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                             if (node.reasoningContent != null) ...[
-                              SizedBox(height: 4.sp),
+                              SizedBox(height: 4),
                               Text(
                                 node.reasoningContent!,
                                 style: TextStyle(
                                   color: Colors.grey[600],
-                                  fontSize: 12.sp,
+                                  fontSize: 12,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -346,7 +340,7 @@ class _BranchTreeDialogState extends State<BranchTreeDialog> {
                   ],
                 ),
                 if (children.isNotEmpty) ...[
-                  SizedBox(height: 8.sp),
+                  SizedBox(height: 8),
                   _buildTreeNode(context, children, allMessages, depth + 1),
                 ],
               ],
@@ -360,8 +354,8 @@ class _BranchTreeDialogState extends State<BranchTreeDialog> {
     final messages = widget.messages;
 
     return Wrap(
-      spacing: 8.sp,
-      runSpacing: 8.sp,
+      spacing: 8,
+      runSpacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
       children:
           pathParts.asMap().entries.expand((entry) {
@@ -377,15 +371,15 @@ class _BranchTreeDialogState extends State<BranchTreeDialog> {
 
             return [
               if (i > 0)
-                Icon(Icons.arrow_forward_ios, size: 12.sp, color: Colors.grey),
+                Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 6.sp, vertical: 0.sp),
+                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 0),
                 decoration: BoxDecoration(
                   color:
                       message.role == CusRole.user.name
                           ? Colors.blue.withValues(alpha: 0.1)
                           : Colors.green.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16.sp),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color:
                         message.role == CusRole.user.name
@@ -396,7 +390,7 @@ class _BranchTreeDialogState extends State<BranchTreeDialog> {
                 child: Text(
                   '${int.parse(part) + 1}',
                   style: TextStyle(
-                    fontSize: 12.sp,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
                     color:
                         message.role == CusRole.user.name

@@ -46,9 +46,11 @@ dependencies:
 
   get_storage: ^2.1.1
   sqflite: ^2.4.2
+  sqflite_common_ffi: ^2.3.5
   objectbox: ^4.1.0
   objectbox_flutter_libs: ^4.1.0
 
+  package_info_plus: ^8.3.0
   connectivity_plus: ^6.1.3
   crypto: ^3.0.6
   url_launcher: ^6.3.1
@@ -58,7 +60,6 @@ dependencies:
   archive: ^3.6.1
 
   # UI
-  font_awesome_flutter: ^10.8.0
   photo_view: ^0.15.0
   toggle_switch: ^2.3.0
   syncfusion_flutter_pdf: ^28.2.12
@@ -110,8 +111,7 @@ dependencies:
   get_thumbnail_video: ^0.7.3
   video_player: ^2.9.3
   audio_waveforms: ^1.3.0
-  audioplayers: ^6.4.0
-  record: ^5.2.1
+
   # ffmpeg_kit_flutter: ^6.0.3   # DISCONTINUED
 
   ffmpeg_kit_flutter:
@@ -154,6 +154,7 @@ flutter:
     - assets/images/
     - assets/chat_backgrounds/
     - assets/characters/
+    - assets/platform_icons/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

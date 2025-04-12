@@ -2,14 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:bot_toast/bot_toast.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../utils/screen_helper.dart';
+
 class ToastUtils {
   // 基础配置
   static const Duration _defaultDuration = Duration(seconds: 2);
-  static final double _defaultRadius = 10.sp;
-  static final EdgeInsets _defaultPadding = EdgeInsets.symmetric(
-    horizontal: 16.sp,
-    vertical: 12.sp,
-  );
+
+  // 获取适合当前平台的尺寸值
+  static double _getRadius() {
+    if (ScreenHelper.isDesktop()) {
+      return 10.0; // 桌面端使用固定值
+    } else {
+      return 10.sp; // 移动端使用响应式单位
+    }
+  }
+
+  // 获取适合当前平台的内边距
+  static EdgeInsets _getPadding() {
+    if (ScreenHelper.isDesktop()) {
+      return const EdgeInsets.symmetric(horizontal: 16, vertical: 12);
+    } else {
+      return EdgeInsets.symmetric(horizontal: 16.sp, vertical: 12.sp);
+    }
+  }
+
+  // 获取适合当前平台的字体大小
+  static double _getFontSize() {
+    if (ScreenHelper.isDesktop()) {
+      return 14.0; // 桌面端使用固定值
+    } else {
+      return 14.sp; // 移动端使用响应式单位
+    }
+  }
 
   /// 1. 成功提示 (✅ + 绿色)
   static void showSuccess(String message, {Duration? duration}) {
@@ -57,7 +81,7 @@ class ToastUtils {
       text: message,
       align: const Alignment(0, 0),
       contentColor: bgColor ?? Colors.black87,
-      textStyle: const TextStyle(color: Colors.white),
+      textStyle: TextStyle(color: Colors.white, fontSize: _getFontSize()),
       duration: duration ?? _defaultDuration,
     );
   }
@@ -67,10 +91,10 @@ class ToastUtils {
     return BotToast.showCustomLoading(
       toastBuilder:
           (_) => Container(
-            padding: _defaultPadding,
+            padding: _getPadding(),
             decoration: BoxDecoration(
               color: Colors.black.withValues(alpha: 0.7),
-              borderRadius: BorderRadius.circular(_defaultRadius),
+              borderRadius: BorderRadius.circular(_getRadius()),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -86,32 +110,51 @@ class ToastUtils {
     );
   }
 
-  // 私有方法：带图标的Toast
+  /// 图标提示的私有实现方法
   static void _showIconToast(
     String message, {
     required IconData icon,
     required Color backgroundColor,
     Duration? duration,
   }) {
-    BotToast.showCustomText(
-      align: const Alignment(0, 0),
+    BotToast.showCustomNotification(
       duration: duration ?? _defaultDuration,
-      toastBuilder:
-          (_) => Container(
-            padding: _defaultPadding,
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(_defaultRadius),
+      toastBuilder: (cancel) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Card(
+            elevation: 0,
+            margin: EdgeInsets.zero,
+            color: backgroundColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(_getRadius()),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, color: Colors.white),
-                SizedBox(width: 8.sp),
-                Text(message, style: const TextStyle(color: Colors.white)),
-              ],
+            child: Padding(
+              padding: _getPadding(),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    icon,
+                    color: Colors.white,
+                    size: ScreenHelper.isDesktop() ? 18 : 18.sp,
+                  ),
+                  SizedBox(width: ScreenHelper.isDesktop() ? 8 : 8.sp),
+                  Flexible(
+                    child: Text(
+                      message,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: _getFontSize(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
+        );
+      },
     );
   }
 }

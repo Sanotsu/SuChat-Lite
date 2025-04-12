@@ -9,6 +9,11 @@
 /// 因为零一万物的API兼容openAI的api，后续付费的应该都是这样的，而不是之前免费的三大平台乱七八糟的
 ///
 enum ApiPlatform {
+  // 2025-04-11 用户使用的模型不属于预设平台(比如谷歌等)
+  // 那么就是统一custom，并在自定义模型中直接新增url、apikey等栏位去取用
+  // 这个不是默认的有效平台，不需要用户导入啥的
+  custom,
+
   aliyun,
   baidu,
   tencent,
@@ -58,6 +63,7 @@ final Map<ApiPlatform, String> CP_NAME_MAP = {
   ApiPlatform.infini: '无问芯穹',
   ApiPlatform.volcengine: '火山引擎',
   ApiPlatform.volcesBot: '火山Bot',
+  ApiPlatform.custom: '[自定义]',
 };
 
 // 大模型的分类，在不同页面可以用作模型的筛选

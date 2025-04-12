@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../../common/utils/screen_helper.dart';
 import '../../../../models/brief_ai_tools/branch_chat/character_card.dart';
 import '../../_chat_components/_small_tool_widgets.dart';
 
@@ -19,18 +19,27 @@ class CharacterCardItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = ScreenHelper.isDesktop();
+
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.sp)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
       child: GestureDetector(
         onTap: onTap,
-        onLongPress: () => _showContextMenu(context),
+        onLongPress:
+            ScreenHelper.isMobile() ? () => _showContextMenu(context) : null,
+        onSecondaryTapDown:
+            isDesktop
+                ? (details) =>
+                    _showDesktopContextMenu(context, details.globalPosition)
+                : null,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // 角色头像
             avatarArea(),
 
-            SizedBox(height: 4.sp),
+            SizedBox(height: 4.0),
 
             // 角色信息
             infoArea(context),
@@ -45,8 +54,8 @@ class CharacterCardItem extends StatelessWidget {
       flex: 2,
       child: ClipRRect(
         borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(12.sp),
-          topRight: Radius.circular(12.sp),
+          topLeft: Radius.circular(12),
+          topRight: Radius.circular(12),
         ),
         child: buildAvatarClipOval(character.avatar, clipBehavior: Clip.none),
       ),
@@ -57,7 +66,7 @@ class CharacterCardItem extends StatelessWidget {
     return Expanded(
       flex: 1,
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 8.sp, vertical: 8.sp),
+        padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -68,7 +77,7 @@ class CharacterCardItem extends StatelessWidget {
                   child: Text(
                     character.name,
                     style: TextStyle(
-                      fontSize: 16.sp,
+                      fontSize: 16.0,
                       fontWeight: FontWeight.bold,
                     ),
                     maxLines: 1,
@@ -77,25 +86,25 @@ class CharacterCardItem extends StatelessWidget {
                 ),
                 if (character.isSystem)
                   Container(
-                    padding: EdgeInsets.all(2.sp),
+                    padding: EdgeInsets.all(2.0),
                     decoration: BoxDecoration(
                       color: Colors.blue.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(4.sp),
+                      borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
                       '系统',
-                      style: TextStyle(fontSize: 10.sp, color: Colors.blue),
+                      style: TextStyle(fontSize: 10.0, color: Colors.blue),
                     ),
                   ),
               ],
             ),
-
+            if (ScreenHelper.isDesktop()) SizedBox(height: 8),
             // 角色描述
             Expanded(
               child: Text(
                 character.description,
-                style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
-                maxLines: 2,
+                style: TextStyle(fontSize: 12.0, color: Colors.grey[600]),
+                maxLines: ScreenHelper.isDesktop() ? 3 : 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -105,6 +114,7 @@ class CharacterCardItem extends StatelessWidget {
     );
   }
 
+  // 移动端长按菜单
   void _showContextMenu(BuildContext context) {
     final RenderBox button = context.findRenderObject() as RenderBox;
     final RenderBox overlay =
@@ -129,7 +139,7 @@ class CharacterCardItem extends StatelessWidget {
           child: Row(
             children: [
               Icon(Icons.edit, color: Theme.of(context).primaryColor),
-              SizedBox(width: 8.sp),
+              SizedBox(width: 8),
               Text('编辑角色'),
             ],
           ),
@@ -140,12 +150,61 @@ class CharacterCardItem extends StatelessWidget {
             child: Row(
               children: [
                 Icon(Icons.delete, color: Colors.red),
-                SizedBox(width: 8.sp),
+                SizedBox(width: 8),
                 Text('删除角色'),
               ],
             ),
           ),
       ],
     );
+  }
+
+  // 桌面端右键菜单
+  void _showDesktopContextMenu(BuildContext context, Offset position) {
+    showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy,
+        position.dx + 1,
+        position.dy + 1,
+      ),
+      items: [
+        PopupMenuItem<String>(
+          value: 'edit',
+          child: Row(
+            children: [
+              Icon(Icons.edit, color: Theme.of(context).primaryColor, size: 20),
+              SizedBox(width: 8),
+              Text('编辑角色'),
+            ],
+          ),
+        ),
+        if (!character.isSystem)
+          PopupMenuItem<String>(
+            value: 'delete',
+            child: Row(
+              children: [
+                Icon(Icons.delete, color: Colors.red, size: 20),
+                SizedBox(width: 8),
+                Text('删除角色'),
+              ],
+            ),
+          ),
+      ],
+      elevation: 4.0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    ).then((value) {
+      if (value == null) return;
+
+      switch (value) {
+        case 'edit':
+          onEdit();
+          break;
+        case 'delete':
+          onDelete();
+          break;
+      }
+    });
   }
 }

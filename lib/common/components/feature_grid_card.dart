@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class FeatureGridCard extends StatelessWidget {
   final Widget targetPage;
@@ -25,9 +24,9 @@ class FeatureGridCard extends StatelessWidget {
     return Card(
       elevation: 1,
       shadowColor: color.withValues(alpha: 0.3),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.sp)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20.sp),
+        borderRadius: BorderRadius.circular(20),
         onTap: () {
           Navigator.of(
             context,
@@ -36,27 +35,24 @@ class FeatureGridCard extends StatelessWidget {
         child: Stack(
           children: [
             Padding(
-              padding: EdgeInsets.all(16.sp),
+              padding: EdgeInsets.all(16),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Container(
-                    width: 64.sp,
-                    height: 64.sp,
+                    width: 64,
+                    height: 64,
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(16.sp),
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Icon(icon, color: color, size: 32.sp),
+                    child: Icon(icon, color: color, size: 32),
                   ),
-                  SizedBox(height: 16.sp),
+                  SizedBox(height: 16),
                   Text(
                     title,
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -64,16 +60,13 @@ class FeatureGridCard extends StatelessWidget {
             ),
             if (isNew)
               Positioned(
-                top: 12.sp,
-                right: 12.sp,
+                top: 12,
+                right: 12,
                 child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 8.sp,
-                    vertical: 4.sp,
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.red,
-                    borderRadius: BorderRadius.circular(12.sp),
+                    borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.red.withValues(alpha: 0.3),
@@ -86,7 +79,7 @@ class FeatureGridCard extends StatelessWidget {
                     '新',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 12.sp,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

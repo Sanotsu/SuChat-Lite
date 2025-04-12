@@ -5,18 +5,23 @@ import 'package:intl/intl.dart';
 import '../../../../common/components/tool_widget.dart';
 import '../../../../common/components/voice_chat_bubble.dart';
 import '../../../../common/constants/constants.dart';
+import '../../../../common/utils/screen_helper.dart';
 import '../../../../models/brief_ai_tools/branch_chat/branch_chat_message.dart';
+import '../../../../models/brief_ai_tools/branch_chat/character_card.dart';
 import '../../_chat_components/_small_tool_widgets.dart';
 import '../../../../common/components/cus_markdown_renderer.dart';
 
 class BranchMessageItem extends StatefulWidget {
   // 用于展示的消息
   final BranchChatMessage message;
+  // 是否使用背景图片(如果是，则会将消息体背景色置为透明)
   final bool? isUseBgImage;
   // 是否显示头像
   final bool? isShowAvatar;
+  // 如果是角色对话可以直接传入当前角色
+  final CharacterCard? character;
   // 长按消息后，点击了消息体处的回调
-  final Function(BranchChatMessage, LongPressStartDetails)? onLongPress;
+  final Function(BranchChatMessage, Offset)? onLongPress;
 
   const BranchMessageItem({
     super.key,
@@ -24,6 +29,7 @@ class BranchMessageItem extends StatefulWidget {
     this.onLongPress,
     this.isUseBgImage = false,
     this.isShowAvatar = true,
+    this.character,
   });
 
   @override
@@ -60,7 +66,7 @@ class _BranchMessageItemState extends State<BranchMessageItem>
     super.build(context);
 
     return Container(
-      margin: EdgeInsets.all(4.sp),
+      margin: EdgeInsets.all(4),
       color: Colors.transparent,
       child: Column(
         crossAxisAlignment: _crossAxisAlignment,
@@ -77,10 +83,10 @@ class _BranchMessageItemState extends State<BranchMessageItem>
                 mainAxisAlignment: _mainAxisAlignment,
                 children: [
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 4.sp),
+                    padding: EdgeInsets.symmetric(horizontal: 4),
                     child: Text(
                       _formatBriefTime(widget.message.createTime),
-                      style: TextStyle(fontSize: 12.sp),
+                      style: TextStyle(fontSize: 12),
                     ),
                   ),
                 ],
@@ -108,7 +114,7 @@ class _BranchMessageItemState extends State<BranchMessageItem>
       children: [
         if (!_isUser) _buildAvatar(),
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: 3.sp),
+          padding: EdgeInsets.symmetric(horizontal: 3),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,7 +123,7 @@ class _BranchMessageItemState extends State<BranchMessageItem>
               if (!_isUser && widget.message.character != null)
                 Text(
                   widget.message.character!.name,
-                  style: TextStyle(fontSize: 12.sp, color: Colors.grey),
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
 
               // 如果角色名为空，显示模型标签
@@ -126,7 +132,7 @@ class _BranchMessageItemState extends State<BranchMessageItem>
                   widget.message.modelLabel != null)
                 Text(
                   widget.message.modelLabel!,
-                  style: TextStyle(fontSize: 12.sp, color: Colors.grey),
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
 
               // 显示模型响应时间
@@ -135,7 +141,7 @@ class _BranchMessageItemState extends State<BranchMessageItem>
                   DateFormat(
                     constDatetimeFormat,
                   ).format(widget.message.createTime),
-                  style: TextStyle(fontSize: 12.sp, color: Colors.grey),
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
             ],
           ),
@@ -147,16 +153,25 @@ class _BranchMessageItemState extends State<BranchMessageItem>
 
   // 头像
   Widget _buildAvatar() {
+    Widget avatar =
+        widget.character != null
+            ? SizedBox(
+              width: 40.sp,
+              height: 40.sp,
+              child: buildAvatarClipOval(widget.character!.avatar),
+            )
+            : CircleAvatar(
+              radius: 15,
+              backgroundColor: _isUser ? Colors.blue : Colors.green,
+              child: Icon(
+                _isUser ? Icons.person : Icons.code,
+                color: Colors.white,
+              ),
+            );
+
     return Container(
-      margin: EdgeInsets.only(
-        right: _isUser ? 0 : 4.sp,
-        left: _isUser ? 4.sp : 0,
-      ),
-      child: CircleAvatar(
-        radius: 15.sp,
-        backgroundColor: _isUser ? Colors.blue : Colors.green,
-        child: Icon(_isUser ? Icons.person : Icons.code, color: Colors.white),
-      ),
+      margin: EdgeInsets.only(right: _isUser ? 0 : 4, left: _isUser ? 4 : 0),
+      child: avatar,
     );
   }
 
@@ -173,11 +188,11 @@ class _BranchMessageItemState extends State<BranchMessageItem>
     Color bgColor = _isUser ? Colors.blue : Colors.grey.shade100;
 
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 4.sp),
-      padding: EdgeInsets.all(8.sp),
+      margin: EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: widget.isUseBgImage == true ? Colors.transparent : bgColor,
-        borderRadius: BorderRadius.circular(8.sp),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: widget.isUseBgImage == true ? textColor : Colors.transparent,
         ),
@@ -196,8 +211,18 @@ class _BranchMessageItemState extends State<BranchMessageItem>
 
           GestureDetector(
             onLongPressStart:
-                widget.onLongPress != null
-                    ? (details) => widget.onLongPress!(widget.message, details)
+                (widget.onLongPress != null && ScreenHelper.isMobile())
+                    ? (details) => widget.onLongPress!(
+                      widget.message,
+                      details.globalPosition,
+                    )
+                    : null,
+            onSecondaryTapDown:
+                (widget.onLongPress != null && ScreenHelper.isDesktop())
+                    ? (details) => widget.onLongPress!(
+                      widget.message,
+                      details.globalPosition,
+                    )
                     : null,
             child: RepaintBoundary(
               child: buildCusMarkdown(widget.message.content),
@@ -211,7 +236,7 @@ class _BranchMessageItemState extends State<BranchMessageItem>
   // DS 的 R 系列有深度思考部分，单独展示
   Widget _buildThinkingProcess() {
     return Container(
-      padding: EdgeInsets.only(bottom: 8.sp),
+      padding: EdgeInsets.only(bottom: 8),
       child: ExpansionTile(
         title: Text(
           widget.message.content.trim().isEmpty
@@ -225,7 +250,7 @@ class _BranchMessageItemState extends State<BranchMessageItem>
         initiallyExpanded: true,
         children: [
           Padding(
-            padding: EdgeInsets.only(left: 24.sp),
+            padding: EdgeInsets.only(left: 24),
             // 使用高性能MarkdownRenderer来渲染深度思考内容，可以利用缓存机制
             child: RepaintBoundary(
               child: buildCusMarkdown(
@@ -247,9 +272,9 @@ class _BranchMessageItemState extends State<BranchMessageItem>
   // 简单的图片预览
   Widget _buildImage(BuildContext context) {
     return Container(
-      margin: EdgeInsets.only(top: 8.sp),
+      margin: EdgeInsets.only(top: 8),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(8.sp),
+        borderRadius: BorderRadius.circular(8),
         child: SizedBox(
           width: 0.3.sw,
           // 添加RepaintBoundary，避免图片重绘影响其他元素

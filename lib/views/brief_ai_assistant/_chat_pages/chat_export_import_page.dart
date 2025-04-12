@@ -2,12 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../../../models/brief_ai_tools/branch_chat/branch_chat_export_data.dart';
 import '../../../../models/brief_ai_tools/branch_chat/branch_store.dart';
 import '../../../common/components/tool_widget.dart';
+import '../../../common/utils/screen_helper.dart';
 
 class ChatExportImportPage extends StatefulWidget {
   const ChatExportImportPage({super.key});
@@ -22,99 +22,247 @@ class _ChatExportImportPageState extends State<ChatExportImportPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 判断平台类型
+    final isDesktop = ScreenHelper.isDesktop();
+
+    // 获取屏幕尺寸
+    final size = MediaQuery.of(context).size;
+
+    // 计算内容的最大宽度
+    final maxWidth = isDesktop ? size.width * 0.6 : size.width;
+
     return Scaffold(
-      appBar: AppBar(title: Text('对话记录导入导出'), centerTitle: true),
-      body: Padding(
-        padding: EdgeInsets.all(16.sp),
+      appBar: AppBar(
+        title: Text('对话记录导入导出'),
+        centerTitle: true,
+        elevation: isDesktop ? 1.0 : null,
+      ),
+      // 使用SingleChildScrollView防止内容溢出
+      body: SingleChildScrollView(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 添加简短说明
+                  if (isDesktop)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 24.0),
+                      child: Text(
+                        '在这里，您可以导出对话记录以备份，或者导入之前备份的对话记录。',
+                        style: TextStyle(fontSize: 16.0, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+
+                  _buildExportSection(size),
+                  SizedBox(height: 48.0),
+                  _buildImportSection(size),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExportSection(Size size) {
+    // 计算按钮宽度，窄屏时自适应，宽屏时固定
+    final useFixedButtonWidth = size.width > 400;
+    final buttonWidth = useFixedButtonWidth ? 140.0 : null;
+
+    return Card(
+      elevation: 1.0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+      child: Padding(
+        padding: EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildExportSection(),
-            SizedBox(height: 32.sp),
-            _buildImportSection(),
+            // 适应窄屏的标题和按钮布局
+            if (size.width < 360)
+              _buildNarrowExportHeader(buttonWidth)
+            else
+              _buildWideExportHeader(buttonWidth),
+
+            SizedBox(height: 8.0),
+            Text(
+              '将所有对话记录导出为JSON文件，可用于备份或迁移到其他设备。',
+              style: TextStyle(fontSize: 13.0, color: Colors.grey[700]),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildExportSection() {
+  // 窄屏时的导出标题和按钮（垂直排列）
+  Widget _buildNarrowExportHeader(double? buttonWidth) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16.0),
+          child: Row(
+            children: [
+              Icon(Icons.download_rounded, color: Colors.blue),
+              SizedBox(width: 8.0),
+              Text(
+                '导出对话',
+                style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          width: double.infinity,
+          child: _buildExportButton(buttonWidth),
+        ),
+      ],
+    );
+  }
+
+  // 宽屏时的导出标题和按钮（水平排列）
+  Widget _buildWideExportHeader(double? buttonWidth) {
+    return Row(
+      children: [
+        Icon(Icons.download_rounded, color: Colors.blue),
+        SizedBox(width: 8.0),
+        Text(
+          '导出对话',
+          style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+        ),
+        Spacer(),
+        _buildExportButton(buttonWidth),
+      ],
+    );
+  }
+
+  // 导出按钮
+  Widget _buildExportButton(double? buttonWidth) {
+    return SizedBox(
+      width: buttonWidth,
+      child: ElevatedButton.icon(
+        onPressed: isExporting ? null : _handleBranchChatExport,
+        icon:
+            isExporting
+                ? SizedBox(
+                  width: 16.0,
+                  height: 16.0,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.0,
+                    color: Colors.white,
+                  ),
+                )
+                : const Icon(Icons.file_download, size: 18.0),
+        label: Text(isExporting ? '导出中...' : '导出对话'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+          padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImportSection(Size size) {
+    // 计算按钮宽度，窄屏时自适应，宽屏时固定
+    final useFixedButtonWidth = size.width > 400;
+    final buttonWidth = useFixedButtonWidth ? 140.0 : null;
+
     return Card(
+      elevation: 1.0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
       child: Padding(
-        padding: EdgeInsets.all(16.sp),
+        padding: EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Text('导出对话', style: TextStyle(fontSize: 18.sp)),
-                Spacer(),
-                ElevatedButton.icon(
-                  onPressed: isExporting ? null : _handleBranchChatExport,
-                  icon:
-                      isExporting
-                          ? SizedBox(
-                            width: 20.sp,
-                            height: 20.sp,
-                            child: const CircularProgressIndicator(),
-                          )
-                          : const Icon(Icons.file_download),
-                  label: Text(isExporting ? '导出中...' : '导出对话'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 8.sp),
+            // 适应窄屏的标题和按钮布局
+            if (size.width < 360)
+              _buildNarrowImportHeader(buttonWidth)
+            else
+              _buildWideImportHeader(buttonWidth),
+
+            SizedBox(height: 8.0),
             Text(
-              '将所有对话记录导出为JSON文件。',
-              style: TextStyle(fontSize: 14.sp, color: Colors.grey),
+              '从JSON文件导入对话记录，并合并到现有对话中。重复的会话将被跳过。',
+              style: TextStyle(fontSize: 13.0, color: Colors.grey[700]),
             ),
-            SizedBox(height: 16.sp),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildImportSection() {
-    return Card(
-      child: Padding(
-        padding: EdgeInsets.all(16.sp),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text('导入对话', style: TextStyle(fontSize: 18.sp)),
-                Spacer(),
-                ElevatedButton.icon(
-                  onPressed: isImporting ? null : _handleBranchChatImport,
-                  icon:
-                      isImporting
-                          ? SizedBox(
-                            width: 20.sp,
-                            height: 20.sp,
-                            child: const CircularProgressIndicator(),
-                          )
-                          : const Icon(Icons.file_upload),
-                  label: Text(isImporting ? '导入中...' : '导入对话'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
+  // 窄屏时的导入标题和按钮（垂直排列）
+  Widget _buildNarrowImportHeader(double? buttonWidth) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16.0),
+          child: Row(
+            children: [
+              Icon(Icons.upload_rounded, color: Colors.green),
+              SizedBox(width: 8.0),
+              Text(
+                '导入对话',
+                style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          width: double.infinity,
+          child: _buildImportButton(buttonWidth),
+        ),
+      ],
+    );
+  }
+
+  // 宽屏时的导入标题和按钮（水平排列）
+  Widget _buildWideImportHeader(double? buttonWidth) {
+    return Row(
+      children: [
+        Icon(Icons.upload_rounded, color: Colors.green),
+        SizedBox(width: 8.0),
+        Text(
+          '导入对话',
+          style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+        ),
+        Spacer(),
+        _buildImportButton(buttonWidth),
+      ],
+    );
+  }
+
+  // 导入按钮
+  Widget _buildImportButton(double? buttonWidth) {
+    return SizedBox(
+      width: buttonWidth,
+      child: ElevatedButton.icon(
+        onPressed: isImporting ? null : _handleBranchChatImport,
+        icon:
+            isImporting
+                ? SizedBox(
+                  width: 16.0,
+                  height: 16.0,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.0,
+                    color: Colors.white,
                   ),
-                ),
-              ],
-            ),
-            SizedBox(height: 8.sp),
-            Text(
-              '从JSON文件导入对话记录，并合并到现有对话中。',
-              style: TextStyle(fontSize: 14.sp, color: Colors.grey),
-            ),
-            SizedBox(height: 16.sp),
-          ],
+                )
+                : const Icon(Icons.file_upload, size: 18.0),
+        label: Text(isImporting ? '导入中...' : '导入对话'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.green,
+          foregroundColor: Colors.white,
+          padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
         ),
       ),
     );
@@ -137,7 +285,8 @@ class _ChatExportImportPageState extends State<ChatExportImportPage> {
       );
 
       // 3. 获取下载目录并创建文件
-      final fileName = 'SuChat对话记录_${DateTime.now().millisecondsSinceEpoch}.json';
+      final fileName =
+          'SuChat对话记录_${DateTime.now().millisecondsSinceEpoch}.json';
 
       try {
         // 先尝试使用 FilePicker 选择保存位置

@@ -9,8 +9,10 @@ import '../../../../common/components/tool_widget.dart';
 import '../../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../../common/llm_spec/constant_llm_enum.dart';
 import '../../../../common/utils/db_tools/db_brief_ai_tool_helper.dart';
+import '../../../../common/utils/screen_helper.dart';
 import '../../../../common/utils/tools.dart';
 import '../../../../services/model_manager_service.dart';
+import '../../branch_chat/pages/add_model_page.dart';
 
 class ModelList extends StatefulWidget {
   const ModelList({super.key});
@@ -45,7 +47,7 @@ class _ModelListState extends State<ModelList> {
   }
 
   // 删除模型
-  Future<void> _deleteModel(BuildContext context, CusBriefLLMSpec model) async {
+  Future<void> _deleteModel(CusBriefLLMSpec model) async {
     if (model.isBuiltin) {
       ScaffoldMessenger.of(
         context,
@@ -165,8 +167,6 @@ class _ModelListState extends State<ModelList> {
         }
       }
 
-      // await _dbHelper.insertBriefCusLLMSpecList(models);
-
       if (!mounted) return;
       commonHintDialog(context, '导入成功', """成功导入 ${models.length} 个模型，
           \n其中 ${duplicateModels.length} 个模型名称已存在，
@@ -211,150 +211,27 @@ class _ModelListState extends State<ModelList> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return RefreshIndicator(
-      onRefresh: () async => _loadModels(),
-      child: ListView(
+    // 根据平台类型选择不同的UI
+    return ScreenHelper.isDesktop()
+        ? _buildDesktopLayout()
+        : _buildMobileLayout();
+  }
+
+  // 桌面端布局
+  Widget _buildDesktopLayout() {
+    return Padding(
+      padding: EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Padding(
-                padding: EdgeInsets.all(16.sp),
-                child: Text(
-                  '已导入 ${_models.length} 个模型',
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.delete_outline),
-                onPressed: () => _clearAllModels(context),
-              ),
-              if (_isImporting)
-                Padding(
-                  padding: EdgeInsets.only(right: 16.sp),
-                  child: SizedBox(
-                    width: 16.sp,
-                    height: 16.sp,
-                    child: CircularProgressIndicator(strokeWidth: 2.sp),
-                  ),
-                )
-              else
-                IconButton(
-                  icon: const Icon(Icons.upload_file_outlined),
-                  onPressed: () => _importFromJson(),
-                ),
-            ],
-          ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              sortColumnIndex: _sortColumnIndex,
-              sortAscending: _sortAscending,
-              dataRowMinHeight: 15.sp,
-              dataRowMaxHeight: 50.sp,
-              headingRowHeight: 50.sp,
-              horizontalMargin: 10.sp,
-              headingTextStyle: const TextStyle(fontWeight: FontWeight.bold),
-              columnSpacing: 10.sp,
-              columns: [
-                DataColumn(
-                  label: const Text('平台'),
-                  onSort: (columnIndex, ascending) {
-                    _sort<String>(
-                      (d) => CP_NAME_MAP[d.platform] ?? '',
-                      columnIndex,
-                      ascending,
-                    );
-                  },
-                ),
-                DataColumn(
-                  label: const Text('模型'),
-                  onSort: (columnIndex, ascending) {
-                    _sort<String>(
-                      (d) => d.name ?? d.model,
-                      columnIndex,
-                      ascending,
-                    );
-                  },
-                ),
-                DataColumn(
-                  label: const Text('类型'),
-                  onSort: (columnIndex, ascending) {
-                    _sort<String>(
-                      (d) => d.modelType.name,
-                      columnIndex,
-                      ascending,
-                    );
-                  },
-                ),
-                // DataColumn(
-                //   label: const Text('输入+输出+单个'),
-                //   onSort: (columnIndex, ascending) {
-                //     _sort<num>(
-                //       (d) =>
-                //           (d.inputPrice ?? 0) +
-                //           (d.outputPrice ?? 0) +
-                //           (d.costPer ?? 0),
-                //       columnIndex,
-                //       ascending,
-                //     );
-                //   },
-                // ),
-                const DataColumn(
-                  label: Text('操作'),
-                  headingRowAlignment: MainAxisAlignment.center,
-                ),
-              ],
-              rows: List<DataRow>.generate(
-                _models.length,
-                (int index) => DataRow(
-                  color: WidgetStateProperty.resolveWith<Color?>((
-                    Set<WidgetState> states,
-                  ) {
-                    // 所有行将具有相同的选定颜色
-                    if (states.contains(WidgetState.selected)) {
-                      return Theme.of(
-                        context,
-                      ).colorScheme.primary.withValues(alpha: 0.08);
-                    }
-                    // 但修改偶数行为灰色
-                    if (index.isEven) {
-                      return Colors.grey.withValues(alpha: 0.3);
-                    }
-                    // 对其他状态和奇数行使用默认值
-                    return null;
-                  }),
-                  cells: [
-                    DataCell(Text(CP_NAME_MAP[_models[index].platform] ?? '')),
-                    DataCell(
-                      SizedBox(
-                        width: 0.45.sw,
-                        child: Text(_models[index].model),
-                      ),
-                    ),
-                    DataCell(Text(_models[index].modelType.name)),
-                    // DataCell(
-                    //   Text(
-                    //     '${_models[index].inputPrice ?? 0} + ${_models[index].outputPrice ?? 0} + ${_models[index].costPer ?? 0}',
-                    //   ),
-                    // ),
-                    DataCell(
-                      _models[index].isBuiltin
-                          ? const SizedBox.shrink()
-                          : IconButton(
-                            icon: const Icon(Icons.delete),
-                            onPressed:
-                                () => _deleteModel(context, _models[index]),
-                          ),
-                    ),
-                  ],
-                  //  长按显示该模型更多信息
-                  onLongPress: () => showModelInfo(context, _models[index]),
-                ),
-              ),
+          _buildHeader(),
+          SizedBox(height: 16),
+          Expanded(
+            child: Card(
+              elevation: 2,
+              color: Colors.white,
+              shadowColor: Colors.black.withValues(alpha: 0.05),
+              child: _buildSimpleTable(),
             ),
           ),
         ],
@@ -362,24 +239,106 @@ class _ModelListState extends State<ModelList> {
     );
   }
 
+  // 移动端布局
+  Widget _buildMobileLayout() {
+    return Column(
+      children: [_buildHeader(), Expanded(child: _buildSimpleTable())],
+    );
+  }
+
+  // 表格标题行
+  Widget _buildHeader() {
+    return Row(
+            children: [
+              Padding(
+          padding: EdgeInsets.all(16),
+                child: Text(
+                  '已导入 ${_models.length} 个模型',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const Spacer(),
+        IconButton(
+          icon: const Icon(Icons.add_circle_outline),
+          onPressed: () async {
+            final result = await Navigator.push<CusBriefLLMSpec>(
+              context,
+              MaterialPageRoute(builder: (context) => const AddModelPage()),
+            );
+
+            if (result != null) {
+              _loadModels();
+            }
+          },
+          tooltip: '添加新模型',
+        ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                onPressed: () => _clearAllModels(context),
+          tooltip: '清除所有自定义模型',
+              ),
+              if (_isImporting)
+                Padding(
+            padding: EdgeInsets.only(right: 16),
+                  child: SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              else
+                IconButton(
+                  icon: const Icon(Icons.upload_file_outlined),
+                  onPressed: () => _importFromJson(),
+            tooltip: '导入模型配置',
+          ),
+      ],
+    );
+  }
+
   void showModelInfo(BuildContext context, CusBriefLLMSpec model) {
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (BuildContext context) {
-        return SizedBox(
-          height: 1.sh,
+        return Container(
+          height:
+              ScreenHelper.isDesktop()
+                  ? MediaQuery.of(context).size.height * 0.7
+                  : 1.sh,
+          padding: EdgeInsets.only(top: 8),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
+              Container(
+                width: 40,
+                height: 4,
+                margin: EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20.sp),
+                padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(model.name ?? model.model),
-                    TextButton(
-                      child: const Text('关闭'),
+                    Text(
+                      model.name ?? model.model,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    TextButton.icon(
+                      icon: Icon(Icons.close),
+                      label: Text('关闭'),
                       onPressed: () {
                         Navigator.pop(context);
                         unfocusHandle();
@@ -388,39 +347,349 @@ class _ModelListState extends State<ModelList> {
                   ],
                 ),
               ),
-              Divider(height: 2.sp, thickness: 2.sp),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: EdgeInsets.all(10.sp),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('部署平台: ${CP_NAME_MAP[model.platform] ?? ''}'),
-                        Text('模型代号: ${model.model}'),
-                        Text('模型名称: ${model.name}'),
-                        Text('模型类型: ${MT_NAME_MAP[model.modelType]}'),
-                        Text('是否免费: ${(model.isFree ?? false) ? '是' : '否'}'),
-                        Text('是否内置: ${model.isBuiltin ? '是' : '否'}'),
-                        Text('输入价格: ${model.inputPrice ?? '0'}'),
-                        Text('输出价格: ${model.outputPrice ?? '0'}'),
-                        Text('单个花费: ${model.costPer ?? '0'}'),
-                        Text('上下文长度: ${model.contextLength ?? 0}'),
-                        Text(
-                          '发布日期: ${model.gmtRelease?.toString().substring(0, 10) ?? ''}',
-                        ),
-                        Text(
-                          '创建日期: ${model.gmtCreate?.toString().substring(0, 10) ?? ''}',
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+              Divider(height: 2, thickness: 2),
+              Expanded(child: _infoRows(model)),
             ],
           ),
         );
       },
+    );
+  }
+
+  // 信息项显示行
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              '$label: ',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: Colors.grey[700],
+              ),
+            ),
+          ),
+          Expanded(child: Text(value, style: TextStyle(fontSize: 14))),
+        ],
+      ),
+    );
+  }
+
+  // 简单的表格实现，避免DataTable的约束问题
+  Widget _buildSimpleTable() {
+    return Column(
+      children: [
+        // 表头
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.withValues(alpha: 0.1),
+            border: Border(
+              bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+            ),
+          ),
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              _buildHeaderCell(
+                '平台',
+                flex: 2,
+                onTap: () {
+                  _sort<String>(
+                    (d) => CP_NAME_MAP[d.platform] ?? '',
+                    0,
+                    _sortColumnIndex == 0 ? !_sortAscending : true,
+                  );
+                },
+              ),
+              _buildHeaderCell(
+                '模型',
+                flex: 5,
+                onTap: () {
+                  _sort<String>(
+                    (d) => d.name ?? d.model,
+                    1,
+                    _sortColumnIndex == 1 ? !_sortAscending : true,
+                  );
+                },
+              ),
+              _buildHeaderCell(
+                '类型',
+                flex: 2,
+                onTap: () {
+                  _sort<String>(
+                    (d) => d.modelType.name,
+                    2,
+                    _sortColumnIndex == 2 ? !_sortAscending : true,
+                  );
+                },
+              ),
+              _buildHeaderCell('操作', flex: 1, onTap: null),
+            ],
+          ),
+        ),
+
+        // 表格内容，使用ListView可以垂直滚动
+        Expanded(
+          child: ListView.builder(
+            itemCount: _models.length,
+            itemBuilder: (context, index) {
+              final model = _models[index];
+              final isEven = index.isEven;
+
+              return GestureDetector(
+                // 移动端长按显示详情，桌面端右键显示菜单
+                onLongPress:
+                    ScreenHelper.isMobile()
+                        ? () => showModelInfo(context, model)
+                        : null,
+                onSecondaryTapDown:
+                    ScreenHelper.isDesktop()
+                        ? (details) => _showContextMenu(
+                          context,
+                          model,
+                          details.globalPosition,
+                        )
+                        : null,
+                child: Container(
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color:
+                        isEven
+                            ? Colors.grey.withValues(alpha: 0.05)
+                            : Colors.white,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Colors.grey.withValues(alpha: 0.1),
+                      ),
+                    ),
+                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: _buildItemRow(model),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildItemRow(CusBriefLLMSpec model) {
+    return Row(
+      children: [
+        Expanded(flex: 2, child: Text(CP_NAME_MAP[model.platform] ?? '')),
+        Expanded(
+          flex: 5,
+          child: Tooltip(
+            message: model.model,
+            child: Text(
+              model.model,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+            ),
+          ),
+        ),
+        Expanded(flex: 2, child: Text(MT_NAME_MAP[model.modelType] ?? '-')),
+        Expanded(
+          flex: 1,
+          child: Center(
+            child:
+                model.isBuiltin
+                    ? const Text('内置', style: TextStyle(color: Colors.grey))
+                    : IconButton(
+                      icon: const Icon(
+                        Icons.delete,
+                        color: Colors.red,
+                        size: 20,
+                      ),
+                      onPressed: () => _deleteModel(model),
+                      tooltip: '删除模型',
+                    ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 构建表头单元格
+  Widget _buildHeaderCell(
+    String text, {
+    required int flex,
+    required VoidCallback? onTap,
+  }) {
+    return Expanded(
+      flex: flex,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Row(
+          children: [
+            Text(
+              text,
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            if (onTap != null) ...[
+              SizedBox(width: 4),
+              Icon(
+                _sortColumnIndex == _getColumnIndex(text)
+                    ? (_sortAscending
+                        ? Icons.arrow_upward
+                        : Icons.arrow_downward)
+                    : Icons.unfold_more,
+                size: 16,
+                color: Colors.grey,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 获取列索引
+  int _getColumnIndex(String columnName) {
+    switch (columnName) {
+      case '平台':
+        return 0;
+      case '模型':
+        return 1;
+      case '类型':
+        return 2;
+      default:
+        return -1;
+    }
+  }
+
+  // 在桌面端显示右键上下文菜单
+  void _showContextMenu(
+    BuildContext context,
+    CusBriefLLMSpec model,
+    Offset position,
+  ) {
+    final items = <PopupMenuEntry<String>>[];
+
+    // 查看详情选项
+    items.add(
+      PopupMenuItem<String>(
+        value: 'info',
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.blue, size: 18),
+            SizedBox(width: 8),
+            Text('查看详情'),
+          ],
+        ),
+      ),
+    );
+
+    // 删除选项（仅非内置模型显示）
+    if (!model.isBuiltin) {
+      items.add(
+        PopupMenuItem<String>(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(Icons.delete_outline, color: Colors.red, size: 18),
+              SizedBox(width: 8),
+              Text('删除模型'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // 显示菜单并处理选择结果
+    showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy,
+        position.dx + 1,
+        position.dy + 1,
+      ),
+      items: items,
+    ).then((value) {
+      if (value == null) return;
+
+      switch (value) {
+        case 'info':
+          _showModelInfoDialog(model);
+          break;
+        case 'delete':
+          _deleteModel(model);
+          break;
+      }
+    });
+  }
+
+  // 在桌面端使用对话框显示模型详情
+  void _showModelInfoDialog(CusBriefLLMSpec model) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Container(
+              width: 600,
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.8,
+              ),
+              padding: EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        model.name ?? model.model,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  Divider(height: 24, thickness: 1),
+                  Expanded(child: _infoRows(model)),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+
+  Widget _infoRows(CusBriefLLMSpec model) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildInfoRow('部署平台', CP_NAME_MAP[model.platform] ?? ''),
+          _buildInfoRow('模型代号', model.model),
+          if (model.baseUrl != null) _buildInfoRow('请求地址', model.baseUrl!),
+          if (model.apiKey != null) _buildInfoRow('API Key', model.apiKey!),
+          _buildInfoRow('模型名称', model.name ?? '-'),
+          _buildInfoRow('模型类型', MT_NAME_MAP[model.modelType] ?? '-'),
+          _buildInfoRow('是否免费', (model.isFree ?? false) ? '是' : '否'),
+          _buildInfoRow('是否内置', model.isBuiltin ? '是' : '否'),
+          _buildInfoRow(
+            '创建日期',
+            model.gmtCreate?.toString().substring(0, 10) ?? '-',
+          ),
+        ],
+      ),
     );
   }
 }

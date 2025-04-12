@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../common/llm_spec/constant_llm_enum.dart';
 
@@ -32,7 +31,7 @@ class ModelFilter extends StatelessWidget {
 
     return Container(
       height: 40,
-      padding: EdgeInsets.only(left: 8.sp),
+      padding: EdgeInsets.only(left: 8),
       child: Row(
         children: [
           Expanded(
@@ -64,7 +63,7 @@ class ModelFilter extends StatelessWidget {
 
   Widget _buildFilterChip(BuildContext context, LLModelType type, int count) {
     return Padding(
-      padding: EdgeInsets.only(right: 8.sp),
+      padding: EdgeInsets.only(right: 8),
       // // 自定义 Chip，可以自定义内边距、标签内边距、形状
       // child: RawChip(
       //   label: Text("${MT_NAME_MAP[type]}($count)"),
@@ -78,19 +77,19 @@ class ModelFilter extends StatelessWidget {
       //   // 选中时颜色
       //   selectedColor: Theme.of(context).primaryColorLight,
       //   // 自定义内边距
-      //   padding: EdgeInsets.all(4.sp),
+      //   padding: EdgeInsets.all(4),
       //   // 自定义标签内边距
-      //   labelPadding: EdgeInsets.symmetric(horizontal: 4.sp),
+      //   labelPadding: EdgeInsets.symmetric(horizontal: 4),
       //   // 自定义圆弧
       //   shape: RoundedRectangleBorder(
-      //     borderRadius: BorderRadius.circular(8.sp),
+      //     borderRadius: BorderRadius.circular(8),
       //   ),
       // ),
 
       // 系统默认 Chip，内边距不够小
       child: FilterChip(
-        // padding: EdgeInsets.all(1.sp),
-        // labelPadding: EdgeInsets.all(1.sp),
+        // padding: EdgeInsets.all(1),
+        // labelPadding: EdgeInsets.all(1),
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         label: Text("${MT_NAME_MAP[type]}($count)"),
         selected: type == selectedType,
@@ -107,7 +106,7 @@ class ModelFilter extends StatelessWidget {
 
   Widget _buildCusChip(BuildContext context, LLModelType type, int count) {
     return Padding(
-      padding: EdgeInsets.only(right: 8.sp),
+      padding: EdgeInsets.only(right: 8),
       child: InkWell(
         onTap:
             isStreaming
@@ -116,15 +115,15 @@ class ModelFilter extends StatelessWidget {
                   onTypeChanged?.call(type);
                   onModelSelect?.call();
                 },
-        borderRadius: BorderRadius.circular(8.sp),
+        borderRadius: BorderRadius.circular(8),
         child: Container(
-          padding: EdgeInsets.all(4.sp),
+          padding: EdgeInsets.all(4),
           decoration: BoxDecoration(
             // color: type == selectedType
             //     ? Theme.of(context).primaryColorLight
             //     : Colors.transparent,
             color: Colors.transparent,
-            borderRadius: BorderRadius.circular(8.sp),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color:
                   type == selectedType
@@ -133,7 +132,7 @@ class ModelFilter extends StatelessWidget {
             ),
           ),
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4.sp),
+            padding: EdgeInsets.symmetric(horizontal: 4),
             child: Text(
               "${MT_NAME_MAP[type]}($count)",
               style: TextStyle(
@@ -148,9 +147,9 @@ class ModelFilter extends StatelessWidget {
       ),
     );
 
-    // 2025-03-13 使用RawChip 不知道怎么设置透明背景色，该用上面简单代替一下
+    // 2025-03-13 使用RawChip 不知道怎么设置透明背景色，改用上面简单代替一下
     // return Padding(
-    //   padding: EdgeInsets.only(right: 8.sp),
+    //   padding: EdgeInsets.only(right: 8),
     //   // 自定义 Chip，可以自定义内边距、标签内边距、形状
 
     //   child: RawChip(
@@ -168,12 +167,12 @@ class ModelFilter extends StatelessWidget {
     //     selectedColor: Theme.of(context).primaryColorLight,
     //     backgroundColor: Colors.transparent,
     //     // 自定义内边距
-    //     padding: EdgeInsets.all(4.sp),
+    //     padding: EdgeInsets.all(4),
     //     // 自定义标签内边距
-    //     labelPadding: EdgeInsets.symmetric(horizontal: 4.sp),
+    //     labelPadding: EdgeInsets.symmetric(horizontal: 4),
     //     // 自定义圆弧
     //     shape: RoundedRectangleBorder(
-    //       borderRadius: BorderRadius.circular(8.sp),
+    //       borderRadius: BorderRadius.circular(8),
     //     ),
     //   ),
     // );

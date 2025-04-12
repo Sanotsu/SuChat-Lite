@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../../common/components/tool_widget.dart';
+import '../../../../common/utils/screen_helper.dart';
 import '../../../../common/utils/tools.dart';
 import '../../../../models/brief_ai_tools/branch_chat/character_card.dart';
 import '../../../../models/brief_ai_tools/branch_chat/character_store.dart';
@@ -67,80 +67,146 @@ class _CharacterListPageState extends State<CharacterListPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 根据平台类型选择不同的布局
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('角色列表'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _navigateToCharacterEditor,
-          ),
-
-          buildPopupMenuButton(),
-        ],
-      ),
+      appBar: _buildAppBar(),
       body: Column(
         children: [
           // 搜索栏
-          Padding(
-            padding: EdgeInsets.all(8.sp),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: '搜索角色...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10.sp),
-                ),
-              ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                  _applyFilter();
-                });
-              },
-            ),
-          ),
-
+          _buildSearchBar(),
           // 角色卡列表
           Expanded(
             child:
                 _isLoading
                     ? const Center(child: CircularProgressIndicator())
-                    : _filteredCharacters.isEmpty
-                    ? const Center(child: Text('没有找到角色卡'))
-                    : GridView.builder(
-                      padding: EdgeInsets.all(8.sp),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: 6 / 9,
-                        crossAxisSpacing: 10.sp,
-                        mainAxisSpacing: 10.sp,
-                      ),
-                      itemCount: _filteredCharacters.length,
-                      itemBuilder: (context, index) {
-                        final character = _filteredCharacters[index];
-
-                        return CharacterCardItem(
-                          character: character,
-                          onTap: () => _handleCharacterTap(character),
-                          onEdit:
-                              () => _navigateToCharacterEditor(
-                                character: character,
-                              ),
-                          onDelete: () => _deleteCharacter(character),
-                        );
-                      },
-                    ),
+                    : _buildCharacterGrid(),
           ),
-
-          // SizedBox(height: 68.sp),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _navigateToCharacterEditor,
-        child: const Icon(Icons.add),
+      floatingActionButton: _buildFloatingActionButton(),
+      floatingActionButtonLocation:
+          ScreenHelper.isDesktop()
+              ? FloatingActionButtonLocation.endFloat
+              : FloatingActionButtonLocation.centerFloat,
+    );
+  }
+
+  Widget _buildFloatingActionButton() {
+    return FloatingActionButton(
+      onPressed: _navigateToCharacterEditor,
+      tooltip: '添加新角色',
+      child: const Icon(Icons.add),
+    );
+  }
+
+  // 构建AppBar
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      title: const Text('角色列表'),
+      titleSpacing: 8,
+      actions: [
+        if (ScreenHelper.isDesktop())
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: _navigateToCharacterEditor,
+            tooltip: '添加新角色',
+          ),
+        buildPopupMenuButton(),
+      ],
+    );
+  }
+
+  // 构建搜索栏
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: EdgeInsets.all(12),
+      child: TextField(
+        decoration: InputDecoration(
+          hintText: '搜索角色...',
+          prefixIcon: const Icon(Icons.search),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 10,
+            horizontal: 16,
+          ),
+        ),
+        onChanged: (value) {
+          setState(() {
+            _searchQuery = value;
+            _applyFilter();
+          });
+        },
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
+
+  // 构建角色卡网格
+  Widget _buildCharacterGrid() {
+    // 根据平台类型决定网格布局
+    final crossAxisCount =
+        ScreenHelper.isDesktop()
+            ? (MediaQuery.of(context).size.width / 240).floor().clamp(3, 6)
+            : MediaQuery.of(context).size.width > 600
+            ? 3
+            : 2;
+
+    return _filteredCharacters.isEmpty
+        ? _buildEmptyState()
+        : GridView.builder(
+          padding: EdgeInsets.all(12),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: 6 / 9,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+          ),
+          itemCount: _filteredCharacters.length,
+          itemBuilder: (context, index) {
+            final character = _filteredCharacters[index];
+            return CharacterCardItem(
+              character: character,
+              onTap: () => _handleCharacterTap(character),
+              onEdit: () => _navigateToCharacterEditor(character: character),
+              onDelete: () => _deleteCharacter(character),
+            );
+          },
+        );
+  }
+
+  // 构建空状态提示
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.person_search,
+            size: 48,
+            color: Colors.grey.withValues(alpha: 0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '没有找到角色卡',
+            style: TextStyle(
+              fontSize: ScreenHelper.getFontSize(16),
+              color: Colors.grey[600],
+            ),
+          ),
+          if (_searchQuery.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.clear),
+              label: const Text('清除搜索'),
+              onPressed: () {
+                setState(() {
+                  _searchQuery = '';
+                  _applyFilter();
+                });
+              },
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -149,8 +215,6 @@ class _CharacterListPageState extends State<CharacterListPage> {
       icon: const Icon(Icons.more_horiz_sharp),
       // 调整弹出按钮的位置
       position: PopupMenuPosition.under,
-      // 弹出按钮的偏移
-      // offset: Offset(-25.sp, 0),
       onSelected: (String value) async {
         // 处理选中的菜单项
         if (value == 'background') {
@@ -255,27 +319,39 @@ class _CharacterListPageState extends State<CharacterListPage> {
       builder:
           (context) => AlertDialog(
             title: const Text('导入/导出'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.upload),
-                  title: const Text('导出角色'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _exportCharacters();
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.download),
-                  title: const Text('导入角色'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _importCharacters();
-                  },
-                ),
-              ],
+            content: SizedBox(
+              width: ScreenHelper.isDesktop() ? 400 : null,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.upload),
+                    title: const Text('导出角色'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _exportCharacters();
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.download),
+                    title: const Text('导入角色'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _importCharacters();
+                    },
+                  ),
+                ],
+              ),
             ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('取消'),
+              ),
+            ],
           ),
     );
   }

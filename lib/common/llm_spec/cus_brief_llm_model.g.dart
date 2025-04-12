@@ -13,18 +13,13 @@ CusBriefLLMSpec _$CusBriefLLMSpecFromJson(Map<String, dynamic> json) =>
       $enumDecode(_$LLModelTypeEnumMap, json['modelType']),
       name: json['name'] as String?,
       isFree: json['isFree'] as bool?,
-      inputPrice: (json['inputPrice'] as num?)?.toDouble(),
-      outputPrice: (json['outputPrice'] as num?)?.toDouble(),
-      costPer: (json['costPer'] as num?)?.toDouble(),
-      contextLength: (json['contextLength'] as num?)?.toInt(),
       cusLlmSpecId: json['cusLlmSpecId'] as String,
-      gmtRelease: json['gmtRelease'] == null
-          ? null
-          : DateTime.parse(json['gmtRelease'] as String),
       gmtCreate: json['gmtCreate'] == null
           ? null
           : DateTime.parse(json['gmtCreate'] as String),
       isBuiltin: json['isBuiltin'] as bool? ?? false,
+      baseUrl: json['baseUrl'] as String?,
+      apiKey: json['apiKey'] as String?,
     );
 
 Map<String, dynamic> _$CusBriefLLMSpecToJson(CusBriefLLMSpec instance) =>
@@ -35,13 +30,10 @@ Map<String, dynamic> _$CusBriefLLMSpecToJson(CusBriefLLMSpec instance) =>
       'modelType': _$LLModelTypeEnumMap[instance.modelType]!,
       'name': instance.name,
       'isFree': instance.isFree,
-      'inputPrice': instance.inputPrice,
-      'outputPrice': instance.outputPrice,
-      'costPer': instance.costPer,
-      'contextLength': instance.contextLength,
-      'gmtRelease': instance.gmtRelease?.toIso8601String(),
       'gmtCreate': instance.gmtCreate?.toIso8601String(),
       'isBuiltin': instance.isBuiltin,
+      'baseUrl': instance.baseUrl,
+      'apiKey': instance.apiKey,
     };
 
 const _$ApiPlatformEnumMap = {
@@ -55,6 +47,7 @@ const _$ApiPlatformEnumMap = {
   ApiPlatform.infini: 'infini',
   ApiPlatform.volcengine: 'volcengine',
   ApiPlatform.volcesBot: 'volcesBot',
+  ApiPlatform.custom: 'custom',
 };
 
 const _$LLModelTypeEnumMap = {

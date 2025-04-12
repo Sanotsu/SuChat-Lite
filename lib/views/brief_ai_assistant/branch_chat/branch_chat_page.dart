@@ -5,12 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:math';
 
 import '../../../common/components/toast_utils.dart';
 import '../../../common/constants/constants.dart';
+import '../../../common/utils/screen_helper.dart';
 import '../../../common/utils/tools.dart';
 import '../../../services/model_manager_service.dart';
 import '../../../common/llm_spec/cus_brief_llm_model.dart';
@@ -26,23 +26,25 @@ import '../../../models/brief_ai_tools/branch_chat/character_card.dart';
 import '../../../services/chat_service.dart';
 import '../../../services/cus_get_storage.dart';
 
+import 'components/draggable_character_avatar_preview.dart';
+import 'pages/character_list_page.dart';
 import '../_chat_components/_small_tool_widgets.dart';
-import 'components/character_avatar_preview.dart';
 import '../_chat_pages/chat_export_import_page.dart';
 import '../_chat_pages/chat_background_picker_page.dart';
 import '../_chat_components/model_filter.dart';
-import '../_chat_components/model_selector.dart';
 import '../../../common/components/cus_markdown_renderer.dart';
 
-import '../index.dart';
 import 'components/branch_message_item.dart';
 import 'components/branch_tree_dialog.dart';
 import '../_chat_components/chat_input_bar.dart';
-import 'components/branch_chat_history_drawer.dart';
 import '../_chat_components/text_selection_dialog.dart';
 import 'components/branch_message_actions.dart';
 
 import 'pages/add_model_page.dart';
+import 'components/adaptive_chat_layout.dart';
+import 'components/branch_chat_history_panel.dart';
+
+import 'components/adaptive_model_selector.dart';
 
 ///
 /// 分支对话主页面
@@ -143,10 +145,8 @@ class _BranchChatPageState extends State<BranchChatPage>
   // 当前角色
   CharacterCard? currentCharacter;
 
-  // 抽屉状态
-  bool isDrawerOpen = false;
-
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey();
+  // 桌面端侧边栏状态
+  bool isSidebarVisible = false;
 
   ///******************************************* */
   ///
@@ -169,6 +169,9 @@ class _BranchChatPageState extends State<BranchChatPage>
       // 从本地存储加载背景图片设置
       loadBackgroundSettings();
     }
+
+    // 初始化桌面端侧边栏状态
+    isSidebarVisible = ScreenHelper.isDesktop();
 
     // 初始化分支存储器
     _initStore();
@@ -279,6 +282,7 @@ class _BranchChatPageState extends State<BranchChatPage>
     loadSessions();
   }
 
+  /// 过滤指定角色排序后的会话
   List<BranchChatSession> _filterCharacterSessions() {
     return store.sessionBox
         .getAll()
@@ -288,78 +292,98 @@ class _BranchChatPageState extends State<BranchChatPage>
       ..sort((a, b) => b.updateTime.compareTo(a.updateTime));
   }
 
-  Future<void> _initSession() async {
-    // 获取今天的最后一条对话记录
-    final today = DateTime.now();
-    final todayStart = DateTime(today.year, today.month, today.day);
+  /// 获取所有排序后的会话
+  List<BranchChatSession> _getSortedSessions() {
+    return store.sessionBox.getAll().toList()
+      ..sort((a, b) => b.updateTime.compareTo(a.updateTime));
+  }
 
-    var sessions =
-        store.sessionBox.getAll().toList()
-          ..sort((a, b) => b.updateTime.compareTo(a.updateTime));
+  /// 处理模型选择和对话创建
+  Future<void> _handleModelSelectionAndChatCreation(
+    BranchChatSession? session,
+  ) async {
+    // 当前使用模型，如果有当前角色则使用角色模型；如果有当前会话则使用会话模型
+    final cusLlmSpecId =
+        currentCharacter?.preferredModel?.cusLlmSpecId ??
+        session?.llmSpec.cusLlmSpecId;
 
-    if (currentCharacter != null) {
-      sessions = _filterCharacterSessions();
+    // 根据cusLlmSpecId获取模型
+    selectedModel =
+        modelList.where((m) => m.cusLlmSpecId == cusLlmSpecId).firstOrNull;
+
+    // 如果模型不存在，则使用默认模型
+    if (selectedModel == null) {
+      ToastUtils.showInfo(
+        '最新对话所用模型已被删除，将使用默认模型构建全新对话。',
+        duration: const Duration(seconds: 5),
+      );
+      setState(() {
+        selectedModel = modelList.first;
+        selectedType = selectedModel!.modelType;
+      });
+      await createNewChat(type: "brand-new");
+    } else {
+      // 如果模型存在，则更新UI
+      setState(() {
+        selectedType = selectedModel!.modelType;
+        isNewChat = false;
+        isLoading = false;
+      });
+      // 如果当前会话存在，则加载消息
+      if (session != null) {
+        await loadMessages();
+      }
     }
+  }
 
+  /// 初始化会话
+  Future<void> _initSession() async {
+    // 根据是否有使用角色获取所有的会话记录
+    var sessions =
+        currentCharacter != null
+            ? _filterCharacterSessions()
+            : _getSortedSessions();
+
+    // 如果没有任何对话记录，则标记创建新对话
     if (sessions.isEmpty) {
       setState(() {
         isNewChat = true;
         isLoading = false;
       });
 
-      // 2025-04-07 如果当天没有对话记录，但是有选择当前角色，直接创建新角色对话
-      // 新建一个就当作存在记录了，后面的逻辑继续
+      // 2025-04-07 如果没有对话记录，但是有选择当前角色，直接创建新角色对话
+      // 如果没有对话记录，也没有角色，上面设置了 isNewChat 标记，直接返回即可
       if (currentCharacter != null) {
+        await _handleModelSelectionAndChatCreation(null);
         await createNewChat();
         // 新建对话后要更新当前对话列表，以便后面逻辑继续
         sessions = _filterCharacterSessions();
-      } else {
-        // 如果没有对话记录，也没有角色，上面设置了 isNewChat 标记，直接返回即可
-        return;
       }
+      return;
     }
+
+    // 如果有会话记录，则获取是今天的最后一条对话记录
+    // 如果有会话记录但今天没有对话记录，则获取最后一条对话记录
+    final today = DateTime.now();
+    final todayStart = DateTime(today.year, today.month, today.day);
 
     final todayLastSession = sessions.firstWhere(
       (session) => session.updateTime.isAfter(todayStart),
-      orElse: () => sessions.isEmpty ? throw Exception() : sessions.first,
+      orElse: () => sessions.first,
     );
 
     try {
       setState(() {
+        // 设置当前会话ID
         currentSessionId = todayLastSession.id;
 
-        // 2025-04-08 如果当天最后一条是角色对话，则更新角色
+        // 如果当天最后一条是角色对话，则更新角色
         if (todayLastSession.character != null) {
           currentCharacter = todayLastSession.character;
         }
-
-        selectedModel =
-            modelList
-                .where(
-                  (m) =>
-                      m.cusLlmSpecId == todayLastSession.llmSpec.cusLlmSpecId,
-                )
-                .firstOrNull;
       });
 
-      if (selectedModel == null) {
-        ToastUtils.showInfo(
-          '最新对话所用模型已被删除，将使用默认模型构建全新对话。',
-          duration: const Duration(seconds: 5),
-        );
-        setState(() {
-          selectedModel = modelList.first;
-          selectedType = selectedModel!.modelType;
-        });
-        createNewChat(type: "brand-new");
-      } else {
-        setState(() {
-          selectedType = selectedModel!.modelType;
-          isNewChat = false;
-          isLoading = false;
-        });
-        await loadMessages();
-      }
+      await _handleModelSelectionAndChatCreation(todayLastSession);
     } catch (e) {
       // 如果没有任何对话记录，或者今天没有对话记录(会报错抛到这里)，显示新对话界面
       setState(() {
@@ -389,6 +413,7 @@ class _BranchChatPageState extends State<BranchChatPage>
         setState(() {
           isNewChat = true;
           isLoading = false;
+          displayMessages.clear();
         });
         return;
       }
@@ -471,123 +496,145 @@ class _BranchChatPageState extends State<BranchChatPage>
       return Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    var mainScaffold = Scaffold(
-      key: _scaffoldKey,
-      // 设置 Scaffold 背景色为透明，这样才能看到底层背景
+    // 创建应用栏
+    final customAppBar = AppBar(
       backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        // 设置 AppBar 背景色为半透明，保证标题文字可读
-        // backgroundColor: Theme.of(context)
-        //     .colorScheme
-        //     .surface
-        //     .withOpacity(1 - _backgroundOpacity),
-        // 不管，全透明
-        backgroundColor: Colors.transparent,
-        title: SimpleMarqueeOrText(
-          data:
-              currentCharacter != null
-                  ? "${currentCharacter?.name}"
-                  : "${CP_NAME_MAP[selectedModel?.platform]} > ${selectedModel?.model}",
-          velocity: 30,
-          width: 0.6.sw,
-          style: TextStyle(
-            fontSize: 14.sp,
-            fontWeight: FontWeight.bold,
-            color: Colors.blue,
-          ),
+      title: SimpleMarqueeOrText(
+        data:
+            currentCharacter != null
+                ? "${currentCharacter?.name}"
+                : "${CP_NAME_MAP[selectedModel?.platform]} > ${selectedModel?.model}",
+        velocity: 30,
+        width: 0.6.sw,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: Colors.blue,
         ),
-        actions: [
-          buildPopupMenuButton(),
-          IconButton(
-            icon: const Icon(Icons.grid_view),
-            onPressed:
-                isStreaming
-                    ? null
-                    : () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => BriefAITools()),
-                      ).then((value) async {
-                        // 2025-04-08 嫌麻烦，从工具栏回来都重新初始化
-                        // 不只初始化模型是因为模型列表变化了，之前对话的模型不一定是当前加载后选中的模型
-                        await initialize();
-                      });
-                    },
-          ),
-        ],
       ),
-      drawer: buildChatHistoryDrawer(),
-      onDrawerChanged: (isOpen) {
-        setState(() => isDrawerOpen = isOpen);
-      },
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              /// 添加模型过滤器
-              ModelFilter(
-                models: modelList,
-                selectedType: selectedType,
-                onTypeChanged: isStreaming ? null : handleTypeChanged,
-                onModelSelect: isStreaming ? null : showModelSelector,
-                isStreaming: isStreaming,
-                isCusChip: true,
-              ),
+      actions: [
+        buildPopupMenuButton(),
 
-              /// 聊天内容
-              Expanded(
-                child:
-                    displayMessages.isEmpty
-                        ? buildEmptyMessageHint(currentCharacter)
-                        : buildMessageList(),
-              ),
+        IconButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => CharacterListPage()),
+            );
+          },
+          tooltip: '角色管理',
+          icon: Icon(Icons.people),
+        ),
 
-              /// 流式响应时显示进度条
-              if (isStreaming) buildResponseLoading(),
+        // 测试：不同平台页面显示效果
+        // IconButton(
+        //   onPressed: () {
+        //     Navigator.push(
+        //       context,
+        //       MaterialPageRoute(
+        //         builder: (context) => ResponsiveLayoutExample(),
+        //       ),
+        //     );
+        //   },
+        //   icon: Icon(Icons.textsms_sharp),
+        // ),
 
-              /// 输入框
-              ChatInputBar(
-                controller: inputController,
-                focusNode: inputFocusNode,
-                onSend: handleSendMessage,
-                onCancel:
-                    currentEditingMessage != null
-                        ? handleCancelEditUserMessage
-                        : null,
-                isEditing: currentEditingMessage != null,
-                isStreaming: isStreaming,
-                onStop: handleStopStreaming,
-                model: selectedModel,
-                onHeightChanged: (height) {
-                  setState(() => inputHeight = height);
-                },
-              ),
-            ],
-          ),
-
-          /// 悬浮按钮(前面是显示新加对话按钮，后面显示滚动到底部按钮)
-          /// 2025-03-13 不放在下面最外层的Stack，是因为如果放在那里，抽屉显示历史记录时，悬浮按钮还在其上层
-          buildFloatingButton(),
-        ],
-      ),
+        //  2025-04-11 暂存，后续考虑页面之间跳转优化
+        // IconButton(
+        //   icon: const Icon(Icons.grid_view),
+        //   onPressed:
+        //       isStreaming
+        //           ? null
+        //           : () {
+        //             Navigator.push(
+        //               context,
+        //               MaterialPageRoute(builder: (context) => BriefAITools()),
+        //             ).then((value) async {
+        //               // 2025-04-08 嫌麻烦，从工具栏回来都重新初始化
+        //               // 不只初始化模型是因为模型列表变化了，之前对话的模型不一定是当前加载后选中的模型
+        //               await initialize();
+        //             });
+        //           },
+        // ),
+      ],
     );
 
-    // 2025-04-02 在使用bot toast后，不添加这个背景色，修改透明度的背景图片效果不对
-    return Container(
-      color: Colors.white,
-      child: Stack(
+    // 创建主体内容
+    final mainBody = Stack(
+      children: [
+        Column(
+          children: [
+            /// 添加模型过滤器
+            ModelFilter(
+              models: modelList,
+              selectedType: selectedType,
+              onTypeChanged: isStreaming ? null : handleTypeChanged,
+              onModelSelect: isStreaming ? null : showModelSelector,
+              isStreaming: isStreaming,
+              isCusChip: true,
+            ),
+
+            /// 聊天内容
+            Expanded(
+              child:
+                  displayMessages.isEmpty
+                      ? buildEmptyMessageHint(currentCharacter)
+                      : buildMessageList(),
+            ),
+
+            /// 流式响应时显示进度条
+            if (isStreaming) buildResponseLoading(),
+
+            /// 输入框
+            ChatInputBar(
+              controller: inputController,
+              focusNode: inputFocusNode,
+              onSend: handleSendMessage,
+              onCancel:
+                  currentEditingMessage != null
+                      ? handleCancelEditUserMessage
+                      : null,
+              isEditing: currentEditingMessage != null,
+              isStreaming: isStreaming,
+              onStop: handleStopStreaming,
+              model: selectedModel,
+              onHeightChanged: (height) {
+                setState(() => inputHeight = height);
+              },
+            ),
+          ],
+        ),
+
+        /// 悬浮按钮
+        buildFloatingButton(),
+      ],
+    );
+
+    // 使用自适应布局组件
+    return AdaptiveChatLayout(
+      isLoading: isLoading,
+      body: mainBody,
+      historyContent: buildChatHistoryContent(),
+      appBar: customAppBar,
+      title: customAppBar.title,
+      actions: customAppBar.actions,
+      isHistorySidebarVisible: isSidebarVisible,
+      onHistorySidebarToggled: (isVisible) {
+        setState(() => isSidebarVisible = isVisible);
+      },
+      background: buildBackground(),
+      floatingAvatarButton: Stack(
         children: [
-          // 背景图片(若不需要全屏背景，可在上方scaffold的body中覆盖背景即可)
-          buildBackground(),
-
-          // 主页面
-          mainScaffold,
-
           // 角色头像预览
-          // 有角色头像且抽屉未展开
-          if (!isDrawerOpen &&
-              (currentCharacter != null && currentCharacter!.avatar.isNotEmpty))
-            CharacterAvatarPreview(character: currentCharacter!),
+          // 有角色头像且抽屉未展开且桌面端侧边栏未展开
+          if ((currentCharacter != null && currentCharacter!.avatar.isNotEmpty))
+            DraggableCharacterAvatarPreview(
+              character: currentCharacter!,
+              left:
+                  isSidebarVisible
+                      ? (ScreenHelper.isMobile() ? 0.8.sw + 4 : 284)
+                      : 4,
+            ),
         ],
       ),
     );
@@ -606,7 +653,7 @@ class _BranchChatPageState extends State<BranchChatPage>
       // 调整弹出按钮的位置
       position: PopupMenuPosition.under,
       // 弹出按钮的偏移
-      // offset: Offset(-25.sp, 0),
+      // offset: Offset(-25, 0),
       onSelected: (String value) async {
         // 处理选中的菜单项
         if (value == 'add') {
@@ -719,21 +766,28 @@ class _BranchChatPageState extends State<BranchChatPage>
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('是否显示头像和时间', style: TextStyle(fontSize: 18.sp)),
+          title: Text('是否简洁显示', style: TextStyle(fontSize: 18)),
           content: StatefulBuilder(
             builder: (BuildContext context, StateSetter setState) {
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              return Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Switch(
-                    value: isShow,
-                    onChanged: (value) => setState(() => isShow = value),
-                    // 缩小点击区域
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  Text(
-                    isShow ? '简洁显示' : '常规显示',
-                    style: TextStyle(fontSize: 14.sp, color: Colors.grey),
+                  Text("简洁显示不显示消息体头像和下方的操作按钮"),
+                  SizedBox(height: 30),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Switch(
+                        value: isShow,
+                        onChanged: (value) => setState(() => isShow = value),
+                        // 缩小点击区域
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      Text(
+                        isShow ? '简洁显示' : '常规显示',
+                        style: TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                    ],
                   ),
                 ],
               );
@@ -879,9 +933,9 @@ class _BranchChatPageState extends State<BranchChatPage>
     });
   }
 
-  // 修改构建抽屉的方法
-  Widget buildChatHistoryDrawer() {
-    return BranchChatHistoryDrawer(
+  // 侧边栏内容构建方法
+  Widget buildChatHistoryContent() {
+    return BranchChatHistoryPanel(
       sessions: sessionList,
       currentSessionId: currentSessionId,
       onSessionSelected: (session) async {
@@ -898,10 +952,15 @@ class _BranchChatPageState extends State<BranchChatPage>
           if (session.id == currentSessionId) {
             createNewChat(type: "brand-new");
           }
-        } else if (action == 'import') {}
+        } else if (action == 'model-import') {
+          // initialize();
+          initModels();
+        }
         // 都要重新加载会话
         loadSessions();
       },
+      // 桌面端在侧边栏中不需要关闭抽屉，移动端点击某条记录后要关闭抽屉
+      needCloseDrawer: ScreenHelper.isDesktop() ? false : true,
     );
   }
 
@@ -1015,20 +1074,12 @@ class _BranchChatPageState extends State<BranchChatPage>
     }
 
     if (!mounted) return;
-    final model = await showModalBottomSheet<CusBriefLLMSpec>(
+
+    // 使用自适应模型选择器，会根据平台选择最合适的显示方式
+    final model = await AdaptiveModelSelector.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      enableDrag: false,
-      builder:
-          (context) => SizedBox(
-            height: MediaQuery.of(context).size.height * 0.8,
-            child: ModelSelector(
-              models: filteredModels,
-              selectedModel: selectedModel,
-              onModelChanged: (model) => Navigator.pop(context, model),
-            ),
-          ),
+      models: filteredModels,
+      selectedModel: selectedModel,
     );
 
     if (!mounted) return;
@@ -1070,7 +1121,7 @@ class _BranchChatPageState extends State<BranchChatPage>
         itemCount: displayMessages.length,
         controller: scrollController,
         // 列表底部留一点高度，避免工具按钮和悬浮按钮重叠
-        padding: EdgeInsets.only(bottom: 50.sp),
+        padding: EdgeInsets.only(bottom: 50),
         itemBuilder: (context, index) {
           final message = displayMessages[index];
 
@@ -1093,6 +1144,7 @@ class _BranchChatPageState extends State<BranchChatPage>
                       backgroundImage != null && backgroundImage!.isNotEmpty,
                   // 简洁模式不显示头像
                   isShowAvatar: !isBriefDisplay,
+                  character: currentCharacter,
                 ),
               ),
               // 为分支操作添加条件渲染，避免不必要的构建
@@ -1123,65 +1175,32 @@ class _BranchChatPageState extends State<BranchChatPage>
     );
   }
 
-  /// 构建流式生成时的加载指示器
+  // 构建响应加载
   Widget buildResponseLoading() {
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        /// 调整位置之后，还是滚动条贯穿屏幕，悬浮按钮放在滚动条上方，和谐一点
-        horizontal: 8.sp,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: ClipRRect(
-              // 设置圆角
-              borderRadius: BorderRadius.all(Radius.circular(5.sp)),
-              child: SizedBox(
-                height: 5.sp, // 设置高度
-                child: LinearProgressIndicator(
-                  value: null, // 当前进度(null就循环)
-                  backgroundColor: Colors.grey, // 背景颜色
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    Colors.blue, // 进度条颜色
-                  ),
-                ),
-              ),
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: Center(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
             ),
-          ),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8.sp),
-            child: SizedBox(
-              width: 16.sp,
-              height: 16.sp,
-              child: CircularProgressIndicator(strokeWidth: 3.sp),
+            SizedBox(width: 8),
+            Text(
+              '正在生成回复...',
+              style: TextStyle(fontSize: 12, color: Colors.black),
             ),
-          ),
-          Expanded(
-            child: ClipRRect(
-              // 设置圆角
-              borderRadius: BorderRadius.all(Radius.circular(5.sp)),
-              child: SizedBox(
-                height: 5.sp, // 设置高度
-                child: LinearProgressIndicator(
-                  value: null, // 当前进度(null就循环)
-                  backgroundColor: Colors.blue, // 背景颜色
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    Colors.grey, // 进度条颜色
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   /// 长按消息，显示消息选项
-  void showMessageOptions(
-    BranchChatMessage message,
-    LongPressStartDetails details,
-  ) {
+  void showMessageOptions(BranchChatMessage message, Offset overlayPosition) {
     // 添加振动反馈
     HapticFeedback.mediumImpact();
 
@@ -1189,9 +1208,6 @@ class _BranchChatPageState extends State<BranchChatPage>
     final bool isUser = message.role == CusRole.user.name;
     // 只有AI消息可以重新生成
     final bool isAssistant = message.role == CusRole.assistant.name;
-
-    // 获取点击位置
-    final Offset overlayPosition = details.globalPosition;
 
     showMenu<String>(
       context: context,
@@ -1936,53 +1952,45 @@ class _BranchChatPageState extends State<BranchChatPage>
       left: 0,
       right: 0,
       // 悬浮按钮有设定上下间距，根据其他组件布局适当调整位置
-      bottom: isStreaming ? inputHeight + 5.sp : inputHeight - 5.sp,
+      bottom: isStreaming ? inputHeight + 5 : inputHeight - 5,
       child: Container(
         // 新版本输入框为了更多输入内容，左右边距为0
-        padding: EdgeInsets.symmetric(horizontal: 0.sp),
+        padding: EdgeInsets.symmetric(horizontal: 0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // 图标按钮的默认尺寸是48*48,占位宽度默认48
-            SizedBox(width: 48.sp),
+            SizedBox(width: 48),
             if (displayMessages.isNotEmpty && !isStreaming)
               // 新加对话按钮的背景色
               Padding(
                 // 这里的上下边距，和下面maxHeight的和，要等于默认图标按钮高度的48sp
-                padding: EdgeInsets.symmetric(vertical: 16.sp),
+                padding: EdgeInsets.symmetric(vertical: 16),
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(14.sp),
-                    //
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   // 限制按钮的最大尺寸
-                  constraints: BoxConstraints(
-                    maxWidth: 124.sp,
-                    maxHeight: 32.sp,
-                  ),
-                  child: ElevatedButton.icon(
+                  constraints: BoxConstraints(maxWidth: 124, maxHeight: 32),
+                  child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       // 设置按钮的背景色为透明
                       backgroundColor: Colors.transparent,
+                      alignment: Alignment.center, // 让内容居中
                       // elevation: 0,
                       // 按钮的尺寸
-                      // minimumSize: Size(52.sp, 28.sp),
+                      // minimumSize: Size(52, 28),
                       // 按钮的圆角
                       // shape: RoundedRectangleBorder(
-                      //   borderRadius: BorderRadius.circular(14.sp),
+                      //   borderRadius: BorderRadius.circular(14),
                       // ),
                     ),
-                    icon: Icon(
-                      Icons.add_comment_outlined,
-                      size: 15.sp,
-                      color: Colors.white,
-                    ),
                     onPressed: createNewChat,
-                    label: Text(
+                    child: Text(
                       '开启新对话',
-                      style: TextStyle(fontSize: 12.sp, color: Colors.white),
+                      style: TextStyle(fontSize: 12, color: Colors.white),
                     ),
                   ),
                 ),
@@ -1990,14 +1998,13 @@ class _BranchChatPageState extends State<BranchChatPage>
             if (showScrollToBottom)
               // 按钮图标变小，但为了和下方的发送按钮对齐，所以补足占位宽度
               IconButton(
-                iconSize: 24.sp,
-                icon: FaIcon(
-                  FontAwesomeIcons.circleArrowDown,
-                  color: Colors.black,
-                ),
+                iconSize: 24,
+                icon: Icon(Icons.arrow_circle_down_outlined),
                 onPressed: resetContentHeight,
               ),
-            if (!showScrollToBottom) SizedBox(width: 48.sp),
+              // 2025-04-11？？？这个桌面的不设小一点显示滚动到底部按钮后新开对话按钮位置会变化
+            if (!showScrollToBottom)
+              SizedBox(width: ScreenHelper.isDesktop() ? 40 : 48),
           ],
         ),
       ),
