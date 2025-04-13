@@ -23,7 +23,6 @@ class _MessageColorSettingsPageState extends State<MessageColorSettingsPage> {
   Future<void> _loadConfig() async {
     final config = await MyGetStorage().loadConfig();
 
-    print("config---$config");
     setState(() {
       _config = config;
     });
@@ -63,9 +62,11 @@ class _MessageColorSettingsPageState extends State<MessageColorSettingsPage> {
                 pickerColor: currentColor,
                 onColorChanged: (color) {
                   // 实时预览颜色变化
-                  Navigator.pop(context, color);
+                  setState(() {
+                    currentColor = color;
+                  });
                 },
-                labelTypes: [],
+                // labelTypes: [],
                 pickerAreaHeightPercent: 0.8,
               ),
             ),
@@ -73,6 +74,10 @@ class _MessageColorSettingsPageState extends State<MessageColorSettingsPage> {
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, currentColor),
+                child: const Text('确定'),
               ),
             ],
           ),
@@ -143,6 +148,18 @@ class _MessageColorSettingsPageState extends State<MessageColorSettingsPage> {
             },
             child: const Text('恢复默认设置'),
           ),
+          Text(
+            _config.userTextColor.toString(),
+            style: TextStyle(color: _config.userTextColor),
+          ),
+          Text(
+            _config.aiNormalTextColor.toString(),
+            style: TextStyle(color: _config.aiNormalTextColor),
+          ),
+          Text(
+            _config.aiThinkingTextColor.toString(),
+            style: TextStyle(color: _config.aiThinkingTextColor),
+          ),
         ],
       ),
     );
@@ -207,4 +224,22 @@ class MessageColorConfig {
       aiThinkingTextColor: Color(map['aiThinkingTextColor']),
     );
   }
+
+  // 实现相等比较
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is MessageColorConfig &&
+        other.userTextColor == userTextColor &&
+        other.aiNormalTextColor == aiNormalTextColor &&
+        other.aiThinkingTextColor == aiThinkingTextColor;
+  }
+
+  // 实现hashCode
+  @override
+  int get hashCode =>
+      userTextColor.hashCode ^
+      aiNormalTextColor.hashCode ^
+      aiThinkingTextColor.hashCode;
 }

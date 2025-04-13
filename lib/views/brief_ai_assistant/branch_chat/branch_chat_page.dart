@@ -161,6 +161,9 @@ class _BranchChatPageState extends State<BranchChatPage>
   void initState() {
     super.initState();
 
+    // 初始化颜色配置为默认值，避免在异步加载前被访问
+    _colorConfig = MessageColorConfig.defaultConfig();
+
     // 设置当前角色
     currentCharacter = widget.character;
 
@@ -267,10 +270,6 @@ class _BranchChatPageState extends State<BranchChatPage>
 
   Future<void> _loadColorConfig() async {
     final config = await MyGetStorage().loadConfig();
-
-    print("加载颜色配置-aiNormalTextColor :${config.aiNormalTextColor}");
-    print("加载颜色配置-aiThinkingTextColor:${config.aiThinkingTextColor}");
-    print("加载颜色配置-userTextColor:${config.userTextColor}");
 
     setState(() {
       _colorConfig = config;
@@ -716,9 +715,33 @@ class _BranchChatPageState extends State<BranchChatPage>
               builder: (context) => const MessageColorSettingsPage(),
             ),
           ).then((value) async {
-            await _loadColorConfig(); // 返回时重新加载配置
+            // 重新加载颜色配置（因为对话列表缓存优化等原因，这里强制重新加载消息以便颜色生效）
+            await _loadColorConfig();
 
-            await initialize();
+            // 强制清除所有缓存
+            setState(() {
+              CusMarkdownRenderer.instance.clearCache();
+            });
+
+            // 再次设置状态强制重建整个页面
+            setState(() {
+              // 强制重新加载所有消息
+              final tempMessages = List<BranchChatMessage>.from(
+                displayMessages,
+              );
+              displayMessages = [];
+
+              // 延迟一帧再恢复消息列表，确保UI完全刷新
+              Future.microtask(() {
+                if (mounted) {
+                  setState(() {
+                    displayMessages = tempMessages;
+                  });
+                  // 恢复滚动位置
+                  resetContentHeight();
+                }
+              });
+            });
           });
         }
       },
@@ -1177,7 +1200,9 @@ class _BranchChatPageState extends State<BranchChatPage>
               // 渲染消息体比较复杂，使用RepaintBoundary包装
               RepaintBoundary(
                 child: BranchMessageItem(
-                  key: ValueKey(message.messageId),
+                  key: ValueKey(
+                    '${message.messageId}_${_colorConfig.hashCode}',
+                  ),
                   message: message,
                   onLongPress: isStreaming ? null : showMessageOptions,
                   isUseBgImage:

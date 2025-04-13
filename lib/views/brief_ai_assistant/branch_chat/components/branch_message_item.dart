@@ -47,13 +47,39 @@ class _BranchMessageItemState extends State<BranchMessageItem>
   bool get wantKeepAlive => true;
 
   // 添加状态缓存变量，避免重复计算
-  late final bool _isUser;
-  late final CrossAxisAlignment _crossAxisAlignment;
-  late final MainAxisAlignment _mainAxisAlignment;
+  late bool _isUser;
+  late CrossAxisAlignment _crossAxisAlignment;
+  late MainAxisAlignment _mainAxisAlignment;
+  
+  // 缓存当前使用的颜色配置
+  MessageColorConfig? _currentColorConfig;
 
   @override
   void initState() {
     super.initState();
+    _updateInternalState();
+  }
+  
+  @override
+  void didUpdateWidget(BranchMessageItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // 检查颜色配置是否发生变化
+    if (oldWidget.colorConfig != widget.colorConfig) {
+      // 如果颜色配置变了，强制更新内部状态
+      _currentColorConfig = widget.colorConfig;
+      if (mounted) {
+        setState(() {});
+      }
+    }
+    
+    // 消息变化也需要更新内部状态
+    if (oldWidget.message != widget.message) {
+      _updateInternalState();
+    }
+  }
+  
+  void _updateInternalState() {
     _isUser =
         widget.message.role == CusRole.user.name ||
         widget.message.role == CusRole.system.name;
@@ -63,16 +89,18 @@ class _BranchMessageItemState extends State<BranchMessageItem>
 
     _mainAxisAlignment =
         _isUser ? MainAxisAlignment.end : MainAxisAlignment.start;
+        
+    _currentColorConfig = widget.colorConfig;
   }
 
   // 获取文本颜色
   Color _getTextColor() {
     // 如果有传入的配置，优先使用
-    if (widget.colorConfig != null) {
+    if (_currentColorConfig != null) {
       if (_isUser) {
-        return widget.colorConfig!.userTextColor;
+        return _currentColorConfig!.userTextColor;
       } else {
-        return widget.colorConfig!.aiNormalTextColor;
+        return _currentColorConfig!.aiNormalTextColor;
       }
     }
 
@@ -255,7 +283,7 @@ class _BranchMessageItemState extends State<BranchMessageItem>
   // DS 的 R 系列有深度思考部分，单独展示
   Widget _buildThinkingProcess() {
     final thinkingColor =
-        widget.colorConfig?.aiThinkingTextColor ?? Colors.grey;
+        _currentColorConfig?.aiThinkingTextColor ?? Colors.grey;
 
     return Container(
       padding: EdgeInsets.only(bottom: 8),
