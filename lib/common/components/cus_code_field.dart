@@ -29,10 +29,22 @@ class CusCodeField extends StatefulWidget {
 
 class _CusCodeFieldState extends State<CusCodeField> {
   bool _copied = false;
+
+  // 选择了一个flutter_highlight 中的主题，然后修改了root的背景颜色为透明
+  // 这样可以同时保留了其他的代码高亮
+  final modifiedTheme = Map<String, TextStyle>.from(
+      themeMap['xcode'] ?? githubTheme,
+    )
+    ..['root'] = TextStyle(
+      backgroundColor: Colors.transparent,
+      color: Colors.black,
+      fontFamily: 'FiraCode', // 使用等宽字体
+      fontSize: 14,
+    );
+
   @override
   Widget build(BuildContext context) {
     return Material(
-      // color: Theme.of(context).colorScheme.onInverseSurface,
       color: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: Column(
@@ -81,24 +93,12 @@ class _CusCodeFieldState extends State<CusCodeField> {
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.all(4.sp),
 
-            // 使用highlight 渲染有好的样式和高亮，但不可以背景透明
+            // 使用highlight 渲染有好的样式和高亮，自定义修改主题后也可以背景透明
             child: HighlightView(
               widget.codes,
               language: widget.name,
-              theme: themeMap['xcode'] ?? githubTheme,
+              theme: modifiedTheme,
             ),
-
-            // 使用Text渲染没有好的样式和高亮，但可以背景透明
-            // child: Text(widget.codes),
-            // child: Text(
-            //   widget.codes,
-            //   style: TextStyle(
-            //     fontFamily: 'JetBrains Mono',
-            //     fontSize: 14,
-            //     height: 1.5,
-            //     color: Theme.of(context).colorScheme.onSurface,
-            //   ),
-            // ),
           ),
         ],
       ),

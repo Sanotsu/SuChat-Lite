@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../utils/advanced_options_utils.dart';
 import 'advanced_options_panel.dart';
 import 'tool_widget.dart';
@@ -35,10 +34,6 @@ class _AdvancedOptionsBottomSheetState
 - **因此，并不是所有展示可调整的参数都会生效。**
 
 若对某个模型启用“更多参数”后导致响应异常，请放弃使用“更多参数”。
-
-
-
-
 ''';
 
   @override
@@ -65,10 +60,10 @@ class _AdvancedOptionsBottomSheetState
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: EdgeInsets.all(16.sp),
+          padding: EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(15.sp)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -85,16 +80,16 @@ class _AdvancedOptionsBottomSheetState
                         context,
                         '说明',
                         _hintDialog,
-                        msgFontSize: 14.sp,
+                        msgFontSize: 14,
                       );
                     },
                     child: Row(
                       children: [
-                        Icon(Icons.info_outline, size: 24.sp),
+                        Icon(Icons.info_outline, size: 24),
                         Text(
                           '更多参数',
                           style: TextStyle(
-                            fontSize: 18.sp,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -109,7 +104,7 @@ class _AdvancedOptionsBottomSheetState
                   ),
                   Text(
                     (_enabled) ? '已启用' : '已禁用',
-                    style: TextStyle(fontSize: 12.sp, color: Colors.grey),
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
               ),
@@ -119,7 +114,7 @@ class _AdvancedOptionsBottomSheetState
                     onPressed: () => Navigator.pop(context),
                     child: const Text('取消'),
                   ),
-                  // SizedBox(width: 8.sp),
+                  // SizedBox(width: 8),
                   TextButton(
                     onPressed:
                         () => Navigator.pop(
@@ -136,20 +131,45 @@ class _AdvancedOptionsBottomSheetState
             ],
           ),
         ),
-        Divider(height: 1.sp),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(16.sp),
-            child: AdvancedOptionsPanel(
-              currentOptions: _options,
-              options: widget.options,
-              onOptionsChanged: (newOptions) {
-                setState(() => _options = newOptions);
-              },
-              isShowEnabledSwitch: false,
+        Divider(height: 1),
+        _enabled
+            ? Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(16),
+                child: AdvancedOptionsPanel(
+                  currentOptions: _options,
+                  options: widget.options,
+                  onOptionsChanged: (newOptions) {
+                    setState(() => _options = newOptions);
+                  },
+                  isShowEnabledSwitch: false,
+                ),
+              ),
+            )
+            : Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.settings_outlined,
+                      size: 64,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      '该模型未启用更多参数',
+                      style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '启用开关后可配置更多参数选项',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ),
       ],
     );
   }

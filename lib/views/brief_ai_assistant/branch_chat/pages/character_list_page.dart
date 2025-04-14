@@ -5,9 +5,7 @@ import '../../../../common/utils/screen_helper.dart';
 import '../../../../common/utils/tools.dart';
 import '../../../../models/brief_ai_tools/branch_chat/character_card.dart';
 import '../../../../models/brief_ai_tools/branch_chat/character_store.dart';
-import '../../../../services/cus_get_storage.dart';
 import '../../../home.dart';
-import '../../_chat_pages/chat_background_picker_page.dart';
 import '../components/character_card_item.dart';
 import 'character_editor_page.dart';
 
@@ -111,7 +109,12 @@ class _CharacterListPageState extends State<CharacterListPage> {
             onPressed: _navigateToCharacterEditor,
             tooltip: '添加新角色',
           ),
-        buildPopupMenuButton(),
+
+        IconButton(
+          icon: const Icon(Icons.import_export),
+          onPressed: _showImportExportDialog,
+          tooltip: '角色备份',
+        ),
       ],
     );
   }
@@ -207,38 +210,6 @@ class _CharacterListPageState extends State<CharacterListPage> {
           ],
         ],
       ),
-    );
-  }
-
-  Widget buildPopupMenuButton() {
-    return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_horiz_sharp),
-      // 调整弹出按钮的位置
-      position: PopupMenuPosition.under,
-      onSelected: (String value) async {
-        // 处理选中的菜单项
-        if (value == 'background') {
-          _showBackgroundPicker();
-        } else if (value == 'character_export_import') {
-          _showImportExportDialog();
-        }
-      },
-      itemBuilder:
-          (BuildContext context) => <PopupMenuItem<String>>[
-            buildCusPopupMenuItem(
-              context,
-              "background",
-              "对话背景",
-              Icons.wallpaper,
-            ),
-
-            buildCusPopupMenuItem(
-              context,
-              "character_export_import",
-              "角色备份",
-              Icons.import_export,
-            ),
-          ],
     );
   }
 
@@ -411,29 +382,5 @@ class _CharacterListPageState extends State<CharacterListPage> {
 
       commonExceptionDialog(context, '导入角色', '导入失败: $e');
     }
-  }
-
-  // 显示背景选择器
-  void _showBackgroundPicker() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder:
-            (context) => ChatBackgroundPickerPage(
-              chatType: 'character',
-              title: '角色对话背景',
-            ),
-      ),
-    ).then((confirmed) async {
-      // 只有在用户点击了确定按钮时才重新加载背景设置
-      if (confirmed == true) {
-        // 存储器
-        final MyGetStorage storage = MyGetStorage();
-
-        // 如果没有专属背景，则加载通用背景设置
-        await storage.getCharacterChatBackground();
-        await storage.getCharacterChatBackgroundOpacity();
-      }
-    });
   }
 }

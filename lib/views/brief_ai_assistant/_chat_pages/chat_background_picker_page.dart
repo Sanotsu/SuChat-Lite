@@ -1,17 +1,18 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:suchat_lite/common/components/tool_widget.dart';
+import '../../../common/components/toast_utils.dart';
+import '../../../common/utils/image_color_helper.dart';
 import '../../../services/cus_get_storage.dart';
 import '../../../common/utils/screen_helper.dart';
 import '../_chat_components/_small_tool_widgets.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import '../branch_chat/components/message_color_config.dart';
 
 class ChatBackgroundPickerPage extends StatefulWidget {
-  const ChatBackgroundPickerPage({
-    super.key,
-    required this.chatType,
-    required this.title,
-  });
+  const ChatBackgroundPickerPage({super.key, required this.title});
 
-  final String chatType;
   final String title;
 
   @override
@@ -19,7 +20,8 @@ class ChatBackgroundPickerPage extends StatefulWidget {
       _ChatBackgroundPickerPageState();
 }
 
-class _ChatBackgroundPickerPageState extends State<ChatBackgroundPickerPage> {
+class _ChatBackgroundPickerPageState extends State<ChatBackgroundPickerPage>
+    with SingleTickerProviderStateMixin {
   final MyGetStorage _storage = MyGetStorage();
   String? _selectedBackground;
   double _opacity = 0.2;
@@ -28,6 +30,11 @@ class _ChatBackgroundPickerPageState extends State<ChatBackgroundPickerPage> {
   // 保存初始设置，用于取消时恢复
   String? _initialBackground;
   double _initialOpacity = 0.2;
+  MessageColorConfig _initialColorConfig = MessageColorConfig.defaultConfig();
+  MessageColorConfig _colorConfig = MessageColorConfig.defaultConfig();
+
+  // 选项卡控制器
+  late TabController _tabController;
 
   final List<String> _defaultBackgrounds = [
     'assets/chat_backgrounds/bg1.jpg',
@@ -37,25 +44,30 @@ class _ChatBackgroundPickerPageState extends State<ChatBackgroundPickerPage> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _loadSettings();
   }
 
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadSettings() async {
-    final background =
-        widget.chatType == 'branch'
-            ? await _storage.getBranchChatBackground()
-            : await _storage.getCharacterChatBackground();
-    final opacity =
-        widget.chatType == 'branch'
-            ? await _storage.getBranchChatBackgroundOpacity()
-            : await _storage.getCharacterChatBackgroundOpacity();
+    final background = await _storage.getBranchChatBackground();
+    final opacity = await _storage.getBranchChatBackgroundOpacity();
+    final colorConfig = await _storage.loadMessageColorConfig();
 
     setState(() {
       _selectedBackground = background;
       _opacity = opacity ?? 0.2;
+      _colorConfig = colorConfig;
+
       // 保存初始值
       _initialBackground = background;
       _initialOpacity = opacity ?? 0.2;
+      _initialColorConfig = colorConfig;
       _isLoading = false;
     });
   }
@@ -82,145 +94,352 @@ class _ChatBackgroundPickerPageState extends State<ChatBackgroundPickerPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [Tab(text: '背景设置'), Tab(text: '字体颜色')],
+        ),
         actions: [
           TextButton(
+            // onPressed: () => saveConfig(true),
+            // 2025-04-14 取消时直接返回不就好了？
             onPressed: () {
-              // 取消操作，恢复初始设置
-              if (widget.chatType == 'branch') {
-                _storage.saveBranchChatBackground(_initialBackground);
-                _storage.saveBranchChatBackgroundOpacity(_initialOpacity);
-              } else {
-                _storage.saveCharacterChatBackground(_initialBackground);
-                _storage.saveCharacterChatBackgroundOpacity(_initialOpacity);
-              }
               Navigator.pop(context);
             },
+
             child: const Text('取消'),
           ),
           TextButton(
-            onPressed: () {
-              // 确认操作，保存当前设置
-              _saveBackground(_selectedBackground);
-              _saveOpacity(_opacity);
-              Navigator.pop(context, true);
-            },
+            onPressed: () => saveAllConfig(false),
             child: const Text('确定'),
           ),
         ],
       ),
-      // 使用SingleChildScrollView包裹内容，处理可能的溢出问题
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 背景预览区域 - 使用固定高度而非Expanded
-            if (_selectedBackground != null)
-              Container(
-                width: double.infinity,
-                height: previewHeight,
-                margin: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Opacity(
-                        opacity: _opacity,
-                        child: buildCusImage(
-                          _selectedBackground!,
-                          fit: BoxFit.contain, // 改为contain以避免图片变形
-                        ),
-                      ),
-                    ),
-                    Center(
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              '透明度: ${(_opacity * 100).toInt()}%',
-                              style: TextStyle(color: Colors.black),
-                            ),
-                            Text(
-                              '透明度: ${(_opacity * 100).toInt()}%',
-                              style: TextStyle(color: Colors.blue),
-                            ),
-                            Text(
-                              '透明度: ${(_opacity * 100).toInt()}%',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+      // 使用TabBarView展示不同设置内容
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          // 背景设置选项卡
+          _buildBackgroundTab(previewHeight, isDesktop),
 
-            // 预设背景部分
+          // 字体颜色设置选项卡
+          _buildColorTab(previewHeight),
+        ],
+      ),
+    );
+  }
+
+  // 背景设置选项卡
+  Widget _buildBackgroundTab(double previewHeight, bool isDesktop) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 背景预览区域
+          if (_selectedBackground != null) _buildPreviewArea(previewHeight),
+
+          // 预设背景部分
+          Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
+              '预设背景',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
+
+          // 根据平台选择不同的布局
+          isDesktop
+              ? _buildDesktopBackgroundGrid()
+              : _buildMobileBackgroundList(),
+
+          // 自定义背景部分
+          Padding(
+            padding: EdgeInsets.all(16),
+            child: _buildCustomBackgroundSection(),
+          ),
+
+          // 透明度调整部分
+          if (_selectedBackground != null) ...[
             Padding(
-              padding: EdgeInsets.all(16),
+              padding: EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                '预设背景',
+                '背景透明度',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
-            // 改为自适应高度的网格布局，更适合桌面端
-            isDesktop
-                ? _buildDesktopBackgroundGrid()
-                : _buildMobileBackgroundList(),
-
-            // 自定义背景部分 - 修改为更灵活的布局
             Padding(
               padding: EdgeInsets.all(16),
-              child: _buildCustomBackgroundSection(),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Slider(
+                      value: _opacity,
+                      min: 0.1,
+                      max: 1.0,
+                      onChanged: (value) {
+                        setState(() {
+                          _opacity = value;
+                        });
+                      },
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Text('${(_opacity * 100).toInt()}%'),
+                ],
+              ),
             ),
+          ],
 
-            // 透明度调整部分
-            if (_selectedBackground != null) ...[
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  '背景透明度',
+          // 为桌面端添加底部空间
+          if (isDesktop) SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+
+  // 字体颜色设置选项卡
+  Widget _buildColorTab(double previewHeight) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 颜色预览区域
+          Container(
+            width: double.infinity,
+            height: previewHeight,
+            margin: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
+              color: Colors.white,
+              image:
+                  _selectedBackground != null
+                      ? DecorationImage(
+                        image: _buildBackgroundImage(_selectedBackground!),
+                        fit: BoxFit.cover,
+                        opacity: _opacity,
+                      )
+                      : null,
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildPreviewText('用户发送消息示例', _colorConfig.userTextColor),
+                  SizedBox(height: 12),
+                  _buildPreviewText(
+                    '模型深度思考示例',
+                    _colorConfig.aiThinkingTextColor,
+                  ),
+                  SizedBox(height: 12),
+                  _buildPreviewText('模型正常回复示例', _colorConfig.aiNormalTextColor),
+                ],
+              ),
+            ),
+          ),
+
+          // 颜色设置列表
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '消息颜色设置',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-              ),
-              Padding(
-                padding: EdgeInsets.all(16),
-                child: Row(
+                SizedBox(height: 16),
+                _buildColorSettingItem(
+                  '用户发送消息字体颜色',
+                  _colorConfig.userTextColor,
+                  () => _selectColor(context, 'user'),
+                ),
+                _buildColorSettingItem(
+                  '模型深度思考字体颜色',
+                  _colorConfig.aiThinkingTextColor,
+                  () => _selectColor(context, 'aiThinking'),
+                ),
+                _buildColorSettingItem(
+                  '模型正常回复字体颜色',
+                  _colorConfig.aiNormalTextColor,
+                  () => _selectColor(context, 'aiNormal'),
+                ),
+                SizedBox(height: 20),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Expanded(
-                      child: Slider(
-                        value: _opacity,
-                        min: 0.1,
-                        max: 1.0,
-                        onChanged: (value) {
+                    SizedBox(
+                      width: 180,
+                      child: ElevatedButton(
+                        onPressed: () {
                           setState(() {
-                            _opacity = value;
+                            _colorConfig = MessageColorConfig.defaultConfig();
                           });
                         },
+                        child: const Text('恢复默认颜色设置'),
                       ),
                     ),
-                    SizedBox(width: 8),
-                    Text('${(_opacity * 100).toInt()}%'),
                   ],
                 ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 颜色选择项目
+  Widget _buildColorSettingItem(
+    String title,
+    Color currentColor,
+    VoidCallback onTap,
+  ) {
+    return ListTile(
+      title: Text(title, style: TextStyle(color: currentColor)),
+      trailing: Container(
+        width: 30,
+        height: 30,
+        decoration: BoxDecoration(
+          color: currentColor,
+          borderRadius: BorderRadius.circular(5),
+          border: Border.all(color: Colors.grey),
+        ),
+      ),
+      onTap: onTap,
+    );
+  }
+
+  // 预览文本样式
+  Widget _buildPreviewText(String text, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(text, style: TextStyle(color: color, fontSize: 16)),
+    );
+  }
+
+  // 颜色选择对话框
+  Future<void> _selectColor(BuildContext context, String colorType) async {
+    Color currentColor;
+    switch (colorType) {
+      case 'user':
+        currentColor = _colorConfig.userTextColor;
+        break;
+      case 'aiNormal':
+        currentColor = _colorConfig.aiNormalTextColor;
+        break;
+      case 'aiThinking':
+        currentColor = _colorConfig.aiThinkingTextColor;
+        break;
+      default:
+        currentColor = Colors.black;
+    }
+
+    Color? newColor = await showDialog<Color>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('选择颜色'),
+            content: SingleChildScrollView(
+              child: ColorPicker(
+                pickerColor: currentColor,
+                onColorChanged: (color) {
+                  currentColor = color;
+                },
+                pickerAreaHeightPercent: 0.8,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, currentColor),
+                child: const Text('确定'),
               ),
             ],
+          ),
+    );
 
-            // 为桌面端添加底部空间，避免内容太靠近底部
-            if (isDesktop) SizedBox(height: 32),
-          ],
-        ),
+    if (newColor != null) {
+      setState(() {
+        switch (colorType) {
+          case 'user':
+            _colorConfig = MessageColorConfig(
+              userTextColor: newColor,
+              aiNormalTextColor: _colorConfig.aiNormalTextColor,
+              aiThinkingTextColor: _colorConfig.aiThinkingTextColor,
+            );
+            break;
+          case 'aiNormal':
+            _colorConfig = MessageColorConfig(
+              userTextColor: _colorConfig.userTextColor,
+              aiNormalTextColor: newColor,
+              aiThinkingTextColor: _colorConfig.aiThinkingTextColor,
+            );
+            break;
+          case 'aiThinking':
+            _colorConfig = MessageColorConfig(
+              userTextColor: _colorConfig.userTextColor,
+              aiNormalTextColor: _colorConfig.aiNormalTextColor,
+              aiThinkingTextColor: newColor,
+            );
+            break;
+        }
+      });
+    }
+  }
+
+  // 背景预览区域
+  Widget _buildPreviewArea(double previewHeight) {
+    return Container(
+      width: double.infinity,
+      height: previewHeight,
+      margin: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Opacity(
+              opacity: _opacity,
+              child: buildCusImage(_selectedBackground!, fit: BoxFit.contain),
+            ),
+          ),
+          Center(
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('透明度: ${(_opacity * 100).toInt()}%'),
+                  Text(
+                    '用户发送消息示例',
+                    style: TextStyle(color: _colorConfig.userTextColor),
+                  ),
+                  Text(
+                    '模型深度思考示例',
+                    style: TextStyle(color: _colorConfig.aiThinkingTextColor),
+                  ),
+                  Text(
+                    '模型正常回复示例',
+                    style: TextStyle(color: _colorConfig.aiNormalTextColor),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -367,6 +586,14 @@ class _ChatBackgroundPickerPageState extends State<ChatBackgroundPickerPage> {
     );
   }
 
+  ImageProvider _buildBackgroundImage(String path) {
+    if (path.startsWith('assets/')) {
+      return AssetImage(path);
+    } else {
+      return FileImage(File(path));
+    }
+  }
+
   void _selectBackground(String? background) {
     setState(() {
       _selectedBackground = background;
@@ -384,19 +611,58 @@ class _ChatBackgroundPickerPageState extends State<ChatBackgroundPickerPage> {
     }
   }
 
-  Future<void> _saveBackground(String? path) async {
-    if (widget.chatType == 'branch') {
-      await _storage.saveBranchChatBackground(path);
-    } else {
-      await _storage.saveCharacterChatBackground(path);
-    }
-  }
+  // 选择图片后保存、取消时恢复初始化都会用到这个
+  saveAllConfig(bool isCancel) async {
+    // 显示加载提示
+    final closeToast = ToastUtils.showLoading('对话背景保存中...');
 
-  Future<void> _saveOpacity(double opacity) async {
-    if (widget.chatType == 'branch') {
-      await _storage.saveBranchChatBackgroundOpacity(opacity);
-    } else {
-      await _storage.saveCharacterChatBackgroundOpacity(opacity);
+    // 确保UI有机会先绘制加载动画
+    await Future.delayed(const Duration(milliseconds: 50));
+
+    try {
+      // 1 保存背景图
+      var path = isCancel ? _initialBackground : _selectedBackground;
+      await _storage.saveBranchChatBackground(path);
+
+      // 保存背景图主色调，用于构建侧边栏背景色
+      if (path != null) {
+        try {
+          // 使用ImageColorHelper在隔离线程中提取颜色
+          // 这样不会阻塞主线程，UI可以保持响应
+          Color dominantColor = await ImageColorHelper.extractDominantColor(
+            path,
+          );
+
+          await MyGetStorage().saveBranchChatHistoryPanelBgColor(
+            dominantColor.toARGB32(),
+          );
+        } catch (e) {
+          // 使用默认颜色
+          await MyGetStorage().saveBranchChatHistoryPanelBgColor(
+            Colors.blueGrey.shade100.toARGB32(),
+          );
+        }
+      }
+
+      // 2 保存背景色透明度
+      await _storage.saveBranchChatBackgroundOpacity(
+        isCancel ? _initialOpacity : _opacity,
+      );
+
+      // 3 保存字体颜色配置
+      await _storage.saveMessageColorConfig(
+        isCancel ? _initialColorConfig : _colorConfig,
+      );
+
+      if (!mounted) return;
+      Navigator.pop(context, isCancel ? false : true);
+    } catch (e) {
+      if (mounted) {
+        commonExceptionDialog(context, "保存设置时出错", e.toString());
+      }
+    } finally {
+      // 确保关闭加载提示
+      closeToast();
     }
   }
 }

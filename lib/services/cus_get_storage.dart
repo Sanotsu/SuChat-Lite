@@ -10,12 +10,12 @@ final box = GetStorage();
 
 class MyGetStorage {
   static const String _firstLaunchKey = 'is_first_launch';
+
   static const String _branchChatBackgroundKey = 'chat_background';
   static const String _branchChatBackgroundOpacityKey =
       'chat_background_opacity';
-  static const String _characterChatBackgroundKey = 'character_chat_background';
-  static const String _characterChatBackgroundOpacityKey =
-      'character_chat_background_opacity';
+  static const String _branchChatHistoryPanelBgColorKey =
+      'branch_chat_history_panel_bg_color_key';
 
   // 检查是否首次启动
   bool isFirstLaunch() {
@@ -140,27 +140,18 @@ class MyGetStorage {
     await box.write(_branchChatBackgroundOpacityKey, opacity);
   }
 
-  // 角色对话背景相关方法
-  Future<String?> getCharacterChatBackground() async {
-    final path = box.read<String>(_characterChatBackgroundKey);
-    return path;
+  // 2025-04-14 对话侧边栏背景色(根据对话主页面背景图变化，但如果图片没变还是会每次显示都重复加载，所以缓存)
+  // 缓存时xxx为Color.toARGB32(), 获取后Color(xxx)
+  Future<int?> getBranchChatHistoryPanelBgColor() async {
+    return box.read(_branchChatHistoryPanelBgColorKey);
   }
 
-  Future<void> saveCharacterChatBackground(String? path) async {
-    if (path == null || path.isEmpty) {
-      await box.remove(_characterChatBackgroundKey);
+  Future<void> saveBranchChatHistoryPanelBgColor(int? color) async {
+    if (color == null || color.isNaN) {
+      await box.remove(_branchChatHistoryPanelBgColorKey);
     } else {
-      await box.write(_characterChatBackgroundKey, path);
+      await box.write(_branchChatHistoryPanelBgColorKey, color);
     }
-  }
-
-  Future<double?> getCharacterChatBackgroundOpacity() async {
-    final opacity = box.read<double>(_characterChatBackgroundOpacityKey);
-    return opacity;
-  }
-
-  Future<void> saveCharacterChatBackgroundOpacity(double opacity) async {
-    await box.write(_characterChatBackgroundOpacityKey, opacity);
   }
 
   /// 更新指定平台的 API Key
@@ -191,11 +182,11 @@ class MyGetStorage {
   // 2025-04-11 用户自行配置的消息体颜色
   static const _key = 'message_color_config';
 
-  Future<void> saveConfig(MessageColorConfig config) async {
+  Future<void> saveMessageColorConfig(MessageColorConfig config) async {
     await box.write(_key, json.encode(config.toMap()));
   }
 
-  Future<MessageColorConfig> loadConfig() async {
+  Future<MessageColorConfig> loadMessageColorConfig() async {
     final configString = box.read(_key);
 
     if (configString != null) {

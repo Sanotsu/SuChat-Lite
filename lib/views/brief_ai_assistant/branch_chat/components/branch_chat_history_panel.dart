@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../common/llm_spec/constant_llm_enum.dart';
 import '../../../../common/utils/screen_helper.dart';
 import '../../../../models/brief_ai_tools/branch_chat/branch_chat_session.dart';
+import '../../../../services/cus_get_storage.dart';
 import '../../../user_and_settings/index.dart';
 import '../../model_config/index.dart';
 
@@ -33,21 +34,42 @@ class BranchChatHistoryPanel extends StatefulWidget {
 }
 
 class _BranchChatHistoryPanelState extends State<BranchChatHistoryPanel> {
+  Color? _bgColor;
+
+  @override
+  void initState() {
+    super.initState();
+    getPanelColor();
+  }
+
+  getPanelColor() async {
+    int? colorValue = (await MyGetStorage().getBranchChatHistoryPanelBgColor());
+
+    // 有缓存侧边栏背景色，就使用;没有就白色
+    // 侧边栏背景色在每次切换对话主页背景图时都会缓存
+    Color sidebarColor = colorValue != null ? Color(colorValue) : Colors.white;
+
+    setState(() {
+      _bgColor = sidebarColor;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        gradient: SweepGradient(
-          colors: [
-            Colors.lightBlue.shade100, // 浅蓝色
-            Colors.purple.shade50, // 浅紫色
-            Colors.pink.shade100, // 浅粉色
-          ],
-          center: Alignment.topCenter, // 渐变中心点
-          startAngle: 0.0, // 起始角度（0.0 表示从正右方开始）
-          endAngle: 3.14, // 结束角度（3.14 ≈ π，即180°）
-        ),
-      ),
+      // decoration: BoxDecoration(
+      //   gradient: SweepGradient(
+      //     colors: [
+      //       Colors.lightBlue.shade100, // 浅蓝色
+      //       Colors.purple.shade50, // 浅紫色
+      //       Colors.pink.shade100, // 浅粉色
+      //     ],
+      //     center: Alignment.topCenter, // 渐变中心点
+      //     startAngle: 0.0, // 起始角度（0.0 表示从正右方开始）
+      //     endAngle: 3.14, // 结束角度（3.14 ≈ π，即180°）
+      //   ),
+      // ),
+      color: _bgColor,
       child: Column(
         children: [
           // 使用 SizedBox 来占位状态栏的高度
@@ -56,7 +78,22 @@ class _BranchChatHistoryPanelState extends State<BranchChatHistoryPanel> {
           _buildMoreFeatures(),
 
           Expanded(
-            child: Container(color: Colors.white, child: buildItemList()),
+            child: Container(
+              color: _bgColor,
+              // decoration: BoxDecoration(
+              //   gradient: SweepGradient(
+              //     colors: [
+              //       Colors.lightBlue.shade100, // 浅蓝色
+              //       Colors.purple.shade50, // 浅紫色
+              //       Colors.pink.shade100, // 浅粉色
+              //     ],
+              //     center: Alignment.topCenter, // 渐变中心点
+              //     startAngle: 0.0, // 起始角度（0.0 表示从正右方开始）
+              //     endAngle: 3.14, // 结束角度（3.14 ≈ π，即180°）
+              //   ),
+              // ),
+              child: buildItemList(),
+            ),
           ),
         ],
       ),
@@ -131,7 +168,8 @@ class _BranchChatHistoryPanelState extends State<BranchChatHistoryPanel> {
                   });
                 },
                 child: Card(
-                  elevation: 0,
+                  elevation: 1,
+                  color: _bgColor?.withValues(alpha: 0.9),
                   child: ListTile(
                     leading: const Icon(Icons.import_export),
                     title: Text(
@@ -159,7 +197,8 @@ class _BranchChatHistoryPanelState extends State<BranchChatHistoryPanel> {
                   );
                 },
                 child: Card(
-                  elevation: 0,
+                  elevation: 1,
+                  color: _bgColor?.withValues(alpha: 0.9),
                   child: ListTile(
                     leading: const Icon(Icons.settings),
                     title: Text(

@@ -8,6 +8,7 @@ import 'dart:math';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -612,5 +613,32 @@ Future<bool> isValidImageUrl(String url) async {
     return contentType != null && contentType.startsWith('image/');
   } catch (e) {
     return false; // 如果发生异常，返回 false
+  }
+}
+
+// 从assets中获取文件(好像不太对？？？)
+Future<File> getImageFileFromAssets(String assetPath) async {
+  try {
+    // 1. 加载字节数据
+    final byteData = await rootBundle.load(assetPath);
+
+    // 2. 获取应用临时目录
+    final tempDir = await getTemporaryDirectory();
+
+    // 3. 创建目标文件
+    final file = File('${tempDir.path}/${assetPath.split('/').last}');
+
+    // 4. 将字节数据写入文件
+    await file.writeAsBytes(
+      byteData.buffer.asUint8List(
+        byteData.offsetInBytes,
+        byteData.lengthInBytes,
+      ),
+    );
+
+    return file;
+  } catch (e) {
+    print('Error getting file from assets: $e');
+    throw Exception('Failed to get file from assets');
   }
 }

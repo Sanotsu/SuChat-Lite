@@ -269,10 +269,38 @@ class _BranchChatPageState extends State<BranchChatPage>
   }
 
   Future<void> _loadColorConfig() async {
-    final config = await MyGetStorage().loadConfig();
+    final config = await MyGetStorage().loadMessageColorConfig();
 
     setState(() {
       _colorConfig = config;
+    });
+  }
+
+  Future<void> reapplyMessageColorConfig() async {
+    // 重新加载颜色配置
+    await _loadColorConfig();
+
+    // 强制清除所有缓存
+    setState(() {
+      CusMarkdownRenderer.instance.clearCache();
+    });
+
+    // 再次设置状态强制重建整个页面
+    setState(() {
+      // 强制重新加载所有消息
+      final tempMessages = List<BranchChatMessage>.from(displayMessages);
+      displayMessages = [];
+
+      // 延迟一帧再恢复消息列表，确保UI完全刷新
+      Future.microtask(() {
+        if (mounted) {
+          setState(() {
+            displayMessages = tempMessages;
+          });
+          // 恢复滚动位置
+          resetContentHeight();
+        }
+      });
     });
   }
 
@@ -708,42 +736,18 @@ class _BranchChatPageState extends State<BranchChatPage>
           handleAddModel();
         } else if (value == 'export_import') {
           navigateToExportImportPage();
-        } else if (value == 'message_color') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const MessageColorSettingsPage(),
-            ),
-          ).then((value) async {
-            // 重新加载颜色配置（因为对话列表缓存优化等原因，这里强制重新加载消息以便颜色生效）
-            await _loadColorConfig();
-
-            // 强制清除所有缓存
-            setState(() {
-              CusMarkdownRenderer.instance.clearCache();
-            });
-
-            // 再次设置状态强制重建整个页面
-            setState(() {
-              // 强制重新加载所有消息
-              final tempMessages = List<BranchChatMessage>.from(
-                displayMessages,
-              );
-              displayMessages = [];
-
-              // 延迟一帧再恢复消息列表，确保UI完全刷新
-              Future.microtask(() {
-                if (mounted) {
-                  setState(() {
-                    displayMessages = tempMessages;
-                  });
-                  // 恢复滚动位置
-                  resetContentHeight();
-                }
-              });
-            });
-          });
         }
+        // else if (value == 'message_color') {
+        //   Navigator.push(
+        //     context,
+        //     MaterialPageRoute(
+        //       builder: (context) => const MessageColorSettingsPage(),
+        //     ),
+        //   ).then((value) async {
+        //     // 重新加载颜色配置（因为对话列表缓存优化等原因，这里强制重新加载消息以便颜色生效）
+        //     reapplyMessageColorConfig();
+        //   });
+        // }
       },
       itemBuilder:
           (BuildContext context) => <PopupMenuItem<String>>[
@@ -785,12 +789,12 @@ class _BranchChatPageState extends State<BranchChatPage>
               "对话备份",
               Icons.import_export,
             ),
-            buildCusPopupMenuItem(
-              context,
-              "message_color",
-              "字体颜色",
-              Icons.three_mp,
-            ),
+            // buildCusPopupMenuItem(
+            //   context,
+            //   "message_color",
+            //   "字体颜色",
+            //   Icons.three_mp,
+            // ),
           ],
     );
   }
@@ -930,14 +934,14 @@ class _BranchChatPageState extends State<BranchChatPage>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder:
-            (context) =>
-                ChatBackgroundPickerPage(chatType: 'branch', title: '切换对话背景'),
+        builder: (context) => ChatBackgroundPickerPage(title: '切换对话背景'),
       ),
     ).then((confirmed) {
       // 只有在用户点击了确定按钮时才重新加载背景设置
       if (confirmed == true) {
         loadBackgroundSettings();
+
+        reapplyMessageColorConfig();
       }
     });
   }
@@ -999,6 +1003,8 @@ class _BranchChatPageState extends State<BranchChatPage>
   // 侧边栏内容构建方法
   Widget buildChatHistoryContent() {
     return BranchChatHistoryPanel(
+      // 因为侧边栏主题色会根据对话背景色来适配，所以要加key
+      key: ValueKey('${backgroundImage.hashCode}'),
       sessions: sessionList,
       currentSessionId: currentSessionId,
       onSessionSelected: (session) async {

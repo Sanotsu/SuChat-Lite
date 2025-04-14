@@ -21,7 +21,7 @@ class _MessageColorSettingsPageState extends State<MessageColorSettingsPage> {
   }
 
   Future<void> _loadConfig() async {
-    final config = await MyGetStorage().loadConfig();
+    final config = await MyGetStorage().loadMessageColorConfig();
 
     setState(() {
       _config = config;
@@ -29,7 +29,7 @@ class _MessageColorSettingsPageState extends State<MessageColorSettingsPage> {
   }
 
   Future<void> _saveConfig() async {
-    await MyGetStorage().saveConfig(_config);
+    await MyGetStorage().saveMessageColorConfig(_config);
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
