@@ -151,13 +151,13 @@ class _DraggableCharacterAvatarPreviewState
             },
             child: Material(
               elevation: 4, // 添加阴影
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(2),
               color: Colors.white.withValues(alpha: 0.9),
               child: Container(
                 width: previewSize.width,
                 height: previewSize.height,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(2),
                   border: Border.all(color: Colors.grey.shade300, width: 1),
                 ),
                 child: Stack(
@@ -165,7 +165,7 @@ class _DraggableCharacterAvatarPreviewState
                     // 图像
                     Center(
                       child: Padding(
-                        padding: const EdgeInsets.all(4),
+                        padding: const EdgeInsets.all(2),
                         child: buildAvatarClipOval(
                           widget.character.avatar,
                           clipBehavior: Clip.none,
@@ -185,8 +185,8 @@ class _DraggableCharacterAvatarPreviewState
                     ),
                     // 拖动提示标签
                     Positioned(
-                      top: 8,
-                      left: 8,
+                      top: 4,
+                      left: 4,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -205,13 +205,13 @@ class _DraggableCharacterAvatarPreviewState
                               color: Colors.white70,
                             ),
                             SizedBox(width: 4),
-                            Text(
-                              ScreenHelper.isMobile() ? "按住拖动" : "按住鼠标拖动",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.white,
-                              ),
-                            ),
+                            // Text(
+                            //   ScreenHelper.isMobile() ? "按住拖动" : "按住鼠标拖动",
+                            //   style: TextStyle(
+                            //     fontSize: 12,
+                            //     color: Colors.white,
+                            //   ),
+                            // ),
                           ],
                         ),
                       ),

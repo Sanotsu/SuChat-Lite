@@ -2,10 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
-import 'package:proste_logger/proste_logger.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../common/utils/tools.dart';
 import '../../../objectbox.g.dart';
 import '../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../common/llm_spec/constant_llm_enum.dart';
@@ -16,8 +15,6 @@ import 'branch_chat_session.dart';
 import 'character_store.dart';
 import 'character_card.dart';
 
-final pl = ProsteLogger();
-
 class BranchStore {
   /// ObjectBox 存储实例
   late final Store store;
@@ -27,9 +24,6 @@ class BranchStore {
 
   /// 会话 Box
   late final Box<BranchChatSession> sessionBox;
-
-  /// 角色存储
-  late final CharacterStore characterStore;
 
   /// 单例实例
   static BranchStore? _instance;
@@ -47,7 +41,7 @@ class BranchStore {
 
   Future<void> _init() async {
     try {
-      final docsDir = await getApplicationDocumentsDirectory();
+      final docsDir = await getAppHomeDirectory();
       final dbDirectory = p.join(docsDir.path, "objectbox", "branch_chat");
 
       // 确保目录存在
@@ -59,23 +53,10 @@ class BranchStore {
       store = await openStore(directory: dbDirectory);
       messageBox = store.box<BranchChatMessage>();
       sessionBox = store.box<BranchChatSession>();
-
-      // 初始化角色存储
-      characterStore = await CharacterStore.create();
     } catch (e) {
       pl.e('初始化 ObjectBox 失败: $e');
       rethrow;
     }
-  }
-
-  /// 获取角色卡
-  CharacterCard? getCharacterById(String characterId) {
-    return characterStore.getCharacterById(characterId);
-  }
-
-  /// 获取所有角色卡
-  List<CharacterCard> getAllCharacters() {
-    return characterStore.characters;
   }
 
   /// 创建新会话 - 添加角色参数
@@ -260,6 +241,9 @@ class BranchStore {
       int importedCount = 0;
       int skippedCount = 0;
 
+      // 获取角色store
+      CharacterStore characterStore = await CharacterStore.create();
+
       // 遍历要导入的会话
       for (final sessionExport in importData.sessions) {
         // 检查是否存在相同的会话
@@ -279,7 +263,9 @@ class BranchStore {
         CharacterCard? character;
         if (sessionExport.characterId != null) {
           // 尝试查找角色卡
-          character = store.getCharacterById(sessionExport.characterId!);
+          character = characterStore.getCharacterById(
+            sessionExport.characterId!,
+          );
         }
 
         // 创建新会话(注意，因为用于判断是否重复的逻辑里面有创建时间，所以这里需要传入创建时间)
@@ -311,7 +297,9 @@ class BranchStore {
           CharacterCard? messageCharacter;
           if (msgExport.characterId != null) {
             // 尝试查找角色卡
-            messageCharacter = store.getCharacterById(msgExport.characterId!);
+            messageCharacter = characterStore.getCharacterById(
+              msgExport.characterId!,
+            );
           }
 
           // 因为对会话记录添加消息也是修改了会话，所以导入会话记录成功后，会话的修改时间也会更新

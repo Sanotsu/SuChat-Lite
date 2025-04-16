@@ -149,7 +149,7 @@ class _CharacterAvatarPreviewState extends State<CharacterAvatarPreview> {
                     children: [
                       Center(
                         child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 3),
+                          padding: EdgeInsets.symmetric(vertical: 0),
                           child: buildAvatarClipOval(
                             widget.character.avatar,
                             clipBehavior: Clip.none,

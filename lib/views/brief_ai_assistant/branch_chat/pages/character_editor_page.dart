@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'package:path_provider/path_provider.dart';
 
 import '../../../../common/components/tool_widget.dart';
 import '../../../../common/llm_spec/constant_llm_enum.dart';
+import '../../../../common/utils/tools.dart';
 import '../../../../models/brief_ai_tools/branch_chat/branch_store.dart';
 import '../../../../models/brief_ai_tools/branch_chat/character_card.dart';
 import '../../../../models/brief_ai_tools/branch_chat/character_store.dart';
@@ -541,7 +541,10 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
               borderRadius: BorderRadius.circular(8),
               child: Opacity(
                 opacity: _backgroundOpacity,
-                child: buildCusImage(_backgroundPath!, fit: BoxFit.cover),
+                child: buildNetworkOrFileImage(
+                  _backgroundPath!,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
             Center(
@@ -580,7 +583,7 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
           title: const Text('相册'),
           onTap: () {
             Navigator.pop(context);
-            _pickImageFromGallery(type);
+            _pickImageFromCameraOrGallery(type, ImageSource.gallery);
           },
         ),
         if (ScreenHelper.isMobile())
@@ -589,7 +592,7 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
             title: const Text('拍照'),
             onTap: () {
               Navigator.pop(context);
-              _pickImageFromCamera(type);
+              _pickImageFromCameraOrGallery(type, ImageSource.camera);
             },
           ),
         ListTile(
@@ -616,44 +619,32 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
         : showModalBottomSheet(context: context, builder: (context) => list);
   }
 
-  // 从相册选择图片
+  // 从相册选择图片或相机拍照
   // type: avatar 头像, bg 背景
-  Future<void> _pickImageFromGallery(String type) async {
+  Future<void> _pickImageFromCameraOrGallery(
+    String type,
+    ImageSource source,
+  ) async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickImage(source: source);
 
     if (pickedFile != null) {
       // 复制图片到应用目录
-      final appDir = await getApplicationDocumentsDirectory();
+      final appDir = await getAppHomeDirectory();
       final fileName =
           '${type == 'avatar' ? 'character_avatar' : 'character_bg'}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+      // 创建角色图片文件夹路径
+      final Directory fileDir = Directory('${appDir.path}/character_images');
+
+      // 检查文件夹是否存在，如果不存在则创建
+      if (!await fileDir.exists()) {
+        await fileDir.create(recursive: true);
+      }
+
       final savedImage = await File(
         pickedFile.path,
-      ).copy('${appDir.path}/$fileName');
-
-      setState(() {
-        if (type == 'avatar') {
-          _avatarPath = savedImage.path;
-        } else {
-          _backgroundPath = savedImage.path;
-        }
-      });
-    }
-  }
-
-  // 使用相机拍照
-  Future<void> _pickImageFromCamera(String type) async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.camera);
-
-    if (pickedFile != null) {
-      // 复制图片到应用目录
-      final appDir = await getApplicationDocumentsDirectory();
-      final fileName =
-          '${type == 'avatar' ? 'character_avatar' : 'character_bg'}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final savedImage = await File(
-        pickedFile.path,
-      ).copy('${appDir.path}/$fileName');
+      ).copy('${fileDir.path}/$fileName');
 
       setState(() {
         if (type == 'avatar') {
@@ -666,50 +657,11 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
   }
 
   // 输入网络图片地址
-  void _inputNetworkImageUrl(String type) {
+  void _inputNetworkImageUrl(String type) async {
     final textController = TextEditingController();
+    var imageUrl = textController.text;
 
-    Widget imagePreview = Container(
-      width: 100,
-      height: 100,
-      margin: const EdgeInsets.only(top: 10),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Image.network(
-          textController.text,
-          fit: BoxFit.cover,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return Center(
-              child: CircularProgressIndicator(
-                value:
-                    loadingProgress.expectedTotalBytes != null
-                        ? loadingProgress.cumulativeBytesLoaded /
-                            loadingProgress.expectedTotalBytes!
-                        : null,
-              ),
-            );
-          },
-          errorBuilder: (context, error, stackTrace) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error, color: Colors.red),
-                  Text('图片加载失败', style: TextStyle(color: Colors.red)),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    );
-
-    showDialog(
+    var rst = await showDialog(
       context: context,
       builder: (context) {
         // 使用 StatefulBuilder 实现对话框内部状态管理
@@ -730,33 +682,27 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
                       keyboardType: TextInputType.url,
                       onChanged: (value) {
                         // 文本变化时触发界面更新
-                        setState(() {});
+                        setState(() {
+                          imageUrl = value;
+                        });
                       },
                     ),
                     const SizedBox(height: 16),
 
                     // 预览区域
-                    if (textController.text.isNotEmpty) imagePreview,
+                    // 效果不好，桌面端也预览报错
+                    // if (url.isNotEmpty) imagePreview,
+                    if (imageUrl.isNotEmpty) buildNetworkOrFileImage(imageUrl),
                   ],
                 ),
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () => Navigator.pop(context, false),
                   child: const Text('取消'),
                 ),
                 TextButton(
-                  onPressed: () {
-                    if (textController.text.isNotEmpty) {
-                      // 更新外部状态
-                      if (type == 'avatar') {
-                        _avatarPath = textController.text;
-                      } else {
-                        _backgroundPath = textController.text;
-                      }
-                      Navigator.pop(context);
-                    }
-                  },
+                  onPressed: () => Navigator.pop(context, true),
                   child: const Text('确定'),
                 ),
               ],
@@ -765,5 +711,16 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
         );
       },
     );
+
+    if (rst == true) {
+      // 更新外部状态
+      setState(() {
+        if (type == 'avatar') {
+          _avatarPath = imageUrl;
+        } else {
+          _backgroundPath = imageUrl;
+        }
+      });
+    }
   }
 }

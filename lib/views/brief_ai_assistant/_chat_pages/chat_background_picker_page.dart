@@ -1,13 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:suchat_lite/common/components/tool_widget.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+
 import '../../../common/components/toast_utils.dart';
+import '../../../common/components/tool_widget.dart';
 import '../../../common/utils/image_color_helper.dart';
 import '../../../services/cus_get_storage.dart';
 import '../../../common/utils/screen_helper.dart';
-import '../_chat_components/_small_tool_widgets.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../branch_chat/components/message_color_config.dart';
 
 class ChatBackgroundPickerPage extends StatefulWidget {
@@ -412,7 +412,10 @@ class _ChatBackgroundPickerPageState extends State<ChatBackgroundPickerPage>
             borderRadius: BorderRadius.circular(12),
             child: Opacity(
               opacity: _opacity,
-              child: buildCusImage(_selectedBackground!, fit: BoxFit.contain),
+              child: buildNetworkOrFileImage(
+                _selectedBackground!,
+                fit: BoxFit.contain,
+              ),
             ),
           ),
           Center(
@@ -642,6 +645,11 @@ class _ChatBackgroundPickerPageState extends State<ChatBackgroundPickerPage>
             Colors.blueGrey.shade100.toARGB32(),
           );
         }
+      } else {
+        // 如果背景图为空(无背景)，则使用默认颜色
+        await MyGetStorage().saveBranchChatHistoryPanelBgColor(
+          Colors.blueGrey.shade100.toARGB32(),
+        );
       }
 
       // 2 保存背景色透明度

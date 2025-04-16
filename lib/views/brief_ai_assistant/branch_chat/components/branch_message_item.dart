@@ -50,7 +50,7 @@ class _BranchMessageItemState extends State<BranchMessageItem>
   late bool _isUser;
   late CrossAxisAlignment _crossAxisAlignment;
   late MainAxisAlignment _mainAxisAlignment;
-  
+
   // 缓存当前使用的颜色配置
   MessageColorConfig? _currentColorConfig;
 
@@ -59,11 +59,11 @@ class _BranchMessageItemState extends State<BranchMessageItem>
     super.initState();
     _updateInternalState();
   }
-  
+
   @override
   void didUpdateWidget(BranchMessageItem oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // 检查颜色配置是否发生变化
     if (oldWidget.colorConfig != widget.colorConfig) {
       // 如果颜色配置变了，强制更新内部状态
@@ -72,13 +72,13 @@ class _BranchMessageItemState extends State<BranchMessageItem>
         setState(() {});
       }
     }
-    
+
     // 消息变化也需要更新内部状态
     if (oldWidget.message != widget.message) {
       _updateInternalState();
     }
   }
-  
+
   void _updateInternalState() {
     _isUser =
         widget.message.role == CusRole.user.name ||
@@ -89,7 +89,7 @@ class _BranchMessageItemState extends State<BranchMessageItem>
 
     _mainAxisAlignment =
         _isUser ? MainAxisAlignment.end : MainAxisAlignment.start;
-        
+
     _currentColorConfig = widget.colorConfig;
   }
 
@@ -110,6 +110,15 @@ class _BranchMessageItemState extends State<BranchMessageItem>
         : widget.message.role == CusRole.system.name
         ? Colors.grey
         : Colors.black;
+  }
+
+  // 如果什么内容都没有，显示等待中
+  getIsWaiting() {
+    var msg = widget.message;
+    return (!_isUser &&
+        (msg.references == null || msg.references!.isEmpty) &&
+        msg.content.isEmpty &&
+        (msg.reasoningContent == null || msg.reasoningContent!.isEmpty));
   }
 
   @override
@@ -231,17 +240,26 @@ class _BranchMessageItemState extends State<BranchMessageItem>
     final textColor = _getTextColor();
     Color bgColor = _isUser ? Colors.blue : Colors.grey.shade100;
 
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: 4),
-      padding: EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: widget.isUseBgImage == true ? Colors.transparent : bgColor,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: widget.isUseBgImage == true ? textColor : Colors.transparent,
+    Widget mainContent;
+
+    if (getIsWaiting()) {
+      mainContent = SizedBox(
+        height: 24,
+        width: 100,
+        child: Row(
+          children: [
+            SizedBox(
+              height: 16,
+              width: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 10),
+            Text("处理中……"),
+          ],
         ),
-      ),
-      child: Column(
+      );
+    } else {
+      mainContent = Column(
         crossAxisAlignment: _crossAxisAlignment,
         children: [
           // 联网搜索结果 - 懒加载，只在有引用时才构建
@@ -276,7 +294,20 @@ class _BranchMessageItemState extends State<BranchMessageItem>
             ),
           ),
         ],
+      );
+    }
+
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: widget.isUseBgImage == true ? Colors.transparent : bgColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: widget.isUseBgImage == true ? textColor : Colors.transparent,
+        ),
       ),
+      child: mainContent,
     );
   }
 

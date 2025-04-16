@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:proste_logger/proste_logger.dart';
 
+import '../../../common/utils/tools.dart';
 import '../../../objectbox.g.dart';
 import '../../../common/components/toast_utils.dart';
 import '../../../common/llm_spec/cus_brief_llm_model.dart';
@@ -38,7 +38,7 @@ class CharacterStore {
   // 初始化 ObjectBox
   Future<void> _init() async {
     try {
-      final docsDir = await getApplicationDocumentsDirectory();
+      final docsDir = await getAppHomeDirectory();
       final dbDirectory = p.join(docsDir.path, "objectbox", "characters");
 
       // 确保目录存在
@@ -51,6 +51,7 @@ class CharacterStore {
       characterBox = store.box<CharacterCard>();
 
       // 检查数据库中是否有角色
+      // 系统角色可删除，但如果没有用户自定义的，会重新创建
       if (characterBox.isEmpty()) {
         await _createDefaultCharacters();
       }
@@ -201,7 +202,7 @@ class CharacterStore {
         filePath =
             '$customPath/角色列表_${DateTime.now().millisecondsSinceEpoch}.json';
       } else {
-        final directory = await getApplicationDocumentsDirectory();
+        final directory = await getAppHomeDirectory();
         filePath =
             '${directory.path}/角色列表_${DateTime.now().millisecondsSinceEpoch}.json';
       }

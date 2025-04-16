@@ -1,7 +1,5 @@
 import '../llm_spec/cus_brief_llm_model.dart';
 import '../llm_spec/constant_llm_enum.dart';
-import 'default_image_generation_models.dart';
-import 'default_video_generation_models.dart';
 
 /// 内置模型的 API Keys (用户不可见和修改)
 /// 2025-03-03 默认是有免费的模型，才可以慷慨提供内嵌的 API Keys，不免费的用户自行导入
@@ -37,8 +35,8 @@ part '_self_build_in_ak.dart';
 /// 2025-03-03 至少保证每种类型都有一个免费的内置模型，方便测试使用(多了也不方便)
 /// 更多的收费、免费的，用户自行导入
 final defaultModels = [
-  ...defaultImageGenerationModels,
-  ...defaultVideoGenerationModels,
+  // ...defaultImageGenerationModels,
+  // ...defaultVideoGenerationModels,
   CusBriefLLMSpec(
     ApiPlatform.siliconCloud,
     'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B',
@@ -51,11 +49,31 @@ final defaultModels = [
   ),
   CusBriefLLMSpec(
     ApiPlatform.siliconCloud,
+    'THUDM/GLM-Z1-9B-0414',
+    LLModelType.reasoner,
+    name: 'GLM-Z1-9B-0414',
+    isFree: true,
+    cusLlmSpecId: 'siliconCloud_glm_z1_9b_0414_builtin',
+    gmtCreate: DateTime.now(),
+    isBuiltin: true,
+  ),
+  CusBriefLLMSpec(
+    ApiPlatform.siliconCloud,
     'Qwen/Qwen2.5-7B-Instruct',
     LLModelType.cc,
     name: 'Qwen2.5-7B-Instruct',
     isFree: true,
     cusLlmSpecId: 'siliconCloud_qwen2_5_7b_instruct_builtin',
+    gmtCreate: DateTime.now(),
+    isBuiltin: true,
+  ),
+  CusBriefLLMSpec(
+    ApiPlatform.siliconCloud,
+    'THUDM/GLM-4-9B-0414',
+    LLModelType.cc,
+    name: 'GLM-4-9B-0414',
+    isFree: true,
+    cusLlmSpecId: 'siliconCloud_glm_4_9b_0414_builtin',
     gmtCreate: DateTime.now(),
     isBuiltin: true,
   ),
@@ -91,11 +109,31 @@ final defaultModels = [
   ),
   CusBriefLLMSpec(
     ApiPlatform.zhipu,
+    "glm-4-flash-250414",
+    LLModelType.cc,
+    name: "GLM-4-Flash-250414",
+    isFree: true,
+    cusLlmSpecId: 'zhipu_glm_4_flash_250414_builtin',
+    gmtCreate: DateTime.now(),
+    isBuiltin: true,
+  ),
+  CusBriefLLMSpec(
+    ApiPlatform.zhipu,
     "glm-4v-flash",
     LLModelType.vision,
     name: "GLM-4V-Flash",
     isFree: true,
     cusLlmSpecId: 'zhipu_glm_4v_flash_builtin',
+    gmtCreate: DateTime.now(),
+    isBuiltin: true,
+  ),
+  CusBriefLLMSpec(
+    ApiPlatform.zhipu,
+    "glm-z1-flash",
+    LLModelType.reasoner,
+    name: "GLM-Z1-Flash",
+    isFree: true,
+    cusLlmSpecId: 'zhipu_glm_z1_flash_builtin',
     gmtCreate: DateTime.now(),
     isBuiltin: true,
   ),

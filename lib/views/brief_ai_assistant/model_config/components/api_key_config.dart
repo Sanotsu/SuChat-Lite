@@ -136,7 +136,7 @@ class _ApiKeyConfigState extends State<ApiKeyConfig> {
                             SizedBox(height: 24),
                             ElevatedButton.icon(
                               icon: Icon(Icons.upload_file),
-                              label: Text('导入配置'),
+                              label: Text('导入配置json'),
                               onPressed: _importFromJson,
                             ),
                           ],
@@ -226,7 +226,7 @@ class _ApiKeyConfigState extends State<ApiKeyConfig> {
         IconButton(
           icon: const Icon(Icons.upload_file),
           onPressed: _importFromJson,
-          tooltip: '导入配置',
+          tooltip: '导入配置json',
         ),
       ],
     );

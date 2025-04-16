@@ -189,7 +189,7 @@ class _CharacterListPageState extends State<CharacterListPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            '没有找到角色卡',
+            '没有找到任何角色',
             style: TextStyle(
               fontSize: ScreenHelper.getFontSize(16),
               color: Colors.grey[600],

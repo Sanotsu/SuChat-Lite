@@ -54,6 +54,16 @@ class _BranchChatHistoryPanelState extends State<BranchChatHistoryPanel> {
     });
   }
 
+  setDefaultColor() async {
+    await MyGetStorage().saveBranchChatHistoryPanelBgColor(
+      Colors.blueGrey.shade100.toARGB32(),
+    );
+
+    setState(() {
+      _bgColor = Colors.blueGrey.shade100;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -104,11 +114,23 @@ class _BranchChatHistoryPanelState extends State<BranchChatHistoryPanel> {
   Widget _buildMoreFeatures() {
     return Column(
       children: [
-        ListTile(
-          leading: const Icon(Icons.history),
-          title: const Text('对话记录与设置'),
+        Row(
+          children: [
+            Expanded(
+              child: ListTile(
+                leading: const Icon(Icons.history),
+                title: const Text('对话记录与设置'),
+              ),
+            ),
+            IconButton(
+              onPressed: () {
+                setDefaultColor();
+              },
+              tooltip: "清除历史记录侧边栏背景色",
+              icon: Icon(Icons.invert_colors, size: 18),
+            ),
+          ],
         ),
-
         Row(
           children: [
             // Expanded(

@@ -12,6 +12,7 @@ import '../../../common/components/toast_utils.dart';
 import '../../../common/constants/constants.dart';
 import '../../../common/utils/screen_helper.dart';
 import '../../../common/utils/tools.dart';
+import '../../../models/brief_ai_tools/branch_chat/character_store.dart';
 import '../../../services/model_manager_service.dart';
 import '../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../common/llm_spec/constant_llm_enum.dart';
@@ -100,8 +101,8 @@ class _BranchChatPageState extends State<BranchChatPage>
   // 流式生成消息(追加显示的消息)
   BranchChatMessage? streamingMessage;
 
-  // 是否新对话
-  bool isNewChat = false;
+  // 是否全新分支对话
+  bool isBranchNewChat = false;
   // 当前会话ID
   int? currentSessionId;
   // 重新生成消息ID
@@ -187,7 +188,7 @@ class _BranchChatPageState extends State<BranchChatPage>
     initialize();
 
     // 获取缓存中的正文文本缩放比例
-    textScaleFactor = MyGetStorage().getChatListAreaScale();
+    textScaleFactor = MyGetStorage().getChatMessageTextScale();
 
     // 获取缓存的高级选项配置
     if (selectedModel != null) {
@@ -366,12 +367,12 @@ class _BranchChatPageState extends State<BranchChatPage>
         selectedModel = modelList.first;
         selectedType = selectedModel!.modelType;
       });
-      await createNewChat(type: "brand-new");
+      await createNewChat();
     } else {
       // 如果模型存在，则更新UI
       setState(() {
         selectedType = selectedModel!.modelType;
-        isNewChat = false;
+        isBranchNewChat = false;
         isLoading = false;
       });
       // 如果当前会话存在，则加载消息
@@ -392,15 +393,16 @@ class _BranchChatPageState extends State<BranchChatPage>
     // 如果没有任何对话记录，则标记创建新对话
     if (sessions.isEmpty) {
       setState(() {
-        isNewChat = true;
+        isBranchNewChat = true;
         isLoading = false;
       });
 
       // 2025-04-07 如果没有对话记录，但是有选择当前角色，直接创建新角色对话
-      // 如果没有对话记录，也没有角色，上面设置了 isNewChat 标记，直接返回即可
+      // 如果没有对话记录，也没有角色，上面设置了 isBranchNewChat 标记，直接返回即可
       if (currentCharacter != null) {
         await _handleModelSelectionAndChatCreation(null);
-        await createNewChat();
+        // 不是新的分支对话(即新的角色对话)
+        await createNewChat(isNewBranch: false);
         // 新建对话后要更新当前对话列表，以便后面逻辑继续
         sessions = _filterCharacterSessions();
       }
@@ -432,7 +434,7 @@ class _BranchChatPageState extends State<BranchChatPage>
     } catch (e) {
       // 如果没有任何对话记录，或者今天没有对话记录(会报错抛到这里)，显示新对话界面
       setState(() {
-        isNewChat = true;
+        isBranchNewChat = true;
         isLoading = false;
       });
     }
@@ -446,7 +448,7 @@ class _BranchChatPageState extends State<BranchChatPage>
   /// 加载消息
   Future<void> loadMessages() async {
     if (currentSessionId == null) {
-      setState(() => isNewChat = true);
+      setState(() => isBranchNewChat = true);
       return;
     }
 
@@ -456,7 +458,7 @@ class _BranchChatPageState extends State<BranchChatPage>
       final messages = store.getSessionMessages(currentSessionId!);
       if (messages.isEmpty) {
         setState(() {
-          isNewChat = true;
+          isBranchNewChat = true;
           isLoading = false;
           displayMessages.clear();
         });
@@ -495,7 +497,7 @@ class _BranchChatPageState extends State<BranchChatPage>
     } catch (e) {
       pl.e('加载消息失败: $e');
       setState(() {
-        isNewChat = true;
+        isBranchNewChat = true;
         isLoading = false;
       });
     }
@@ -503,20 +505,8 @@ class _BranchChatPageState extends State<BranchChatPage>
     resetContentHeight();
   }
 
-  // 加载背景设置 - 优化为异步加载并缓存结果
+  // 加载背景设置
   Future<void> loadBackgroundSettings() async {
-    // 先检查是否已有缓存的背景设置
-    final cachedBackground = storage.getCachedBackground();
-    final cachedOpacity = storage.getCachedBackgroundOpacity();
-
-    if (cachedBackground != null || cachedOpacity != null) {
-      // 如果有缓存，先使用缓存值快速渲染
-      setState(() {
-        if (cachedBackground != null) backgroundImage = cachedBackground;
-        if (cachedOpacity != null) backgroundOpacity = cachedOpacity;
-      });
-    }
-
     // 然后异步加载最新设置
     final background = await storage.getBranchChatBackground();
     final opacity = await storage.getBranchChatBackgroundOpacity();
@@ -679,6 +669,7 @@ class _BranchChatPageState extends State<BranchChatPage>
           // 有角色头像且抽屉未展开且桌面端侧边栏未展开
           if ((currentCharacter != null && currentCharacter!.avatar.isNotEmpty))
             DraggableCharacterAvatarPreview(
+              key: ValueKey(currentCharacter!.avatar),
               character: currentCharacter!,
               left:
                   isSidebarVisible
@@ -707,13 +698,13 @@ class _BranchChatPageState extends State<BranchChatPage>
       onSelected: (String value) async {
         // 处理选中的菜单项
         if (value == 'add') {
-          createNewChat(type: 'brand-new');
+          createNewChat();
         } else if (value == 'options') {
           showAdvancedOptions();
         } else if (value == 'text_size') {
           adjustTextScale(context, textScaleFactor, (value) async {
             setState(() => textScaleFactor = value);
-            await MyGetStorage().setChatListAreaScale(value);
+            await MyGetStorage().setChatMessageTextScale(value);
 
             if (!mounted) return;
             Navigator.of(context).pop();
@@ -969,7 +960,7 @@ class _BranchChatPageState extends State<BranchChatPage>
         });
 
         // 2.2. 创建新对话
-        createNewChat(type: "brand-new");
+        createNewChat();
 
         ToastUtils.showSuccess('添加模型成功');
       } catch (e) {
@@ -1019,10 +1010,9 @@ class _BranchChatPageState extends State<BranchChatPage>
           await store.deleteSession(session);
           // 如果删除的是当前会话，创建新会话
           if (session.id == currentSessionId) {
-            createNewChat(type: "brand-new");
+            createNewChat();
           }
         } else if (action == 'model-import') {
-          // initialize();
           initModels();
         }
         // 都要重新加载会话
@@ -1046,6 +1036,22 @@ class _BranchChatPageState extends State<BranchChatPage>
 
   /// 切换历史对话(在抽屉中点选了不同的历史记录)
   Future<void> switchSession(int sessionId) async {
+    // 有好几种情况是使用默认模型创建全新对话，所以提出来
+    useDefaultModel(String hintKeyWord) {
+      ToastUtils.showInfo(
+        '该历史对话【$hintKeyWord】，将使用默认模型构建全新对话。',
+        duration: const Duration(seconds: 3),
+      );
+
+      setState(() {
+        selectedModel = modelList.first;
+        selectedType = selectedModel!.modelType;
+        isLoading = false;
+      });
+
+      createNewChat();
+    }
+
     if (isLoading) return;
 
     setState(() {
@@ -1054,30 +1060,30 @@ class _BranchChatPageState extends State<BranchChatPage>
 
     final session = store.sessionBox.get(sessionId);
 
+    // 如果点击的会话不存在，则使用新的模型直接创建新对话
     if (session == null) {
-      ToastUtils.showInfo(
-        '该对话记录已不存在，将使用默认模型构建全新对话。',
-        duration: const Duration(seconds: 5),
-      );
-
-      selectedModel = modelList.first;
-      selectedType = selectedModel!.modelType;
-
-      createNewChat();
+      useDefaultModel('记录已不存在');
       return;
     }
 
-    setState(() {
-      currentSessionId = sessionId;
-      isNewChat = false;
-      currentBranchPath = "0";
-      isStreaming = false;
-      streamingContent = '';
-      streamingReasoningContent = '';
-      currentEditingMessage = null;
-      inputController.clear();
+    // 如果对话是角色对话，但角色已被删除，也使用默认模型创建新对话
+    try {
+      final store = await CharacterStore.create();
+      if (session.character != null &&
+          !(store.characters
+              .map((c) => c.characterId)
+              .toList()
+              .contains(session.character?.characterId))) {
+        useDefaultModel('所用角色已被删除');
+        return;
+      }
+    } catch (e) {
+      ToastUtils.showInfo('角色查询失败：$e', duration: const Duration(seconds: 3));
+    }
 
-      // 如果存在会话，但是会话使用的模型被删除了，也提示，并使用默认模型构建全新对话
+    // 如果该对话使用的模型被删除，也使用默认模型创建新对话
+    // 如果存在会话，但是会话使用的模型被删除了，也提示，并使用默认模型构建全新对话
+    setState(() {
       selectedModel =
           modelList
               .where((m) => m.cusLlmSpecId == session.llmSpec.cusLlmSpecId)
@@ -1085,23 +1091,32 @@ class _BranchChatPageState extends State<BranchChatPage>
     });
 
     if (selectedModel == null) {
-      ToastUtils.showInfo(
-        '该历史对话所用模型已被删除，将使用默认模型构建全新对话。',
-        duration: const Duration(seconds: 3),
-      );
       setState(() {
-        selectedModel = modelList.first;
-        selectedType = selectedModel!.modelType;
+        currentSessionId = null;
       });
-      createNewChat();
-    } else {
-      // 更新当前选中的模型和类型
-      setState(() {
-        selectedType = selectedModel!.modelType;
-        currentCharacter = session.character;
-      });
-      await loadMessages();
+
+      useDefaultModel('所用模型已被删除');
+      return;
     }
+
+    // 到这里了就是正常有记录、有模型或者有角色的对话，正常处理
+    setState(() {
+      currentSessionId = sessionId;
+      isBranchNewChat = false;
+      currentBranchPath = "0";
+      isStreaming = false;
+      streamingContent = '';
+      streamingReasoningContent = '';
+      currentEditingMessage = null;
+      inputController.clear();
+    });
+
+    // 更新当前选中的模型和类型
+    setState(() {
+      selectedType = selectedModel!.modelType;
+      currentCharacter = session.character;
+    });
+    await loadMessages();
 
     resetContentHeight();
 
@@ -1829,15 +1844,20 @@ class _BranchChatPageState extends State<BranchChatPage>
     }
 
     try {
-      final title = content.length > 20 ? content.substring(0, 20) : content;
-      if (isNewChat) {
-        await createNewChat(title: title);
-      }
+      // 如果是新的分支对话，在用户发送消息时才创建记录；
+      // 如果是角色对话新开对话，可能需要在点击新对话时就要创建记录，因为有可能预设首条消息
+      if (isBranchNewChat) {
+        final title = content.length > 20 ? content.substring(0, 20) : content;
 
-      // 2025-04-07 修改对话记录标题,强行重置默认的对话记录
-      var currentSession = store.sessionBox.get(currentSessionId!)!;
-      if (currentSession.messages.length <= 1) {
-        currentSession.title = title;
+        final session = await store.createSession(
+          title,
+          llmSpec: selectedModel!,
+          modelType: selectedType,
+        );
+        setState(() {
+          currentSessionId = session.id;
+          isBranchNewChat = false;
+        });
       }
 
       // 如果是编译用户输入过的消息，会和直接发送消息有一些区别
@@ -1845,7 +1865,7 @@ class _BranchChatPageState extends State<BranchChatPage>
         await _processingUserMessage(currentEditingMessage!, messageData);
       } else {
         await store.addMessage(
-          session: currentSession,
+          session: store.sessionBox.get(currentSessionId!)!,
           content: content,
           role: CusRole.user.name,
           parent: displayMessages.isEmpty ? null : displayMessages.last,
@@ -2059,7 +2079,14 @@ class _BranchChatPageState extends State<BranchChatPage>
                       //   borderRadius: BorderRadius.circular(14),
                       // ),
                     ),
-                    onPressed: createNewChat,
+                    onPressed: () {
+                      if (currentCharacter != null) {
+                        // 不是新的分支对话(即新的角色对话)
+                        createNewChat(isNewBranch: false);
+                      } else {
+                        createNewChat();
+                      }
+                    },
                     child: Text(
                       '开启新对话',
                       style: TextStyle(fontSize: 12, color: Colors.white),
@@ -2096,7 +2123,8 @@ class _BranchChatPageState extends State<BranchChatPage>
     return Positioned.fill(
       child: Opacity(
         opacity: bgOpacity,
-        child: buildCusImage(bgImage, fit: BoxFit.cover),
+        child: buildNetworkOrFileImage(bgImage, fit: BoxFit.cover),
+        // child: buildCusImage(bgImage, fit: BoxFit.cover),
       ),
     );
   }
@@ -2190,7 +2218,16 @@ class _BranchChatPageState extends State<BranchChatPage>
 
   // 添加对角色使用的支持到现有方法中
   // 2025-04-07 默认如果有角色开启新对话也使用该角色的新对话，但如果是右上角点击新建对话，则是默认智能助手而非角色对话
-  Future<void> createNewChat({String? type, String? title}) async {
+  ///
+  /// 2025-04-15 重新整理一下新建对话的逻辑：
+  /// 除了当前有角色且点击底部的“开启新对话”按钮会对角色使用新对话，
+  ///     初始化的时候：从角色列表点击进来的
+  /// 其他切换了模型类型、右上角新开对话，都重置当前角色为空，进行默认的分支对话
+  /// 其他点击历史记录时继续记录的角色或者分支对话；如果该记录的模型或者角色被删除，默认新增的也是分支对话
+  ///
+  /// 角色对话需要在用户发送消息前就创建session，更新显示消息列表(因为可能存在预设的首条消息)
+  /// 而分支对话在用户发送后才创建session，才更新消息列表(没有首条消息，可以显示其他内容)
+  Future<void> createNewChat({bool? isNewBranch = true}) async {
     // 无法选择模型时使用默认模型
     if (modelList.isEmpty || selectedModel == null) {
       ToastUtils.showError('请先配置模型');
@@ -2199,7 +2236,7 @@ class _BranchChatPageState extends State<BranchChatPage>
 
     setState(() {
       isLoading = true;
-      isNewChat = true;
+      isBranchNewChat = true;
       displayMessages = [];
       allMessages = [];
       currentBranchPath = "0";
@@ -2214,8 +2251,8 @@ class _BranchChatPageState extends State<BranchChatPage>
     inputController.clear();
     CusMarkdownRenderer.instance.clearCache();
 
-    // 如果是全新的对话，则不是角色对话，那么就是在用户发送时才构建对话记录，这里单纯设定新对话标记即可
-    if (type == "brand-new") {
+    // 如果是全新的分支对话，则不是角色对话，那么就是在用户发送时才构建对话记录，这里单纯设定新对话标记即可
+    if (isNewBranch == true) {
       setState(() {
         currentCharacter = null;
         isLoading = false;
@@ -2225,12 +2262,11 @@ class _BranchChatPageState extends State<BranchChatPage>
       return;
     }
 
-    // 创建新会话
+    // 如果是新的角色对话，则要在用户发送消息前就创建新会话
+    // 2025-04-16 目前仅在角色对话过程中，点击下方“开启新对话”时才触发
     try {
       final sessionTitle =
-          currentCharacter != null
-              ? "与${currentCharacter!.name}的对话"
-              : title ?? "新对话";
+          currentCharacter != null ? "与${currentCharacter!.name}的对话" : "新的角色对话";
 
       // 2025-04-07 避免用户一直创建新对话，导致存在大量每个对话只有1个角色预设消息的问题
       // 这里如果对话中指定角色的消息只有1条且角色为该消息角色为assistant，则删除这些对话
@@ -2266,7 +2302,7 @@ class _BranchChatPageState extends State<BranchChatPage>
       setState(() {
         currentSessionId = session.id;
         isLoading = false;
-        isNewChat = false;
+        isBranchNewChat = false;
       });
 
       // 开启新对话后，没有对话列表，所以不显示滚动到底部按钮

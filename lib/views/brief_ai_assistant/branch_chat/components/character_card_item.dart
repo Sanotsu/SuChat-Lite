@@ -144,17 +144,17 @@ class CharacterCardItem extends StatelessWidget {
             ],
           ),
         ),
-        if (!character.isSystem)
-          PopupMenuItem(
-            onTap: onDelete,
-            child: Row(
-              children: [
-                Icon(Icons.delete, color: Colors.red),
-                SizedBox(width: 8),
-                Text('删除角色'),
-              ],
-            ),
+        // if (!character.isSystem)
+        PopupMenuItem(
+          onTap: onDelete,
+          child: Row(
+            children: [
+              Icon(Icons.delete, color: Colors.red),
+              SizedBox(width: 8),
+              Text('删除角色'),
+            ],
           ),
+        ),
       ],
     );
   }
@@ -180,17 +180,17 @@ class CharacterCardItem extends StatelessWidget {
             ],
           ),
         ),
-        if (!character.isSystem)
-          PopupMenuItem<String>(
-            value: 'delete',
-            child: Row(
-              children: [
-                Icon(Icons.delete, color: Colors.red, size: 20),
-                SizedBox(width: 8),
-                Text('删除角色'),
-              ],
-            ),
+        // if (!character.isSystem)
+        PopupMenuItem<String>(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(Icons.delete, color: Colors.red, size: 20),
+              SizedBox(width: 8),
+              Text('删除角色'),
+            ],
           ),
+        ),
       ],
       elevation: 4.0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

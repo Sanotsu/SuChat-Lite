@@ -164,7 +164,8 @@ class ModelManagerService {
 
   // 删除用户导入的模型(内置模型不能删除)
   static Future<bool> deleteUserModel(String modelId) async {
-    if (modelId.endsWith('_builtin')) return false;
+    // 2025-04-15 如果有其他同类型的模型，可以删除内置的
+    // if (modelId.endsWith('_builtin')) return false;
 
     await _dbHelper.deleteBriefCusLLMSpecById(modelId);
     return true;

@@ -218,7 +218,10 @@ class _ChatInputBarState extends State<ChatInputBar> {
     /// 选择文件，并解析出文本内容
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['pdf', 'txt', 'docx', 'doc'],
+      allowedExtensions:
+          ScreenHelper.isDesktop()
+              ? ['pdf', 'docx', 'doc']
+              : ['pdf', 'txt', 'docx', 'doc'],
       allowMultiple: false,
     );
 
@@ -524,56 +527,65 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
   /// 点击上传文档名称，可预览文档内容
   void previewDocumentContent() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (BuildContext context) {
-        return SizedBox(
-          height: 0.8.sh,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('解析后文档内容预览', style: TextStyle(fontSize: 18)),
-                    TextButton(
-                      child: const Text('关闭'),
-                      onPressed: () {
-                        Navigator.pop(context);
-                        unfocusHandle();
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              Divider(height: 2, thickness: 2),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: EdgeInsets.all(10),
-                    // 2025-03-22 这里解析出来的内容可能包含非法字符，所以就算使用Text或者Text.rich，都会报错
-                    // 使用MarkdownBody也会报错，但能显示出来，上面是无法显示
-                    child:
-                        fileContent.length > 8000
-                            ? Text(
-                              "解析后内容过长${fileContent.length}字符，只展示前8000字符\n\n${fileContent.substring(0, 8000)}\n <已截断...>",
-                            )
-                            : MarkdownBody(
-                              data: String.fromCharCodes(fileContent.runes),
-                              // selectable: true,
-                            ),
-                  ),
-                ),
+    var mainWidget = Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('解析后文档内容预览', style: TextStyle(fontSize: 18)),
+              TextButton(
+                child: const Text('关闭'),
+                onPressed: () {
+                  Navigator.pop(context);
+                  unfocusHandle();
+                },
               ),
             ],
           ),
-        );
-      },
+        ),
+        Divider(height: 2, thickness: 2),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.all(10),
+              // 2025-03-22 这里解析出来的内容可能包含非法字符，所以就算使用Text或者Text.rich，都会报错
+              // 使用MarkdownBody也会报错，但能显示出来，上面是无法显示
+              child:
+                  fileContent.length > 8000
+                      ? Text(
+                        "解析后内容过长${fileContent.length}字符，只展示前8000字符\n\n${fileContent.substring(0, 8000)}\n <已截断...>",
+                      )
+                      : MarkdownBody(
+                        data: String.fromCharCodes(fileContent.runes),
+                        // selectable: true,
+                      ),
+            ),
+          ),
+        ),
+      ],
     );
+
+    ScreenHelper.isDesktop()
+        ? showDialog(
+          context: context,
+          builder: (context) {
+            final screenWidth = MediaQuery.of(context).size.width;
+            return AlertDialog(
+              content: SizedBox(width: screenWidth * 0.6, child: mainWidget),
+            );
+          },
+        )
+        : showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          builder: (BuildContext context) {
+            return SizedBox(height: 0.8.sh, child: mainWidget);
+          },
+        );
   }
 
   // 切换语音输入或文本输入按钮（桌面端显示键盘图标，不支持切换）

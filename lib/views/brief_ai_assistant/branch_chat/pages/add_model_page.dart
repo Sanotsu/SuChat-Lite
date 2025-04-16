@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:suchat_lite/common/components/tool_widget.dart';
 import 'package:uuid/uuid.dart';
+
 import '../../../../common/components/toast_utils.dart';
+import '../../../../common/components/tool_widget.dart';
 import '../../../../common/llm_spec/constant_llm_enum.dart';
 import '../../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../../common/utils/db_tools/db_brief_ai_tool_helper.dart';

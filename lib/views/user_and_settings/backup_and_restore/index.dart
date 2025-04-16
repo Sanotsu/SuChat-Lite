@@ -107,7 +107,7 @@ class _BackupAndRestoreState extends State<BackupAndRestore> {
       });
 
       // 获取应用文档目录路径
-      Directory appDocDir = await getApplicationDocumentsDirectory();
+      Directory appDocDir = await getAppHomeDirectory();
       // 临时存放zip文件的路径
       var tempZipDir =
           await Directory(
@@ -176,7 +176,7 @@ class _BackupAndRestoreState extends State<BackupAndRestore> {
     var tempZipDir = await Directory(tempZipPath).create();
 
     // 获取临时文件夹目录(在导出函数中是固定了的，所以这里也直接取就好)
-    Directory appDocDir = await getApplicationDocumentsDirectory();
+    Directory appDocDir = await getAppHomeDirectory();
     String tempJsonsPath = p.join(appDocDir.path, DB_EXPORT_DIR);
     // 临时存放所有json文件的文件夹
     Directory tempDirectory = Directory(tempJsonsPath);
@@ -313,7 +313,7 @@ class _BackupAndRestoreState extends State<BackupAndRestore> {
           /// 删除前可以先备份一下到临时文件，避免出错后完成无法使用(最多确认恢复成功之后再删除就好了)
 
           // 获取应用文档目录路径
-          Directory appDocDir = await getApplicationDocumentsDirectory();
+          Directory appDocDir = await getAppHomeDirectory();
           // 临时存放zip文件的路径
           var tempZipDir =
               await Directory(

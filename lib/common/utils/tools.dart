@@ -642,3 +642,22 @@ Future<File> getImageFileFromAssets(String assetPath) async {
     throw Exception('Failed to get file from assets');
   }
 }
+
+// 创建应用项目，把app生成使用的文件都放在这里
+Future<Directory> getAppHomeDirectory() async {
+  // 获取应用文档目录
+  final Directory appDocDir = await getApplicationDocumentsDirectory();
+
+  // 定义应用根文件夹名称
+  const String appFolderName = 'SuChatFiles';
+
+  // 创建应用根文件夹路径
+  final Directory appDir = Directory('${appDocDir.path}/$appFolderName');
+
+  // 检查文件夹是否存在，如果不存在则创建
+  if (!await appDir.exists()) {
+    await appDir.create(recursive: true);
+  }
+
+  return appDir;
+}

@@ -5,6 +5,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:uuid/uuid.dart';
+
+import '../../../../common/components/toast_utils.dart';
 import '../../../../common/components/tool_widget.dart';
 import '../../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../../common/llm_spec/constant_llm_enum.dart';
@@ -48,13 +50,15 @@ class _ModelListState extends State<ModelList> {
 
   // 删除模型
   Future<void> _deleteModel(CusBriefLLMSpec model) async {
-    if (model.isBuiltin) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('内置模型不能删除')));
+    final models = await _dbHelper.queryBriefCusLLMSpecList(
+      modelType: model.modelType,
+    );
+    if (models.length <= 1) {
+      ToastUtils.showError("无其他同类模型，不可删除");
       return;
     }
 
+    if (!mounted) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder:
@@ -105,6 +109,9 @@ class _ModelListState extends State<ModelList> {
 
     if (confirm == true) {
       await ModelManagerService.clearUserModels();
+
+      // 2025-04-15 清除全部用户模型后，重新加载预设模型，避免无可用模型
+      await ModelManagerService.initBuiltinModelsTest();
       if (mounted) {
         _loadModels();
       }
@@ -249,15 +256,15 @@ class _ModelListState extends State<ModelList> {
   // 表格标题行
   Widget _buildHeader() {
     return Row(
-            children: [
-              Padding(
+      children: [
+        Padding(
           padding: EdgeInsets.all(16),
-                child: Text(
-                  '已导入 ${_models.length} 个模型',
+          child: Text(
+            '已导入 ${_models.length} 个模型',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const Spacer(),
+          ),
+        ),
+        const Spacer(),
         IconButton(
           icon: const Icon(Icons.add_circle_outline),
           onPressed: () async {
@@ -272,25 +279,25 @@ class _ModelListState extends State<ModelList> {
           },
           tooltip: '添加新模型',
         ),
-              IconButton(
-                icon: const Icon(Icons.delete_outline),
-                onPressed: () => _clearAllModels(context),
-          tooltip: '清除所有自定义模型',
-              ),
-              if (_isImporting)
-                Padding(
+        IconButton(
+          icon: const Icon(Icons.delete_outline),
+          onPressed: () => _clearAllModels(context),
+          tooltip: '清除所有自定义模型，并恢复内置模型',
+        ),
+        if (_isImporting)
+          Padding(
             padding: EdgeInsets.only(right: 16),
-                  child: SizedBox(
+            child: SizedBox(
               width: 16,
               height: 16,
               child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                )
-              else
-                IconButton(
-                  icon: const Icon(Icons.upload_file_outlined),
-                  onPressed: () => _importFromJson(),
-            tooltip: '导入模型配置',
+            ),
+          )
+        else
+          IconButton(
+            icon: const Icon(Icons.upload_file_outlined),
+            onPressed: () => _importFromJson(),
+            tooltip: '导入模型配置json',
           ),
       ],
     );
@@ -306,10 +313,7 @@ class _ModelListState extends State<ModelList> {
       ),
       builder: (BuildContext context) {
         return Container(
-          height:
-              ScreenHelper.isDesktop()
-                  ? MediaQuery.of(context).size.height * 0.7
-                  : 1.sh,
+          height: 0.7.sh,
           padding: EdgeInsets.only(top: 8),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -329,11 +333,15 @@ class _ModelListState extends State<ModelList> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      model.name ?? model.model,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: Text(
+                        model.name ?? model.model,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     TextButton.icon(
@@ -361,8 +369,8 @@ class _ModelListState extends State<ModelList> {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 6),
       child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           SizedBox(
             width: 80,
             child: Text(
@@ -392,7 +400,7 @@ class _ModelListState extends State<ModelList> {
               bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
             ),
           ),
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: EdgeInsets.all(8),
           child: Row(
             children: [
               _buildHeaderCell(
@@ -411,7 +419,7 @@ class _ModelListState extends State<ModelList> {
                 flex: 5,
                 onTap: () {
                   _sort<String>(
-                    (d) => d.name ?? d.model,
+                    (d) => d.model,
                     1,
                     _sortColumnIndex == 1 ? !_sortAscending : true,
                   );
@@ -468,7 +476,7 @@ class _ModelListState extends State<ModelList> {
                       ),
                     ),
                   ),
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: EdgeInsets.all(8),
                   child: _buildItemRow(model),
                 ),
               );
@@ -500,7 +508,19 @@ class _ModelListState extends State<ModelList> {
           child: Center(
             child:
                 model.isBuiltin
-                    ? const Text('内置', style: TextStyle(color: Colors.grey))
+                    // ? const Text('内置', style: TextStyle(color: Colors.grey))
+                    ? TextButton(
+                      onPressed: () => _deleteModel(model),
+                      style: TextButton.styleFrom(
+                        // 将最小尺寸设置为零
+                        minimumSize: Size.zero,
+                        // 将内边距设置为零
+                        padding: EdgeInsets.zero,
+                        // 缩小点击目标区域
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text('内置', style: TextStyle(color: Colors.grey)),
+                    )
                     : IconButton(
                       icon: const Icon(
                         Icons.delete,

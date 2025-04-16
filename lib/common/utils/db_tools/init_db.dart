@@ -6,8 +6,8 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:path_provider/path_provider.dart';
 
+import '../tools.dart';
 import 'ddl_brief_ai_tool.dart';
 
 ///
@@ -87,7 +87,7 @@ class DBInit {
     }
 
     // 获取Android和iOS存储数据库的目录路径(用户看不到，在Android/data/……里看不到)。
-    Directory directory = await getApplicationDocumentsDirectory();
+    Directory directory = await getAppHomeDirectory();
     String path = "${directory.path}/${DBInitConfig.databaseName}";
 
     // IOS不支持这个方法，所以可能取不到这个地址
@@ -158,7 +158,7 @@ class DBInit {
   // 导出所有数据
   Future<void> exportDatabase() async {
     // 获取应用文档目录路径
-    Directory appDocDir = await getApplicationDocumentsDirectory();
+    Directory appDocDir = await getAppHomeDirectory();
     // 创建或检索 db_export 文件夹
     var tempDir =
         await Directory(p.join(appDocDir.path, DB_EXPORT_DIR)).create();

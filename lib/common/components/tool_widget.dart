@@ -788,6 +788,14 @@ Widget buildNetworkOrFileImage(String imageUrl, {BoxFit? fit}) {
     //   },
     //   fit: fit,
     // );
+  } else if (imageUrl.startsWith('assets')) {
+    return Image.asset(
+      imageUrl,
+      errorBuilder: (context, error, stackTrace) {
+        return Image.asset(placeholderImageUrl, fit: BoxFit.scaleDown);
+      },
+      fit: fit,
+    );
   } else {
     return Image.file(
       File(imageUrl),

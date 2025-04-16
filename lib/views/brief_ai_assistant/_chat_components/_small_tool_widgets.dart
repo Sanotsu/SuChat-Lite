@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../common/components/tool_widget.dart';
 import '../../../common/constants/constants.dart';
 import '../../../models/brief_ai_tools/branch_chat/character_card.dart';
 
@@ -154,7 +155,8 @@ Widget buildAvatarClipOval(
 }) {
   return ClipOval(
     clipBehavior: clipBehavior,
-    child: buildCusImage(url, fit: fit),
+    // child: buildCusImage(url, fit: fit),
+    child: buildNetworkOrFileImage(url, fit: fit),
   );
 }
 

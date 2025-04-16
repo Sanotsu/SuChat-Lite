@@ -1,5 +1,3 @@
-// ignore_for_file: avoid_print
-
 import 'dart:async';
 import 'dart:io';
 import 'package:bot_toast/bot_toast.dart';
@@ -12,14 +10,14 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:proste_logger/proste_logger.dart';
 
+import 'models/brief_ai_tools/branch_chat/branch_store.dart';
 import 'common/components/toast_utils.dart';
+import 'common/components/min_size_layout.dart';
 import 'common/utils/screen_helper.dart';
+import 'services/cus_get_storage.dart';
 import 'services/model_manager_service.dart';
 import 'services/network_service.dart';
 import 'views/home.dart';
-import 'services/cus_get_storage.dart';
-import 'models/brief_ai_tools/branch_chat/branch_store.dart';
-import 'common/components/min_size_layout.dart';
 
 GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -58,13 +56,14 @@ class AppCatchError {
   }
 
   void initApp() async {
-    await GetStorage.init();
+    // 默认使用path_provider 的 getTemporaryDirectory()作为存储路径,且无法修改
+    await GetStorage.init('SuChatGetStorage');
 
     // 只在首次启动时初始化内置模型
-    // if (MyGetStorage().isFirstLaunch()) {
-    await ModelManagerService.initBuiltinModelsTest();
-    await MyGetStorage().markLaunched();
-    // }
+    if (MyGetStorage().isFirstLaunch()) {
+      await ModelManagerService.initBuiltinModelsTest();
+      await MyGetStorage().markLaunched();
+    }
 
     // 初始化 ObjectBox
     final store = await BranchStore.create();
@@ -102,7 +101,7 @@ class AppCatchError {
         error.toString().contains("token已过期") ||
         error.toString().contains("登录出错") ||
         error.toString().toLowerCase().contains("invalid")) {
-      print(error);
+      debugPrint(error.toString());
     }
   }
 }
@@ -185,11 +184,7 @@ class SuChatApp extends StatelessWidget {
             child = BotToastInit()(context, child);
 
             // 应用最小尺寸限制
-            child = MinSizeLayout(
-              minWidth: 640,
-              minHeight: 360,
-              child: child,
-            );
+            child = MinSizeLayout(minWidth: 640, minHeight: 360, child: child);
 
             // 针对桌面平台的背景处理
             if (ScreenHelper.isDesktop()) {
