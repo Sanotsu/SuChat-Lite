@@ -24,7 +24,6 @@ Future<(Stream<String>, VoidCallback)> getStreamOnlyStringResponse(
   try {
     final response = await HttpUtils.post(
       path: url,
-      method: CusHttpMethod.post,
       headers: headers,
       data: requestBody,
       responseType: stream ? CusRespType.stream : CusRespType.json,
@@ -146,7 +145,6 @@ Future<(Stream<ChatCompletionResponse>, VoidCallback)> getStreamResponse(
   try {
     final response = await HttpUtils.post(
       path: url,
-      method: CusHttpMethod.post,
       headers: headers,
       data: requestBody,
       responseType: stream ? CusRespType.stream : CusRespType.json,

@@ -6,14 +6,21 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../../../common/components/toast_utils.dart';
 import '../../../common/components/tool_widget.dart';
 import '../../../common/utils/image_color_helper.dart';
+import '../../../models/brief_ai_tools/branch_chat/character_card.dart';
 import '../../../services/cus_get_storage.dart';
 import '../../../common/utils/screen_helper.dart';
 import '../branch_chat/components/message_color_config.dart';
 
 class ChatBackgroundPickerPage extends StatefulWidget {
-  const ChatBackgroundPickerPage({super.key, required this.title});
+  const ChatBackgroundPickerPage({
+    super.key,
+    required this.title,
+    this.currentCharacter,
+  });
 
   final String title;
+  // 当前角色(如果对话是角色对话，则传入当前角色)
+  final CharacterCard? currentCharacter;
 
   @override
   State<ChatBackgroundPickerPage> createState() =>
@@ -46,6 +53,11 @@ class _ChatBackgroundPickerPageState extends State<ChatBackgroundPickerPage>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadSettings();
+
+    // 如果是角色对话传入了角色，则默认选中字体颜色设置选项卡
+    if (widget.currentCharacter != null) {
+      _tabController.index = 1;
+    }
   }
 
   @override
@@ -198,6 +210,8 @@ class _ChatBackgroundPickerPageState extends State<ChatBackgroundPickerPage>
 
   // 字体颜色设置选项卡
   Widget _buildColorTab(double previewHeight) {
+    var image = _selectedBackground ?? widget.currentCharacter?.background;
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,9 +226,9 @@ class _ChatBackgroundPickerPageState extends State<ChatBackgroundPickerPage>
               border: Border.all(color: Colors.grey.shade300),
               color: Colors.white,
               image:
-                  _selectedBackground != null
+                  (image != null && image.trim().isNotEmpty)
                       ? DecorationImage(
-                        image: _buildBackgroundImage(_selectedBackground!),
+                        image: _buildBackgroundImage(image),
                         fit: BoxFit.cover,
                         opacity: _opacity,
                       )

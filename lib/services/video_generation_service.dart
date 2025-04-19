@@ -4,7 +4,6 @@ import '../common/constants/default_models.dart';
 import '../common/llm_spec/cus_brief_llm_model.dart';
 import '../common/llm_spec/constant_llm_enum.dart';
 import '../common/utils/dio_client/cus_http_client.dart';
-import '../common/utils/dio_client/cus_http_request.dart';
 import '../models/brief_ai_tools/video_generation/video_generation_request.dart';
 import '../models/brief_ai_tools/video_generation/video_generation_response.dart';
 import 'cus_get_storage.dart';
@@ -132,7 +131,6 @@ class VideoGenerationService {
 
     final response = await HttpUtils.post(
       path: baseUrl,
-      method: CusHttpMethod.post,
       headers: headers,
       data: requestBody,
     );
@@ -242,7 +240,6 @@ class VideoGenerationService {
     switch (model.platform) {
       case ApiPlatform.siliconCloud:
         taskResponse = await HttpUtils.post(
-          method: CusHttpMethod.post,
           path: _getBaseTaskUrl(model.platform),
           headers: headers,
           data: {'requestId': taskId},

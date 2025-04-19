@@ -262,6 +262,11 @@ class CharacterStore {
             json['characterId'] = identityHashCode(json['name']).toString();
           }
 
+          // 如果文件有id，则将其string类型的id转为number类型
+          if (json['id'] != null) {
+            json['id'] = identityHashCode(json['id']);
+          }
+
           final character = CharacterCard.fromJson(json);
 
           // 检查角色是否已存在

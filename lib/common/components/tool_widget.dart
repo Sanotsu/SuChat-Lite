@@ -1121,3 +1121,95 @@ class CustomProgressIndicator extends StatelessWidget {
     );
   }
 }
+
+// 上方图标下方文字的InkWell按钮
+Widget buildIconTextInkWell({
+  required IconData icon,
+  required String label,
+  required VoidCallback? onTap,
+  required BuildContext context,
+}) {
+  var iconColor = Theme.of(context).colorScheme.primary;
+  var textColor = Theme.of(context).colorScheme.onSurface;
+
+  return Tooltip(
+    message: label,
+    verticalOffset: 10,
+    preferBelow: false,
+    // 此处不在InkWell外面加这个Material会报错
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 64,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 24,
+                color: onTap == null ? Colors.grey : iconColor,
+              ),
+              SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: onTap == null ? Colors.grey : textColor,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+// 上方图标下方文字的TextButton按钮
+Widget buildIconWithTextButton({
+  required IconData icon,
+  required String label,
+  required VoidCallback? onTap,
+  required BuildContext context,
+}) {
+  var iconColor = Theme.of(context).colorScheme.primary;
+  var textColor = Theme.of(context).colorScheme.onSurface;
+
+  return Tooltip(
+    message: label,
+    verticalOffset: 20,
+    preferBelow: false,
+    child: TextButton(
+      onPressed: onTap,
+      child: Container(
+        width: 64,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 24,
+              color: onTap == null ? Colors.grey : iconColor,
+            ),
+            SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                color: onTap == null ? Colors.grey : textColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}

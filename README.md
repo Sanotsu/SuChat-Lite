@@ -1,12 +1,46 @@
-# suchat_lite
+# SuChat Lite
 
-SuChat，使用 Flutter 开发、以调用云平台在线大模型 API 驱动的、简洁版 AI 聊天应用，支持简单的自定义角色。
+SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API 驱动的、简洁版 AI 聊天应用，支持简单的自定义角色。
 
-SuChat is a concise AI chat application developed using Flutter, powered by calling cloud platform-based large model APIs online. It supports simple custom characters for role-playing.。
+SuChat is a concise AI chat application developed using Flutter, powered by calling cloud platform-based large model APIs online. It supports simple custom characters for role-playing.
 
-大模型 API 调用**只保留其 HTTP API 兼容 openAI API 结构的**云平台和模型。
+![SuChat Lite 预览](./_doc/snapshots/screenshot-home.png)
 
-具体如下(2025-04-08)：
+## Features
+
+- **Support for Multiple LLM Providers**
+  - 支持多个云平台在线模型 HTTP API 的调用
+  - 未预设的平台可以单个手动填写：请求地址、模型名、API Key 即可使用
+- **Local Data Storage**
+  - 所有对话保留在设备本地(但不同的平台记录各自独立)
+- **Markdown, Latex & Code Highlighting**
+  - 简单的 Markdown, Latex 和代码高亮的支持
+- **Streaming Reply**
+  - 大模型响应流式追加显示
+- **Cross-Platform Availability**
+  - 页面适配桌面端和移动端，Windows、Linux、Android App 有编译测试
+  - 无需部署，通过可下载的安装包快速开始使用，无需复杂设置
+- **Simple Custom Characters for Role-Playing**
+  - 支持简单的自定义角色管理、使用角色进行聊天
+  - 如果是角色聊天，还可以针对特定角色使用特定的背景
+  - 如果是角色聊天，默认会固定在左下角显示当前角色头像，可以点击放大预览并进行拖动和缩放
+- **And More**
+  - 支持编辑和删除用户已发送的消息(分支管理)
+    - 选中消息长按(移动端)或者鼠标右键(桌面端)
+  - 支持调整对话消息显示的文字大小
+  - 支持自定义用户输入、大模型思考、大模型正常响应的消息文本字体颜色
+  - 支持切换聊天页面的背景图片和侧边栏背景色
+  - 支持使用紧凑的消息列表(选中“简洁显示”，则不显示头像和消息下方工具按钮)
+  - 支持针对不同模型配置更多高级请求参数(慎用)
+  - 支持数据的导入导出(对话数据、角色数据、模型规格数据等)
+    - 可以单个类别导入导出备份，也可以整体打包备份
+  - 手机 App 端支持语音转文字输入(使用的讯飞语音听写 API)
+
+---
+
+大模型 API 调用**只保留其 HTTP API 兼容 openAI API 结构的**云平台和对话模型。
+
+具体如下(2025-04-18)：
 
 - 对话模型：
   - [阿里](https://help.aliyun.com/zh/model-studio/developer-reference/compatibility-of-openai-with-dashscope)
@@ -18,16 +52,14 @@ SuChat is a concise AI chat application developed using Flutter, powered by call
   - [零一万物](https://platform.lingyiwanwu.com/docs/api-reference)
   - [无问芯穹](https://docs.infini-ai.com/gen-studio/api/maas.html#/operations/chatCompletions)
   - [硅基流动](https://docs.siliconflow.cn/cn/api-reference/chat-completions/chat-completions)
-- 图片生成：
-  - 阿里云: [图像生成-通义万相 文生图 V2 版](https://help.aliyun.com/zh/model-studio/developer-reference/text-to-image-v2-api-reference)、[文生图 FLUX](https://help.aliyun.com/zh/model-studio/developer-reference/flux/)
-  - 智谱 AI: [CogView](https://open.bigmodel.cn/dev/api/image-model/cogview)
-  - 硅基流动: [创建图片生成请求](https://docs.siliconflow.cn/cn/api-reference/images/images-generations)
-- 视频生成：
-  - 阿里云: [视频生成-通义万相](https://help.aliyun.com/zh/model-studio/developer-reference/video-generation-wanx/)
-  - 智谱 AI: [CogVideoX](https://open.bigmodel.cn/dev/api/videomodel/cogvideox)
-  - 硅基流动: [创建视频生成请求](https://docs.siliconflow.cn/cn/api-reference/videos/videos_submit)
+- 其他兼容兼容 openAI API 结构的云平台和 HTTP API 可使用自定义模式添加
+  - 此时需要模型管理中平台选择自定义后，添加其请求地址、模型代号、平台密钥
 
-目前只调试了 Android 手机部分。
+目前只调试了 Android 手机端、Linux 桌面端、Windows 桌面端:
+
+- Ubuntu 22.04 (Inter Core i5-4460 的 Windows 7 下使用 VirtualBox 安装的虚拟机)
+- Android 14 & Android 12 (努比亚 Z60 Ultra 和 小米 6)
+- Windows 11 (机械革命 耀世 16 Pro)
 
 ---
 
@@ -35,33 +67,38 @@ SuChat is a concise AI chat application developed using Flutter, powered by call
 
 [https://cloud.siliconflow.cn/i/tRIcST68](https://cloud.siliconflow.cn/i/tRIcST68)
 
-# 更新说明
+## 更新说明
 
 查看 [CHANGELOG](CHANGELOG.md)，**新版本改动的模块和功能信息也在该 ChangeLog 中简述**。
 
-# 功能介绍
+## 使用指南
 
-## 补充说明
+从 release 直接下载对应平台应用即可，桌面端是封装过的，无需安装。
 
-![配置和其他工具](./_doc/screenshots/导入配置等.jpg)
+### 补充说明
 
-默认助手、角色扮演的对话可以单独导出，也可以在设置页面和其他内容一起全量备份、覆写恢复。
+打包好的应用是直接使用我个人密钥的一些免费的大模型，都是比较基础的。
 
-打包好的 apk 是直接使用我个人密钥的一些免费的大模型，都是比较基础的。可以自行导入平台模型和密钥使用自己的资源。
+可以自行导入或添加平台模型和密钥使用自己的资源。
 
-- “导入”入口在“工具”模块右上角，点击“设置”图标，进入配置页面。
-- 如果想使用本应用支持的平台中更加强劲的模型，可自行去各个平台充值、获取密钥，再导入密钥和模型 json 文件
-  - **密钥只缓存在本地，事实上，除了调用 API 和加载图片、视频，都没有联网操作**
+- 模型和密钥管理入口：点击在侧边栏的“模块”按钮，进入“配置页面”页面。
+- 如果想使用本应用预设支持的平台中更加强劲的模型，可自行去各个平台充值、获取密钥。
+- 可以手动添加模型和平台密钥，或者导入符合预设结构的入密钥和模型 json 文件
+  - **密钥仅使用 `get_storage` 缓存在本地。除了调用 API 都不联网。**
   - 想用哪个平台、哪个模型，全都自己导入
-- 平台密钥和模型规格的**固定 json 结构**见下方
+- json 导入时，平台密钥和模型规格的**固定 json 结构**见下方
 
 ---
+
+<details>
+
+<summary>导入平台密钥和模型规格 json 文件规格</summary>
 
 **_注意，平台密钥和平台模型规格要同时导入，否则无法正常使用。_**
 
 #### 平台密钥 json 结构
 
-导入平台的密钥的 key 一定要和这个文件中 key 一样，不然匹配不上：
+导入预设平台的密钥的 key 一定要和这个文件中 key 一样，不然匹配不上：
 
 ```json
 {
@@ -78,7 +115,7 @@ SuChat is a concise AI chat application developed using Flutter, powered by call
 
   // 火山方舟的预置推理接入点
   "USER_VOLCENGINE_API_KEY": "xxx",
-  // 自定义推理接入点(比较简单的联网应用)
+  // 火山方舟自定义推理接入点(比较简单的联网应用)
   "USER_VOLCESBOT_API_KEY": "xxx",
 
   // 讯飞, 语音转写需要
@@ -120,6 +157,11 @@ SuChat is a concise AI chat application developed using Flutter, powered by call
 
 ```ts
 enum ApiPlatform {
+  // 用户使用的模型不属于预设平台(比如谷歌等)
+  // 那么就是统一custom，并在自定义模型中直接新增url、apikey等栏位去取用
+  // 这个不是默认的有效平台，不需要用户导入密钥啥的
+  custom,
+
   aliyun, // 阿里云百炼
   baidu, // 百度千帆
   tencent, // 腾讯混元
@@ -145,22 +187,74 @@ enum LLModelType {
   cc, // 文本对话
   reasoner, // 深度思考
   vision, // 图片解读
-  tti, // 文本生图
-  iti, // 图片生图
-  image, // 图片生成(文生图生通用)
-  ttv, // 文生视频
-  itv, // 图生视频
-  video, // 视频生成(文生图生通用)
 }
 ```
 
 后续我会放一些整理好的各个平台我常用的大模型规格 json 文件在项目的 **[\_cus_model_jsons](./_cus_model_jsons)** 文件夹中，可以参考使用。
 
-# 其他说明
+</details>
 
-## 开发环境
+## 主要功能特点
 
-在一个 Windows 7 中使用 Visual Box 7 安装的 Ubuntu20.04 LTS 虚拟机中使用 VSCode 进行开发。
+### 核心功能
+
+- **多模型支持**：支持接入多种 AI 大模型，包括文本、图像和多模态模型(TODO)
+- **分支对话**：支持对话分支管理，可以在同一会话中探索不同的回答方向
+- **角色扮演**：支持创建和使用预设角色进行对话
+- **粗糙文件处理**：支持选择和解析各种本地文档（PDF、DOCX、TXT 等，但暂未用到）
+- **云端文档管理**：通过智谱开放平台管理和使用云端文档
+
+### 技术特点
+
+- **跨平台兼容**：针对移动端和桌面端进行了特别优化
+- **响应式设计**：自适应不同屏幕尺寸和设备方向
+- **本地存储**：使用 ObjectBox 进行高性能本地数据存储
+- **主题定制**：支持自定义界面颜色和背景
+- **错误处理**：较为完善的异常捕获和错误提示机制
+
+## 项目结构
+
+```sh
+lib/
+├── apis/                       # API 接口模块
+├── common/                     # 通用功能模块
+│   ├── components/             # 通用 UI 组件
+│   ├── constants/              # 常量定义
+│   ├── llm_spec/               # 语言模型规格定义
+│   └── utils/                  # 工具类和辅助函数
+├── models/                     # 数据模型
+│   └── brief_ai_tools/         # AI 工具相关模型
+├── services/                   # 服务层
+├── views/                      # 视图层
+│   ├── brief_ai_assistant/     # AI 助手相关视图
+│   │   ├── _chat_components/   # 聊天组件
+│   │   ├── branch_chat/        # 分支对话功能
+│   │   ├── model_config/       # 模型配置
+│   │   └── ...
+│   ├── home.dart               # 主页
+│   └── user_and_settings/      # 用户和设置页面
+├── main.dart                   # 应用入口文件
+├── objectbox.g.dart            # ObjectBox 生成的数据库代码
+└── objectbox-model.json        # ObjectBox 数据模型
+```
+
+## 技术栈
+
+- **前端框架**：Flutter
+- **编程语言**：Dart
+- **本地数据库**：ObjectBox
+- **状态管理**：GetX
+- **网络请求**：Dio
+- **本地存储**：GetStorage
+- **屏幕适配**：flutter_screenutil
+- **表单验证**：form_builder_validators
+- **文档处理**：多种文档解析库（PDF、DOCX 等）
+
+## 安装指南
+
+### 开发环境
+
+在一个 Windows 7 中使用 Visual Box 7 安装的 Ubuntu22.04 LTS 虚拟机中进行开发。
 
 2025-04-08 使用最新 flutter 版本：
 
@@ -171,3 +265,37 @@ Framework • revision c236373904 (4 周前) • 2025-03-13 16:17:06 -0400
 Engine • revision 18b71d647a
 Tools • Dart 3.7.2 • DevTools 2.42.3
 ```
+
+### 获取代码
+
+```bash
+git clone https://github.com/Sanotsu/SuChat-Lite.git
+```
+
+### 安装依赖
+
+```bash
+flutter pub get
+```
+
+### 运行项目
+
+```bash
+# 运行调试版本
+flutter run
+
+# 构建发布版本
+flutter build apk  # Android
+flutter build ios   # iOS
+flutter build windows  # Windows
+flutter build macos    # macOS
+flutter build linux    # Linux
+```
+
+## 贡献指南
+
+欢迎提交 Issues 和 Pull Requests 来帮助改进项目。
+
+## 许可证
+
+[LICENSE 名称] - 查看 LICENSE 文件了解更多细节

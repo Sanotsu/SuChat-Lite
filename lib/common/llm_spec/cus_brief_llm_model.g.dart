@@ -37,6 +37,7 @@ Map<String, dynamic> _$CusBriefLLMSpecToJson(CusBriefLLMSpec instance) =>
     };
 
 const _$ApiPlatformEnumMap = {
+  ApiPlatform.custom: 'custom',
   ApiPlatform.aliyun: 'aliyun',
   ApiPlatform.baidu: 'baidu',
   ApiPlatform.tencent: 'tencent',
@@ -47,7 +48,6 @@ const _$ApiPlatformEnumMap = {
   ApiPlatform.infini: 'infini',
   ApiPlatform.volcengine: 'volcengine',
   ApiPlatform.volcesBot: 'volcesBot',
-  ApiPlatform.custom: 'custom',
 };
 
 const _$LLModelTypeEnumMap = {

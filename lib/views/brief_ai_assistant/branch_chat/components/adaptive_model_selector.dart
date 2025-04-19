@@ -422,7 +422,8 @@ class _DesktopModelSelectorState extends State<DesktopModelSelector> {
     for (final model in widget.models) {
       types.add(model.modelType);
     }
-    return types.toList();
+    // Set转List再按name排序
+    return types.toList()..sort((a, b) => a.name.compareTo(b.name));
   }
 
   @override

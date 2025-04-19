@@ -21,13 +21,18 @@ import '../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../common/utils/document_parser.dart';
 import '../../../common/utils/screen_helper.dart';
 import '../../../common/utils/tools.dart';
+import '../branch_chat/pages/file_upload_to_bigmodel_page.dart';
 
 // 定义消息数据类
 class MessageData {
   final String text;
   final List<XFile>? images;
   final XFile? audio;
+  // 本地可用获取文档文件
   final PlatformFile? file;
+  // 云端只能获取文档的文件名
+  final String? cloudFileName;
+  // 本地云端都使用同一个文档内容变量，两者不会同时存在
   final String? fileContent;
   final List<XFile>? videos;
   // 可以根据需要添加更多类型
@@ -37,6 +42,7 @@ class MessageData {
     this.images,
     this.audio,
     this.file,
+    this.cloudFileName,
     this.fileContent,
     this.videos,
   });
@@ -79,15 +85,22 @@ class ChatInputBar extends StatefulWidget {
 class _ChatInputBarState extends State<ChatInputBar> {
   bool _showToolbar = false;
   final _picker = ImagePicker();
+
+  // 选中的图片
   List<XFile>? _selectedImages;
+  // 选中的音频
   XFile? _selectedAudio;
-  // 被选中的文件
-  PlatformFile? _selectedFile;
+
   // 文件是否在解析中
   bool isLoadingDocument = false;
-  // 解析后的文件内容
-  String fileContent = '';
+  // 被选中的文件
+  PlatformFile? _selectedFile;
+  // 解析后的文件内容(本地和云端同时只能有一个，所以用一个变量记录)
+  String _fileContent = '';
+  // 云端文档的文件名(本地能获取到文件，云端只有文件名)
+  String _cloudFileName = '';
 
+  // 是否是语音输入模式
   bool _isVoiceMode = false;
 
   // 获取当前模型支持的工具列表
@@ -96,13 +109,6 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
     final List<ToolItem> tools = [
       // 基础工具 - 所有模型都支持
-      ToolItem(
-        icon: Icons.file_open,
-        label: '文档',
-        type: 'upload_file',
-        onTap: _handleFileUpload,
-        color: Colors.grey,
-      ),
     ];
 
     // 根据模型类型添加特定工具
@@ -135,6 +141,23 @@ class _ChatInputBarState extends State<ChatInputBar> {
         );
         break;
       case LLModelType.cc:
+        tools.addAll([
+          ToolItem(
+            icon: Icons.file_open,
+            label: '本地文档',
+            type: 'upload_file',
+            onTap: _handleFileUpload,
+            color: Colors.grey,
+          ),
+          ToolItem(
+            icon: Icons.cloud_upload,
+            label: '云端文档',
+            type: 'upload_cloud_file',
+            onTap: _handleCloudFileUpload,
+            color: Colors.grey,
+          ),
+        ]);
+        break;
       default:
         break;
     }
@@ -173,6 +196,8 @@ class _ChatInputBarState extends State<ChatInputBar> {
   void _notifyHeightChange() {
     // 等待下一帧布局完成后再获取高度
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_containerKey.currentContext == null) return;
+
       final RenderBox renderBox =
           _containerKey.currentContext!.findRenderObject() as RenderBox;
       final height = renderBox.size.height;
@@ -206,13 +231,34 @@ class _ChatInputBarState extends State<ChatInputBar> {
     }
   }
 
+  Future<void> _handleCloudFileUpload() async {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder:
+            (context) => FileUploadPage(
+              onFileAnalyze: (String fileContent, String fileName) {
+                // 在这里处理文件内容
+                setState(() {
+                  _selectedFile = null;
+                  _cloudFileName = fileName;
+                  _fileContent = fileContent;
+                  isLoadingDocument = false;
+                });
+              },
+            ),
+      ),
+    );
+  }
+
   // 处理文件上传
   Future<void> _handleFileUpload() async {
     // 只支持单个文件，如果点击上传按钮，就无论如何都清空旧的选中
     setState(() {
       isLoadingDocument = false;
-      fileContent = '';
+      _fileContent = '';
       _selectedFile = null;
+      // 处理本地文件时确保云端文档的文件名始终为空
+      _cloudFileName = "";
     });
 
     /// 选择文件，并解析出文本内容
@@ -228,8 +274,10 @@ class _ChatInputBarState extends State<ChatInputBar> {
     if (result != null) {
       setState(() {
         isLoadingDocument = true;
-        fileContent = '';
+        _fileContent = '';
         _selectedFile = null;
+        // 处理本地文件时确保云端文档的文件名始终为空
+        _cloudFileName = "";
       });
 
       PlatformFile file = result.files.first;
@@ -258,8 +306,10 @@ class _ChatInputBarState extends State<ChatInputBar> {
         if (!mounted) return;
         setState(() {
           _selectedFile = file;
-          fileContent = text;
+          _fileContent = text;
           isLoadingDocument = false;
+          // 处理本地文件时确保云端文档的文件名始终为空
+          _cloudFileName = "";
         });
       } catch (e) {
         if (!mounted) return;
@@ -267,8 +317,10 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
         setState(() {
           _selectedFile = file;
-          fileContent = "";
+          _fileContent = "";
           isLoadingDocument = false;
+          // 处理本地文件时确保云端文档的文件名始终为空
+          _cloudFileName = "";
         });
         rethrow;
       }
@@ -287,6 +339,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
       _selectedAudio = null;
       _selectedFile = null;
 
+      _cloudFileName = "";
+      _fileContent = '';
+
       // 一般取消、发送完之后都会清除媒体资源，同时也收起工具栏，并通知父组件修改悬浮按钮位置
       _showToolbar = false;
       _notifyHeightChange();
@@ -299,7 +354,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
     if (text.isEmpty &&
         _selectedImages == null &&
         _selectedAudio == null &&
-        _selectedFile == null) {
+        _selectedFile == null &&
+        _fileContent.isEmpty &&
+        _cloudFileName.isEmpty) {
       return;
     }
 
@@ -309,6 +366,8 @@ class _ChatInputBarState extends State<ChatInputBar> {
       images: _selectedImages,
       audio: _selectedAudio,
       file: _selectedFile,
+      cloudFileName: _cloudFileName,
+      fileContent: _fileContent,
     );
 
     // 发送消息
@@ -329,7 +388,8 @@ class _ChatInputBarState extends State<ChatInputBar> {
         /// 选中的媒体预览
         if (_selectedImages != null) _buildImagePreviewArea(),
 
-        if (isLoadingDocument || _selectedFile != null)
+        if (isLoadingDocument ||
+            (_selectedFile != null || _fileContent.isNotEmpty))
           Container(
             height: 100,
             decoration: BoxDecoration(
@@ -443,62 +503,52 @@ class _ChatInputBarState extends State<ChatInputBar> {
   Widget buildFilePreviewArea() {
     _notifyHeightChange();
 
+    var mainWidget = Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _selectedFile?.name ?? _cloudFileName,
+          maxLines: 2,
+          style: TextStyle(fontSize: 12),
+        ),
+        RichText(
+          softWrap: true,
+          overflow: TextOverflow.ellipsis,
+          maxLines: 2,
+          text: TextSpan(
+            children: [
+              if (_selectedFile != null)
+                TextSpan(
+                  text: formatFileSize(_selectedFile?.size ?? 0),
+                  style: TextStyle(color: Colors.black, fontSize: 12),
+                ),
+              TextSpan(
+                text: " 文档解析完成 ",
+                style: TextStyle(color: Colors.blue, fontSize: 15),
+              ),
+              TextSpan(
+                text: "共有 ${_fileContent.length} 字符",
+                style: TextStyle(color: Colors.black, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        if (!isLoadingDocument)
-          IconButton(
-            onPressed: _handleFileUpload,
-            icon: const Icon(Icons.file_upload),
-          ),
+        SizedBox(width: 10),
         Expanded(
           child:
-              _selectedFile != null
+              (_selectedFile != null || _fileContent.isNotEmpty)
                   ? GestureDetector(
                     onTap: () {
                       previewDocumentContent();
                     },
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _selectedFile?.name ?? "",
-                          maxLines: 2,
-                          style: TextStyle(fontSize: 12),
-                        ),
-                        RichText(
-                          softWrap: true,
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 2,
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: formatFileSize(_selectedFile?.size ?? 0),
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              TextSpan(
-                                text: " 文档解析完成 ",
-                                style: TextStyle(
-                                  color: Colors.blue,
-                                  fontSize: 15,
-                                ),
-                              ),
-                              TextSpan(
-                                text: "共有 ${fileContent.length} 字符",
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                    child: mainWidget,
                   )
                   : Center(
                     child: Text(
@@ -507,13 +557,14 @@ class _ChatInputBarState extends State<ChatInputBar> {
                     ),
                   ),
         ),
-        if (_selectedFile != null)
+        if (_selectedFile != null || _cloudFileName.isNotEmpty)
           SizedBox(
             width: 48,
             child: IconButton(
               onPressed: () {
                 setState(() {
-                  fileContent = "";
+                  _fileContent = "";
+                  _cloudFileName = "";
                   _selectedFile = null;
                   _notifyHeightChange();
                 });
@@ -555,12 +606,12 @@ class _ChatInputBarState extends State<ChatInputBar> {
               // 2025-03-22 这里解析出来的内容可能包含非法字符，所以就算使用Text或者Text.rich，都会报错
               // 使用MarkdownBody也会报错，但能显示出来，上面是无法显示
               child:
-                  fileContent.length > 8000
+                  _fileContent.length > 8000
                       ? Text(
-                        "解析后内容过长${fileContent.length}字符，只展示前8000字符\n\n${fileContent.substring(0, 8000)}\n <已截断...>",
+                        "解析后内容过长${_fileContent.length}字符，只展示前8000字符\n\n${_fileContent.substring(0, 8000)}\n <已截断...>",
                       )
                       : MarkdownBody(
-                        data: String.fromCharCodes(fileContent.runes),
+                        data: String.fromCharCodes(_fileContent.runes),
                         // selectable: true,
                       ),
             ),
@@ -634,6 +685,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                       images: _selectedImages,
                       audio: _selectedAudio,
                       file: _selectedFile,
+                      fileContent: _fileContent,
                     );
 
                     widget.onSend(messageData);
@@ -653,6 +705,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                       images: _selectedImages,
                       audio: XFile("$tempPath.m4a"),
                       file: _selectedFile,
+                      fileContent: _fileContent,
                     );
 
                     widget.onSend(messageData);
@@ -712,7 +765,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
           },
           decoration: InputDecoration(
             hintText: widget.isEditing ? '编辑消息...' : '输入消息...',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             prefixIcon:
                 (widget.isEditing && widget.onCancel != null)
                     ? IconButton(

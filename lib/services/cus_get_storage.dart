@@ -173,4 +173,15 @@ class MyGetStorage {
 
     return MessageColorConfig.defaultConfig();
   }
+
+  ///
+  /// 2025-04-16 把文件上传到智谱开发平台的文件管理中去
+  /// 那么只能使用用户自己的API KEY，所以需要缓存
+  ///
+  static const String bigmodelApiKey = 'bigmodel_api_key';
+  Future<void> setBigmodelApiKey(String? key) async {
+    await box.write(bigmodelApiKey, key);
+  }
+
+  String? getBigmodelApiKey() => box.read(bigmodelApiKey);
 }

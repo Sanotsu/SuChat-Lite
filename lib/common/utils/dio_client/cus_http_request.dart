@@ -60,11 +60,11 @@ class HttpRequest {
       ErrorInterceptor(),
       PrettyDioLogger(
         requestHeader: true,
-        // requestBody: true,
-        requestBody: false,
+        requestBody: true,
+        // requestBody: false,
         responseHeader: true,
-        // responseBody: true,
-        responseBody: false, // 响应太多了，不显示
+        responseBody: true,
+        // responseBody: false, // 响应太多了，不显示
         maxWidth: 150,
       ),
     ]);
@@ -82,6 +82,8 @@ class HttpRequest {
     Map<String, dynamic>? queryParameters,
     bool showLoading = true, // 加载过程
     bool showErrorMessage = true, // 显示错误信息
+    // 2025-04-16
+    String? contentType,
   }) async {
     //动态添加header头
     // Map<String, dynamic> headers = <String, dynamic>{};
@@ -91,6 +93,7 @@ class HttpRequest {
       method: methodValues[method],
       headers: headers,
       responseType: responseTypeValues[responseType],
+      contentType: contentType,
     );
 
     dynamic closeToast;

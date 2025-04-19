@@ -12,6 +12,7 @@ class BranchChatMessage {
   String messageId;
   String role;
   String content;
+  @Property(type: PropertyType.date)
   DateTime createTime;
 
   // 角色相关字段

@@ -10,10 +10,12 @@ import '../../../../models/brief_ai_tools/branch_chat/branch_store.dart';
 import '../../../../models/brief_ai_tools/branch_chat/character_card.dart';
 import '../../../../models/brief_ai_tools/branch_chat/character_store.dart';
 import '../../../../common/llm_spec/cus_brief_llm_model.dart';
+import '../../../../services/cus_get_storage.dart';
 import '../../../../services/model_manager_service.dart';
 import '../../../../common/utils/screen_helper.dart';
 import '../../_chat_components/_small_tool_widgets.dart';
 import '../components/adaptive_model_selector.dart';
+import '../components/message_color_config.dart';
 
 class CharacterEditorPage extends StatefulWidget {
   final CharacterCard? character;
@@ -41,6 +43,9 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
   bool _isEditing = false;
   bool isSaving = false;
 
+  // 当前字体颜色(这里设默认，初始化时更新)
+  MessageColorConfig _colorConfig = MessageColorConfig.defaultConfig();
+
   @override
   void initState() {
     super.initState();
@@ -59,6 +64,8 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
       _backgroundOpacity = widget.character!.backgroundOpacity ?? 0.2;
       _preferredModel = widget.character!.preferredModel;
     }
+
+    _loadColorConfig();
   }
 
   @override
@@ -71,6 +78,14 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
     _exampleDialogueController.dispose();
     _tagsController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadColorConfig() async {
+    final config = await MyGetStorage().loadMessageColorConfig();
+
+    setState(() {
+      _colorConfig = config;
+    });
   }
 
   Future<void> _selectModel() async {
@@ -466,8 +481,8 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
             GestureDetector(
               onTap: () => _showAvatarOrBgOptions('bg'),
               child: Container(
-                width: 100,
-                height: 70,
+                width: 144,
+                height: 81,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.grey.shade300),
@@ -485,8 +500,9 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
             SizedBox(width: 8),
             Expanded(
               child: Text(
-                '点击图片设置角色专属背景',
+                '点击左侧图片\n设置角色背景',
                 style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                textAlign: TextAlign.center,
               ),
             ),
             if (_backgroundPath != null)
@@ -549,19 +565,23 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
             ),
             Center(
               child: Container(
-                padding: EdgeInsets.all(8),
+                padding: EdgeInsets.all(4),
                 // 用户的字体颜色和AI响应的字体颜色不一样
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      '透明度: ${(_backgroundOpacity * 100).toInt()}%',
-                      style: TextStyle(color: Colors.black),
+                      '用户消息: ${(_backgroundOpacity * 100).toInt()}%',
+                      style: TextStyle(color: _colorConfig.userTextColor),
                     ),
                     Text(
-                      '透明度: ${(_backgroundOpacity * 100).toInt()}%',
-                      style: TextStyle(color: Colors.blue),
+                      '思考内容: ${(_backgroundOpacity * 100).toInt()}%',
+                      style: TextStyle(color: _colorConfig.aiThinkingTextColor),
+                    ),
+                    Text(
+                      '正常回复: ${(_backgroundOpacity * 100).toInt()}%',
+                      style: TextStyle(color: _colorConfig.aiNormalTextColor),
                     ),
                   ],
                 ),

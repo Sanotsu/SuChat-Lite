@@ -168,14 +168,8 @@ class _BranchChatPageState extends State<BranchChatPage>
     // 设置当前角色
     currentCharacter = widget.character;
 
-    // 从角色加载背景设置（如果有角色）
-    if (currentCharacter != null && currentCharacter!.background != null) {
-      backgroundImage = currentCharacter!.background;
-      backgroundOpacity = currentCharacter!.backgroundOpacity ?? 0.35;
-    } else {
-      // 从本地存储加载背景图片设置
-      loadBackgroundSettings();
-    }
+    // 加载背景图片设置
+    loadBackgroundSettings();
 
     // 初始化桌面端侧边栏状态
     isSidebarVisible = ScreenHelper.isDesktop();
@@ -506,17 +500,30 @@ class _BranchChatPageState extends State<BranchChatPage>
   }
 
   // 加载背景设置
+  // 2025-04-18 暂时以下情况会调用到此函数
+  //   0. 此页面初始化时
+  //   1. 从切换背景页面返回时
+  //   2. 切换对话记录时
+  //   3.创建新对话时(不管是切换模型还是点击新开按钮)
   Future<void> loadBackgroundSettings() async {
-    // 然后异步加载最新设置
-    final background = await storage.getBranchChatBackground();
-    final opacity = await storage.getBranchChatBackgroundOpacity();
-
-    // 只有当值不同时才更新UI
-    if (background != backgroundImage || opacity != backgroundOpacity) {
+    // 从角色加载背景设置（如果有角色）
+    if (currentCharacter != null && currentCharacter!.background != null) {
       setState(() {
-        backgroundImage = background;
-        backgroundOpacity = opacity ?? 0.2;
+        backgroundImage = currentCharacter!.background;
+        backgroundOpacity = currentCharacter!.backgroundOpacity ?? 0.35;
       });
+    } else {
+      // 从本地存储加载背景图片设置
+      final background = await storage.getBranchChatBackground();
+      final opacity = await storage.getBranchChatBackgroundOpacity();
+
+      // 只有当值不同时才更新UI
+      if (background != backgroundImage || opacity != backgroundOpacity) {
+        setState(() {
+          backgroundImage = background;
+          backgroundOpacity = opacity ?? 0.2;
+        });
+      }
     }
   }
 
@@ -548,7 +555,7 @@ class _BranchChatPageState extends State<BranchChatPage>
         ),
       ),
       actions: [
-        buildPopupMenuButton(),
+        if (ScreenHelper.isMobile()) buildPopupMenuButton(),
 
         IconButton(
           onPressed:
@@ -652,9 +659,22 @@ class _BranchChatPageState extends State<BranchChatPage>
 
     // 使用自适应布局组件
     return AdaptiveChatLayout(
+      key: ValueKey("$currentSessionId-${currentCharacter?.name}"),
       isLoading: isLoading,
-      body: mainBody,
+      body: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            right: BorderSide(
+              color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
+              width: 2,
+            ),
+          ),
+        ),
+        child: mainBody,
+      ),
       historyContent: buildChatHistoryContent(),
+      rightSidebar:
+          ScreenHelper.isDesktop() ? buildDesktopRightSidebarPanel() : null,
       appBar: customAppBar,
       title: customAppBar.title,
       actions: customAppBar.actions,
@@ -780,12 +800,6 @@ class _BranchChatPageState extends State<BranchChatPage>
               "对话备份",
               Icons.import_export,
             ),
-            // buildCusPopupMenuItem(
-            //   context,
-            //   "message_color",
-            //   "字体颜色",
-            //   Icons.three_mp,
-            // ),
           ],
     );
   }
@@ -901,31 +915,15 @@ class _BranchChatPageState extends State<BranchChatPage>
     }
   }
 
-  // 更换背景图片
-  // Future<void> changeBackground() async {
-  //   final result = await showModalBottomSheet<String>(
-  //     context: context,
-  //     builder: (context) => ChatBackgroundPicker(
-  //       currentImage: backgroundImage,
-  //       opacity: backgroundOpacity,
-  //       onOpacityChanged: (value) async {
-  //         setState(() => backgroundOpacity = value);
-  //         await MyGetStorage().saveChatBackgroundOpacity(value);
-  //       },
-  //     ),
-  //   );
-
-  //   if (result != null) {
-  //     setState(() => backgroundImage = result);
-  //     await MyGetStorage().saveChatBackground(result);
-  //   }
-  // }
-
   void changeBackground() {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ChatBackgroundPickerPage(title: '切换对话背景'),
+        builder:
+            (context) => ChatBackgroundPickerPage(
+              title: '切换对话背景',
+              currentCharacter: currentCharacter,
+            ),
       ),
     ).then((confirmed) {
       // 只有在用户点击了确定按钮时才重新加载背景设置
@@ -1118,6 +1116,8 @@ class _BranchChatPageState extends State<BranchChatPage>
     });
     await loadMessages();
 
+    loadBackgroundSettings();
+
     resetContentHeight();
 
     // 创建新对话等内部会有，所以这里就最后恢复加载状态即可
@@ -1226,6 +1226,7 @@ class _BranchChatPageState extends State<BranchChatPage>
                   ),
                   message: message,
                   onLongPress: isStreaming ? null : showMessageOptions,
+                  // 有默认对话背景图、或者有角色自定义背景图，就是有使用背景图
                   isUseBgImage:
                       backgroundImage != null && backgroundImage!.isNotEmpty,
                   // 简洁模式不显示头像
@@ -1345,7 +1346,7 @@ class _BranchChatPageState extends State<BranchChatPage>
         ToastUtils.showToast('已复制到剪贴板');
       } else if (value == 'select') {
         if (!mounted) return;
-        await showDialog(
+        showDialog(
           context: context,
           builder:
               (context) => TextSelectionDialog(
@@ -1818,7 +1819,8 @@ class _BranchChatPageState extends State<BranchChatPage>
     if (messageData.text.isEmpty &&
         messageData.images == null &&
         messageData.audio == null &&
-        messageData.file == null) {
+        messageData.file == null &&
+        messageData.fileContent == null) {
       return;
     }
 
@@ -1828,20 +1830,85 @@ class _BranchChatPageState extends State<BranchChatPage>
       return;
     }
 
-    var content = messageData.text;
-
-    // 2025-03-22 暂时不支持文档处理，也没有将解析后的文档内容作为参数传递
-    // 后续有单独上传文档的需求再更新
-    if (messageData.file != null) {
-      commonExceptionDialog(context, "异常提示", "暂不支持上传文档，后续有需求再更新");
-      return;
-    }
+    // 准备用户消息内容
+    String messageContent = messageData.text.trim();
 
     // 处理JSON格式响应
     if (advancedEnabled &&
         advancedOptions?["response_format"] == "json_object") {
-      content = "$content(请严格按照json格式输出)";
+      messageContent = "$messageContent(请严格按照json格式输出)";
     }
+
+    // 2025-03-22 暂时不支持文档处理，也没有将解析后的文档内容作为参数传递
+    // 后续有单独上传文档的需求再更新
+    if (messageData.file != null ||
+        (messageData.fileContent != null &&
+            messageData.fileContent?.trim().isNotEmpty == true)) {
+      commonExceptionDialog(context, "异常提示", "暂不支持上传文档，后续有需求再更新");
+      return;
+    }
+
+    // 【要保留】处理文档内容，检查是否已经在对话中存在相同文档
+    // 2025-04-17 目前这个处理只是把手动解析或者智谱开放平台解析后的内容作为消息的参数传递调用API
+    // 感觉还是不够完善，所以暂时还是不加入消息
+    // 后续有专门支持文件的多模态后，直接传文件再处理
+    // if (messageData.fileContent != null &&
+    //     messageData.fileContent!.isNotEmpty) {
+    //   final fileName =
+    //       messageData.cloudFileName != null &&
+    //               messageData.cloudFileName!.isNotEmpty
+    //           ? messageData.cloudFileName!
+    //           : (messageData.file?.name ?? '未命名文档');
+
+    //   // 生成文档内容的特殊标记
+    //   final docStartMark = "${DocumentUtils.DOC_START_PREFIX}$fileName]]";
+
+    //   // 检查对话列表中是否已存在此文档
+    //   bool docAlreadyExists = false;
+
+    //   // 遍历现有消息查找相同文档
+    //   for (var message in displayMessages) {
+    //     if (message.content.contains(docStartMark) &&
+    //         message.content.contains(DocumentUtils.DOC_END)) {
+    //       docAlreadyExists = true;
+    //       break;
+    //     }
+    //   }
+
+    //   // 如果文档不存在于对话中，则添加到当前消息
+    //   if (!docAlreadyExists) {
+    //     // 包装文档内容
+    //     var wrappedContent = '';
+
+    //     if (messageData.cloudFileName != null) {
+    //       // 云端文件
+    //       wrappedContent = DocumentUtils.wrapDocumentContent(
+    //         messageData.fileContent!,
+    //         messageData.cloudFileName!,
+    //       );
+    //     } else if (messageData.file != null) {
+    //       // 本地文件
+    //       wrappedContent = DocumentUtils.wrapDocumentContent(
+    //         messageData.fileContent!,
+    //         messageData.file!.name,
+    //       );
+    //     }
+
+    //     // 如果用户消息非空，添加换行再附加文档内容
+    //     if (messageContent.isNotEmpty) {
+    //       messageContent = "$messageContent\n\n$wrappedContent";
+    //     } else {
+    //       messageContent = wrappedContent;
+    //     }
+    //   }
+    // }
+
+    // // 如果消息为空（没有文本且没有添加文档内容），则不处理
+    // if (messageContent.isEmpty) {
+    //   return;
+    // }
+
+    var content = messageContent;
 
     try {
       // 如果是新的分支对话，在用户发送消息时才创建记录；
@@ -2112,18 +2179,14 @@ class _BranchChatPageState extends State<BranchChatPage>
 
   // 构建背景
   Widget buildBackground() {
-    // 优先使用角色背景
-    final bgImage = currentCharacter?.background ?? backgroundImage;
-    final bgOpacity = currentCharacter?.backgroundOpacity ?? backgroundOpacity;
-
-    if (bgImage == null || bgImage.isEmpty) {
+    if (backgroundImage == null || backgroundImage!.trim().isEmpty) {
       return Container(color: Colors.transparent);
     }
 
     return Positioned.fill(
       child: Opacity(
-        opacity: bgOpacity,
-        child: buildNetworkOrFileImage(bgImage, fit: BoxFit.cover),
+        opacity: backgroundOpacity,
+        child: buildNetworkOrFileImage(backgroundImage!, fit: BoxFit.cover),
         // child: buildCusImage(bgImage, fit: BoxFit.cover),
       ),
     );
@@ -2220,7 +2283,7 @@ class _BranchChatPageState extends State<BranchChatPage>
   // 2025-04-07 默认如果有角色开启新对话也使用该角色的新对话，但如果是右上角点击新建对话，则是默认智能助手而非角色对话
   ///
   /// 2025-04-15 重新整理一下新建对话的逻辑：
-  /// 除了当前有角色且点击底部的“开启新对话”按钮会对角色使用新对话，
+  /// 除了当前有角色且点击底部的"开启新对话"按钮会对角色使用新对话，
   ///     初始化的时候：从角色列表点击进来的
   /// 其他切换了模型类型、右上角新开对话，都重置当前角色为空，进行默认的分支对话
   /// 其他点击历史记录时继续记录的角色或者分支对话；如果该记录的模型或者角色被删除，默认新增的也是分支对话
@@ -2259,11 +2322,14 @@ class _BranchChatPageState extends State<BranchChatPage>
         // 开启新对话后，没有对话列表，所以不显示滚动到底部按钮
         showScrollToBottom = false;
       });
+
+      loadBackgroundSettings();
+
       return;
     }
 
     // 如果是新的角色对话，则要在用户发送消息前就创建新会话
-    // 2025-04-16 目前仅在角色对话过程中，点击下方“开启新对话”时才触发
+    // 2025-04-16 目前仅在角色对话过程中，点击下方"开启新对话"时才触发
     try {
       final sessionTitle =
           currentCharacter != null ? "与${currentCharacter!.name}的对话" : "新的角色对话";
@@ -2307,6 +2373,8 @@ class _BranchChatPageState extends State<BranchChatPage>
 
       // 开启新对话后，没有对话列表，所以不显示滚动到底部按钮
       showScrollToBottom = false;
+
+      loadBackgroundSettings();
 
       // 创建新对话后，重置内容高度
       resetContentHeight();
@@ -2406,5 +2474,84 @@ class _BranchChatPageState extends State<BranchChatPage>
     }
 
     return history;
+  }
+
+  // 桌面端右侧功能按钮面板
+  Widget buildDesktopRightSidebarPanel() {
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          // 新建对话
+          buildIconWithTextButton(
+            icon: Icons.add,
+            label: '新建对话',
+            onTap: !isStreaming ? createNewChat : null,
+            context: context,
+          ),
+          // 高级选项
+          buildIconWithTextButton(
+            icon: Icons.settings_suggest,
+            label: '高级选项',
+            onTap: !isStreaming ? showAdvancedOptions : null,
+            context: context,
+          ),
+          // 调整文本大小
+          buildIconWithTextButton(
+            icon: Icons.format_size,
+            label: '字体大小',
+            onTap:
+                !isStreaming
+                    ? () => adjustTextScale(context, textScaleFactor, (
+                      value,
+                    ) async {
+                      setState(() => textScaleFactor = value);
+                      await MyGetStorage().setChatMessageTextScale(value);
+                      if (!mounted) return;
+                      Navigator.of(context).pop();
+                    })
+                    : null,
+            context: context,
+          ),
+          // 切换简洁模式
+          buildIconWithTextButton(
+            icon: isBriefDisplay ? Icons.details : Icons.visibility_outlined,
+            label: isBriefDisplay ? '详细显示' : '简洁显示',
+            onTap:
+                !isStreaming
+                    ? () => setState(() => isBriefDisplay = !isBriefDisplay)
+                    : null,
+            context: context,
+          ),
+          // 切换背景图片
+          buildIconWithTextButton(
+            icon: Icons.wallpaper,
+            label: '更换背景',
+            onTap: !isStreaming ? changeBackground : null,
+            context: context,
+          ),
+          // 显示分支树
+          buildIconWithTextButton(
+            icon: Icons.account_tree,
+            label: '对话分支',
+            onTap: !isStreaming && !isBranchNewChat ? showBranchTree : null,
+            context: context,
+          ),
+          // 添加模型
+          buildIconWithTextButton(
+            icon: Icons.add_box_outlined,
+            label: '添加模型',
+            onTap: !isStreaming ? handleAddModel : null,
+            context: context,
+          ),
+          // 导入导出
+          buildIconWithTextButton(
+            icon: Icons.import_export,
+            label: '导入导出',
+            onTap: !isStreaming ? navigateToExportImportPage : null,
+            context: context,
+          ),
+        ],
+      ),
+    );
   }
 }

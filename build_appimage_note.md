@@ -25,7 +25,7 @@ flutter build linux --release
 成功构建 Linux 应用后，位置应该在项目相对路径的 build 下:
 
 ```sh
-build/linux/x64/release/bundle/suchat_lite
+build/linux/x64/release/bundle/SuChat
 ```
 
 ### 3 创建 AppDir 结构
@@ -43,7 +43,7 @@ build/linux/x64/release/bundle/suchat_lite
 ```sh
 [Desktop Entry]
 Name=SuChat
-Exec=/usr/bin/bundle/suchat_lite
+Exec=/usr/bin/bundle/SuChat
 Icon=suchat
 Type=Application
 Categories=Utility;
@@ -87,7 +87,7 @@ INFO:Generator:Searching AppDir
 ? ID [Eg: com.example.app]: com.swm.suchat
 ? Application Name: SuChat
 ? Icon: suchat
-? Executable path: usr/bin/bundle/suchat_lite
+? Executable path: usr/bin/bundle/SuChat
 ? Arguments [Default: $@]: $@
 ? Version [Eg: 1.0.0]: 0.0.1-beta.1
 ? Update Information [Default: guess]: guess
@@ -106,7 +106,7 @@ AppDir:
     name: SuChat
     icon: suchat
     version: 0.0.1-beta.1
-    exec: usr/bin/bundle/suchat_lite
+    exec: usr/bin/bundle/SuChat
     exec_args: $@
   apt:
     xxx……

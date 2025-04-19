@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../../common/llm_spec/constant_llm_enum.dart';
 import '../../../../common/utils/screen_helper.dart';
 import '../../../../services/cus_get_storage.dart';
 
@@ -15,6 +17,8 @@ class ApiKeyConfig extends StatefulWidget {
 class _ApiKeyConfigState extends State<ApiKeyConfig> {
   bool _obscureText = true;
   Map<String, String> _apiKeys = {};
+
+  ApiPlatformAKLabel? _selectedPlatformKeyLabel;
 
   @override
   void initState() {
@@ -247,7 +251,7 @@ class _ApiKeyConfigState extends State<ApiKeyConfig> {
           ),
           subtitle: Padding(
             padding: EdgeInsets.only(top: 4),
-            child: Text(
+            child: SelectableText(
               _obscureText ? '••••••••••••••••' : entry.value,
               style: TextStyle(
                 color: Colors.green.shade700,
@@ -286,6 +290,41 @@ class _ApiKeyConfigState extends State<ApiKeyConfig> {
     }).toList();
   }
 
+  Widget _buildPlatformKeyLabelDropdown() {
+    return DropdownButtonFormField<ApiPlatformAKLabel>(
+      value: _selectedPlatformKeyLabel,
+      decoration: InputDecoration(
+        labelText: '选择平台',
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      ),
+
+      menuMaxHeight: 0.5.sh,
+      items:
+          ApiPlatformAKLabel.values.map((platform) {
+            return DropdownMenuItem(
+              value: platform,
+              child: Row(
+                children: [
+                  Text(
+                    CP_LABLE_NAME_MAP[platform] ?? platform.name,
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+      onChanged: (value) {
+        setState(() => _selectedPlatformKeyLabel = value);
+      },
+      validator: (value) {
+        if (value == null) return '请选择平台';
+        return null;
+      },
+      isExpanded: true,
+    );
+  }
+
   // 显示添加/编辑API Key的对话框
   Future<void> _showAddEditKeyDialog(
     BuildContext context, {
@@ -295,9 +334,11 @@ class _ApiKeyConfigState extends State<ApiKeyConfig> {
     final isDesktop = ScreenHelper.isDesktop();
     final isEditing = existingPlatform != null;
 
-    final platformController = TextEditingController(
-      text: existingPlatform ?? '',
-    );
+    _selectedPlatformKeyLabel =
+        ApiPlatformAKLabel.values
+            .where((e) => e.name == existingPlatform)
+            .firstOrNull;
+
     final keyController = TextEditingController(text: existingKey ?? '');
     bool showKey = false;
 
@@ -313,15 +354,7 @@ class _ApiKeyConfigState extends State<ApiKeyConfig> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    TextField(
-                      controller: platformController,
-                      decoration: InputDecoration(
-                        labelText: '平台名称',
-                        hintText: '例如: openai, anthropic, gemini',
-                        border: OutlineInputBorder(),
-                        enabled: !isEditing, // 编辑时不允许修改平台名称
-                      ),
-                    ),
+                    _buildPlatformKeyLabelDropdown(),
                     SizedBox(height: 16),
                     TextField(
                       controller: keyController,
@@ -349,10 +382,10 @@ class _ApiKeyConfigState extends State<ApiKeyConfig> {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    final platform = platformController.text.trim();
                     final key = keyController.text.trim();
+                    var platform = _selectedPlatformKeyLabel?.name;
 
-                    if (platform.isEmpty || key.isEmpty) {
+                    if (platform == null || platform.isEmpty || key.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('平台名称和API Key不能为空')),
                       );

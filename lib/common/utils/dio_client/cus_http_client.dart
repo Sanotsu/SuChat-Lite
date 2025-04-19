@@ -15,6 +15,7 @@ class HttpUtils {
     Map<String, dynamic>? queryParameters,
     dynamic headers,
     CusRespType? responseType,
+    String? contentType,
     bool showLoading = true,
     bool showErrorMessage = true,
   }) {
@@ -23,6 +24,7 @@ class HttpUtils {
       method: CusHttpMethod.get,
       queryParameters: queryParameters,
       responseType: responseType,
+      contentType: contentType,
       headers: headers,
       showLoading: showLoading,
       showErrorMessage: showErrorMessage,
@@ -32,10 +34,10 @@ class HttpUtils {
   /// post
   static Future post({
     required String path,
-    required CusHttpMethod method,
     dynamic data,
     dynamic headers,
     CusRespType? responseType,
+    String? contentType,
     CancelToken? cancelToken,
     bool showLoading = true,
     bool showErrorMessage = true,
@@ -45,6 +47,31 @@ class HttpUtils {
       method: CusHttpMethod.post,
       data: data,
       responseType: responseType,
+      contentType: contentType,
+      headers: headers,
+      cancelToken: cancelToken,
+      showLoading: showLoading,
+      showErrorMessage: showErrorMessage,
+    );
+  }
+
+  /// delete
+  static Future delete({
+    required String path,
+    Map<String, dynamic>? queryParameters,
+    dynamic headers,
+    CusRespType? responseType,
+    String? contentType,
+    CancelToken? cancelToken,
+    bool showLoading = true,
+    bool showErrorMessage = true,
+  }) {
+    return httpRequest.request(
+      path: path,
+      method: CusHttpMethod.delete,
+      queryParameters: queryParameters,
+      responseType: responseType,
+      contentType: contentType,
       headers: headers,
       cancelToken: cancelToken,
       showLoading: showLoading,

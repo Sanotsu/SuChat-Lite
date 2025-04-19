@@ -16,14 +16,16 @@ class CharacterCard {
   String scenario;
   String firstMessage;
   String exampleDialogue;
-  
+
   // 标签以JSON字符串形式存储
   String tagsJson;
-  
+
   // 角色偏好的模型，序列化为JSON字符串存储
   String? preferredModelJson;
 
+  @Property(type: PropertyType.date)
   DateTime createTime;
+  @Property(type: PropertyType.date)
   DateTime updateTime;
   bool isSystem; // 是否是系统预设角色
 
@@ -36,6 +38,7 @@ class CharacterCard {
   String? additionalSettingsJson;
 
   // 非持久化字段，仅用于运行时
+  // @Transient() 的作用是避免字段被存储，但 ObjectBox 仍然会检查字段类型并发出警告。
   @Transient()
   List<String>? _tags;
 
@@ -76,7 +79,9 @@ class CharacterCard {
 
   // 获取偏好模型
   CusBriefLLMSpec? get preferredModel {
-    if (_preferredModel == null && preferredModelJson != null && preferredModelJson!.isNotEmpty) {
+    if (_preferredModel == null &&
+        preferredModelJson != null &&
+        preferredModelJson!.isNotEmpty) {
       try {
         final Map<String, dynamic> decoded = jsonDecode(preferredModelJson!);
         _preferredModel = CusBriefLLMSpec.fromJson(decoded);
@@ -109,9 +114,13 @@ class CharacterCard {
 
   // 获取额外设置
   Map<String, dynamic> get additionalSettings {
-    if (_additionalSettings == null && additionalSettingsJson != null && additionalSettingsJson!.isNotEmpty) {
+    if (_additionalSettings == null &&
+        additionalSettingsJson != null &&
+        additionalSettingsJson!.isNotEmpty) {
       try {
-        final Map<String, dynamic> decoded = jsonDecode(additionalSettingsJson!);
+        final Map<String, dynamic> decoded = jsonDecode(
+          additionalSettingsJson!,
+        );
         _additionalSettings = decoded;
       } catch (e) {
         if (kDebugMode) {
@@ -154,8 +163,7 @@ class CharacterCard {
     this.background,
     this.backgroundOpacity,
     Map<String, dynamic>? additionalSettings,
-  }) : 
-       characterId = characterId ?? identityHashCode(name).toString(),
+  }) : characterId = characterId ?? identityHashCode(name).toString(),
        tagsJson = '[]',
        createTime = createTime ?? DateTime.now(),
        updateTime = updateTime ?? DateTime.now(),

@@ -101,6 +101,7 @@ dependencies:
   file_picker: ^8.3.7
   path_provider: ^2.1.5
   path: ^1.9.1
+  open_file: ^3.5.10
 
   # 文件相关，图片、音频、视频相关
   flutter_cache_manager: ^3.4.1

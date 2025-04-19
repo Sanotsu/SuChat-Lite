@@ -219,7 +219,7 @@ class _CharacterListPageState extends State<CharacterListPage> {
       commonHintDialog(
         context,
         '异常提示',
-        '角色"${character.name}"未设置偏好模型，长按该角色卡点击"编辑角色"',
+        '角色"${character.name}"未设置偏好模型，${ScreenHelper.isDesktop() ? '鼠标右键' : '长按该角色卡'}点击"编辑角色"',
       );
 
       return;

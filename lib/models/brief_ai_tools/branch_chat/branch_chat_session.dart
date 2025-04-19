@@ -11,7 +11,9 @@ class BranchChatSession {
   int id;
 
   String title;
+  @Property(type: PropertyType.date)
   DateTime createTime;
+  @Property(type: PropertyType.date)
   DateTime updateTime;
 
   // 修改字段名，使其成为普通属性而不是私有属性

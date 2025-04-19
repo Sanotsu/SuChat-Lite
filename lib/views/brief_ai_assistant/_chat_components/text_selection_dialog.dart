@@ -5,8 +5,13 @@ import '../../../common/components/toast_utils.dart';
 
 class TextSelectionDialog extends StatelessWidget {
   final String text;
+  final String title;
 
-  const TextSelectionDialog({super.key, required this.text});
+  const TextSelectionDialog({
+    super.key,
+    required this.text,
+    this.title = "选择文本",
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +22,7 @@ class TextSelectionDialog extends StatelessWidget {
             icon: const Icon(Icons.close),
             onPressed: () => Navigator.pop(context),
           ),
-          title: const Text('选择文本'),
+          title: Text(title),
           actions: [
             IconButton(
               icon: const Icon(Icons.copy),

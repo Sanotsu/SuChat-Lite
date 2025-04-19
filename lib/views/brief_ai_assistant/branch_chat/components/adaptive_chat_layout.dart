@@ -11,6 +11,8 @@ class AdaptiveChatLayout extends StatelessWidget {
   /// 历史记录内容(在移动端作为抽屉，在桌面端作为侧边栏)
   final Widget historyContent;
 
+  final Widget? rightSidebar;
+
   /// 应用栏
   final PreferredSizeWidget? appBar;
 
@@ -40,6 +42,7 @@ class AdaptiveChatLayout extends StatelessWidget {
     super.key,
     required this.body,
     required this.historyContent,
+    this.rightSidebar,
     this.appBar,
     this.title,
     this.actions,
@@ -97,6 +100,9 @@ class AdaptiveChatLayout extends StatelessWidget {
                   backgroundColor: Colors.transparent,
                 ),
               ),
+
+              // 右侧侧边栏
+              if (rightSidebar != null) rightSidebar!,
             ],
           ),
 

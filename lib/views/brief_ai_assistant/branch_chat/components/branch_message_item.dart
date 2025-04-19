@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../../common/components/tool_widget.dart';
 import '../../../../common/components/voice_chat_bubble.dart';
 import '../../../../common/constants/constants.dart';
+import '../../../../common/utils/doucment_utils.dart';
 import '../../../../common/utils/screen_helper.dart';
 import '../../../../models/brief_ai_tools/branch_chat/branch_chat_message.dart';
 import '../../../../models/brief_ai_tools/branch_chat/character_card.dart';
@@ -214,10 +215,10 @@ class _BranchMessageItemState extends State<BranchMessageItem>
   // 头像
   Widget _buildAvatar() {
     Widget avatar =
-        widget.character != null
+        (!_isUser && widget.character != null)
             ? SizedBox(
-              width: 40.sp,
-              height: 40.sp,
+              width: 30.sp,
+              height: 30.sp,
               child: buildAvatarClipOval(widget.character!.avatar),
             )
             : CircleAvatar(
@@ -288,7 +289,7 @@ class _BranchMessageItemState extends State<BranchMessageItem>
                     : null,
             child: RepaintBoundary(
               child: buildCusMarkdown(
-                widget.message.content,
+                DocumentUtils.getDisplayMessage(widget.message.content),
                 textColor: textColor,
               ),
             ),

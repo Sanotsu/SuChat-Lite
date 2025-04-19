@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../../../../common/llm_spec/constant_llm_enum.dart';
 import '../../../../common/utils/screen_helper.dart';
 import '../../../../models/brief_ai_tools/branch_chat/branch_chat_session.dart';
@@ -61,6 +62,68 @@ class _BranchChatHistoryPanelState extends State<BranchChatHistoryPanel> {
 
     setState(() {
       _bgColor = Colors.blueGrey.shade100;
+    });
+  }
+
+  // 显示颜色选择器对话框
+  void _showColorPickerDialog() {
+    // 当前颜色或默认颜色
+    Color pickerColor = _bgColor ?? Colors.white;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('选择侧边栏背景颜色'),
+          content: SingleChildScrollView(
+            child: ColorPicker(
+              pickerColor: pickerColor,
+              onColorChanged: (Color color) {
+                pickerColor = color;
+              },
+              pickerAreaHeightPercent: 0.8,
+              displayThumbColor: true,
+              paletteType: PaletteType.hsvWithHue,
+              portraitOnly: true,
+              enableAlpha: true,
+              labelTypes: const [ColorLabelType.hex, ColorLabelType.rgb],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('取消'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('恢复默认'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                setDefaultColor();
+              },
+            ),
+            TextButton(
+              child: const Text('确定'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _applySelectedColor(pickerColor);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 应用选择的颜色
+  void _applySelectedColor(Color color) async {
+    // 保存颜色设置
+    await MyGetStorage().saveBranchChatHistoryPanelBgColor(color.toARGB32());
+
+    // 更新UI
+    setState(() {
+      _bgColor = color;
     });
   }
 
@@ -129,6 +192,13 @@ class _BranchChatHistoryPanelState extends State<BranchChatHistoryPanel> {
               tooltip: "清除历史记录侧边栏背景色",
               icon: Icon(Icons.invert_colors, size: 18),
             ),
+            IconButton(
+              onPressed: () {
+                _showColorPickerDialog();
+              },
+              tooltip: "自定义侧边栏背景色",
+              icon: Icon(Icons.color_lens, size: 18),
+            ),
           ],
         ),
         Row(
@@ -191,7 +261,7 @@ class _BranchChatHistoryPanelState extends State<BranchChatHistoryPanel> {
                 },
                 child: Card(
                   elevation: 1,
-                  color: _bgColor?.withValues(alpha: 0.9),
+                  color: _bgColor,
                   child: ListTile(
                     leading: const Icon(Icons.import_export),
                     title: Text(
@@ -220,7 +290,7 @@ class _BranchChatHistoryPanelState extends State<BranchChatHistoryPanel> {
                 },
                 child: Card(
                   elevation: 1,
-                  color: _bgColor?.withValues(alpha: 0.9),
+                  color: _bgColor,
                   child: ListTile(
                     leading: const Icon(Icons.settings),
                     title: Text(
