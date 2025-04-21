@@ -1,30 +1,33 @@
+<p align="right">
+  <a href="README.md">简体中文</a> |
+  <a href="README-EN.md">English</a>
+</p>
+
 # SuChat Lite
 
-SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API 驱动的、简洁版 AI 聊天应用，支持简单的自定义角色。
-
-SuChat is a concise AI chat application developed using Flutter, powered by calling cloud platform-based large model APIs online. It supports simple custom characters for role-playing.
+SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API 驱动的、简洁版 AI 聊天应用，支持简单自定义角色。
 
 ![SuChat Lite 预览](./_doc/snapshots/screenshot-home.png)
 
-## Features
+## 特性
 
-- **Support for Multiple LLM Providers**
+- **支持多个 LLM 提供商**
   - 支持多个云平台在线模型 HTTP API 的调用
-  - 未预设的平台可以单个手动填写：请求地址、模型名、API Key 即可使用
-- **Local Data Storage**
+  - 未预设的云平台可以单个手动填写：请求地址、模型名、API Key 即可使用
+- **本地数据存储**
   - 所有对话保留在设备本地(但不同的平台记录各自独立)
 - **Markdown, Latex & Code Highlighting**
   - 简单的 Markdown, Latex 和代码高亮的支持
-- **Streaming Reply**
+- **流式响应显示**
   - 大模型响应流式追加显示
-- **Cross-Platform Availability**
+- **跨平台可用性**
   - 页面适配桌面端和移动端，Windows、Linux、Android App 有编译测试
   - 无需部署，通过可下载的安装包快速开始使用，无需复杂设置
-- **Simple Custom Characters for Role-Playing**
-  - 支持简单的自定义角色管理、使用角色进行聊天
-  - 如果是角色聊天，还可以针对特定角色使用特定的背景
+- **简单自定义角色的角色扮演**
+  - 支持简单的自定义角色管理、使用自定义角色进行聊天
+  - 如果是角色聊天，还可以针对特定角色设置使用自己喜欢的聊天背景图
   - 如果是角色聊天，默认会固定在左下角显示当前角色头像，可以点击放大预览并进行拖动和缩放
-- **And More**
+- **更多**
   - 支持编辑和删除用户已发送的消息(分支管理)
     - 选中消息长按(移动端)或者鼠标右键(桌面端)
   - 支持调整对话消息显示的文字大小
@@ -67,13 +70,9 @@ SuChat is a concise AI chat application developed using Flutter, powered by call
 
 [https://cloud.siliconflow.cn/i/tRIcST68](https://cloud.siliconflow.cn/i/tRIcST68)
 
-## 更新说明
-
-查看 [CHANGELOG](CHANGELOG.md)，**新版本改动的模块和功能信息也在该 ChangeLog 中简述**。
-
 ## 使用指南
 
-从 release 直接下载对应平台应用即可，桌面端是封装过的，无需安装。
+从 release 直接下载对应平台应用即可，桌面端是封装过的，应该无需安装。
 
 ### 补充说明
 
@@ -194,24 +193,6 @@ enum LLModelType {
 
 </details>
 
-## 主要功能特点
-
-### 核心功能
-
-- **多模型支持**：支持接入多种 AI 大模型，包括文本、图像和多模态模型(TODO)
-- **分支对话**：支持对话分支管理，可以在同一会话中探索不同的回答方向
-- **角色扮演**：支持创建和使用预设角色进行对话
-- **粗糙文件处理**：支持选择和解析各种本地文档（PDF、DOCX、TXT 等，但暂未用到）
-- **云端文档管理**：通过智谱开放平台管理和使用云端文档
-
-### 技术特点
-
-- **跨平台兼容**：针对移动端和桌面端进行了特别优化
-- **响应式设计**：自适应不同屏幕尺寸和设备方向
-- **本地存储**：使用 ObjectBox 进行高性能本地数据存储
-- **主题定制**：支持自定义界面颜色和背景
-- **错误处理**：较为完善的异常捕获和错误提示机制
-
 ## 项目结构
 
 ```sh
@@ -223,14 +204,13 @@ lib/
 │   ├── llm_spec/               # 语言模型规格定义
 │   └── utils/                  # 工具类和辅助函数
 ├── models/                     # 数据模型
-│   └── brief_ai_tools/         # AI 工具相关模型
+│   └── brief_ai_tools/         # AI 相关模型
 ├── services/                   # 服务层
 ├── views/                      # 视图层
-│   ├── brief_ai_assistant/     # AI 助手相关视图
+│   ├── brief_ai_assistant/     # AI 相关视图
 │   │   ├── _chat_components/   # 聊天组件
-│   │   ├── branch_chat/        # 分支对话功能
-│   │   ├── model_config/       # 模型配置
-│   │   └── ...
+│   │   ├── branch_chat/        # 主要的对话功能页面
+│   │   └── model_config/       # 模型配置
 │   ├── home.dart               # 主页
 │   └── user_and_settings/      # 用户和设置页面
 ├── main.dart                   # 应用入口文件
@@ -238,64 +218,45 @@ lib/
 └── objectbox-model.json        # ObjectBox 数据模型
 ```
 
-## 技术栈
-
-- **前端框架**：Flutter
-- **编程语言**：Dart
-- **本地数据库**：ObjectBox
-- **状态管理**：GetX
-- **网络请求**：Dio
-- **本地存储**：GetStorage
-- **屏幕适配**：flutter_screenutil
-- **表单验证**：form_builder_validators
-- **文档处理**：多种文档解析库（PDF、DOCX 等）
-
-## 安装指南
-
-### 开发环境
+## 开发环境
 
 在一个 Windows 7 中使用 Visual Box 7 安装的 Ubuntu22.04 LTS 虚拟机中进行开发。
 
-2025-04-08 使用最新 flutter 版本：
-
 ```sh
+# 开发机环境：
+$ lsb_release -c -a && uname -r -m
+No LSB modules are available.
+Distributor ID: Ubuntu
+Description:    Ubuntu 22.04.3 LTS
+Release:        22.04
+Codename:       jammy
+5.15.0-119-generic x86_64
+
+# 2025-04-21 使用的 flutter 版本：
 $ flutter --version
 Flutter 3.29.2 • channel stable • https://github.com/flutter/flutter.git
-Framework • revision c236373904 (4 周前) • 2025-03-13 16:17:06 -0400
+Framework • revision c236373904 (5 周前) • 2025-03-13 16:17:06 -0400
 Engine • revision 18b71d647a
 Tools • Dart 3.7.2 • DevTools 2.42.3
-```
-
-### 获取代码
-
-```bash
-git clone https://github.com/Sanotsu/SuChat-Lite.git
-```
-
-### 安装依赖
-
-```bash
-flutter pub get
-```
-
-### 运行项目
-
-```bash
-# 运行调试版本
-flutter run
-
-# 构建发布版本
-flutter build apk  # Android
-flutter build ios   # iOS
-flutter build windows  # Windows
-flutter build macos    # macOS
-flutter build linux    # Linux
 ```
 
 ## 贡献指南
 
 欢迎提交 Issues 和 Pull Requests 来帮助改进项目。
 
-## 许可证
+| Name                                          | Formula Expression                                                                                                                                     | Purpose                                                         |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| Riemann Zeta Function Integral Representation | $$\zeta(s) = \frac{1}{\Gamma(s)} \int_0^\infty \frac{x^{s-1}}{e^x - 1} dx$$                                                                            | Analytic continuation and study of prime number distribution    |
+| Navier-Stokes Equations                       | $$\rho \left( \frac{\partial \mathbf{v}}{\partial t} + \mathbf{v} \cdot \nabla \mathbf{v} \right) = -\nabla p + \mu \nabla^2 \mathbf{v} + \mathbf{f}$$ | Momentum conservation equations describing viscous fluid motion |
 
-[LICENSE 名称] - 查看 LICENSE 文件了解更多细节
+正如报错信息提示，在`MarkdownComponent`的 abstract class `BlockMd` 的行`child = Row(children: [Flexible(child: child)]);`报错，但是我不知道该如何在自定义的 markdown 渲染工具类中捕获到报错的组件，并降级为自定义的渲染器。
+
+
+As the error message indicates, the issue occurs in the abstract class `BlockMd` of `MarkdownComponent` at the line `child = Row(children: [Flexible(child: child)]);`. However, I'm unsure how to catch the problematic component in my custom Markdown rendering utility class and fall back to a custom renderer.  
+
+### Key Translation Notes:  
+1. **报错信息提示** → *As the error message indicates*  
+2. **自定义的 markdown 渲染工具类** → *custom Markdown rendering utility class*  
+3. **降级为自定义的渲染器** → *fall back to a custom renderer*  
+
+Let me know if you'd like any adjustments!

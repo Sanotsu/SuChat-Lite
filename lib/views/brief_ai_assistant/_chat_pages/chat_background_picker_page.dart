@@ -210,7 +210,7 @@ class _ChatBackgroundPickerPageState extends State<ChatBackgroundPickerPage>
 
   // 字体颜色设置选项卡
   Widget _buildColorTab(double previewHeight) {
-    var image = _selectedBackground ?? widget.currentCharacter?.background;
+    var image = widget.currentCharacter?.background ?? _selectedBackground;
 
     return SingleChildScrollView(
       child: Column(
