@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:gpt_markdown/custom_widgets/selectable_adapter.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 
 import 'cus_code_field.dart';
 import 'optimized_custom_markdown_renderer.dart';
+import 'safe_markdown_wrapper.dart';
 import 'tool_widget.dart';
 
 /// 优化的Markdown渲染工具类
@@ -103,6 +103,20 @@ class CusMarkdownRenderer {
   Widget _buildGptMarkdown(String text, Color? textColor, bool selectable) {
     return Builder(
       builder: (context) {
+        // 2025-04-22 经过测试，gpt_markdown 无法正常渲染表格中的LaTeX，所以需要先处理文本
+        // 具体来说，表格中使用$$...$$、$...$、\[...\]包裹的LaTeX，gpt_markdown 无法正常渲染
+        // 所以需要先处理文本，检测到表格中有$$...$$、$...$、\[...\]包裹的内容替换为使用\(...\)
+
+        /// 其实还有一点，非表格中、其他地方单独显示的使用$...$包裹的LaTeX公式也无法正确显示，其他3种则正常。
+        text = normalizeLatexInMarkdownTable(text);
+
+        // 2025-04-22
+        // 目前实测，gpt_markdown 能正常渲染大部分使用\(...\)包裹的LaTeX内容，无论是表格中、列表中、还是文本中。
+        // 所有暂时把所有使用到LaTeX语法的地方，统一替换使用单行\(...\)来包裹
+        text = normalizeAllLatex(text);
+
+        // print("处理后的text:\n $text");
+
         final child = GptMarkdown(
           text,
           style: TextStyle(
@@ -162,13 +176,13 @@ class CusMarkdownRenderer {
   Widget _buildHighlight(BuildContext context, String text, TextStyle style) {
     final theme = Theme.of(context);
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 4.sp, vertical: 2.sp),
+      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       decoration: BoxDecoration(
         color: theme.colorScheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(4.sp),
+        borderRadius: BorderRadius.circular(4),
         border: Border.all(
           color: theme.colorScheme.secondary.withValues(alpha: 0.5),
-          width: 1.sp,
+          width: 1,
         ),
       ),
       child: Text(
@@ -177,7 +191,7 @@ class CusMarkdownRenderer {
           color: theme.colorScheme.onSecondaryContainer,
           fontFamily: 'monospace',
           fontWeight: FontWeight.bold,
-          fontSize: style.fontSize != null ? style.fontSize! * 0.9 : 13.5.sp,
+          fontSize: style.fontSize != null ? style.fontSize! * 0.9 : 13.5,
           height: style.height,
         ),
       ),
@@ -215,12 +229,12 @@ class CusMarkdownRenderer {
   Widget _buildImage(BuildContext context, String url) {
     return Image.network(
       url,
-      width: 100.sp,
-      height: 100.sp,
+      width: 100,
+      height: 100,
       errorBuilder:
           (context, error, stackTrace) => Icon(
             Icons.error,
-            size: 24.sp,
+            size: 24,
             color: Theme.of(context).colorScheme.error,
           ),
     );
@@ -242,9 +256,8 @@ class CusMarkdownRenderer {
     final child =
         inline
             ? Math.tex(tex, textStyle: textStyle)
-            // : _buildMultiLineLatex(context, tex, textStyle);
             : Padding(
-              padding: EdgeInsets.all(8.sp),
+              padding: EdgeInsets.all(8),
               child: Scrollbar(
                 controller: controller,
                 child: SingleChildScrollView(
@@ -263,25 +276,6 @@ class CusMarkdownRenderer {
       ),
     );
   }
-
-  // Widget _buildMultiLineLatex(
-  //   BuildContext context,
-  //   String tex,
-  //   TextStyle? textStyle,
-  // ) {
-  //   final controller = ScrollController();
-  //   return Padding(
-  //     padding: EdgeInsets.all(8.sp),
-  //     child: Scrollbar(
-  //       controller: controller,
-  //       child: SingleChildScrollView(
-  //         controller: controller,
-  //         scrollDirection: Axis.horizontal,
-  //         child: Math.tex(tex, textStyle: textStyle),
-  //       ),
-  //     ),
-  //   );
-  // }
 
   Widget _buildLatexTable(String tex) {
     final tableString =
@@ -304,19 +298,19 @@ class CusMarkdownRenderer {
   ) {
     final value = (int.tryParse(string) ?? -1) + 1;
     return SizedBox(
-      height: 20.sp,
-      width: 20.sp,
+      height: 20,
+      width: 20,
       child: Container(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.primary,
-          borderRadius: BorderRadius.circular(10.sp),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Center(
           child: Text(
             "$value",
             style: textStyle.copyWith(
               color: Theme.of(context).colorScheme.onPrimary,
-              fontSize: 12.sp,
+              fontSize: 12,
             ),
           ),
         ),

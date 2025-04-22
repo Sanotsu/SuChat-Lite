@@ -27,6 +27,7 @@ import '../../../models/brief_ai_tools/branch_chat/character_card.dart';
 import '../../../services/chat_service.dart';
 import '../../../services/cus_get_storage.dart';
 
+import '../_chat_components/text_edit_dialog.dart';
 import 'components/draggable_character_avatar_preview.dart';
 import 'components/message_color_config.dart';
 import 'pages/character_list_page.dart';
@@ -1331,6 +1332,11 @@ class _BranchChatPageState extends State<BranchChatPage>
             value: 'regenerate',
             child: buildMenuItemWithIcon(icon: Icons.refresh, text: '重新生成'),
           ),
+        if (isAssistant)
+          PopupMenuItem<String>(
+            value: 'update_message',
+            child: buildMenuItemWithIcon(icon: Icons.edit, text: '修改消息'),
+          ),
         PopupMenuItem<String>(
           value: 'delete',
           child: buildMenuItemWithIcon(
@@ -1355,6 +1361,24 @@ class _BranchChatPageState extends State<BranchChatPage>
                             message.reasoningContent!.isNotEmpty
                         ? '【推理过程】\n${message.reasoningContent!}\n\n【AI响应】\n${message.content}'
                         : message.content,
+              ),
+        );
+      } else if (value == 'update_message') {
+        // 2025-04-22 有时候AI响应的内容不完整或者不对，导致格式化显示时不美观，提供手动修改。
+        // 又或者对于AI响应的内容不满意，要手动修改后继续对话。
+        // 和修改用户信息不同，这个AI响应的修改不会创建新分支(但感觉修改了AI的响应会不会不严谨了？？？)。
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          builder:
+              (context) => TextEditDialog(
+                text: message.content,
+                onSaved: (updatedText) async {
+                  var msg = message;
+                  msg.content = updatedText;
+                  await store.updateMessage(msg);
+                  await loadMessages();
+                },
               ),
         );
       } else if (value == 'edit') {
@@ -2210,47 +2234,26 @@ class _BranchChatPageState extends State<BranchChatPage>
   }
 
   // 滚动到底部
-  void _scrollToBottom({int? times}) {
-    // 统一在这里等待布局更新完成，才滚动到底部
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !scrollController.hasClients) return;
+  Future<void> _scrollToBottom({int? times}) async {
+    if (!mounted) return;
 
-      // 延迟50ms，避免内容高度还没更新
-      Future.delayed(const Duration(milliseconds: 50), () {
-        scrollController.animateTo(
-          scrollController.position.maxScrollExtent,
-          duration: Duration(milliseconds: times ?? 500),
-          curve: Curves.easeOut,
-        );
-      });
+    await Future.delayed(Duration.zero);
+    if (!mounted || !scrollController.hasClients) return;
 
-      setState(() {
-        isUserScrolling = false;
-      });
-    });
+    final position = scrollController.position;
+    if (!position.hasContentDimensions ||
+        position.maxScrollExtent <= position.minScrollExtent) {
+      return;
+    }
+
+    await scrollController.animateTo(
+      position.maxScrollExtent,
+      duration: Duration(milliseconds: times ?? 500),
+      curve: Curves.easeOut,
+    );
+
+    if (mounted) setState(() => isUserScrolling = false);
   }
-
-  // 2025-04-08 我忘记上面那个在哪里会报错了，先保留这个
-  // Future<void> _scrollToBottom({int? times}) async {
-  //   if (!mounted) return;
-
-  //   await Future.delayed(Duration.zero);
-  //   if (!mounted || !scrollController.hasClients) return;
-
-  //   final position = scrollController.position;
-  //   if (!position.hasContentDimensions ||
-  //       position.maxScrollExtent <= position.minScrollExtent) {
-  //     return;
-  //   }
-
-  //   await scrollController.animateTo(
-  //     position.maxScrollExtent,
-  //     duration: Duration(milliseconds: times ?? 500),
-  //     curve: Curves.easeOut,
-  //   );
-
-  //   if (mounted) setState(() => isUserScrolling = false);
-  // }
 
   // 发送角色首次消息
   Future<void> _sendCharacterFirstMessage(BranchChatSession session) async {

@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_highlight/theme_map.dart';
 import 'package:flutter_highlight/themes/github.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 /// 改造原始代码做一些简单自定义
 /// A widget that displays code with syntax highlighting and a copy button.
@@ -81,7 +80,7 @@ class _CusCodeFieldState extends State<CusCodeField> {
                   },
                   icon: Icon(
                     (_copied) ? Icons.done : Icons.content_paste,
-                    size: 15.sp,
+                    size: 15,
                   ),
                   label: Text((_copied) ? "Copied!" : "Copy"),
                 ),
@@ -91,7 +90,7 @@ class _CusCodeFieldState extends State<CusCodeField> {
           const Divider(height: 1),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.all(4.sp),
+            padding: EdgeInsets.all(4),
 
             // 使用highlight 渲染有好的样式和高亮，自定义修改主题后也可以背景透明
             child: HighlightView(

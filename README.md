@@ -16,10 +16,15 @@ SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API �
   - 未预设的云平台可以单个手动填写：请求地址、模型名、API Key 即可使用
 - **本地数据存储**
   - 所有对话保留在设备本地(但不同的平台记录各自独立)
-- **Markdown, Latex & Code Highlighting**
-  - 简单的 Markdown, Latex 和代码高亮的支持
-- **流式响应显示**
-  - 大模型响应流式追加显示
+- **Markdown, Latex & 代码高亮**
+  - 简单的 Markdown, Latex 语法支持和代码高亮的支持
+- **更丰富的消息处理**
+  - 支持编辑和删除用户已发送的消息(分支管理)以及其他对消息的操作
+    - 功能按钮通过选中消息长按(移动端)或者鼠标右键(桌面端)触发
+  - 支持调整对话消息显示的文字大小
+  - 支持自定义用户输入、大模型思考、大模型正常响应的消息文本字体颜色
+  - 支持切换聊天页面的背景图片和侧边栏背景色
+  - 支持使用紧凑的消息列表(选中“简洁显示”，则不显示头像和消息下方工具按钮)
 - **跨平台可用性**
   - 页面适配桌面端和移动端，Windows、Linux、Android App 有编译测试
   - 无需部署，通过可下载的安装包快速开始使用，无需复杂设置
@@ -28,12 +33,7 @@ SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API �
   - 如果是角色聊天，还可以针对特定角色设置使用自己喜欢的聊天背景图
   - 如果是角色聊天，默认会固定在左下角显示当前角色头像，可以点击放大预览并进行拖动和缩放
 - **更多**
-  - 支持编辑和删除用户已发送的消息(分支管理)
-    - 选中消息长按(移动端)或者鼠标右键(桌面端)
-  - 支持调整对话消息显示的文字大小
-  - 支持自定义用户输入、大模型思考、大模型正常响应的消息文本字体颜色
-  - 支持切换聊天页面的背景图片和侧边栏背景色
-  - 支持使用紧凑的消息列表(选中“简洁显示”，则不显示头像和消息下方工具按钮)
+  - 大模型响应使用流式追加显示
   - 支持针对不同模型配置更多高级请求参数(慎用)
   - 支持数据的导入导出(对话数据、角色数据、模型规格数据等)
     - 可以单个类别导入导出备份，也可以整体打包备份
@@ -243,20 +243,3 @@ Tools • Dart 3.7.2 • DevTools 2.42.3
 ## 贡献指南
 
 欢迎提交 Issues 和 Pull Requests 来帮助改进项目。
-
-| Name                                          | Formula Expression                                                                                                                                     | Purpose                                                         |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
-| Riemann Zeta Function Integral Representation | $$\zeta(s) = \frac{1}{\Gamma(s)} \int_0^\infty \frac{x^{s-1}}{e^x - 1} dx$$                                                                            | Analytic continuation and study of prime number distribution    |
-| Navier-Stokes Equations                       | $$\rho \left( \frac{\partial \mathbf{v}}{\partial t} + \mathbf{v} \cdot \nabla \mathbf{v} \right) = -\nabla p + \mu \nabla^2 \mathbf{v} + \mathbf{f}$$ | Momentum conservation equations describing viscous fluid motion |
-
-正如报错信息提示，在`MarkdownComponent`的 abstract class `BlockMd` 的行`child = Row(children: [Flexible(child: child)]);`报错，但是我不知道该如何在自定义的 markdown 渲染工具类中捕获到报错的组件，并降级为自定义的渲染器。
-
-
-As the error message indicates, the issue occurs in the abstract class `BlockMd` of `MarkdownComponent` at the line `child = Row(children: [Flexible(child: child)]);`. However, I'm unsure how to catch the problematic component in my custom Markdown rendering utility class and fall back to a custom renderer.  
-
-### Key Translation Notes:  
-1. **报错信息提示** → *As the error message indicates*  
-2. **自定义的 markdown 渲染工具类** → *custom Markdown rendering utility class*  
-3. **降级为自定义的渲染器** → *fall back to a custom renderer*  
-
-Let me know if you'd like any adjustments!

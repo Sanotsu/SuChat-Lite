@@ -18,8 +18,12 @@ SuChat is a concise AI chat application developed using Flutter, powered by call
   - All conversations are stored locally on the device (with separate records per platform)
 - **Markdown, LaTeX & Code Highlighting**
   - Basic support for Markdown formatting, LaTeX equations, and Code highlighting
-- **Streaming Responses**
-  - Real-time streaming display of model responses
+- **Enhanced Message Handling**
+  - Edit/delete sent messages (branch management) via long-press (mobile) or right-click (desktop)
+  - Adjustable message font size
+  - Customizable text colors for: user input, AI "thinking" status, and responses
+  - Customizable chat background images and sidebar colors
+  - Compact message view option (hides avatars and action buttons)
 - **Cross-Platform Compatibility**
   - Responsive design for both desktop and mobile (tested on Windows, Linux, and Android)
   - Ready-to-use installers with zero deployment requirements
@@ -28,11 +32,7 @@ SuChat is a concise AI chat application developed using Flutter, powered by call
   - Customizable chat backgrounds for specific roles
   - Role-specific avatars displayed in bottom-left corner (click to zoom/drag)
 - **And More**
-  - Edit/delete sent messages (branch management) via long-press (mobile) or right-click (desktop)
-  - Adjustable message font size
-  - Customizable text colors for user input, AI "thinking" status, and responses
-  - Customizable chat background images and sidebar colors
-  - Compact message view option (hides avatars and tool buttons)
+  - Real-time streaming display of model responses
   - Advanced request parameter configuration per model (use with caution)
   - Data import/export (conversations, roles, model specs) – individual or bundled backups
   - Voice-to-text input on mobile (using iFlytek speech recognition API)
@@ -223,11 +223,3 @@ Issues and PRs are welcome for improvements.
 ---
 
 —— Translated by DeepSeek
-
-
-**数学公式表：**
-
-| 名称                | 公式表达式                                                                 | 作用                          |
-|---------------------|--------------------------------------------------------------------------|-----------------------------|
-| 黎曼ζ函数积分表达式 | $$\zeta(s) = \frac{1}{\Gamma(s)} \int_0^\infty \frac{x^{s-1}}{e^x - 1} dx$$ | 解析延拓与素数分布研究              |
-| 纳维-斯托克斯方程   | $$\rho \left( \frac{\partial \mathbf{v}}{\partial t} + \mathbf{v} \cdot \nabla \mathbf{v} \right) = -\nabla p + \mu \nabla^2 \mathbf{v} + \mathbf{f}$$ | 描述粘性流体运动的动量守恒方程 |
