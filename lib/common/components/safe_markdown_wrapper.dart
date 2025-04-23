@@ -312,3 +312,20 @@ String normalizeInlineMathLatex(String text) {
 
   return processedLines.join('\n');
 }
+
+/// 将所有使用$...$包裹的单行LaTeX语法替换为\(...\)包裹
+String convertDollarToParenthesesLatex(String text) {
+  // 匹配单个美元符号包裹的LaTeX公式：$...$
+  // 注意: 确保不匹配 $$...$$ 和 \$
+  final inlineLatexPattern = RegExp(
+    r'(?<!\$)(?<!\\)\$(?!\$)(.*?)(?<!\\)\$(?!\$)', // 确保前后不是$，也不是\$
+    multiLine: true,
+  );
+
+  // 替换为统一格式
+  return text.replaceAllMapped(inlineLatexPattern, (match) {
+    String? formulaContent = match.group(1);
+    if (formulaContent == null) return match.group(0) ?? '';
+    return '\\($formulaContent\\)';
+  });
+}

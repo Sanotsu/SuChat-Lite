@@ -72,7 +72,7 @@ class _AddModelPageState extends State<AddModelPage> {
                     _buildTextField(
                       controller: _baseUrlController,
                       labelText: '请求地址',
-                      hintText: '请输入请求地址',
+                      hintText: '请输入请求地址(比如:https://api.deepseek.com/v1)',
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return '请输入请求地址';
@@ -87,7 +87,7 @@ class _AddModelPageState extends State<AddModelPage> {
                   _buildTextField(
                     controller: _modelNameController,
                     labelText: '模型名',
-                    hintText: '请输入模型名(作为请求参数的那个)',
+                    hintText: '请输入模型名(作为请求参数的那个,比如:deepseek-reasoner)',
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return '请输入模型名';

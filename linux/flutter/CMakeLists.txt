@@ -67,6 +67,33 @@ target_link_libraries(flutter INTERFACE
   PkgConfig::GLIB
   PkgConfig::GIO
 )
+
+# === 输入法支持（优先 Fcitx，次选 IBus）===
+message(STATUS "正在配置输入法支持...")
+
+# 1. 优先查找 Fcitx（针对中文输入优化）
+pkg_check_modules(FCITX QUIET IMPORTED_TARGET 
+    fcitx-gtk              # 核心库
+    fcitx-frontend-gtk3    # GTK3 前端
+)
+if(FCITX_FOUND)
+    target_link_libraries(flutter INTERFACE PkgConfig::FCITX)
+    message(STATUS "已启用 Fcitx 输入法支持（中文优化）")
+else()
+    # 2. 次选 IBus（通用后备方案）
+    pkg_check_modules(IBUS QUIET IMPORTED_TARGET ibus-1.0)
+    if(IBUS_FOUND)
+        target_link_libraries(flutter INTERFACE PkgConfig::IBUS)
+        message(STATUS "已启用 IBus 输入法支持（基础支持）")
+    else()
+        # 3. 两者均未找到
+        message(WARNING "未找到 Fcitx 或 IBus 开发库，Release 版中文输入可能受限")
+        message(WARNING "解决方案：安装 fcitx-libs-dev 或 libibus-1.0-dev")
+        message(WARNING "  Fcitx用户: sudo apt install fcitx-libs-dev fcitx-frontend-gtk3 fcitx-config-gtk")
+        message(WARNING "  IBus用户: sudo apt install libibus-1.0-dev")
+    endif()
+endif()
+
 add_dependencies(flutter flutter_assemble)
 
 # === Flutter tool backend ===

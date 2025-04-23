@@ -239,7 +239,7 @@ class _BranchMessageItemState extends State<BranchMessageItem>
   // 对话消息正文部分
   Widget _buildMessageContent(BuildContext context) {
     final textColor = _getTextColor();
-    Color bgColor = _isUser ? Colors.blue : Colors.grey.shade100;
+    Color bgColor = _isUser ? Colors.lightBlue.shade50 : Colors.grey.shade50;
 
     Widget mainContent;
 

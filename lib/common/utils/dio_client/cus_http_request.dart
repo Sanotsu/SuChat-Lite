@@ -60,11 +60,11 @@ class HttpRequest {
       ErrorInterceptor(),
       PrettyDioLogger(
         requestHeader: true,
-        requestBody: true,
-        // requestBody: false,
+        // requestBody: true,
+        requestBody: false,
         responseHeader: true,
-        responseBody: true,
-        // responseBody: false, // 响应太多了，不显示
+        // responseBody: true,
+        responseBody: false, // 响应太多了，不显示
         maxWidth: 150,
       ),
     ]);

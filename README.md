@@ -74,6 +74,8 @@ SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API �
 
 从 release 直接下载对应平台应用即可，桌面端是封装过的，应该无需安装。
 
+手动封装 AppImage 可参看 [将 flutter 应用构建为 Linux 下 .APPImage 格式](build_appimage_note.md)
+
 ### 补充说明
 
 打包好的应用是直接使用我个人密钥的一些免费的大模型，都是比较基础的。

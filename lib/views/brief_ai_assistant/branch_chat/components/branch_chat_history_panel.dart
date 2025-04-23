@@ -57,11 +57,11 @@ class _BranchChatHistoryPanelState extends State<BranchChatHistoryPanel> {
 
   setDefaultColor() async {
     await MyGetStorage().saveBranchChatHistoryPanelBgColor(
-      Colors.blueGrey.shade100.toARGB32(),
+      Colors.grey.shade50.toARGB32(),
     );
 
     setState(() {
-      _bgColor = Colors.blueGrey.shade100;
+      _bgColor = Colors.grey.shade50;
     });
   }
 

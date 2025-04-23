@@ -201,7 +201,7 @@ class MessageColorConfig {
   // 默认配置
   factory MessageColorConfig.defaultConfig() {
     return MessageColorConfig(
-      userTextColor: Colors.white,
+      userTextColor: Colors.blue,
       aiNormalTextColor: Colors.black,
       aiThinkingTextColor: Colors.grey,
     );

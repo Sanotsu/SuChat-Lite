@@ -108,12 +108,17 @@ class CusMarkdownRenderer {
         // 所以需要先处理文本，检测到表格中有$$...$$、$...$、\[...\]包裹的内容替换为使用\(...\)
 
         /// 其实还有一点，非表格中、其他地方单独显示的使用$...$包裹的LaTeX公式也无法正确显示，其他3种则正常。
-        text = normalizeLatexInMarkdownTable(text);
+        // text = normalizeLatexInMarkdownTable(text);
 
-        // 2025-04-22
-        // 目前实测，gpt_markdown 能正常渲染大部分使用\(...\)包裹的LaTeX内容，无论是表格中、列表中、还是文本中。
-        // 所有暂时把所有使用到LaTeX语法的地方，统一替换使用单行\(...\)来包裹
-        text = normalizeAllLatex(text);
+        // // 2025-04-22
+        // // 目前实测，gpt_markdown 能正常渲染大部分使用\(...\)包裹的LaTeX内容，无论是表格中、列表中、还是文本中。
+        // // 所有暂时把所有使用到LaTeX语法的地方，统一替换使用单行\(...\)来包裹
+        // text = normalizeAllLatex(text);
+
+        // 2025-04-23 我在21日提出issue (https://github.com/Infinitix-LLC/gpt_markdown/issues/56)，23日作者就修复了.
+        // 表格中使用$$...$$、\[...\]包裹的LaTeX可以正常显示不抛错了，但是所有(不管是否表格内)使用 $...$ 还是无法正常显示
+        // 所以需要再处理一次，检测到$...$包裹的LaTeX公式，替换为使用单行$...$来包裹
+        text = convertDollarToParenthesesLatex(text);
 
         // print("处理后的text:\n $text");
 

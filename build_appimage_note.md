@@ -1,5 +1,32 @@
 # 将 flutter 应用构建为 Linux 下 .APPImage 格式
 
+## 方法一(推荐)
+
+使用[AppImage/appimagetool](https://github.com/AppImage/appimagetool)打包
+
+1. 从[releases](https://github.com/AppImage/appimagetool/releases)中下载最新版本，应用名类似`appimagetool-x86_64.AppImage`
+2. 在下载的应用目录执行下面命令
+
+```sh
+chmod +x appimagetool-x86_64.AppImage
+sudo mv appimagetool-x86_64.AppImage /usr/local/bin/appimagetool
+```
+
+3. 执行项目根目录的 AppImage 打包脚本
+
+```sh
+chmod +x build_appimage_script.sh
+./build_appimage_script.sh
+```
+
+成功执行之后，打包后的 AppImage 应用应该在`build/linux/x64/release`中，类似：
+
+```sh
+build/linux/x64/release/SuChat-x86_64.AppImage
+```
+
+## 方法二(旧版本做法)
+
 我是使用[AppImageCrafters/appimage-builder](https://github.com/AppImageCrafters/appimage-builder)来实现的，Flutter 打包部分可参看其官方文档[Flutter Application](https://appimage-builder.readthedocs.io/en/latest/examples/flutter.html)部分。
 
 ### 1 安装 appimage-builder
@@ -176,3 +203,92 @@ test:
 ```sh
 chmod +x SuChat-0.0.1-beta.1-x86_64.AppImage
 ```
+
+## 打包的应用无法切换输入法的问题
+
+Linux 下(开发机 Ubuntu22.04) 项目 debug 时，在 app 输入框输入内容，输入法可正常切换；但是 build release 之后，按键盘就输入对应英文，没法唤起输入法并切换。
+
+暂时不知道为什么，临时的解决方法如下:
+
+1. 在开发机安装 ibus-1.0 和 fcitx 的开发文件
+
+```sh
+sudo apt update
+# IBus
+sudo apt install libibus-1.0-dev
+# Fcitx
+sudo apt install fcitx-libs-dev fcitx-frontend-gtk3
+
+# 验证是否安装成功：
+pkg-config --modversion ibus-1.0  # 应输出版本号（如 1.5.26）
+
+# 检查开发文件是否存在
+ls /usr/include/fcitx-*/          # 头文件
+ls /usr/lib/x86_64-linux-gnu/pkgconfig/fcitx*.pc  # pkg-config 文件
+```
+
+2. 在项目的 linux 构建文件中加入相关配置
+
+在`linux/flutter/CMakeLists.txt`中，#在文件末尾（或 target_link_libraries 部分后）添加以下内容：
+
+```cmake
+# === 输入法支持（优先 Fcitx，次选 IBus）===
+message(STATUS "正在配置输入法支持...")
+
+# 1. 优先查找 Fcitx（针对中文输入优化）
+pkg_check_modules(FCITX QUIET IMPORTED_TARGET
+    fcitx-gtk              # 核心库
+    fcitx-frontend-gtk3    # GTK3 前端
+)
+if(FCITX_FOUND)
+    target_link_libraries(flutter INTERFACE PkgConfig::FCITX)
+    message(STATUS "已启用 Fcitx 输入法支持（中文优化）")
+else()
+    # 2. 次选 IBus（通用后备方案）
+    pkg_check_modules(IBUS QUIET IMPORTED_TARGET ibus-1.0)
+    if(IBUS_FOUND)
+        target_link_libraries(flutter INTERFACE PkgConfig::IBUS)
+        message(STATUS "已启用 IBus 输入法支持（基础支持）")
+    else()
+        # 3. 两者均未找到
+        message(WARNING "未找到 Fcitx 或 IBus 开发库，Release 版中文输入可能受限")
+        message(WARNING "解决方案：安装 fcitx-libs-dev 或 libibus-1.0-dev")
+        message(WARNING "  Fcitx用户: sudo apt install fcitx-libs-dev fcitx-frontend-gtk3 fcitx-config-gtk")
+        message(WARNING "  IBus用户: sudo apt install libibus-1.0-dev")
+    endif()
+endif()
+```
+
+这样在执行`flutter build linux --release -v`命令时应该能看到输入法配置的消息。
+
+在 build 完成之后，在项目根目录终端检查最终链接库，执行
+
+```sh
+ldd build/linux/x64/release/bundle/your_app | grep -E "fcitx|ibus"
+```
+
+会输出类似内容:
+
+```sh
+libibus-1.0.so.5 => /lib/x86_64-linux-gnu/libibus-1.0.so.5 (0x00007f9911041000)
+```
+
+同时，在构建 AppImage 的脚本`build_appimage_script.sh`也有相关的配置，就是配置 AppRun:
+
+```sh
+# 创建 AppRun
+cat > AppDir/AppRun << 'EOF'
+#!/bin/bash
+# 设置输入法和库路径(不添加可能打包后的应用切不了中文输入法)
+export GTK_IM_MODULE=fcitx
+export QT_IM_MODULE=fcitx
+export XMODIFIERS=@im=fcitx
+export LD_LIBRARY_PATH="${APPDIR}/usr/lib:${LD_LIBRARY_PATH}"
+# 启动应用
+exec "${APPDIR}/SuChat" "$@"
+EOF
+chmod +x AppDir/AppRun
+```
+
+**我的个例，一套流程下来，虽然开发依赖有装 fcitx，但始终检测不到，使用的 ibus。**
+但之后打包成 AppImage 格式后输入法可以切换到我安装的输入法，正常输入中文了。
