@@ -75,7 +75,7 @@ class PlatformLogo extends StatelessWidget {
       case ApiPlatform.infini:
         return 'assets/platform_icons/infini.png';
       default:
-        return 'assets/platform_icons/deepseek.png';
+        return 'assets/images/no_image.png';
     }
   }
 

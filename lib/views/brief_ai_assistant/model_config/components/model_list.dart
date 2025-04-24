@@ -708,6 +708,7 @@ class _ModelListState extends State<ModelList> {
             '创建日期',
             model.gmtCreate?.toString().substring(0, 10) ?? '-',
           ),
+          _buildInfoRow('模型描述', model.description ?? '-'),
         ],
       ),
     );

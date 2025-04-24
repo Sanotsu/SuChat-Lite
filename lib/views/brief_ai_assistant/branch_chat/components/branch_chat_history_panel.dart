@@ -185,13 +185,13 @@ class _BranchChatHistoryPanelState extends State<BranchChatHistoryPanel> {
                 title: const Text('对话记录与设置'),
               ),
             ),
-            IconButton(
-              onPressed: () {
-                setDefaultColor();
-              },
-              tooltip: "清除历史记录侧边栏背景色",
-              icon: Icon(Icons.invert_colors, size: 18),
-            ),
+            // IconButton(
+            //   onPressed: () {
+            //     setDefaultColor();
+            //   },
+            //   tooltip: "清除历史记录侧边栏背景色",
+            //   icon: Icon(Icons.invert_colors, size: 18),
+            // ),
             IconButton(
               onPressed: () {
                 _showColorPickerDialog();

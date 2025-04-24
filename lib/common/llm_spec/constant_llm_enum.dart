@@ -94,6 +94,8 @@ enum LLModelType {
   // 2025-03-06 推理模型(深度思考)有思考过程，且支持的参数和对话模型差异很大，所以单独分类
   reasoner,
 
+  // 2025-04-23 视觉推理模型
+  vision_reasoner, // 视觉推理
   // 图片生成大模型分3种: 单独文生图、单独图生图、文生图生都可以
   tti, // Text To Image
   iti, // Image To Image
@@ -118,6 +120,7 @@ final Map<LLModelType, String> MT_NAME_MAP = {
   LLModelType.cc: '文本对话',
   LLModelType.vision: '图片解读',
   LLModelType.reasoner: '深度思考',
+  LLModelType.vision_reasoner: '视觉推理',
   LLModelType.tti: '文本生图',
   LLModelType.iti: '图片生图',
   LLModelType.image: '图片生成',

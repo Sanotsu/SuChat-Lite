@@ -55,6 +55,7 @@ class BriefAIToolDdl {
       isBuiltin      INTEGER NOT NULL,
       baseUrl        TEXT,
       apiKey         TEXT,
+      description    TEXT,
       PRIMARY KEY(cusLlmSpecId),
       UNIQUE(platform,model,modelType)
     );

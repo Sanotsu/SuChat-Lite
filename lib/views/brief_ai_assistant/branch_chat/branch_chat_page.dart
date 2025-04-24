@@ -306,6 +306,7 @@ class _BranchChatPageState extends State<BranchChatPage>
       LLModelType.cc,
       LLModelType.vision,
       LLModelType.reasoner,
+      LLModelType.vision_reasoner,
     ]);
 
     if (!mounted) return;

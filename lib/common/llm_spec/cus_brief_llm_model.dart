@@ -32,6 +32,9 @@ class CusBriefLLMSpec {
   String? baseUrl;
   String? apiKey;
 
+  // 2025-04-23 预留一个想随意填写的栏位，供记录其他内容
+  String? description;
+
   CusBriefLLMSpec(
     this.platform,
     this.model,
@@ -43,6 +46,7 @@ class CusBriefLLMSpec {
     this.isBuiltin = false,
     this.baseUrl,
     this.apiKey,
+    this.description,
   });
 
   // 从字符串转
@@ -69,6 +73,7 @@ class CusBriefLLMSpec {
       isBuiltin: map['isBuiltin'] == 1 ? true : false,
       baseUrl: map['baseUrl'],
       apiKey: map['apiKey'],
+      description: map['description'],
     );
   }
 
@@ -84,6 +89,7 @@ class CusBriefLLMSpec {
       'isBuiltin': isBuiltin ? 1 : 0,
       'baseUrl': baseUrl,
       'apiKey': apiKey,
+      'description': description,
     };
   }
 
@@ -110,7 +116,8 @@ class CusBriefLLMSpec {
           gmtCreate == other.gmtCreate &&
           isBuiltin == other.isBuiltin &&
           baseUrl == other.baseUrl &&
-          apiKey == other.apiKey;
+          apiKey == other.apiKey &&
+          description == other.description;
 
   @override
   int get hashCode =>
@@ -123,5 +130,6 @@ class CusBriefLLMSpec {
       gmtCreate.hashCode ^
       isBuiltin.hashCode ^
       baseUrl.hashCode ^
-      apiKey.hashCode;
+      apiKey.hashCode ^
+      description.hashCode;
 }

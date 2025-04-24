@@ -188,6 +188,7 @@ enum LLModelType {
   cc, // 文本对话
   reasoner, // 深度思考
   vision, // 图片解读
+  vision_reasoner, // 视觉推理
 }
 ```
 

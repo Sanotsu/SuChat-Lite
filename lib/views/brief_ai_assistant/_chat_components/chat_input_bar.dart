@@ -113,7 +113,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
     // 根据模型类型添加特定工具
     switch (widget.model!.modelType) {
-      case LLModelType.vision:
+      case LLModelType.vision || LLModelType.vision_reasoner:
         tools.addAll([
           ToolItem(
             icon: Icons.image,

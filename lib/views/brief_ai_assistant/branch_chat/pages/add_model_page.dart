@@ -22,6 +22,7 @@ class _AddModelPageState extends State<AddModelPage> {
   LLModelType? _selectedModelType;
   final _modelNameController = TextEditingController();
   final _apiKeyController = TextEditingController();
+  final _descriptionController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   final _baseUrlController = TextEditingController();
@@ -30,6 +31,7 @@ class _AddModelPageState extends State<AddModelPage> {
   void dispose() {
     _modelNameController.dispose();
     _apiKeyController.dispose();
+    _descriptionController.dispose();
     _baseUrlController.dispose();
     super.dispose();
   }
@@ -109,6 +111,15 @@ class _AddModelPageState extends State<AddModelPage> {
                       return null;
                     },
                   ),
+
+                  SizedBox(height: 16),
+                  // 描述输入
+                  _buildTextField(
+                    controller: _descriptionController,
+                    labelText: '描述(非必填)',
+                    hintText: '请输入描述(非必填)',
+                  ),
+
                   SizedBox(height: 32),
 
                   // 提交按钮
@@ -168,7 +179,12 @@ class _AddModelPageState extends State<AddModelPage> {
         contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       ),
       items:
-          [LLModelType.cc, LLModelType.reasoner, LLModelType.vision]
+          [
+                LLModelType.cc,
+                LLModelType.reasoner,
+                LLModelType.vision,
+                LLModelType.vision_reasoner,
+              ]
               .map(
                 (type) => DropdownMenuItem(
                   value: type,
@@ -205,7 +221,7 @@ class _AddModelPageState extends State<AddModelPage> {
     required TextEditingController controller,
     required String labelText,
     required String hintText,
-    required FormFieldValidator<String> validator,
+    FormFieldValidator<String>? validator,
   }) {
     return TextFormField(
       controller: controller,
@@ -238,6 +254,7 @@ class _AddModelPageState extends State<AddModelPage> {
             name: _modelNameController.text.trim(),
             baseUrl: _baseUrlController.text.trim(),
             apiKey: _apiKeyController.text.trim(),
+            description: _descriptionController.text.trim(),
             cusLlmSpecId: const Uuid().v4(),
             gmtCreate: DateTime.now(),
           );

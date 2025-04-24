@@ -55,6 +55,7 @@ const _$LLModelTypeEnumMap = {
   LLModelType.cc: 'cc',
   LLModelType.vision: 'vision',
   LLModelType.reasoner: 'reasoner',
+  LLModelType.vision_reasoner: 'vision_reasoner',
   LLModelType.tti: 'tti',
   LLModelType.iti: 'iti',
   LLModelType.image: 'image',
