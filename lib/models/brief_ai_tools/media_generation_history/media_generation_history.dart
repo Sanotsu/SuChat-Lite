@@ -52,6 +52,8 @@ class MediaGenerationHistory {
 
   // 音频地址,数据库存分号连接的字符串(一般都在平台的oss中，有超时设定)
   List<String>? audioUrls;
+  // 2025-04-25 更方便对比，还需要保留音色信息
+  String? voice;
 
   // 其他参数，json字符串(比如style、coverImageUrl等，不是所有平台和模型都有返回的)
   String? otherParams;
@@ -77,6 +79,7 @@ class MediaGenerationHistory {
     this.imageUrls,
     this.videoUrls,
     this.audioUrls,
+    this.voice,
     this.otherParams,
     required this.gmtCreate,
     this.gmtModified,
@@ -112,6 +115,7 @@ class MediaGenerationHistory {
       imageUrls: (map['imageUrls'] as String?)?.split(";").toList(),
       videoUrls: (map['videoUrls'] as String?)?.split(";").toList(),
       audioUrls: (map['audioUrls'] as String?)?.split(";").toList(),
+      voice: map['voice'] as String?,
       otherParams: map['otherParams'] as String?,
       gmtCreate: DateTime.tryParse(map['gmtCreate']) ?? DateTime.now(),
       gmtModified:
@@ -135,6 +139,7 @@ class MediaGenerationHistory {
       'imageUrls': imageUrls?.join(";"), // 存入数据库用分号分割，取的时候也一样
       'videoUrls': videoUrls?.join(";"),
       'audioUrls': audioUrls?.join(";"),
+      'voice': voice,
       'otherParams': otherParams,
       'gmtCreate': DateFormat(constDatetimeFormat).format(gmtCreate),
       'gmtModified':

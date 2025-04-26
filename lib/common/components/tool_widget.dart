@@ -42,10 +42,7 @@ commonHintDialog(
     builder: (context) {
       return AlertDialog(
         title: Text(title),
-        content: Text(
-          message,
-          style: TextStyle(fontSize: msgFontSize ?? 14.sp),
-        ),
+        content: Text(message, style: TextStyle(fontSize: msgFontSize ?? 14)),
         actions: [
           TextButton(
             onPressed: () {
@@ -146,8 +143,8 @@ commonMDHintModalBottomSheet(
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(15.sp),
-            topRight: Radius.circular(15.sp),
+            topLeft: Radius.circular(15),
+            topRight: Radius.circular(15),
           ),
         ),
         child: Column(
@@ -155,11 +152,11 @@ commonMDHintModalBottomSheet(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20.sp),
+              padding: EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(title, style: TextStyle(fontSize: 18.sp)),
+                  Text(title, style: TextStyle(fontSize: 18)),
                   TextButton(
                     child: const Text('关闭'),
                     onPressed: () {
@@ -170,11 +167,11 @@ commonMDHintModalBottomSheet(
                 ],
               ),
             ),
-            Divider(height: 2.sp, thickness: 2.sp),
+            Divider(height: 2, thickness: 2),
             Expanded(
               child: SingleChildScrollView(
                 child: Padding(
-                  padding: EdgeInsets.all(10.sp),
+                  padding: EdgeInsets.all(10),
                   child: MarkdownBody(
                     data: message,
                     selectable: true,
@@ -225,8 +222,8 @@ buildNetworkImageViewGrid(
   return GridView.count(
     crossAxisCount: crossAxisCount ?? 2,
     shrinkWrap: true,
-    mainAxisSpacing: 5.sp,
-    crossAxisSpacing: 5.sp,
+    mainAxisSpacing: 5,
+    crossAxisSpacing: 5,
     physics: const NeverScrollableScrollPhysics(),
     children: buildImageList(
       context,
@@ -425,10 +422,10 @@ Widget buildImageView(
                 (context, url, error) => Container(
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(10.sp),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Padding(
-                    padding: EdgeInsets.all(5.sp),
+                    padding: EdgeInsets.all(5),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -504,7 +501,7 @@ Widget cusFormBuilerTextField(
   List<TextInputFormatter>? inputFormatters,
 }) {
   return Padding(
-    padding: EdgeInsets.all(5.sp),
+    padding: EdgeInsets.all(5),
     child: FormBuilderTextField(
       name: name,
       initialValue: initialValue,
@@ -556,7 +553,7 @@ Widget buildModifyMultiSelectDialogField(
           .toList();
 
   return Padding(
-    padding: EdgeInsets.symmetric(horizontal: 10.sp),
+    padding: EdgeInsets.symmetric(horizontal: 10),
     child: MultiSelectDialogField(
       key: key,
       items: formattedItems,
@@ -566,8 +563,8 @@ Widget buildModifyMultiSelectDialogField(
       // selectedColor: Colors.blue,
       decoration: BoxDecoration(
         // color: Colors.blue.withOpacity(0.1),
-        borderRadius: BorderRadius.all(Radius.circular(5.sp)),
-        border: Border.all(width: 2.sp, color: Theme.of(context).disabledColor),
+        borderRadius: BorderRadius.all(Radius.circular(5)),
+        border: Border.all(width: 2, color: Theme.of(context).disabledColor),
       ),
       // buttonIcon: const Icon(Icons.fitness_center, color: Colors.blue),
       buttonIcon: const Icon(Icons.restaurant_menu),
@@ -575,7 +572,7 @@ Widget buildModifyMultiSelectDialogField(
         labelText ?? "",
         style: TextStyle(
           // color: Colors.blue[800],
-          fontSize: 12.sp,
+          fontSize: 12,
         ),
       ),
       // searchable: true,
@@ -597,8 +594,8 @@ InputDecoration _buildInputDecoration(
 ) {
   final contentPadding =
       isOutline != null && isOutline
-          ? EdgeInsets.symmetric(horizontal: 5.sp, vertical: 15.sp)
-          : EdgeInsets.symmetric(horizontal: 5.sp, vertical: 5.sp);
+          ? EdgeInsets.symmetric(horizontal: 5, vertical: 15)
+          : EdgeInsets.symmetric(horizontal: 5, vertical: 5);
 
   return InputDecoration(
     isDense: true,
@@ -625,7 +622,7 @@ buildSmallChip(String labelText, {Color? bgColor, double? labelTextSize}) {
     labelStyle: TextStyle(fontSize: labelTextSize),
     labelPadding: EdgeInsets.zero,
     // 设置负数会报错，但好像看到有点效果呢
-    // labelPadding: EdgeInsets.fromLTRB(0, -6.sp, 0, -6.sp),
+    // labelPadding: EdgeInsets.fromLTRB(0, -6, 0, -6),
     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
   );
 }
@@ -643,7 +640,7 @@ Widget buildSmallButtonTag(
     padding: const EdgeInsets.fromLTRB(8.0, 4.0, 8.0, 4.0),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
     fillColor: bgColor ?? Colors.grey[300],
-    child: Text(labelText, style: TextStyle(fontSize: labelTextSize ?? 12.sp)),
+    child: Text(labelText, style: TextStyle(fontSize: labelTextSize ?? 12)),
   );
 }
 
@@ -653,24 +650,24 @@ buildTinyButtonTag(String labelText, {Color? bgColor, double? labelTextSize}) {
   return SizedBox(
     // 传入大于12的字体，修正为12；不传则默认12
     height:
-        ((labelTextSize != null && labelTextSize > 10.sp)
-            ? 10.sp
-            : labelTextSize ?? 10.sp) +
-        10.sp,
+        ((labelTextSize != null && labelTextSize > 10)
+            ? 10
+            : labelTextSize ?? 10) +
+        10,
     child: RawMaterialButton(
       onPressed: () {},
       constraints: const BoxConstraints(),
-      padding: EdgeInsets.fromLTRB(4.sp, 2.sp, 4.sp, 2.sp),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.sp)),
+      padding: EdgeInsets.fromLTRB(4, 2, 4, 2),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       fillColor: bgColor ?? Colors.grey[300],
       child: Text(
         labelText,
         style: TextStyle(
           // 传入大于10的字体，修正为10；不传则默认10
           fontSize:
-              (labelTextSize != null && labelTextSize > 10.sp)
-                  ? 10.sp
-                  : labelTextSize ?? 10.sp,
+              (labelTextSize != null && labelTextSize > 10)
+                  ? 10
+                  : labelTextSize ?? 10,
         ),
       ),
     ),
@@ -687,7 +684,7 @@ buildDataTableWithHorizontalScrollbar({
     thickness: 5,
     // 设置交互模式后，滚动条和手势滚动方向才一致
     interactive: true,
-    radius: Radius.circular(5.sp),
+    radius: Radius.circular(5),
     // 不设置这个，滚动条默认不显示，在滚动时才显示
     thumbVisibility: true,
     // trackVisibility: true,
@@ -698,12 +695,12 @@ buildDataTableWithHorizontalScrollbar({
       controller: scrollController,
       scrollDirection: Axis.horizontal,
       child: DataTable(
-        // dataRowHeight: 10.sp,
-        dataRowMinHeight: 60.sp, // 设置行高范围
-        dataRowMaxHeight: 100.sp,
+        // dataRowHeight: 10,
+        dataRowMinHeight: 60, // 设置行高范围
+        dataRowMaxHeight: 100,
         headingRowHeight: 25, // 设置表头行高
         horizontalMargin: 10, // 设置水平边距
-        columnSpacing: 20.sp, // 设置列间距
+        columnSpacing: 20, // 设置列间距
         columns: columns,
         rows: rows,
       ),
@@ -768,16 +765,15 @@ Widget buildNetworkOrFileImage(String imageUrl, {BoxFit? fit}) {
       placeholder:
           (context, url) => Center(
             child: SizedBox(
-              width: 36.sp,
-              height: 36.sp,
+              width: 36,
+              height: 36,
               child: const CircularProgressIndicator(color: Colors.blue),
             ),
           ),
 
       // placeholder: (context, url) => const CustomProgressIndicator(), // 自定义进度条
       errorWidget:
-          (context, url, error) =>
-              Center(child: Icon(Icons.error, size: 36.sp)),
+          (context, url, error) => Center(child: Icon(Icons.error, size: 36)),
     );
 
     // 2024-03-29 这样每次都会重新请求图片，网络图片都不小的，流量顶不住。用上面的
@@ -954,7 +950,7 @@ buildClickImageDialog(BuildContext context, String imageUrl) {
       );
     },
     child: Padding(
-      padding: EdgeInsets.all(20.sp),
+      padding: EdgeInsets.all(20),
       child: SizedBox(width: 0.8.sw, child: buildNetworkOrFileImage(imageUrl)),
     ),
   );
@@ -1003,7 +999,7 @@ Widget buildDropdownButton2<T>({
     child: DropdownButton2<T>(
       isExpanded: true,
       // 提示词
-      hint: Text(hintLabel ?? '请选择', style: TextStyle(fontSize: 14.sp)),
+      hint: Text(hintLabel ?? '请选择', style: TextStyle(fontSize: 14)),
       // 下拉选择
       items:
           items
@@ -1014,7 +1010,7 @@ Widget buildDropdownButton2<T>({
                   child: Text(
                     itemToString != null ? itemToString(e) : e.toString(),
                     style: TextStyle(
-                      fontSize: labelSize ?? 15.sp,
+                      fontSize: labelSize ?? 15,
                       color: Colors.blue,
                     ),
                   ),
@@ -1027,11 +1023,11 @@ Widget buildDropdownButton2<T>({
       onChanged: onChanged,
       // 默认的按钮的样式(下拉框旋转的样式)
       buttonStyleData: ButtonStyleData(
-        height: height ?? 30.sp,
-        // width: 190.sp,
-        padding: EdgeInsets.all(0.sp),
+        height: height ?? 30,
+        // width: 190,
+        padding: EdgeInsets.all(0),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(5.sp),
+          borderRadius: BorderRadius.circular(5),
           border: Border.all(color: Colors.black26),
           // color: Colors.blue[50],
           color: Colors.white,
@@ -1041,31 +1037,31 @@ Widget buildDropdownButton2<T>({
       // 按钮后面的图标的样式(默认也有个下三角)
       iconStyleData: IconStyleData(
         icon: const Icon(Icons.arrow_drop_down),
-        iconSize: 20.sp,
+        iconSize: 20,
         iconEnabledColor: Colors.blue,
         iconDisabledColor: Colors.grey,
       ),
       // 下拉选项列表区域的样式
       dropdownStyleData: DropdownStyleData(
-        maxHeight: itemMaxHeight ?? 300.sp,
+        maxHeight: itemMaxHeight ?? 300,
         // 不设置且isExpanded为true就是外部最宽
-        // width: 190.sp, // 可以根据下面的offset偏移和上面按钮的长度来调整
+        // width: 190, // 可以根据下面的offset偏移和上面按钮的长度来调整
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(5.sp),
+          borderRadius: BorderRadius.circular(5),
           color: Colors.white,
         ),
         // offset: const Offset(-20, 0),
         offset: const Offset(0, 0),
         scrollbarTheme: ScrollbarThemeData(
-          radius: Radius.circular(40.sp),
-          thickness: WidgetStateProperty.all(6.sp),
+          radius: Radius.circular(40),
+          thickness: WidgetStateProperty.all(6),
           thumbVisibility: WidgetStateProperty.all(true),
         ),
       ),
       // 下拉选项单个选项的样式
       menuItemStyleData: MenuItemStyleData(
-        height: 48.sp, // 方便超过1行的模型名显示，所有设置高点
-        padding: EdgeInsets.symmetric(horizontal: 5.sp),
+        height: 48, // 方便超过1行的模型名显示，所有设置高点
+        padding: EdgeInsets.symmetric(horizontal: 5),
       ),
     ),
   );
@@ -1083,7 +1079,7 @@ buildCusPopupMenuItem(
     child: Row(
       children: [
         Icon(icon, color: Theme.of(context).primaryColor),
-        SizedBox(width: 5.sp),
+        SizedBox(width: 5),
         Text(label, style: TextStyle(color: Theme.of(context).primaryColor)),
       ],
     ),
@@ -1093,9 +1089,9 @@ buildCusPopupMenuItem(
 /// 一些功能按钮的样式统一一下
 ButtonStyle buildFunctionButtonStyle({Color? backgroundColor}) {
   return ElevatedButton.styleFrom(
-    minimumSize: Size(80.sp, 32.sp),
-    padding: EdgeInsets.symmetric(horizontal: 10.sp),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.sp)),
+    minimumSize: Size(80, 32),
+    padding: EdgeInsets.symmetric(horizontal: 10),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
     foregroundColor: Colors.white,
     backgroundColor: backgroundColor ?? Colors.blue,
   );

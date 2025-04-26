@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mime/mime.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
@@ -10,6 +9,8 @@ import 'package:share_plus/share_plus.dart';
 import '../../../common/components/toast_utils.dart';
 import '../../../common/components/tool_widget.dart';
 import '../../../common/constants/constants.dart';
+import '../../../common/utils/screen_helper.dart';
+import '../../../common/utils/tools.dart';
 import 'mime_media_manager_base.dart';
 
 abstract class MediaManagerBase extends StatefulWidget {
@@ -66,9 +67,8 @@ abstract class MediaManagerBaseState<T extends MediaManagerBase>
       AssetPathEntity? aiMediaPath;
       List<AssetEntity> media = [];
       try {
-        aiMediaPath = albums.firstWhere(
-          (entity) => entity.name == getAIMediaDirName(),
-        );
+        var dirName = await getAIMediaDirName();
+        aiMediaPath = albums.firstWhere((entity) => entity.name == dirName);
 
         // 获取AI生成媒体文件列表
         media = await aiMediaPath.getAssetListRange(start: 0, end: 1000);
@@ -87,13 +87,15 @@ abstract class MediaManagerBaseState<T extends MediaManagerBase>
       /// 测试
       /// 2025-02-21 测试发现，实际的文件数量和photo manager获取的文件数量不一致，原因未知
       ///
-      final files = await classifyFilesByMimeType(getAIMediaDir());
+      final files = await classifyFilesByMimeType((await getAIMediaDir()));
 
       List<File> mimeFiles =
           mediaType == RequestType.image
               ? files[CusMimeCls.IMAGE]!
               : mediaType == RequestType.video
               ? files[CusMimeCls.VIDEO]!
+              : mediaType == RequestType.audio
+              ? files[CusMimeCls.AUDIO]!
               : [];
 
       debugPrint('mimeFiles中数量: ${mimeFiles.length}; media中数量:${media.length}');
@@ -147,20 +149,22 @@ abstract class MediaManagerBaseState<T extends MediaManagerBase>
   }
 
   // 获取AI生成媒体目录
-  String getAIMediaDir() {
+  Future<String> getAIMediaDir() async {
     switch (mediaType) {
       case RequestType.image:
-        return LLM_IG_DIR_V2.path;
+        return (await getImageGenDir()).path;
       case RequestType.video:
-        return LLM_VG_DIR_V2.path;
+        return (await getVideoGenDir()).path;
+      case RequestType.audio:
+        return (await getVoiceGenDir()).path;
       default:
         return "";
     }
   }
 
   // 获取AI生成媒体目录名称
-  String getAIMediaDirName() {
-    return getAIMediaDir().split("/").last;
+  Future<String> getAIMediaDirName() async {
+    return (await getAIMediaDir()).split("/").last;
   }
 
   // 分享选中的媒体
@@ -242,7 +246,7 @@ abstract class MediaManagerBaseState<T extends MediaManagerBase>
             icon: const Icon(Icons.refresh),
             onPressed: refreshMediaList,
           ),
-          if (isMultiSelectMode) ...[
+          if (isMultiSelectMode && ScreenHelper.isMobile()) ...[
             IconButton(
               icon: const Icon(Icons.share),
               onPressed: _shareSelectedMedia,
@@ -269,11 +273,11 @@ abstract class MediaManagerBaseState<T extends MediaManagerBase>
               : mediaList.isEmpty
               ? const Center(child: Text('暂无内容'))
               : GridView.builder(
-                padding: EdgeInsets.all(8.sp),
+                padding: EdgeInsets.all(8),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 3,
-                  mainAxisSpacing: 8.sp,
-                  crossAxisSpacing: 8.sp,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
                 ),
                 itemCount: mediaList.length,
                 itemBuilder: (context, index) {
@@ -293,11 +297,11 @@ abstract class MediaManagerBaseState<T extends MediaManagerBase>
     }
 
     return GridView.builder(
-      padding: EdgeInsets.all(8.sp),
+      padding: EdgeInsets.all(8),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
-        mainAxisSpacing: 8.sp,
-        crossAxisSpacing: 8.sp,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
       ),
       itemCount: mediaList.length,
       itemBuilder: (context, index) {
@@ -352,7 +356,7 @@ abstract class MediaManagerBaseState<T extends MediaManagerBase>
             Container(
               color: Colors.blue.withValues(alpha: 0.3),
               alignment: Alignment.center,
-              child: Icon(Icons.check_circle, color: Colors.white, size: 30.sp),
+              child: Icon(Icons.check_circle, color: Colors.white, size: 30),
             ),
         ],
       ),

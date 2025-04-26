@@ -7,7 +7,7 @@ import 'package:ffmpeg_kit_flutter/return_code.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-import '../../../constants/constants.dart';
+import '../../../utils/tools.dart';
 
 /// 按住说话最后发送的类型(转换后的文本还是原音频文件)
 enum SendContentType { voice, text }
@@ -117,12 +117,8 @@ class SoundsRecorderController {
       });
 
       // 外部存储权限的获取在按下说话按钮前就判断了，能到这里来一定是有权限了
-      // 翻译保存的文本，放到设备外部存储固定位置，不存在文件夹则先创建
-      if (!await CHAT_AUDIO_DIR.exists()) {
-        await CHAT_AUDIO_DIR.create(recursive: true);
-      }
       final file = File(
-        '${CHAT_AUDIO_DIR.path}/${DateTime.now().microsecondsSinceEpoch}.m4a',
+        '${(await getChatAudioDir()).path}/${DateTime.now().microsecondsSinceEpoch}.m4a',
       );
 
       // 录制(path参数 是可选的，这里指定固定位置)
@@ -140,7 +136,7 @@ class SoundsRecorderController {
 
       // 需要转为pcm让讯飞能够识别（但播放时，pcm就无法播放了）
       var time = path.value?.split("/").last.split(".").first;
-      final pcmPath = '${CHAT_AUDIO_DIR.path}/$time.pcm';
+      final pcmPath = '${(await getChatAudioDir()).path}/$time.pcm';
 
       debugPrint("转换后的地址--$pcmPath");
 

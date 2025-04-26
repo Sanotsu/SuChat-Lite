@@ -32,6 +32,7 @@ MediaGenerationHistory _$MediaGenerationHistoryFromJson(
       audioUrls: (json['audioUrls'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList(),
+      voice: json['voice'] as String?,
       otherParams: json['otherParams'] as String?,
       gmtCreate: DateTime.parse(json['gmtCreate'] as String),
       gmtModified: json['gmtModified'] == null
@@ -56,6 +57,7 @@ Map<String, dynamic> _$MediaGenerationHistoryToJson(
       'imageUrls': instance.imageUrls,
       'videoUrls': instance.videoUrls,
       'audioUrls': instance.audioUrls,
+      'voice': instance.voice,
       'otherParams': instance.otherParams,
       'gmtCreate': instance.gmtCreate.toIso8601String(),
       'gmtModified': instance.gmtModified?.toIso8601String(),

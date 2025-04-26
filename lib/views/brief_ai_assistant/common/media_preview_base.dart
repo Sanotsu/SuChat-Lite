@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../common/components/toast_utils.dart';
+import '../../../common/utils/screen_helper.dart';
 import 'show_media_info_dialog.dart';
 
 abstract class MediaPreviewBase extends StatelessWidget {
@@ -24,7 +24,7 @@ abstract class MediaPreviewBase extends StatelessWidget {
 
       final result = await Share.shareXFiles([
         XFile(file.path),
-      ], text: '思文AI助手');
+      ], text: 'SuChat');
 
       if (result.status == ShareResultStatus.success) {
         ToastUtils.showSuccess('分享成功!');
@@ -86,10 +86,11 @@ abstract class MediaPreviewBase extends StatelessWidget {
       appBar: AppBar(
         title: Text(title),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: () => _shareMedia(context),
-          ),
+          if (ScreenHelper.isMobile())
+            IconButton(
+              icon: const Icon(Icons.share),
+              onPressed: () => _shareMedia(context),
+            ),
           IconButton(
             icon: const Icon(Icons.delete),
             onPressed: () => _deleteMedia(context),
@@ -100,10 +101,7 @@ abstract class MediaPreviewBase extends StatelessWidget {
           ),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.all(5.sp),
-        child: buildPreviewContent(),
-      ),
+      body: Padding(padding: EdgeInsets.all(5), child: buildPreviewContent()),
     );
   }
 }

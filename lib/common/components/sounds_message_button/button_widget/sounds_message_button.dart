@@ -211,23 +211,23 @@ class _SoundsMessageButtonState extends State<SoundsMessageButton> {
           }
 
           return Container(
-            // margin: EdgeInsets.symmetric(horizontal: 16.sp),
-            height: 44.sp,
+            // margin: EdgeInsets.symmetric(horizontal: 16),
+            height: 44,
             width: double.infinity,
             alignment: Alignment.center,
             decoration:
                 widget.customDecoration ??
                 BoxDecoration(
-                  borderRadius: BorderRadius.circular(4.sp),
+                  borderRadius: BorderRadius.circular(4),
                   color: Colors.white,
-                  border: Border.all(color: Colors.grey, width: 1.sp),
+                  border: Border.all(color: Colors.grey, width: 1),
                   boxShadow: const [
                     BoxShadow(color: Color(0xffeeeeee), blurRadius: 2),
                   ],
                 ),
             child: Text(
               value.title,
-              style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           );
         },

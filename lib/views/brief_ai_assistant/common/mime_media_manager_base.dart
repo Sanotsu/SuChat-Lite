@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get_thumbnail_video/index.dart';
 import 'package:get_thumbnail_video/video_thumbnail.dart';
 import 'package:mime/mime.dart';
@@ -15,6 +14,8 @@ import 'package:share_plus/share_plus.dart';
 import '../../../common/components/toast_utils.dart';
 import '../../../common/components/tool_widget.dart';
 import '../../../common/constants/constants.dart';
+import '../../../common/utils/screen_helper.dart';
+import '../../../common/utils/tools.dart';
 
 abstract class MimeMediaManagerBase extends StatefulWidget {
   const MimeMediaManagerBase({super.key});
@@ -47,7 +48,7 @@ abstract class MimeMediaManagerBaseState<T extends MimeMediaManagerBase>
     setState(() => isLoading = true);
 
     try {
-      final files = await classifyFilesByMimeType(getAIMediaDirName());
+      final files = await classifyFilesByMimeType((await getAIMediaDirName()));
 
       // print('AI生成$mediaType数量: ${files[mediaType]!.length}');
 
@@ -72,14 +73,14 @@ abstract class MimeMediaManagerBaseState<T extends MimeMediaManagerBase>
   }
 
   // 获取AI生成媒体目录名
-  String getAIMediaDirName() {
+  Future<String> getAIMediaDirName() async {
     switch (mediaType) {
       case CusMimeCls.IMAGE:
-        return LLM_IG_DIR_V2.path;
+        return (await getImageGenDir()).path;
       case CusMimeCls.VIDEO:
-        return LLM_VG_DIR_V2.path;
-      default:
-        return "";
+        return (await getVideoGenDir()).path;
+      case CusMimeCls.AUDIO:
+        return (await getVoiceGenDir()).path;
     }
   }
 
@@ -161,7 +162,7 @@ abstract class MimeMediaManagerBaseState<T extends MimeMediaManagerBase>
               icon: const Icon(Icons.refresh),
               onPressed: refreshMediaList,
             ),
-          if (isMultiSelectMode) ...[
+          if (isMultiSelectMode && ScreenHelper.isMobile()) ...[
             IconButton(
               icon: const Icon(Icons.share),
               onPressed: _shareSelectedMedia,
@@ -185,23 +186,7 @@ abstract class MimeMediaManagerBaseState<T extends MimeMediaManagerBase>
       body:
           isLoading
               ? const Center(child: CircularProgressIndicator())
-              : mediaList.isEmpty
-              ? const Center(child: Text('暂无内容'))
-              : GridView.builder(
-                padding: EdgeInsets.all(8.sp),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  mainAxisSpacing: 8.sp,
-                  crossAxisSpacing: 8.sp,
-                ),
-                itemCount: mediaList.length,
-                itemBuilder: (context, index) {
-                  final file = mediaList[index];
-                  final isSelected = selectedMedia.contains(file);
-
-                  return buildMediaGridItem(file, isSelected);
-                },
-              ),
+              : buildMediaGrid(),
     );
   }
 
@@ -212,11 +197,12 @@ abstract class MimeMediaManagerBaseState<T extends MimeMediaManagerBase>
     }
 
     return GridView.builder(
-      padding: EdgeInsets.all(8.sp),
+      padding: EdgeInsets.all(8),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        mainAxisSpacing: 8.sp,
-        crossAxisSpacing: 8.sp,
+        crossAxisCount: ScreenHelper.isDesktop() ? 3 : 2,
+        childAspectRatio: 16 / 9,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
       ),
       itemCount: mediaList.length,
       itemBuilder: (context, index) {
@@ -268,7 +254,18 @@ abstract class MimeMediaManagerBaseState<T extends MimeMediaManagerBase>
                 if (snapshot.hasData) {
                   return snapshot.data!;
                 }
-                return const SizedBox.shrink();
+                // return const SizedBox.shrink();
+                // 桌面端取不到预览图，就显示个名字
+                return Container(
+                  color: Colors.grey.shade200,
+                  padding: EdgeInsets.all(10),
+                  child: Center(
+                    child: Text(
+                      file.path.split('/').last,
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ),
+                );
               },
             ),
           if (mediaType == CusMimeCls.IMAGE)
@@ -277,7 +274,7 @@ abstract class MimeMediaManagerBaseState<T extends MimeMediaManagerBase>
             Container(
               color: Colors.blue.withValues(alpha: 0.3),
               alignment: Alignment.center,
-              child: Icon(Icons.check_circle, color: Colors.white, size: 30.sp),
+              child: Icon(Icons.check_circle, color: Colors.white, size: 30),
             ),
         ],
       ),
@@ -376,26 +373,33 @@ Future<Image?> generateThumbnail(File videoFile) async {
 
   // 如果没有缓存，则生成缩略图
   try {
-    XFile thumbnailFile = await VideoThumbnail.thumbnailFile(
-      video: videoFile.path,
-      // 缓存到临时目录
-      thumbnailPath: (await getTemporaryDirectory()).path,
-      imageFormat: ImageFormat.JPEG,
-      quality: 50, // 图片质量
-    );
+    File thumbnail;
+
+    // 2025-04-24 移动端生成缩略图，桌面端无法使用
+    if (ScreenHelper.isMobile()) {
+      XFile thumbnailFile = await VideoThumbnail.thumbnailFile(
+        video: videoFile.path,
+        // 缓存到临时目录
+        thumbnailPath: (await getTemporaryDirectory()).path,
+        imageFormat: ImageFormat.JPEG,
+        quality: 50, // 图片质量
+      );
+
+      thumbnail = File(thumbnailFile.path);
+    } else {
+      thumbnail = File(placeholderImageUrl);
+      return null;
+    }
 
     // 缓存缩略图
-    await cacheManager.putFile(
-      cacheKey,
-      File(thumbnailFile.path).readAsBytesSync(),
-    );
-    _thumbnailCache[cacheKey] = File(thumbnailFile.path);
+    await cacheManager.putFile(cacheKey, thumbnail.readAsBytesSync());
+    _thumbnailCache[cacheKey] = thumbnail;
 
     // print('生成视频缩略图: ${thumbnailFile.path}');
 
     return kIsWeb
-        ? Image.network(thumbnailFile.path, fit: BoxFit.cover)
-        : Image.file(File(thumbnailFile.path), fit: BoxFit.cover);
+        ? Image.network(thumbnail.path, fit: BoxFit.cover)
+        : Image.file(thumbnail, fit: BoxFit.cover);
   } catch (e) {
     debugPrint("生成视频缩略图失败: $e");
     return null;

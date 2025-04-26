@@ -9,6 +9,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:proste_logger/proste_logger.dart';
+import 'package:video_player_media_kit/video_player_media_kit.dart';
 
 import 'models/brief_ai_tools/branch_chat/branch_store.dart';
 import 'common/components/toast_utils.dart';
@@ -78,6 +79,22 @@ class AppCatchError {
     );
 
     NetworkStatusService().initialize();
+
+    // 单行初始化后，您可以正常在多个平台使用 video_player
+    VideoPlayerMediaKit.ensureInitialized(
+      // default: false    -    dependency: media_kit_libs_android_video
+      android: true,
+      // default: false    -    dependency: media_kit_libs_ios_video
+      iOS: true,
+      // default: false    -    dependency: media_kit_libs_macos_video
+      macOS: true,
+      // default: false    -    dependency: media_kit_libs_windows_video
+      windows: true,
+      // default: false    -    dependency: media_kit_libs_linux
+      // 需要在开发机安装依赖，比如Ubuntu下:sudo apt install libmpv-dev
+      // 没安装在报错信息下会有提示
+      linux: true,
+    );
     runApp(const SuChatApp());
   }
 

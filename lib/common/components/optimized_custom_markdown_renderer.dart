@@ -122,12 +122,12 @@ class _OptimizedCustomMarkdownRendererState
 
     return MarkdownStyleSheet(
       p: baseTextStyle,
-      h1: baseTextStyle.copyWith(fontSize: 24.sp, fontWeight: FontWeight.bold),
-      h2: baseTextStyle.copyWith(fontSize: 22.sp, fontWeight: FontWeight.bold),
-      h3: baseTextStyle.copyWith(fontSize: 20.sp, fontWeight: FontWeight.bold),
-      h4: baseTextStyle.copyWith(fontSize: 18.sp, fontWeight: FontWeight.bold),
-      h5: baseTextStyle.copyWith(fontSize: 16.sp, fontWeight: FontWeight.bold),
-      h6: baseTextStyle.copyWith(fontSize: 14.sp, fontWeight: FontWeight.bold),
+      h1: baseTextStyle.copyWith(fontSize: 24, fontWeight: FontWeight.bold),
+      h2: baseTextStyle.copyWith(fontSize: 22, fontWeight: FontWeight.bold),
+      h3: baseTextStyle.copyWith(fontSize: 20, fontWeight: FontWeight.bold),
+      h4: baseTextStyle.copyWith(fontSize: 18, fontWeight: FontWeight.bold),
+      h5: baseTextStyle.copyWith(fontSize: 16, fontWeight: FontWeight.bold),
+      h6: baseTextStyle.copyWith(fontSize: 14, fontWeight: FontWeight.bold),
       em: baseTextStyle.copyWith(fontStyle: FontStyle.italic),
       strong: baseTextStyle.copyWith(fontWeight: FontWeight.bold),
       code: baseTextStyle.copyWith(
@@ -138,8 +138,8 @@ class _OptimizedCustomMarkdownRendererState
         color: theme.colorScheme.onSurfaceVariant,
         fontStyle: FontStyle.italic,
       ),
-      blockSpacing: 8.sp,
-      listIndent: 24.sp,
+      blockSpacing: 8,
+      listIndent: 24,
       listBullet: baseTextStyle,
       tableBody: baseTextStyle,
       tableHead: baseTextStyle.copyWith(fontWeight: FontWeight.bold),
@@ -148,19 +148,19 @@ class _OptimizedCustomMarkdownRendererState
         color: theme.colorScheme.outline.withValues(alpha: 0.5),
         width: 0.5,
       ),
-      tableCellsPadding: EdgeInsets.all(8.sp),
+      tableCellsPadding: EdgeInsets.all(8),
       a: baseTextStyle.copyWith(
         color: theme.colorScheme.primary,
         decoration: TextDecoration.underline,
       ),
-      codeblockPadding: EdgeInsets.all(8.sp),
+      codeblockPadding: EdgeInsets.all(8),
       codeblockDecoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(4.sp),
+        borderRadius: BorderRadius.circular(4),
       ),
       horizontalRuleDecoration: BoxDecoration(
         border: Border(
-          top: BorderSide(width: 1.sp, color: theme.colorScheme.outline),
+          top: BorderSide(width: 1, color: theme.colorScheme.outline),
         ),
       ),
     );
@@ -351,10 +351,10 @@ class AICodeBuilder extends MarkdownElementBuilder {
     );
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 4.sp, vertical: 2.sp),
+      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(4.sp),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: Text(code, style: codeStyle),
     );
@@ -367,10 +367,10 @@ class AICodeBuilder extends MarkdownElementBuilder {
 
     return Container(
       width: double.infinity,
-      margin: EdgeInsets.symmetric(vertical: 8.sp),
+      margin: EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8.sp),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -382,7 +382,7 @@ class AICodeBuilder extends MarkdownElementBuilder {
             fontFamily: 'monospace',
             fontSize: (baseStyle.fontSize ?? 14.0) * 0.9,
           ),
-          padding: EdgeInsets.all(16.sp),
+          padding: EdgeInsets.all(16),
         ),
       ),
     );
@@ -422,16 +422,16 @@ class AITableBuilder extends MarkdownElementBuilder {
 
     // 构建表格
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 8.sp),
+      margin: EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         border: Border.all(
           color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
           width: 0.5,
         ),
-        borderRadius: BorderRadius.circular(4.sp),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(4.sp),
+        borderRadius: BorderRadius.circular(4),
         child: _buildMarkdownTable(columns, rows, preferredStyle),
       ),
     );
@@ -579,7 +579,7 @@ class AITableBuilder extends MarkdownElementBuilder {
                     columns.map((column) {
                       return Expanded(
                         child: Container(
-                          padding: EdgeInsets.all(8.sp),
+                          padding: EdgeInsets.all(8),
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             border: Border(
@@ -615,7 +615,7 @@ class AITableBuilder extends MarkdownElementBuilder {
 
                   return Expanded(
                     child: Container(
-                      padding: EdgeInsets.all(8.sp),
+                      padding: EdgeInsets.all(8),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         border: Border(

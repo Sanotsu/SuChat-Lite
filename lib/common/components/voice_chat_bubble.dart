@@ -39,7 +39,7 @@ class _VoiceWaveBubbleState extends State<VoiceWaveBubble> {
   final playerWaveStyle = PlayerWaveStyle(
     fixedWaveColor: Colors.white54,
     liveWaveColor: Colors.white,
-    spacing: 5.sp,
+    spacing: 5,
   );
 
   @override
@@ -87,9 +87,9 @@ class _VoiceWaveBubbleState extends State<VoiceWaveBubble> {
     return Align(
       alignment: widget.isSender ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 5.sp),
+        padding: EdgeInsets.symmetric(horizontal: 5),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10.sp),
+          borderRadius: BorderRadius.circular(10),
           color: widget.isSender ? Colors.blue : Colors.lightGreen,
         ),
         child: Row(
@@ -117,12 +117,12 @@ class _VoiceWaveBubbleState extends State<VoiceWaveBubble> {
                 splashColor: Colors.transparent,
                 highlightColor: Colors.transparent,
               ),
-            SizedBox(width: 5.sp),
+            SizedBox(width: 5),
             Text(
               '$voiceDuration"',
               style: const TextStyle(color: Colors.white),
             ),
-            SizedBox(width: 5.sp),
+            SizedBox(width: 5),
             AudioFileWaveforms(
               // size: Size(widget.width ?? 200, 20),
               size: Size(1.sw / 60 / 2 * voiceDuration, 20),

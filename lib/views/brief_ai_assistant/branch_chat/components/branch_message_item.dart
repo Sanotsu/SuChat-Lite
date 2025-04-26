@@ -217,8 +217,8 @@ class _BranchMessageItemState extends State<BranchMessageItem>
     Widget avatar =
         (!_isUser && widget.character != null)
             ? SizedBox(
-              width: 30.sp,
-              height: 30.sp,
+              width: 30,
+              height: 30,
               child: buildAvatarClipOval(widget.character!.avatar),
             )
             : CircleAvatar(

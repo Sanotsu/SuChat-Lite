@@ -10,11 +10,13 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../components/toast_utils.dart';
 import '../constants/constants.dart';
+import 'screen_helper.dart';
 
 /// 请求各种权限
 /// 目前存储类的权限要分安卓版本，所以单独处理
@@ -258,11 +260,8 @@ Future<File> saveTtiBase64ImageToLocal(
 }) async {
   final bytes = base64Decode(base64Image);
 
-  if (!await LLM_IG_DIR.exists()) {
-    await LLM_IG_DIR.create(recursive: true);
-  }
   final file = File(
-    '${LLM_IG_DIR.path}/${prefix ?? ""}${DateFormat(constDatetimeSuffix).format(DateTime.now())}.png',
+    '${(await getImageGenDir()).path}/${prefix ?? ""}${DateFormat(constDatetimeSuffix).format(DateTime.now())}.png',
   );
 
   await file.writeAsBytes(bytes);
@@ -300,7 +299,7 @@ Future<String?> saveImageToLocal(
   dynamic closeToast;
   try {
     // 2024-09-14 支持自定义下载的文件夹
-    var dir = dlDir ?? LLM_IG_DIR;
+    var dir = dlDir ?? (await getImageGenDir());
 
     // 2024-08-17 直接保存文件到指定位置
     if (!await dir.exists()) {
@@ -364,7 +363,7 @@ Future<String?> saveVideoToLocal(
 
   dynamic closeToast;
   try {
-    var dir = dlDir ?? LLM_VG_DIR;
+    var dir = dlDir ?? (await getVideoGenDir());
 
     // 2024-08-17 直接保存文件到指定位置
     if (!await dir.exists()) {
@@ -442,12 +441,9 @@ savevgVideoToLocal(String netVideoUrl, {String? prefix}) async {
   dynamic closeToast;
   try {
     // 2024-08-17 直接保存文件到指定位置
-    if (!await LLM_VG_DIR.exists()) {
-      await LLM_VG_DIR.create(recursive: true);
-    }
     // 2024-09-04 智谱文生视频有一个随机的名称，就只使用它就好(可以避免同一个视频保存了多个)
     final filePath =
-        '${LLM_VG_DIR.path}/${prefix ?? ""}_${netVideoUrl.split('/').last}';
+        '${(await getVideoGenDir()).path}/${prefix ?? ""}_${netVideoUrl.split('/').last}';
 
     closeToast = ToastUtils.showLoading('【视频保存中...】');
     await Dio().download(netVideoUrl, filePath);
@@ -643,21 +639,109 @@ Future<File> getImageFileFromAssets(String assetPath) async {
   }
 }
 
-// 创建应用项目，把app生成使用的文件都放在这里
-Future<Directory> getAppHomeDirectory() async {
-  // 获取应用文档目录
-  final Directory appDocDir = await getApplicationDocumentsDirectory();
+/// 获取应用主目录
+/// [subfolder] 可选的子目录名称
+///
+/// 返回的目录结构：
+/// - Android (有权限): /storage/emulated/0/SuChatNew[/subfolder]
+/// - Android (无权限): /data/data/《packageName》/app_flutter/SuChatFiles[/subfolder]
+/// - iOS: ~/Documents/SuChatFiles[/subfolder]
+/// - 其他平台: 文档目录/SuChatFiles[/subfolder]
+Future<Directory> getAppHomeDirectory({String? subfolder}) async {
+  try {
+    Directory baseDir;
 
-  // 定义应用根文件夹名称
-  const String appFolderName = 'SuChatFiles';
+    if (Platform.isAndroid) {
+      // 尝试获取外部存储权限
+      final hasPermission = await requestStoragePermission();
 
-  // 创建应用根文件夹路径
-  final Directory appDir = Directory('${appDocDir.path}/$appFolderName');
+      if (hasPermission) {
+        // 注意：直接使用硬编码路径在Android 10+可能不可靠
+        baseDir = Directory('/storage/emulated/0/SuChatNew');
+      } else {
+        ToastUtils.showError("未授权访问设备外部存储，数据将保存到应用文档目录");
 
-  // 检查文件夹是否存在，如果不存在则创建
-  if (!await appDir.exists()) {
-    await appDir.create(recursive: true);
+        baseDir = await getApplicationDocumentsDirectory();
+        baseDir = Directory(p.join(baseDir.path, 'SuChatNew'));
+      }
+    } else {
+      // 其他平台使用文档目录
+      baseDir = await getApplicationDocumentsDirectory();
+      baseDir = Directory(p.join(baseDir.path, 'SuChatFiles'));
+    }
+
+    // 处理子目录
+    if (subfolder != null && subfolder.trim().isNotEmpty) {
+      baseDir = Directory(p.join(baseDir.path, subfolder));
+    }
+
+    // 确保目录存在
+    if (!await baseDir.exists()) {
+      await baseDir.create(recursive: true);
+    }
+
+    print('getAppHomeDirectory 获取的目录: ${baseDir.path}');
+    return baseDir;
+  } catch (e) {
+    debugPrint('获取应用目录失败: $e');
+    // 回退方案：使用临时目录
+    final tempDir = await getTemporaryDirectory();
+    return Directory(p.join(tempDir.path, 'SuChatFallback'));
+  }
+}
+
+/// 获取不同平台的可访问目录
+Future<Directory> getAppSubDir(String folderName) async {
+  print("path_provider 获取到的各个目录地址(始)=======================");
+
+  if (ScreenHelper.isDesktop() || ScreenHelper.isMobile()) {
+    print('getTemporaryDirectory--> ${await getTemporaryDirectory()}');
+
+    print(
+      'getApplicationSupportDirectory--> ${await getApplicationSupportDirectory()}',
+    );
+    print(
+      'getApplicationDocumentsDirectory--> ${await getApplicationDocumentsDirectory()}',
+    );
+    print(
+      'getApplicationCacheDirectory--> ${await getApplicationCacheDirectory()}',
+    );
+    print('getDownloadsDirectory--> ${await getDownloadsDirectory()}');
   }
 
-  return appDir;
+  if (Platform.isAndroid) {
+    print(
+      'getExternalStorageDirectory--> ${await getExternalStorageDirectory()}',
+    );
+    print(
+      'getExternalCacheDirectories--> ${await getExternalCacheDirectories()}',
+    );
+    print(
+      'getExternalStorageDirectories--> ${await getExternalStorageDirectories()}',
+    );
+  }
+
+  if (Platform.isIOS || Platform.isMacOS) {
+    print('getLibraryDirectory--> ${await getLibraryDirectory()}');
+  }
+
+  print("path_provider 获取到的各个目录地址(完)=======================");
+
+  return getAppHomeDirectory(subfolder: folderName);
+}
+
+Future<Directory> getChatAudioDir() async {
+  return getAppHomeDirectory(subfolder: "chat_audio");
+}
+
+Future<Directory> getImageGenDir() async {
+  return getAppHomeDirectory(subfolder: "image_generation");
+}
+
+Future<Directory> getVideoGenDir() async {
+  return getAppHomeDirectory(subfolder: "video_generation");
+}
+
+Future<Directory> getVoiceGenDir() async {
+  return getAppHomeDirectory(subfolder: "voice_generation");
 }

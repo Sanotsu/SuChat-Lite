@@ -1,39 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:bot_toast/bot_toast.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-
-import '../utils/screen_helper.dart';
 
 class ToastUtils {
   // 基础配置
   static const Duration _defaultDuration = Duration(seconds: 2);
-
-  // 获取适合当前平台的尺寸值
-  static double _getRadius() {
-    if (ScreenHelper.isDesktop()) {
-      return 10.0; // 桌面端使用固定值
-    } else {
-      return 10.sp; // 移动端使用响应式单位
-    }
-  }
-
-  // 获取适合当前平台的内边距
-  static EdgeInsets _getPadding() {
-    if (ScreenHelper.isDesktop()) {
-      return const EdgeInsets.symmetric(horizontal: 16, vertical: 12);
-    } else {
-      return EdgeInsets.symmetric(horizontal: 16.sp, vertical: 12.sp);
-    }
-  }
-
-  // 获取适合当前平台的字体大小
-  static double _getFontSize() {
-    if (ScreenHelper.isDesktop()) {
-      return 14.0; // 桌面端使用固定值
-    } else {
-      return 14.sp; // 移动端使用响应式单位
-    }
-  }
 
   /// 1. 成功提示 (✅ + 绿色)
   static void showSuccess(String message, {Duration? duration}) {
@@ -81,7 +51,7 @@ class ToastUtils {
       text: message,
       align: const Alignment(0, 0),
       contentColor: bgColor ?? Colors.black87,
-      textStyle: TextStyle(color: Colors.white, fontSize: _getFontSize()),
+      textStyle: TextStyle(color: Colors.white, fontSize: 14),
       duration: duration ?? _defaultDuration,
     );
   }
@@ -91,17 +61,17 @@ class ToastUtils {
     return BotToast.showCustomLoading(
       toastBuilder:
           (_) => Container(
-            padding: _getPadding(),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: Colors.black.withValues(alpha: 0.7),
-              borderRadius: BorderRadius.circular(_getRadius()),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const CircularProgressIndicator(color: Colors.white),
                 if (message != null) ...[
-                  SizedBox(height: 8.sp),
+                  SizedBox(height: 8),
                   Text(message, style: const TextStyle(color: Colors.white)),
                 ],
               ],
@@ -127,26 +97,19 @@ class ToastUtils {
             margin: EdgeInsets.zero,
             color: backgroundColor,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(_getRadius()),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Padding(
-              padding: _getPadding(),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    icon,
-                    color: Colors.white,
-                    size: ScreenHelper.isDesktop() ? 18 : 18.sp,
-                  ),
-                  SizedBox(width: ScreenHelper.isDesktop() ? 8 : 8.sp),
+                  Icon(icon, color: Colors.white, size: 18),
+                  SizedBox(width: 8),
                   Flexible(
                     child: Text(
                       message,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: _getFontSize(),
-                      ),
+                      style: TextStyle(color: Colors.white, fontSize: 14),
                     ),
                   ),
                 ],

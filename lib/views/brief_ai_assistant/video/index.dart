@@ -7,11 +7,13 @@ import '../../../common/components/tool_widget.dart';
 import '../../../common/constants/constants.dart';
 import '../../../common/llm_spec/constant_llm_enum.dart';
 import '../../../common/utils/tools.dart';
+import '../../../common/utils/screen_helper.dart';
 import '../../../models/brief_ai_tools/media_generation_history/media_generation_history.dart';
 import '../../../services/video_generation_service.dart';
 import '../../../views/brief_ai_assistant/common/media_generation_base.dart';
 import 'mime_video_manager.dart';
 import 'video_player_screen.dart';
+import '../../../common/components/loading_overlay.dart';
 
 class BriefVideoScreen extends MediaGenerationBase {
   const BriefVideoScreen({super.key});
@@ -72,7 +74,7 @@ class _BriefVideoScreenState
 - 部分模型可以选择是否上传参考图片
 - 视频生成耗时较长，可稍后查询任务状态
 - 生成的视频会自动保存在设备的以下目录:
-  - /SuChat/brief_video_generation
+  - /SuChat/video_generation
 - 视频生成任务记录可以长按删除
 ''';
 
@@ -88,7 +90,10 @@ class _BriefVideoScreenState
 
   Widget buildMediaOptionsBak() {
     return SizedBox(
-      width: 0.45.sw,
+      width:
+          ScreenHelper.isDesktop()
+              ? MediaQuery.of(context).size.width * 0.2
+              : 0.45.sw,
       child: Row(
         children: [
           // 分辨率选择
@@ -108,7 +113,7 @@ class _BriefVideoScreenState
           ),
 
           // 视频长度选择(2025-02-19 暂时统一为5秒或者模型默认)
-          SizedBox(width: 8.sp),
+          SizedBox(width: 8),
           Expanded(
             child: DropdownButton<int>(
               value: _videoLength,
@@ -118,10 +123,7 @@ class _BriefVideoScreenState
                     return DropdownMenuItem(
                       value: length,
                       alignment: AlignmentDirectional.center,
-                      child: Text(
-                        '$length秒',
-                        style: TextStyle(fontSize: 12.sp),
-                      ),
+                      child: Text('$length秒', style: TextStyle(fontSize: 12)),
                     );
                   }).toList(),
               onChanged:
@@ -140,115 +142,119 @@ class _BriefVideoScreenState
   @override
   Widget buildGeneratedList() {
     if (_allTasks.isEmpty) {
-      return const Expanded(child: Center(child: Text('暂无视频生成任务')));
+      return Center(child: Text('暂无视频生成任务', style: TextStyle(fontSize: 16)));
     }
 
-    return Expanded(
-      child: Column(
-        children: [
-          Divider(height: 5.sp),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8.sp),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  "视频生成任务",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16.sp,
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => _checkUnfinishedTasks(),
-                  icon: Icon(Icons.refresh, color: Colors.blue),
-                ),
-              ],
-            ),
-          ),
-          Divider(height: 5.sp),
-          Expanded(
-            child: ListView.builder(
-              itemCount: _allTasks.length,
-              itemBuilder: (context, index) {
-                var task = _allTasks[index];
+    return Column(
+      children: [
+        Divider(height: 5),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8),
 
-                return Card(
-                  margin: EdgeInsets.all(5.sp),
-                  child: ListTile(
-                    leading: Icon(Icons.video_file, size: 48.sp),
-                    title: Text(CP_NAME_MAP[task.llmSpec.platform] ?? ''),
-                    subtitle: Text(
-                      task.prompt,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12.sp),
-                    ),
-                    // 视频生成任务，虽然设计时可能有多个，但实际只是有一个元素的数组
-                    trailing:
-                        task.isSuccess &&
-                                task.videoUrls?.first != null &&
-                                task.videoUrls?.first.trim() != ''
-                            ? IconButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (_) => NetworkVideoPlayerScreen(
-                                          videoUrl:
-                                              task.videoUrls!.first.trim(),
-                                        ),
-                                  ),
-                                );
-                              },
-                              icon: Icon(
-                                Icons.play_circle,
-                                size: 36.sp,
-                                color: Colors.blue,
-                              ),
-                            )
-                            : Icon(Icons.hourglass_empty, size: 36.sp),
-                    // 长按删除
-                    onLongPress: () async {
-                      final result = await showDialog<bool>(
-                        context: context,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                "视频生成任务",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              IconButton(
+                onPressed: () => _checkUnfinishedTasks(),
+                icon: Icon(Icons.refresh, color: Colors.blue),
+              ),
+            ],
+          ),
+        ),
+        Divider(height: 5),
+        Expanded(child: _buildTaskList()),
+      ],
+    );
+  }
+
+  // 双端都列表布局
+  Widget _buildTaskList() {
+    return ListView.builder(
+      itemCount: _allTasks.length,
+      itemBuilder: (context, index) {
+        var task = _allTasks[index];
+        return _buildTaskCard(task);
+      },
+    );
+  }
+
+  // 构建任务卡片
+  Widget _buildTaskCard(MediaGenerationHistory task) {
+    return Card(
+      margin: EdgeInsets.all(5),
+      child: ListTile(
+        leading: Icon(Icons.video_file, size: 48),
+        title: Text(
+          CP_NAME_MAP[task.llmSpec.platform] ?? '',
+          style: TextStyle(fontSize: 14),
+        ),
+        subtitle: Text(
+          task.prompt,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 12),
+        ),
+        // 视频生成任务，虽然设计时可能有多个，但实际只是有一个元素的数组
+        trailing:
+            task.isSuccess &&
+                    task.videoUrls?.first != null &&
+                    task.videoUrls?.first.trim() != ''
+                ? IconButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
                         builder:
-                            (context) => AlertDialog(
-                              title: Text('删除视频生成任务'),
-                              content: Text('删除后，视频生成任务记录将不再显示，但不会影响已保存的视频文件。'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.pop(context, false);
-                                  },
-                                  child: Text('取消'),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.pop(context, true);
-                                  },
-                                  child: Text('确定'),
-                                ),
-                              ],
+                            (_) => VideoPlayerScreen(
+                              videoUrl: task.videoUrls!.first.trim(),
                             ),
-                      );
-
-                      if (result == true) {
-                        await dbHelper.deleteMediaGenerationHistoryByRequestId(
-                          task.requestId,
-                        );
-                      }
-
-                      if (!mounted) return;
-                      await _queryAllTasks();
-                    },
+                      ),
+                    );
+                  },
+                  icon: Icon(Icons.play_circle, size: 36, color: Colors.blue),
+                )
+                : Icon(Icons.hourglass_empty, size: 36),
+        // 长按删除
+        onLongPress: () async {
+          final result = await showDialog<bool>(
+            context: context,
+            builder:
+                (context) => AlertDialog(
+                  title: Text('删除视频生成任务', style: TextStyle(fontSize: 16)),
+                  content: Text(
+                    '删除后，视频生成任务记录将不再显示，但不会影响已保存的视频文件。',
+                    style: TextStyle(fontSize: 14),
                   ),
-                );
-              },
-            ),
-          ),
-        ],
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context, false);
+                      },
+                      child: Text('取消', style: TextStyle(fontSize: 14)),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context, true);
+                      },
+                      child: Text('确定', style: TextStyle(fontSize: 14)),
+                    ),
+                  ],
+                ),
+          );
+
+          if (result == true) {
+            await dbHelper.deleteMediaGenerationHistoryByRequestId(
+              task.requestId,
+            );
+          }
+
+          if (!mounted) return;
+          await _queryAllTasks();
+        },
       ),
     );
   }
@@ -258,6 +264,12 @@ class _BriefVideoScreenState
     if (!checkGeneratePrerequisites()) return;
 
     setState(() => isGenerating = true);
+    
+    // 显示生成遮罩
+    LoadingOverlay.showVideoGeneration(context, onCancel: () {
+      // 取消生成
+      setState(() => isGenerating = false);
+    });
 
     try {
       // 2025-02-19 暂时只配置模型，如果是图生视频，多一个参考图，其他都不传
@@ -314,6 +326,9 @@ class _BriefVideoScreenState
         context,
       ).showSnackBar(SnackBar(content: Text('生成失败: $e')));
     } finally {
+      // 隐藏生成遮罩
+      LoadingOverlay.hide();
+      
       if (mounted) {
         setState(() => isGenerating = false);
       }
@@ -470,7 +485,7 @@ class _BriefVideoScreenState
     for (final url in urls) {
       final localUrl = await saveVideoToLocal(
         url,
-        dlDir: LLM_VG_DIR_V2,
+        dlDir: (await getVideoGenDir()),
         showSaveHint: false,
       );
       if (localUrl != null) {

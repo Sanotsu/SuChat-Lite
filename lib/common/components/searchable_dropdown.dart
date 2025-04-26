@@ -1,6 +1,5 @@
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 /// 可筛选的下拉框
 class SearchableDropdown<T> extends StatefulWidget {
@@ -55,10 +54,7 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
       child: DropdownButton2<T>(
         isExpanded: true,
         // 提示词
-        hint: Text(
-          widget.hintLable ?? '请选择',
-          style: TextStyle(fontSize: 14.sp),
-        ),
+        hint: Text(widget.hintLable ?? '请选择', style: TextStyle(fontSize: 14)),
         items:
             widget.items
                 .map(
@@ -70,7 +66,7 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
                           ? widget.itemToString!(e)
                           : e.toString(),
                       style: TextStyle(
-                        fontSize: widget.labelSize ?? 15.sp,
+                        fontSize: widget.labelSize ?? 15,
                         color: Colors.blue,
                       ),
                     ),
@@ -81,11 +77,11 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
         onChanged: widget.onChanged,
         // 默认的按钮的样式(下拉框旋转的样式)
         buttonStyleData: ButtonStyleData(
-          height: widget.height ?? 30.sp,
-          // width: 190.sp,
-          padding: EdgeInsets.all(0.sp),
+          height: widget.height ?? 30,
+          // width: 190,
+          padding: EdgeInsets.all(0),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(5.sp),
+            borderRadius: BorderRadius.circular(5),
             border: Border.all(color: Colors.black26),
             // color: Colors.blue[50],
             color: Colors.white,
@@ -95,50 +91,50 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
         // 按钮后面的图标的样式(默认也有个下三角)
         iconStyleData: IconStyleData(
           icon: const Icon(Icons.arrow_drop_down),
-          iconSize: 20.sp,
+          iconSize: 20,
           iconEnabledColor: Colors.blue,
           iconDisabledColor: Colors.grey,
         ),
         // 下拉选项列表区域的样式
         dropdownStyleData: DropdownStyleData(
-          maxHeight: widget.itemMaxHeight ?? 300.sp,
+          maxHeight: widget.itemMaxHeight ?? 300,
           // 不设置且isExpanded为true就是外部最宽
-          // width: 190.sp, // 可以根据下面的offset偏移和上面按钮的长度来调整
+          // width: 190, // 可以根据下面的offset偏移和上面按钮的长度来调整
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(5.sp),
+            borderRadius: BorderRadius.circular(5),
             color: Colors.white,
           ),
           // offset: const Offset(-20, 0),
           offset: const Offset(0, 0),
           scrollbarTheme: ScrollbarThemeData(
-            radius: Radius.circular(40.sp),
-            thickness: WidgetStateProperty.all(6.sp),
+            radius: Radius.circular(40),
+            thickness: WidgetStateProperty.all(6),
             thumbVisibility: WidgetStateProperty.all(true),
           ),
         ),
         // 下拉选项单个选项的样式
         menuItemStyleData: MenuItemStyleData(
-          height: 48.sp, // 方便超过1行的模型名显示，所有设置高点
-          padding: EdgeInsets.symmetric(horizontal: 5.sp),
+          height: 48, // 方便超过1行的模型名显示，所有设置高点
+          padding: EdgeInsets.symmetric(horizontal: 5),
         ),
         // 下拉搜索框的样式
         dropdownSearchData: DropdownSearchData(
           searchController: textEditingController,
-          searchInnerWidgetHeight: 50.sp,
+          searchInnerWidgetHeight: 50,
           searchInnerWidget: Container(
-            height: 50.sp,
-            padding: EdgeInsets.all(5.sp),
+            height: 50,
+            padding: EdgeInsets.all(5),
             child: TextFormField(
               expands: true,
               maxLines: null,
               controller: textEditingController,
               decoration: InputDecoration(
                 isDense: true,
-                contentPadding: EdgeInsets.all(5.sp),
+                contentPadding: EdgeInsets.all(5),
                 hintText: '输入关键字进行筛选',
-                hintStyle: TextStyle(fontSize: 12.sp),
+                hintStyle: TextStyle(fontSize: 12),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8.sp),
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
             ),

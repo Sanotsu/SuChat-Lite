@@ -33,6 +33,7 @@ class BriefAIToolDdl {
       imageUrls           TEXT,
       videoUrls           TEXT,
       audioUrls           TEXT,
+      voice               TEXT,
       otherParams         TEXT,
       gmtCreate           TEXT    NOT NULL,
       gmtModified         TEXT,

@@ -28,6 +28,7 @@ import '../../../services/chat_service.dart';
 import '../../../services/cus_get_storage.dart';
 
 import '../_chat_components/text_edit_dialog.dart';
+import '../index.dart';
 import 'components/draggable_character_avatar_preview.dart';
 import 'components/message_color_config.dart';
 import 'pages/character_list_page.dart';
@@ -589,22 +590,22 @@ class _BranchChatPageState extends State<BranchChatPage>
         // ),
 
         //  2025-04-11 暂存，后续考虑页面之间跳转优化
-        // IconButton(
-        //   icon: const Icon(Icons.grid_view),
-        //   onPressed:
-        //       isStreaming
-        //           ? null
-        //           : () {
-        //             Navigator.push(
-        //               context,
-        //               MaterialPageRoute(builder: (context) => BriefAITools()),
-        //             ).then((value) async {
-        //               // 2025-04-08 嫌麻烦，从工具栏回来都重新初始化
-        //               // 不只初始化模型是因为模型列表变化了，之前对话的模型不一定是当前加载后选中的模型
-        //               await initialize();
-        //             });
-        //           },
-        // ),
+        IconButton(
+          icon: const Icon(Icons.grid_view),
+          onPressed:
+              isStreaming
+                  ? null
+                  : () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => BriefAITools()),
+                    ).then((value) async {
+                      // 2025-04-08 嫌麻烦，从工具栏回来都重新初始化
+                      // 不只初始化模型是因为模型列表变化了，之前对话的模型不一定是当前加载后选中的模型
+                      await initialize();
+                    });
+                  },
+        ),
       ],
     );
 
@@ -941,7 +942,7 @@ class _BranchChatPageState extends State<BranchChatPage>
   Future<void> handleAddModel() async {
     final result = await Navigator.push<CusBriefLLMSpec>(
       context,
-      MaterialPageRoute(builder: (context) => const AddModelPage()),
+      MaterialPageRoute(builder: (context) => AddModelPage(isAddChat: true)),
     );
 
     // 1 从添加单个模型页面返回后，先重新初始化(加载之前的模型列表、会话内容等)

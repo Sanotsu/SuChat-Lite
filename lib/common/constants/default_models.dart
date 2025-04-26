@@ -1,5 +1,7 @@
 import '../llm_spec/cus_brief_llm_model.dart';
 import '../llm_spec/constant_llm_enum.dart';
+import 'default_image_generation_models.dart';
+import 'default_video_generation_models.dart';
 
 /// 内置模型的 API Keys (用户不可见和修改)
 /// 2025-03-03 默认是有免费的模型，才可以慷慨提供内嵌的 API Keys，不免费的用户自行导入
@@ -35,8 +37,8 @@ part '_self_build_in_ak.dart';
 /// 2025-03-03 至少保证每种类型都有一个免费的内置模型，方便测试使用(多了也不方便)
 /// 更多的收费、免费的，用户自行导入
 final defaultModels = [
-  // ...defaultImageGenerationModels,
-  // ...defaultVideoGenerationModels,
+  ...defaultImageGenerationModels,
+  ...defaultVideoGenerationModels,
   CusBriefLLMSpec(
     ApiPlatform.siliconCloud,
     'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B',

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
@@ -200,7 +199,7 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(
-                    strokeWidth: 2.sp,
+                    strokeWidth: 2,
                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
                 ),

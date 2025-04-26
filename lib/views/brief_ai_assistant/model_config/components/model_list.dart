@@ -152,10 +152,12 @@ class _ModelListState extends State<ModelList> {
       // 设置ID和时间
       models =
           models.map((e) {
-            e.name =
-                !(e.isFree ?? false)
-                    ? '【收费】${e.name ?? capitalizeWords(e.model)}'
-                    : (e.name ?? capitalizeWords(e.model));
+            // e.name =
+            //     !(e.isFree ?? false)
+            //         ? '【收费】${e.name ?? capitalizeWords(e.model)}'
+            //         : (e.name ?? capitalizeWords(e.model));
+            // 2025-04-26 感觉这个是否收费栏位没什么必要
+            e.name = e.name ?? capitalizeWords(e.model);
             e.gmtCreate = DateTime.now();
             e.isBuiltin = false; // 用户导入的模型
             return e;

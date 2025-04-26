@@ -7,6 +7,7 @@ import 'branch_chat/pages/character_list_page.dart';
 import 'image/index.dart';
 import 'model_config/index.dart';
 import 'video/index.dart';
+import 'voice/index.dart';
 
 class BriefAITools extends StatefulWidget {
   const BriefAITools({super.key});
@@ -185,6 +186,12 @@ class _BriefAIToolsState extends State<BriefAITools> {
                     targetPage: const BriefVideoScreen(),
                     title: "视频生成",
                     icon: Icons.videocam,
+                    accentColor: Colors.red.shade600,
+                  ),
+                  FeatureGridCard(
+                    targetPage: const BriefVoiceScreen(),
+                    title: "语音合成",
+                    icon: Icons.audiotrack,
                     accentColor: Colors.red.shade600,
                   ),
                 ]),

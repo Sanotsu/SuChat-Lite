@@ -233,20 +233,20 @@ class _CircleButton extends StatelessWidget {
                 isLeft
                     ? Icon(
                       Icons.close,
-                      size: 28.sp,
+                      size: 28,
                       color:
                           isFocus ? data.iconFocusTxtColor : data.iconTxtColor,
                     )
                     // : Icon(
                     //     Icons.text_decrease,
-                    //     size: 28.sp,
+                    //     size: 28,
                     //     color:
                     //         isFocus ? data.iconFocusTxtColor : data.iconTxtColor,
                     //   )
                     : Text(
                       '文',
                       style: TextStyle(
-                        fontSize: 22.sp,
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color:
                             isFocus
@@ -341,8 +341,8 @@ class _Bubble extends StatelessWidget {
     final status = polymerState.controller.status.value;
 
     // 80 是气泡整体高度
-    var height = 64.sp;
-    Rect rect = Rect.fromLTRB(24.sp, 0, 24.sp, height);
+    var height = 64.0;
+    Rect rect = Rect.fromLTRB(24, 0, 24, height);
 
     if (status == SoundsMessageStatus.recording) {
       rect = Rect.fromLTRB(
@@ -353,9 +353,9 @@ class _Bubble extends StatelessWidget {
       );
     } else if (status == SoundsMessageStatus.canceling) {
       rect = Rect.fromLTRB(
-        paddingSide - 5.sp,
+        paddingSide - 5,
         0,
-        ScreenUtil().screenWidth - data.iconFocusSize - paddingSide - 10.sp,
+        ScreenUtil().screenWidth - data.iconFocusSize - paddingSide - 10,
         height,
       );
     }
@@ -363,7 +363,7 @@ class _Bubble extends StatelessWidget {
     double bottom = 0;
     if (status == SoundsMessageStatus.textProcessing ||
         status == SoundsMessageStatus.textProcessed) {
-      bottom = 20.sp;
+      bottom = 20;
     }
 
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
@@ -374,7 +374,7 @@ class _Bubble extends StatelessWidget {
       // 键盘高度
       bottom:
           max(keyboardHeight, data.sendAreaHeight * 2 + data.iconFocusSize) +
-          20.sp,
+          20,
       // bottom: data.sendAreaHeight * 2 + data.iconFocusSize,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
@@ -392,7 +392,7 @@ class _Bubble extends StatelessWidget {
           child: CustomPaint(
             painter: _BubblePainter(data, status, paddingSide),
             child: Container(
-              padding: EdgeInsets.all(10.sp),
+              padding: EdgeInsets.all(10),
               // 根据状态判断是否显示文字还是录制中的振幅动画
               child:
                   status == SoundsMessageStatus.textProcessing ||
@@ -633,9 +633,9 @@ class _TextVoiceSend extends StatelessWidget {
       onTap: onTap,
       child: Column(
         children: [
-          VoiceIcon(color: Colors.white, size: 20.sp),
-          SizedBox(height: 5.sp),
-          Text('发送原语音', style: TextStyle(fontSize: 13.sp, color: Colors.white)),
+          VoiceIcon(color: Colors.white, size: 20),
+          SizedBox(height: 5),
+          Text('发送原语音', style: TextStyle(fontSize: 13, color: Colors.white)),
         ],
       ),
     );
@@ -655,9 +655,9 @@ class _TextCancelSend extends StatelessWidget {
       onTap: onTap,
       child: Column(
         children: [
-          Icon(Icons.close_rounded, size: 20.sp, color: Colors.white),
-          SizedBox(height: 5.sp),
-          Text('取消', style: TextStyle(fontSize: 13.sp, color: Colors.white)),
+          Icon(Icons.close_rounded, size: 20, color: Colors.white),
+          SizedBox(height: 5),
+          Text('取消', style: TextStyle(fontSize: 13, color: Colors.white)),
         ],
       ),
     );

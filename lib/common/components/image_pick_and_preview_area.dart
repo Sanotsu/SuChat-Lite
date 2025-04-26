@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'tool_widget.dart';
@@ -24,11 +23,11 @@ class ImagePickAndPreviewArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 100.sp,
-      margin: EdgeInsets.fromLTRB(5.sp, 5.sp, 5.sp, 0),
+      height: 100,
+      margin: EdgeInsets.fromLTRB(5, 5, 5, 0),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey, width: 1.sp),
-        borderRadius: BorderRadius.circular(5.sp),
+        border: Border.all(color: Colors.grey, width: 1),
+        borderRadius: BorderRadius.circular(5),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -39,21 +38,21 @@ class ImagePickAndPreviewArea extends StatelessWidget {
                 context: context,
                 builder: (BuildContext context) {
                   return AlertDialog(
-                    title: Text("选择图片来源", style: TextStyle(fontSize: 18.sp)),
+                    title: Text("选择图片来源", style: TextStyle(fontSize: 18)),
                     actions: [
                       TextButton(
                         onPressed: () {
                           Navigator.of(context).pop();
                           imageSelectedHandle(ImageSource.camera);
                         },
-                        child: Text("拍照", style: TextStyle(fontSize: 16.sp)),
+                        child: Text("拍照", style: TextStyle(fontSize: 16)),
                       ),
                       TextButton(
                         onPressed: () {
                           Navigator.of(context).pop();
                           imageSelectedHandle(ImageSource.gallery);
                         },
-                        child: Text("相册", style: TextStyle(fontSize: 16.sp)),
+                        child: Text("相册", style: TextStyle(fontSize: 16)),
                       ),
                     ],
                   );

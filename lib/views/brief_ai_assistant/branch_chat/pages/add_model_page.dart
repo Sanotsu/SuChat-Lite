@@ -11,7 +11,8 @@ import '../../../../common/utils/screen_helper.dart';
 import '../../../../services/cus_get_storage.dart';
 
 class AddModelPage extends StatefulWidget {
-  const AddModelPage({super.key});
+  final bool? isAddChat;
+  const AddModelPage({super.key, this.isAddChat = false});
 
   @override
   State<AddModelPage> createState() => _AddModelPageState();
@@ -26,6 +27,29 @@ class _AddModelPageState extends State<AddModelPage> {
   final _formKey = GlobalKey<FormState>();
 
   final _baseUrlController = TextEditingController();
+
+  List<LLModelType> typeList = [];
+
+  @override
+  void initState() {
+    super.initState();
+
+    typeList =
+        widget.isAddChat == true
+            ? [
+              LLModelType.cc,
+              LLModelType.reasoner,
+              LLModelType.vision,
+              LLModelType.vision_reasoner,
+            ]
+            : [
+              LLModelType.cc,
+              LLModelType.reasoner,
+              LLModelType.vision,
+              LLModelType.vision_reasoner,
+              LLModelType.tts,
+            ];
+  }
 
   @override
   void dispose() {
@@ -179,12 +203,7 @@ class _AddModelPageState extends State<AddModelPage> {
         contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       ),
       items:
-          [
-                LLModelType.cc,
-                LLModelType.reasoner,
-                LLModelType.vision,
-                LLModelType.vision_reasoner,
-              ]
+          typeList
               .map(
                 (type) => DropdownMenuItem(
                   value: type,

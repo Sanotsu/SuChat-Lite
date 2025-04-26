@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:photo_manager/photo_manager.dart';
 
@@ -14,28 +13,28 @@ showMediaInfoDialog(AssetEntity entity, BuildContext context) {
     builder: (BuildContext context) {
       return Dialog(
         // 修改默认弹窗的边距，可以让弹窗显示更宽一点
-        // insetPadding: EdgeInsets.only(left: 10.sp, right: 10.sp),
+        // insetPadding: EdgeInsets.only(left: 10, right: 10),
         shape: RoundedRectangleBorder(
           // 设置圆角半径
-          borderRadius: BorderRadius.circular(15.sp),
+          borderRadius: BorderRadius.circular(15),
         ),
         child: SizedBox(
           // 如果保持背景色为白色，圆角就看不到
           // color: Colors.white,
-          height: 400.sp,
+          height: 400,
           child: Column(
             children: [
               SizedBox(
-                height: 50.sp,
+                height: 50,
                 child: Center(
-                  child: Text("详情", style: TextStyle(fontSize: 20.sp)),
+                  child: Text("详情", style: TextStyle(fontSize: 20)),
                 ),
               ),
               Expanded(
                 child: ListView(
                   shrinkWrap: true,
-                  padding: EdgeInsets.symmetric(horizontal: 5.sp),
-                  itemExtent: 50.sp,
+                  padding: EdgeInsets.symmetric(horizontal: 5),
+                  itemExtent: 50,
                   children: <Widget>[
                     ListTile(
                       title: const Text("文件名称"),
@@ -116,11 +115,11 @@ showMediaInfoDialog(AssetEntity entity, BuildContext context) {
                 ),
               ),
               SizedBox(
-                height: 60.sp,
+                height: 60,
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: Padding(
-                    padding: EdgeInsets.only(right: 10.sp),
+                    padding: EdgeInsets.only(right: 10),
                     child: TextButton(
                       style: TextButton.styleFrom(
                         textStyle: Theme.of(context).textTheme.labelLarge,

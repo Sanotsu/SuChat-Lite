@@ -1,51 +1,42 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../../common/utils/screen_helper.dart';
-import '../common/media_preview_base.dart';
 
-class VideoPreviewScreen extends MediaPreviewBase {
-  const VideoPreviewScreen({super.key, required super.asset, super.onDelete});
+/// 通用音频播放器组件
+/// 基于VideoPlayer构建，可以在移动端和桌面端使用
+class AudioPlayerWidget extends StatefulWidget {
+  final String audioUrl;
+  final String? sourceType; // 'file', 'network', 'asset'
+  final Color primaryColor;
+  final Color secondaryColor;
+  final bool autoPlay;
+  final bool showWaveform; // 是否显示波形图，目前还未实现，预留
 
-  @override
-  String get title => '视频预览';
-
-  @override
-  Widget buildPreviewContent() {
-    return FutureBuilder<File?>(
-      future: asset.file,
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        return VideoPlayerWidget(videoUrl: snapshot.data!.path);
-      },
-    );
-  }
-}
-
-class VideoPlayerWidget extends StatefulWidget {
-  final String videoUrl;
-  final String? sourceType;
-
-  const VideoPlayerWidget({
+  const AudioPlayerWidget({
     super.key,
-    required this.videoUrl,
+    required this.audioUrl,
     this.sourceType = 'file',
+    this.primaryColor = Colors.blue,
+    this.secondaryColor = Colors.grey,
+    this.autoPlay = false,
+    this.showWaveform = false,
   });
 
   @override
-  State<VideoPlayerWidget> createState() => _VideoPlayerWidgetState();
+  State<AudioPlayerWidget> createState() => _AudioPlayerWidgetState();
 }
 
-class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
+class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   late VideoPlayerController _controller;
   bool _isInitialized = false;
   bool _isPlaying = false;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
+  String? _tempAssetPath;
 
   @override
   void initState() {
@@ -53,39 +44,73 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     _initializeController();
   }
 
-  void _initializeController() {
-    // 桌面平台使用 video_player_media_kit
-    if (ScreenHelper.isDesktop()) {
-      // MediaKit初始化已由插件内部处理，不需要额外初始化代码
-    }
+  @override
+  void dispose() {
+    _controller.dispose();
+    // 删除临时资源文件
+    _cleanupTempAsset();
+    super.dispose();
+  }
 
+  // 清理临时asset文件
+  Future<void> _cleanupTempAsset() async {
+    if (_tempAssetPath != null) {
+      try {
+        final file = File(_tempAssetPath!);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (e) {
+        debugPrint('清理临时文件失败: $e');
+      }
+    }
+  }
+
+  // 将asset音频文件复制到临时目录
+  Future<String> _loadAssetToTemp(String assetPath) async {
+    final byteData = await rootBundle.load(assetPath);
+    final tempDir = await getTemporaryDirectory();
+    final tempFile = File('${tempDir.path}/${assetPath.split('/').last}');
+    await tempFile.writeAsBytes(byteData.buffer.asUint8List());
+    return tempFile.path;
+  }
+
+  void _initializeController() async {
     if (widget.sourceType == "network") {
       _controller = VideoPlayerController.networkUrl(
-        Uri.parse(widget.videoUrl),
+        Uri.parse(widget.audioUrl),
       );
+    } else if (widget.sourceType == "asset") {
+      // 将资源文件复制到临时目录
+      _tempAssetPath = await _loadAssetToTemp(widget.audioUrl);
+      _controller = VideoPlayerController.file(File(_tempAssetPath!));
     } else {
-      _controller = VideoPlayerController.file(File(widget.videoUrl));
+      _controller = VideoPlayerController.file(File(widget.audioUrl));
     }
 
     _controller.initialize().then((_) {
-      // 监听视频位置变化
-      _controller.addListener(_videoListener);
+      // 监听音频位置变化
+      _controller.addListener(_audioListener);
 
       if (mounted) {
         setState(() {
           _isInitialized = true;
           _duration = _controller.value.duration;
         });
-        //// 自动播放
-        // _controller.play();
-        // _isPlaying = true;
-        _controller.pause();
-        _isPlaying = false;
+
+        // 是否自动播放
+        if (widget.autoPlay) {
+          _controller.play();
+          _isPlaying = true;
+        } else {
+          _controller.pause();
+          _isPlaying = false;
+        }
       }
     });
   }
 
-  void _videoListener() {
+  void _audioListener() {
     if (mounted && _controller.value.isInitialized) {
       setState(() {
         _position = _controller.value.position;
@@ -112,10 +137,10 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
+            CircularProgressIndicator(color: widget.primaryColor),
             SizedBox(height: 16),
             Text(
-              '加载视频中...',
+              '加载音频中...',
               style: TextStyle(fontSize: ScreenHelper.getFontSize(14)),
             ),
           ],
@@ -123,56 +148,42 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       );
     }
 
-    // 使用SingleChildScrollView确保在桌面端窗口变小时可以滚动
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // 计算视频尺寸，确保不超出屏幕宽度
-        final maxWidth = constraints.maxWidth;
-        // 移动端可以正常获取到比例，实测Ubuntu下没获取到所有返回size为0,比例是1.0
-        // final aspectRatio = _controller.value.aspectRatio;
-
-        // 测试
-        final aspectRatio =
-            ScreenHelper.isDesktop() ? 3 / 2 : _controller.value.aspectRatio;
-
-        final videoHeight = maxWidth / aspectRatio;
-
-        return SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 视频播放器
-              SizedBox(
-                width: maxWidth,
-                height: videoHeight,
-                child: VideoPlayer(_controller),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(10),
+      ),
+      padding: ScreenHelper.adaptPadding(
+        EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 波形图（预留，暂未实现）
+          if (widget.showWaveform)
+            Container(
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(5),
               ),
-
-              // 紧贴视频的控制器区域
-              Container(
-                // color: Colors.black12,
-                padding: ScreenHelper.adaptPadding(
-                  EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    /// 进度条和时间显示
-                    buildSliderRow(),
-
-                    /// 控制按钮行
-                    buildControlRow(),
-                  ],
-                ),
+              margin: EdgeInsets.only(bottom: 8),
+              child: Center(
+                child: Text('音频波形图（开发中）', style: TextStyle(color: Colors.grey)),
               ),
-            ],
-          ),
-        );
-      },
+            ),
+
+          // 进度条和时间显示
+          _buildSliderRow(),
+
+          // 控制按钮行
+          _buildControlRow(),
+        ],
+      ),
     );
   }
 
-  buildSliderRow() {
+  Widget _buildSliderRow() {
     return Row(
       children: [
         // 当前时间
@@ -180,7 +191,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
           _formatDuration(_position),
           style: TextStyle(
             fontSize: ScreenHelper.getFontSize(11),
-            color: Colors.grey[700],
+            color: widget.secondaryColor,
           ),
         ),
 
@@ -200,7 +211,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
               value: _position.inMilliseconds.toDouble(),
               min: 0.0,
               max: _duration.inMilliseconds.toDouble(),
-              activeColor: Colors.blue,
+              activeColor: widget.primaryColor,
               inactiveColor: Colors.grey[300],
               onChanged: (value) {
                 _controller.seekTo(Duration(milliseconds: value.toInt()));
@@ -214,14 +225,14 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
           _formatDuration(_duration),
           style: TextStyle(
             fontSize: ScreenHelper.getFontSize(11),
-            color: Colors.grey[700],
+            color: widget.secondaryColor,
           ),
         ),
       ],
     );
   }
 
-  buildControlRow() {
+  Widget _buildControlRow() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -235,7 +246,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
           icon: Icon(
             _controller.value.volume > 0 ? Icons.volume_up : Icons.volume_off,
             size: ScreenHelper.adaptWidth(20),
-            color: Colors.grey[700],
+            color: widget.secondaryColor,
           ),
           onPressed: () {
             _controller.setVolume(_controller.value.volume > 0 ? 0 : 1.0);
@@ -247,7 +258,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         // 分隔
         SizedBox(width: ScreenHelper.adaptWidth(16)),
 
-        // 向后10秒
+        // 向后5秒
         IconButton(
           constraints: BoxConstraints(
             minWidth: ScreenHelper.adaptWidth(36),
@@ -255,12 +266,12 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
           ),
           padding: EdgeInsets.zero,
           icon: Icon(
-            Icons.replay_10,
+            Icons.replay_5,
             size: ScreenHelper.adaptWidth(24),
-            color: Colors.blue,
+            color: widget.primaryColor,
           ),
           onPressed: () {
-            final newPosition = _position - const Duration(seconds: 10);
+            final newPosition = _position - const Duration(seconds: 5);
             _controller.seekTo(
               newPosition < Duration.zero ? Duration.zero : newPosition,
             );
@@ -277,7 +288,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
           icon: Icon(
             _isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
             size: ScreenHelper.adaptWidth(40),
-            color: Colors.blue,
+            color: widget.primaryColor,
           ),
           onPressed: () {
             setState(() {
@@ -287,7 +298,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
           },
         ),
 
-        // 向前10秒
+        // 向前5秒
         IconButton(
           constraints: BoxConstraints(
             minWidth: ScreenHelper.adaptWidth(36),
@@ -295,12 +306,12 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
           ),
           padding: EdgeInsets.zero,
           icon: Icon(
-            Icons.forward_10,
+            Icons.forward_5,
             size: ScreenHelper.adaptWidth(24),
-            color: Colors.blue,
+            color: widget.primaryColor,
           ),
           onPressed: () {
-            final newPosition = _position + const Duration(seconds: 10);
+            final newPosition = _position + const Duration(seconds: 5);
             _controller.seekTo(
               newPosition > _duration ? _duration : newPosition,
             );
@@ -320,7 +331,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
           icon: Icon(
             Icons.replay,
             size: ScreenHelper.adaptWidth(20),
-            color: Colors.grey[700],
+            color: widget.secondaryColor,
           ),
           onPressed: () {
             _controller.seekTo(Duration.zero);
@@ -333,12 +344,5 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         ),
       ],
     );
-  }
-
-  @override
-  void dispose() {
-    _controller.removeListener(_videoListener);
-    _controller.dispose();
-    super.dispose();
   }
 }

@@ -1,12 +1,14 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
+
 import '../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../common/llm_spec/constant_llm_enum.dart';
 import '../../../common/utils/db_tools/db_brief_ai_tool_helper.dart';
 import '../../../common/components/tool_widget.dart';
+import '../../../common/utils/screen_helper.dart';
 import '../../../services/model_manager_service.dart';
+import '../../../services/voice_generation_service.dart';
 
 abstract class MediaGenerationBase extends StatefulWidget {
   const MediaGenerationBase({super.key});
@@ -35,10 +37,22 @@ abstract class MediaGenerationBaseState<T extends MediaGenerationBase>
   Widget buildMediaOptions();
   Widget buildGeneratedList();
 
+  // 可用的音色列表
+  List<AliyunVoiceType> voiceOptions =
+      VoiceGenerationService.getV1AvailableVoices() +
+      VoiceGenerationService.getV2AvailableVoices() +
+      VoiceGenerationService.getSambertVoices() +
+      VoiceGenerationService.getQwenTTSVoices();
+
+  // 选择的音色
+  late AliyunVoiceType selectedVoice;
+
   @override
   void initState() {
     super.initState();
     _loadModels();
+
+    selectedVoice = voiceOptions.first;
   }
 
   // 是否显示选择参考图片按钮和参考图片预览
@@ -106,29 +120,26 @@ abstract class MediaGenerationBaseState<T extends MediaGenerationBase>
               label: const Text('选择参考图片'),
             ),
           ),
-          SizedBox(width: 8.sp),
+          SizedBox(width: 8),
         ],
         // 生成按钮
         Expanded(
           child: ElevatedButton(
             onPressed: isGenerating ? null : generate,
             style: ElevatedButton.styleFrom(
-              // shape: RoundedRectangleBorder(
-              //   // 设置圆角大小
-              //   borderRadius: BorderRadius.circular(10.sp),
-              // ),
               backgroundColor: Colors.blue,
               foregroundColor: Colors.white,
             ),
-            // child: Text(isGenerating ? '生成中...' : '生成'),
-            child:
-                isGenerating
-                    ? SizedBox(
-                      width: 24.sp,
-                      height: 24.sp,
-                      child: CircularProgressIndicator(),
-                    )
-                    : const Text('生成'),
+            child: isGenerating
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Text('生成'),
           ),
         ),
       ],
@@ -140,20 +151,20 @@ abstract class MediaGenerationBaseState<T extends MediaGenerationBase>
     if (referenceImage == null) return const SizedBox.shrink();
 
     return Padding(
-      padding: EdgeInsets.all(4.sp),
+      padding: EdgeInsets.all(4),
       child: Stack(
         children: [
           Image.file(
             referenceImage!,
-            height: 100.sp,
-            width: 100.sp,
+            height: 100,
+            width: 100,
             fit: BoxFit.cover,
           ),
           Positioned(
             right: 0,
             top: 0,
             child: InkWell(
-              child: Icon(Icons.close, size: 20.sp),
+              child: Icon(Icons.close, size: 20),
               onTap: () => setState(() => referenceImage = null),
             ),
           ),
@@ -166,43 +177,116 @@ abstract class MediaGenerationBaseState<T extends MediaGenerationBase>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(title), actions: buildAppBarActions()),
-      body: Padding(
-        padding: EdgeInsets.all(8.sp),
-        child: Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.only(bottom: 8.sp),
-              child: Row(
-                children: [
-                  // 模型选择
-                  buildModelSelector(),
+      body:
+          ScreenHelper.isDesktop()
+              ? _buildDesktopLayout(context)
+              : _buildMobileLayout(context),
+    );
+  }
 
-                  // 媒体选项(由子类实现)
-                  buildMediaOptions(),
-                ],
-              ),
-            ),
-
-            Row(
+  // 桌面布局 - 左右结构
+  Widget _buildDesktopLayout(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 左侧输入区域
+          Container(
+            width: MediaQuery.of(context).size.width * 0.4,
+            padding: EdgeInsets.only(right: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // 参考图片预览(如果子类没有图片预览，可以重写一个空box)
+                // 配置区域
+                Row(
+                  children: [
+                    // 模型选择
+                    buildModelSelector(),
+                    // 媒体选项
+                    buildMediaOptions(),
+                  ],
+                ),
+
+                SizedBox(height: 16),
+
+                // 参考图片预览
                 if (_isShowImageRef()) buildReferenceImagePreview(),
 
-                // 提示词输入
-                buildPromptInput(),
+                SizedBox(height: 8),
+
+                // 提示词输入 - 这里不使用Expanded包装，改为Flexible
+                Flexible(
+                  child: TextField(
+                    controller: promptController,
+                    maxLines: ScreenHelper.isDesktop() ? 10 : 5,
+                    style: TextStyle(fontSize: 14),
+                    decoration: InputDecoration(
+                      labelText: '提示词',
+                      hintText: '请输入描述',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.all(12),
+                    ),
+                    enabled: !isGenerating,
+                  ),
+                ),
+
+                SizedBox(height: 16),
+
+                // 生成按钮区域
+                buildReferenceImageAndButton(),
               ],
             ),
+          ),
 
-            // 参考图片和生成按钮
-            Padding(
-              padding: EdgeInsets.only(top: 8.sp),
-              child: buildReferenceImageAndButton(),
+          // 中间分隔线
+          VerticalDivider(width: 32, thickness: 1),
+
+          // 右侧结果区域
+          Expanded(child: buildGeneratedList()),
+        ],
+      ),
+    );
+  }
+
+  // 移动布局 - 上下结构
+  Widget _buildMobileLayout(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.all(8),
+      child: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                // 模型选择
+                buildModelSelector(),
+
+                // 媒体选项(由子类实现)
+                buildMediaOptions(),
+              ],
             ),
+          ),
 
-            // 生成的媒体列表(由子类实现)
-            buildGeneratedList(),
-          ],
-        ),
+          Row(
+            children: [
+              // 参考图片预览
+              if (_isShowImageRef()) buildReferenceImagePreview(),
+
+              // 提示词输入
+              Expanded(child: buildPromptInput()),
+            ],
+          ),
+
+          // 参考图片和生成按钮
+          Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: buildReferenceImageAndButton(),
+          ),
+
+          // 生成的媒体列表(由子类实现)
+          Expanded(child: buildGeneratedList()),
+        ],
       ),
     );
   }
@@ -223,12 +307,9 @@ abstract class MediaGenerationBaseState<T extends MediaGenerationBase>
       ),
       IconButton(
         onPressed: () {
-          commonMDHintModalBottomSheet(
-            context,
-            "$title使用说明",
-            note,
-            msgFontSize: 15.sp,
-          );
+          ScreenHelper.isDesktop()
+              ? commonMarkdwonHintDialog(context, "$title使用说明", note)
+              : commonMDHintModalBottomSheet(context, "$title使用说明", note);
         },
         icon: const Icon(Icons.info_outline),
       ),
@@ -244,15 +325,36 @@ abstract class MediaGenerationBaseState<T extends MediaGenerationBase>
       child: buildDropdownButton2<CusBriefLLMSpec?>(
         value: selectedModel,
         items: modelList,
-        height: 48.sp,
+        height: 48,
         hintLabel: "选择模型",
         alignment: Alignment.centerLeft,
-        // labelSize: 12.sp,
         onChanged:
             isGenerating
                 ? null
                 : (value) {
-                  setState(() => selectedModel = value!);
+                  setState(() {
+                    selectedModel = value!;
+
+                    // 2025-04-25 虽然不严谨，但暂时图省事这样写
+                    if (selectedModel?.modelType == LLModelType.tts) {
+                      if (selectedModel?.model == "cosyvoice-v1") {
+                        voiceOptions =
+                            VoiceGenerationService.getV1AvailableVoices();
+                      } else if (selectedModel?.model == "cosyvoice-v2") {
+                        voiceOptions =
+                            VoiceGenerationService.getV2AvailableVoices();
+                      } else if (selectedModel?.model == "sambert") {
+                        voiceOptions =
+                            VoiceGenerationService.getSambertVoices();
+                      } else if (selectedModel?.model != null &&
+                          selectedModel!.model.contains('qwen-tts')) {
+                        voiceOptions =
+                            VoiceGenerationService.getQwenTTSVoices();
+                      }
+
+                      selectedVoice = voiceOptions.first;
+                    }
+                  });
                 },
         itemToString:
             (e) =>
@@ -263,17 +365,17 @@ abstract class MediaGenerationBaseState<T extends MediaGenerationBase>
 
   // 提示词输入框
   Widget buildPromptInput() {
-    return Expanded(
-      child: TextField(
-        controller: promptController,
-        maxLines: 5,
-        decoration: const InputDecoration(
-          labelText: '提示词',
-          hintText: '请输入描述',
-          border: OutlineInputBorder(),
-        ),
-        enabled: !isGenerating,
+    return TextField(
+      controller: promptController,
+      maxLines: 5,
+      style: TextStyle(fontSize: 14),
+      decoration: InputDecoration(
+        labelText: '提示词',
+        hintText: '请输入描述',
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.all(12),
       ),
+      enabled: !isGenerating,
     );
   }
 

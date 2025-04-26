@@ -24,7 +24,7 @@ class _RecordingPainter extends CustomPainter {
       paint.color = const Color(0xffb0b0b0);
       canvas.drawPath(path, paint);
 
-      final scale = (size.height * 3 - 8.sp) / (size.height * 3);
+      final scale = (size.height * 3 - 8) / (size.height * 3);
 
       final bgShaderRect = Rect.fromCenter(
         center: bgOvalRect.center,
@@ -80,11 +80,11 @@ class _BubblePainter extends CustomPainter {
     var dx = rect.center.dx;
     if (status == SoundsMessageStatus.textProcessing ||
         status == SoundsMessageStatus.textProcessed) {
-      dx = size.width + 24.sp - paddingSide - data.iconFocusSize / 2;
+      dx = size.width + 24 - paddingSide - data.iconFocusSize / 2;
     }
-    path.moveTo(dx - 7.sp, size.height);
-    path.lineTo(dx, size.height + 6.sp);
-    path.lineTo(dx + 7.sp, size.height);
+    path.moveTo(dx - 7, size.height);
+    path.lineTo(dx, size.height + 6);
+    path.lineTo(dx + 7, size.height);
 
     // 矩形
     path.addRRect(rrect);

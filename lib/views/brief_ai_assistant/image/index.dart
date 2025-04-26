@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../common/components/tool_widget.dart';
 import '../../../common/constants/constants.dart';
 import '../../../common/llm_spec/constant_llm_enum.dart';
 import '../../../common/utils/tools.dart';
+import '../../../common/utils/screen_helper.dart';
 import '../../../models/brief_ai_tools/media_generation_history/media_generation_history.dart';
 import '../../../services/image_generation_service.dart';
 import '../../../views/brief_ai_assistant/common/media_generation_base.dart';
 import 'mime_image_manager.dart';
+import '../../../common/components/loading_overlay.dart';
 
 class BriefImageScreen extends MediaGenerationBase {
   const BriefImageScreen({super.key});
@@ -70,15 +71,15 @@ class _BriefImageScreenState
 - 文生图耗时较长，**请勿在生成过程中退出**
 - 默认一次生成1张图片
 - 生成的图片会保存在设备的以下目录:
-  - /SuChat/brief_image_generation
+  - /SuChat/image_generation
 ''';
 
   @override
   Widget buildMediaOptions() {
     return SizedBox(
-      width: 90.sp,
+      width: 90,
       child: buildDropdownButton2<CusLabel?>(
-        height: 48.sp,
+        height: 48,
         value: _selectedImageSize,
         items: _imageSizeOptions,
         hintLabel: "选择类型",
@@ -96,21 +97,19 @@ class _BriefImageScreenState
   @override
   Widget buildGeneratedList() {
     if (_generatedImages.isEmpty) {
-      return const Expanded(child: Center(child: Text('暂无生成的图片')));
+      return Center(child: Text('暂无生成的图片', style: TextStyle(fontSize: 16)));
     }
 
     /// 图片展示
-    return Expanded(
-      child: Column(
-        children: [
-          /// 文生图的结果
-          if (_generatedImages.isNotEmpty)
-            ...buildImageResultGrid(
-              _generatedImages,
-              "${selectedModel?.platform.name}_${selectedModel?.name}",
-            ),
-        ],
-      ),
+    return Column(
+      children: [
+        /// 文生图的结果
+        if (_generatedImages.isNotEmpty)
+          ...buildImageResultGrid(
+            _generatedImages,
+            "${selectedModel?.platform.name}_${selectedModel?.name}",
+          ),
+      ],
     );
   }
 
@@ -119,6 +118,12 @@ class _BriefImageScreenState
     if (!checkGeneratePrerequisites()) return;
 
     setState(() => isGenerating = true);
+    
+    // 显示生成遮罩
+    LoadingOverlay.showImageGeneration(context, onCancel: () {
+      // 取消生成
+      setState(() => isGenerating = false);
+    });
 
     try {
       // 创建历史记录
@@ -185,7 +190,7 @@ class _BriefImageScreenState
       for (final url in imageUrls) {
         var localPath = await saveImageToLocal(
           url,
-          dlDir: LLM_IG_DIR_V2,
+          dlDir: await getImageGenDir(),
           showSaveHint: false,
         );
 
@@ -214,6 +219,9 @@ class _BriefImageScreenState
       commonExceptionDialog(context, "异常提示", "AI图片生成失败: $e");
       rethrow;
     } finally {
+      // 隐藏生成遮罩
+      LoadingOverlay.hide();
+      
       if (mounted) {
         setState(() => isGenerating = false);
       }
@@ -299,10 +307,10 @@ class _BriefImageScreenState
 
       // 文生图结果提示行
       Padding(
-        padding: EdgeInsets.all(5.sp),
+        padding: EdgeInsets.all(5),
         child: Text(
           "生成的图片(点击查看、长按保存)",
-          style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
 
@@ -312,11 +320,11 @@ class _BriefImageScreenState
           child: Column(
             children: [
               Padding(
-                padding: EdgeInsets.all(5.sp),
+                padding: EdgeInsets.all(5),
                 child: buildNetworkImageViewGrid(
                   context,
                   urls,
-                  crossAxisCount: 2,
+                  crossAxisCount: ScreenHelper.isDesktop() ? 3 : 2,
                   prefix: prefix,
                 ),
               ),
