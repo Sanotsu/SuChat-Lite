@@ -144,7 +144,7 @@ app.*.symbols
 # 暂时不关注ios、web、windows、mocos、linux等的构建
 ios
 web
-windows
+# windows
 macos
 # linux
 
@@ -161,3 +161,9 @@ macos
 
 # 2025-03-21 升级后运行时生成的文件夹，应该没用
 android/app/.cxx/
+
+# 打包的安装包和临时配置文件
+installer/
+portable/
+temp/
+SuChat_for_gui.evb
