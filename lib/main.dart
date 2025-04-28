@@ -1,122 +1,226 @@
+import 'dart:async';
+import 'dart:io';
+import 'package:bot_toast/bot_toast.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:get_storage/get_storage.dart';
+import 'package:proste_logger/proste_logger.dart';
+import 'package:video_player_media_kit/video_player_media_kit.dart';
+
+import 'models/brief_ai_tools/branch_chat/branch_store.dart';
+import 'common/components/toast_utils.dart';
+import 'common/components/min_size_layout.dart';
+import 'common/utils/screen_helper.dart';
+import 'services/cus_get_storage.dart';
+import 'services/model_manager_service.dart';
+import 'services/network_service.dart';
+import 'views/home.dart';
+
+GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
-  runApp(const MyApp());
+  AppCatchError().run();
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+final pl = ProsteLogger();
 
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+//全局异常的捕捉
+class AppCatchError {
+  run() {
+    ///Flutter 框架异常
+    FlutterError.onError = (FlutterErrorDetails details) async {
+      ///线上环境 todo
+      if (kReleaseMode) {
+        Zone.current.handleUncaughtError(details.exception, details.stack!);
+      } else {
+        //开发期间 print
+        FlutterError.dumpErrorToConsole(details);
+      }
+    };
+
+    runZonedGuarded(() {
+      //受保护的代码块
+      WidgetsFlutterBinding.ensureInitialized();
+
+      // 仅在移动端限制垂直方向
+      if (Platform.isAndroid || Platform.isIOS) {
+        SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+      }
+
+      // 继续初始化...
+      initApp();
+    }, (error, stack) => catchError(error, stack));
+  }
+
+  void initApp() async {
+    // 默认使用path_provider 的 getTemporaryDirectory()作为存储路径,且无法修改
+    await GetStorage.init('SuChatGetStorage');
+
+    // 只在首次启动时初始化内置模型
+    if (MyGetStorage().isFirstLaunch()) {
+      await ModelManagerService.initBuiltinModelsTest();
+      await MyGetStorage().markLaunched();
+    }
+
+    // 初始化 ObjectBox
+    final store = await BranchStore.create();
+
+    // 在应用退出时关闭 Store
+    WidgetsBinding.instance.addObserver(
+      LifecycleEventHandler(
+        detached: () async {
+          store.store.close();
+        },
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
+
+    NetworkStatusService().initialize();
+
+    // 单行初始化后，您可以正常在多个平台使用 video_player
+    VideoPlayerMediaKit.ensureInitialized(
+      // default: false    -    dependency: media_kit_libs_android_video
+      android: true,
+      // default: false    -    dependency: media_kit_libs_ios_video
+      iOS: true,
+      // default: false    -    dependency: media_kit_libs_macos_video
+      macOS: true,
+      // default: false    -    dependency: media_kit_libs_windows_video
+      windows: true,
+      // default: false    -    dependency: media_kit_libs_linux
+      // 需要在开发机安装依赖，比如Ubuntu下:sudo apt install libmpv-dev
+      // 没安装在报错信息下会有提示
+      linux: true,
+    );
+    runApp(const SuChatApp());
+  }
+
+  ///对搜集的 异常进行处理  上报等等
+  catchError(Object error, StackTrace stack) async {
+    //是否是 Release版本
+    debugPrint("AppCatchError>>>>>>>>>> [ kReleaseMode ] $kReleaseMode");
+    debugPrint('AppCatchError>>>>>>>>>> [ Message ] $error');
+    pl.d(error);
+    debugPrint('AppCatchError>>>>>>>>>> [ Stack ] \n$stack');
+
+    // 弹窗提醒用户
+    ToastUtils.showError(
+      error.toString(),
+      duration: const Duration(seconds: 5),
+    );
+
+    // 判断返回数据中是否包含"token失效"的信息
+    // 一些错误处理，比如token失效这里退出到登录页面之类的
+    if (error.toString().contains("token无效") ||
+        error.toString().contains("token已过期") ||
+        error.toString().contains("登录出错") ||
+        error.toString().toLowerCase().contains("invalid")) {
+      debugPrint(error.toString());
+    }
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+/// 生命周期事件处理器
+class LifecycleEventHandler extends WidgetsBindingObserver {
+  final AsyncCallback? detached;
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+  LifecycleEventHandler({this.detached});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
+    switch (state) {
+      case AppLifecycleState.detached:
+        if (detached != null) {
+          await detached!();
+        }
+        break;
+      default:
+        break;
+    }
+  }
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
+class SuChatApp extends StatelessWidget {
+  const SuChatApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
+    // 获取当前平台的设计尺寸
+    final designSize = ScreenHelper.getDesignSize();
+
+    return ScreenUtilInit(
+      designSize: designSize,
+      // minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (_, widget) {
+        return MaterialApp(
+          navigatorKey: navigatorKey,
+          title: 'SuChat',
+          debugShowCheckedModeBanner: false,
+          // 应用导航的观察者，导航有变化的时候可以做一些事？
+          // navigatorObservers: [routeObserver],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+            // form builder表单验证的多国语言
+            FormBuilderLocalizations.delegate,
           ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+          supportedLocales: const [
+            Locale('zh', 'CN'),
+            Locale('en', 'US'),
+            ...FormBuilderLocalizations.supportedLocales,
+          ],
+          // 初始化的locale
+          locale: const Locale('zh', 'CN'),
+
+          /// 默认的主题
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+            useMaterial3: true,
+          ),
+
+          home: const HomePage(),
+
+          builder: (context, child) {
+            // 根据平台调整字体缩放
+            child = MediaQuery(
+              ///设置文字大小不随系统设置改变
+              data: MediaQuery.of(context).copyWith(
+                textScaler: TextScaler.linear(
+                  ScreenHelper.isDesktop() ? 1.0 : 1.0,
+                ),
+              ),
+              child: child!,
+            );
+
+            // 1 先初始化 bot_toast
+            child = BotToastInit()(context, child);
+
+            // 应用最小尺寸限制
+            child = MinSizeLayout(minWidth: 640, minHeight: 360, child: child);
+
+            // 针对桌面平台的背景处理
+            if (ScreenHelper.isDesktop()) {
+              child = myBuilder(context, child);
+            }
+
+            return child;
+          },
+
+          // 2. registered route observer
+          navigatorObservers: [BotToastNavigatorObserver()],
+        );
+      },
     );
   }
+}
+
+// 2025-04-02 实测发现，如果不添加这个定义字widget默认背景色为白色
+// 在使用了 bot_toast 后，分支对话和角色对话主页，背景会像是有一层遮罩一样黑的，实际就是没有背景
+Widget myBuilder(BuildContext context, Widget? child) {
+  return Container(color: Colors.white, child: child);
 }

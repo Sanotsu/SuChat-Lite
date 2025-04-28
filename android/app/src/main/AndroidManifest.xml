@@ -13,9 +13,10 @@
     <!-- =语音录制 -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <application
-        android:label="SuChat Lite"
+        android:label="SuChat"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
