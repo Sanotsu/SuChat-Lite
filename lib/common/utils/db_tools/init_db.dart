@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../tools.dart';
@@ -158,7 +159,8 @@ class DBInit {
   // 导出所有数据
   Future<void> exportDatabase() async {
     // 获取应用文档目录路径
-    Directory appDocDir = await getAppHomeDirectory();
+    // 这个获取缓存目录即可
+    Directory appDocDir = await getApplicationCacheDirectory();
     // 创建或检索 db_export 文件夹
     var tempDir =
         await Directory(p.join(appDocDir.path, DB_EXPORT_DIR)).create();

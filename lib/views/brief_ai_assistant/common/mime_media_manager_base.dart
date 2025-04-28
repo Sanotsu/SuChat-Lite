@@ -200,7 +200,7 @@ abstract class MimeMediaManagerBaseState<T extends MimeMediaManagerBase>
       padding: EdgeInsets.all(8),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: ScreenHelper.isDesktop() ? 3 : 2,
-        childAspectRatio: 16 / 9,
+        childAspectRatio: mediaType == CusMimeCls.AUDIO ? 16 / 9 : 1,
         mainAxisSpacing: 8,
         crossAxisSpacing: 8,
       ),

@@ -50,9 +50,9 @@ abstract class MediaGenerationBaseState<T extends MediaGenerationBase>
   @override
   void initState() {
     super.initState();
-    _loadModels();
-
     selectedVoice = voiceOptions.first;
+
+    _loadModels();
   }
 
   // 是否显示选择参考图片按钮和参考图片预览
@@ -75,6 +75,16 @@ abstract class MediaGenerationBaseState<T extends MediaGenerationBase>
     setState(() {
       modelList = models;
       selectedModel = models.isNotEmpty ? models.first : null;
+
+      // 测试自用，如果有的话，默认把qwen-tts放在第一个
+      if (selectedModel?.modelType == LLModelType.tts) {
+        var temp = models.where((e) => e.model.contains("qwen-tts")).toList();
+        if (temp.isNotEmpty) {
+          selectedModel = temp.first;
+          voiceOptions = VoiceGenerationService.getQwenTTSVoices();
+          selectedVoice = voiceOptions.first;
+        }
+      }
     });
   }
 
@@ -130,16 +140,17 @@ abstract class MediaGenerationBaseState<T extends MediaGenerationBase>
               backgroundColor: Colors.blue,
               foregroundColor: Colors.white,
             ),
-            child: isGenerating
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                : const Text('生成'),
+            child:
+                isGenerating
+                    ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                    : const Text('生成'),
           ),
         ),
       ],

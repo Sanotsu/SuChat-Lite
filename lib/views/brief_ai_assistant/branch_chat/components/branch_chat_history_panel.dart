@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+
 import '../../../../common/llm_spec/constant_llm_enum.dart';
 import '../../../../common/utils/screen_helper.dart';
 import '../../../../models/brief_ai_tools/branch_chat/branch_chat_session.dart';
 import '../../../../services/cus_get_storage.dart';
 import '../../../user_and_settings/index.dart';
+import '../../index.dart';
 import '../../model_config/index.dart';
 
 /// 历史记录侧边栏内容面板
@@ -180,9 +182,17 @@ class _BranchChatHistoryPanelState extends State<BranchChatHistoryPanel> {
         Row(
           children: [
             Expanded(
-              child: ListTile(
-                leading: const Icon(Icons.history),
-                title: const Text('对话记录与设置'),
+              child: GestureDetector(
+                onDoubleTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => BriefAITools()),
+                  );
+                },
+                child: ListTile(
+                  leading: const Icon(Icons.history),
+                  title: const Text('对话记录与设置'),
+                ),
               ),
             ),
             // IconButton(

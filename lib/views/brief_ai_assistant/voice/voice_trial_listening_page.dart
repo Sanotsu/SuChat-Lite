@@ -79,7 +79,7 @@ class _VoiceTrialListeningPageState extends State<VoiceTrialListeningPage>
             children: [
               ListTile(
                 title: Text(
-                  "${sample.name} ${sample.id}",
+                  sample.sampleName,
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 subtitle: Text(sample.scene),

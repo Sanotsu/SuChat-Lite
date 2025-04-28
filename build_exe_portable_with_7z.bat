@@ -50,7 +50,7 @@ set "SEVENZIP_DIR=%SEVENZIP_DIR:~0,-1%"
 echo 7-Zip directory: %SEVENZIP_DIR%
 
 REM Create output directory
-set "OUTPUT_DIR=%PROJECT_ROOT%\portable"
+set "OUTPUT_DIR=%PROJECT_ROOT%\dist\7z"
 if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
 
 REM Create temporary directory

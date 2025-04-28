@@ -71,7 +71,7 @@ class _BriefImageScreenState
 - 文生图耗时较长，**请勿在生成过程中退出**
 - 默认一次生成1张图片
 - 生成的图片会保存在设备的以下目录:
-  - /SuChat/image_generation
+  - /SuChatFiles/image_generation
 ''';
 
   @override

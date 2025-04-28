@@ -55,7 +55,7 @@ set /p PUBLISHER=Enter publisher name [default:swm.com]:
 if "%PUBLISHER%"=="" set "PUBLISHER=swm.com"
 
 REM Create output directory
-set "OUTPUT_DIR=%PROJECT_ROOT%\installer"
+set "OUTPUT_DIR=%PROJECT_ROOT%\dist\inno"
 if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
 
 REM Create a temp directory to copy required runtime files if they exist

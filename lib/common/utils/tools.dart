@@ -377,7 +377,7 @@ Future<String?> saveVideoToLocal(
     }
     await Dio().download(netVideoUrl, filePath);
 
-    // 保存的地址在 /storage/emulated/0/SuChat/…… 前面一节就不显示了
+    // 保存的地址在 /storage/emulated/0/SuChatFiles/…… 前面一节就不显示了
     if (showSaveHint && closeToast != null) {
       closeToast();
       ToastUtils.showToast("视频已保存在手机下/${filePath.split("/0/").last}");
@@ -449,7 +449,7 @@ savevgVideoToLocal(String netVideoUrl, {String? prefix}) async {
     await Dio().download(netVideoUrl, filePath);
 
     closeToast();
-    // 保存的地址在 /storage/emulated/0/SuChat/…… 前面一节就不显示了
+    // 保存的地址在 /storage/emulated/0/SuChatFiles/…… 前面一节就不显示了
     ToastUtils.showToast("视频已保存在手机下/${filePath.split("/0/").last}");
   } finally {
     if (closeToast != null) {
@@ -643,7 +643,7 @@ Future<File> getImageFileFromAssets(String assetPath) async {
 /// [subfolder] 可选的子目录名称
 ///
 /// 返回的目录结构：
-/// - Android (有权限): /storage/emulated/0/SuChatNew[/subfolder]
+/// - Android (有权限): /storage/emulated/0/SuChatFiles[/subfolder]
 /// - Android (无权限): /data/data/《packageName》/app_flutter/SuChatFiles[/subfolder]
 /// - iOS: ~/Documents/SuChatFiles[/subfolder]
 /// - 其他平台: 文档目录/SuChatFiles[/subfolder]
@@ -657,12 +657,12 @@ Future<Directory> getAppHomeDirectory({String? subfolder}) async {
 
       if (hasPermission) {
         // 注意：直接使用硬编码路径在Android 10+可能不可靠
-        baseDir = Directory('/storage/emulated/0/SuChatNew');
+        baseDir = Directory('/storage/emulated/0/SuChatFiles');
       } else {
         ToastUtils.showError("未授权访问设备外部存储，数据将保存到应用文档目录");
 
         baseDir = await getApplicationDocumentsDirectory();
-        baseDir = Directory(p.join(baseDir.path, 'SuChatNew'));
+        baseDir = Directory(p.join(baseDir.path, 'SuChatFiles'));
       }
     } else {
       // 其他平台使用文档目录

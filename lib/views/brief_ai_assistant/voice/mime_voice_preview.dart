@@ -32,19 +32,21 @@ class MimeVoicePreview extends MimeMediaPreviewBase {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildInfoRow(
-                    Icons.insert_drive_file,
-                    '文件名',
+                    Icons.insert_drive_file_outlined,
+                    '文件名称',
                     file.path.split('/').last,
                   ),
                   Divider(),
+                  _buildInfoRow(Icons.folder_outlined, '文件位置', file.path),
+                  Divider(),
                   _buildInfoRow(
-                    Icons.sd_storage,
+                    Icons.sd_storage_outlined,
                     '文件大小',
                     _formatFileSize(file.lengthSync()),
                   ),
                   Divider(),
                   _buildInfoRow(
-                    Icons.access_time,
+                    Icons.access_time_outlined,
                     '创建时间',
                     _formatDateTime(file.lastModifiedSync()),
                   ),

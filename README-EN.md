@@ -7,7 +7,13 @@
 
 SuChat is a concise AI chat application developed using Flutter, powered by calling cloud platform-based large model APIs online. It supports simple custom characters for role-playing.
 
-![SuChat Lite Preview](./_doc/snapshots/screenshot-home.png)
+desktop:
+
+![SuChat desktop Preview](./_doc/snapshots/screenshot-home-desktop.png)
+
+mobile:
+
+![SuChat mobile Preview](./_doc/snapshots/screenshot-mobile.jpg)
 
 ## Features
 
@@ -16,6 +22,7 @@ SuChat is a concise AI chat application developed using Flutter, powered by call
   - Supports manual configuration for non-preset platforms: Just input the endpoint URL, model name, and API key
 - **Local Data Storage**
   - All conversations are stored locally on the device (with separate records per platform)
+  - Desktop: `/Documents/SuChatFiles`, Mobile: `/<DeviceRoot>/SuChatFiles`
 - **Markdown, LaTeX & Code Highlighting**
   - Basic support for Markdown formatting, LaTeX equations, and Code highlighting
 - **Enhanced Message Handling**
@@ -83,6 +90,8 @@ Pre-built apps include basic models using my personal free-tier API keys. To upg
 <summary>JSON Import Specifications</summary>
 
 **Both API keys and model specs must be imported together for full functionality.**
+
+---
 
 #### API Key JSON Structure
 

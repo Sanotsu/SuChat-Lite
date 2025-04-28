@@ -41,3 +41,7 @@ EOF
 # 生成 AppImage
 # appimagetool AppDir
 appimagetool AppDir -u 'Icon=brand.png'
+
+# 创建dist目录（如果不存在）并移动AppImage文件
+mkdir -p ../../../../dist/appimage
+mv SuChat*.AppImage ../../../../dist/appimage/

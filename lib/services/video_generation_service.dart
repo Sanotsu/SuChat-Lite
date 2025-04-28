@@ -133,6 +133,7 @@ class VideoGenerationService {
       path: baseUrl,
       headers: headers,
       data: requestBody,
+      showLoading: false,
     );
 
     return VideoGenerationSubmitResponse.fromResponseBody(

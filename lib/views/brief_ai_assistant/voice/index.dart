@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
 
+import '../../../common/components/loading_overlay.dart';
 import '../../../common/components/toast_utils.dart';
 import '../../../common/components/tool_widget.dart';
 import '../../../common/constants/constants.dart';
@@ -14,11 +15,12 @@ import '../../../common/utils/tools.dart';
 import '../../../models/brief_ai_tools/media_generation_history/media_generation_history.dart';
 import '../../../services/qwen_tts_service.dart';
 import '../../../services/voice_generation_service.dart';
+
 import '../common/media_generation_base.dart';
+
 import 'mime_voice_manager.dart';
 import 'audio_player_widget.dart';
 import 'voice_trial_listening_page.dart';
-import '../../../common/components/loading_overlay.dart';
 
 class BriefVoiceScreen extends MediaGenerationBase {
   const BriefVoiceScreen({super.key});
@@ -40,11 +42,12 @@ class _BriefVoiceScreenState
 - 目前只支持**阿里云**平台的语音合成服务
 - 先选择平台模型和音色，再输入要合成的文本
 - 支持:
-  - Qwen-TTS
-  - CosyVoice的V1和V2
-  - Sambert 
+  - Qwen-TTS(最大输入 512 token)
+  - CosyVoice(最大输入 2000 字符)
+  - Sambert(最大输入 1 万字符)
+- 文字越多耗时越久，**请勿在生成过程中退出**
 - 生成的语音会保存在设备的以下目录:
-  - /SuChat/voice_generation
+  - /SuChatFiles/voice_generation
 ''';
 
   @override
@@ -96,12 +99,15 @@ class _BriefVoiceScreenState
     if (!checkGeneratePrerequisites()) return;
 
     setState(() => isGenerating = true);
-    
+
     // 显示生成遮罩
-    LoadingOverlay.showVoiceGeneration(context, onCancel: () {
-      // 取消生成
-      setState(() => isGenerating = false);
-    });
+    LoadingOverlay.showVoiceGeneration(
+      context,
+      onCancel: () {
+        // 取消生成
+        setState(() => isGenerating = false);
+      },
+    );
 
     try {
       final voiceDir = await getVoiceGenDir();
@@ -183,7 +189,7 @@ class _BriefVoiceScreenState
     } finally {
       // 隐藏生成遮罩
       LoadingOverlay.hide();
-      
+
       if (mounted) {
         setState(() => isGenerating = false);
       }

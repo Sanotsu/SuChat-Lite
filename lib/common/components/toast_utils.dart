@@ -6,52 +6,73 @@ class ToastUtils {
   static const Duration _defaultDuration = Duration(seconds: 2);
 
   /// 1. 成功提示 (✅ + 绿色)
-  static void showSuccess(String message, {Duration? duration}) {
+  static void showSuccess(
+    String message, {
+    Duration? duration,
+    Alignment? align,
+  }) {
     _showIconToast(
       message,
       icon: Icons.check_circle,
       backgroundColor: Colors.green,
       duration: duration,
+      align: align,
     );
   }
 
   /// 2. 错误提示 (❌ + 红色)
-  static void showError(String message, {Duration? duration}) {
+  static void showError(
+    String message, {
+    Duration? duration,
+    Alignment? align,
+  }) {
     _showIconToast(
       message,
       icon: Icons.error,
       backgroundColor: Colors.red,
       duration: duration,
+      align: align,
     );
   }
 
   /// 3. 警告提示 (⚠️ + 橙色)
-  static void showWarning(String message, {Duration? duration}) {
+  static void showWarning(
+    String message, {
+    Duration? duration,
+    Alignment? align,
+  }) {
     _showIconToast(
       message,
       icon: Icons.warning_amber_rounded,
       backgroundColor: Colors.orange,
       duration: duration,
+      align: align,
     );
   }
 
   /// 4. 信息提示 (ℹ️ + 蓝色)
-  static void showInfo(String message, {Duration? duration}) {
+  static void showInfo(String message, {Duration? duration, Alignment? align}) {
     _showIconToast(
       message,
       icon: Icons.info,
       backgroundColor: Colors.blue,
       duration: duration,
+      align: align,
     );
   }
 
   /// 5. 普通文字提示 (居中)
-  static void showToast(String message, {Duration? duration, Color? bgColor}) {
+  static void showToast(
+    String message, {
+    Duration? duration,
+    Color? bgColor,
+    Alignment? align,
+  }) {
     BotToast.showText(
       text: message,
-      align: const Alignment(0, 0),
+      align: align ?? const Alignment(0, 0),
       contentColor: bgColor ?? Colors.black87,
-      textStyle: TextStyle(color: Colors.white, fontSize: 14),
+      textStyle: const TextStyle(color: Colors.white, fontSize: 14),
       duration: duration ?? _defaultDuration,
     );
   }
@@ -86,8 +107,10 @@ class ToastUtils {
     required IconData icon,
     required Color backgroundColor,
     Duration? duration,
+    Alignment? align,
   }) {
     BotToast.showCustomNotification(
+      align: align ?? Alignment.topCenter,
       duration: duration ?? _defaultDuration,
       toastBuilder: (cancel) {
         return Padding(

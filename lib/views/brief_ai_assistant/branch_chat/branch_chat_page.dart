@@ -12,43 +12,40 @@ import '../../../common/components/toast_utils.dart';
 import '../../../common/constants/constants.dart';
 import '../../../common/utils/screen_helper.dart';
 import '../../../common/utils/tools.dart';
-import '../../../models/brief_ai_tools/branch_chat/character_store.dart';
-import '../../../services/model_manager_service.dart';
 import '../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../common/llm_spec/constant_llm_enum.dart';
 import '../../../common/components/simple_marquee_or_text.dart';
 import '../../../common/components/tool_widget.dart';
 import '../../../common/utils/advanced_options_utils.dart';
+import '../../../common/components/cus_markdown_renderer.dart';
 import '../../../models/brief_ai_tools/branch_chat/branch_chat_message.dart';
 import '../../../models/brief_ai_tools/branch_chat/branch_manager.dart';
 import '../../../models/brief_ai_tools/branch_chat/branch_store.dart';
 import '../../../models/brief_ai_tools/branch_chat/branch_chat_session.dart';
 import '../../../models/brief_ai_tools/branch_chat/character_card.dart';
+import '../../../models/brief_ai_tools/branch_chat/character_store.dart';
+import '../../../services/model_manager_service.dart';
 import '../../../services/chat_service.dart';
 import '../../../services/cus_get_storage.dart';
 
 import '../_chat_components/text_edit_dialog.dart';
-import '../index.dart';
-import 'components/draggable_character_avatar_preview.dart';
-import 'components/message_color_config.dart';
-import 'pages/character_list_page.dart';
 import '../_chat_components/_small_tool_widgets.dart';
+import '../_chat_components/model_filter.dart';
+import '../_chat_components/chat_input_bar.dart';
+import '../_chat_components/text_selection_dialog.dart';
 import '../_chat_pages/chat_export_import_page.dart';
 import '../_chat_pages/chat_background_picker_page.dart';
-import '../_chat_components/model_filter.dart';
-import '../../../common/components/cus_markdown_renderer.dart';
 
 import 'components/branch_message_item.dart';
 import 'components/branch_tree_dialog.dart';
-import '../_chat_components/chat_input_bar.dart';
-import '../_chat_components/text_selection_dialog.dart';
 import 'components/branch_message_actions.dart';
-
-import 'pages/add_model_page.dart';
 import 'components/adaptive_chat_layout.dart';
 import 'components/branch_chat_history_panel.dart';
-
 import 'components/adaptive_model_selector.dart';
+import 'components/draggable_character_avatar_preview.dart';
+import 'components/message_color_config.dart';
+import 'pages/add_model_page.dart';
+import 'pages/character_list_page.dart';
 
 ///
 /// 分支对话主页面
@@ -590,22 +587,23 @@ class _BranchChatPageState extends State<BranchChatPage>
         // ),
 
         //  2025-04-11 暂存，后续考虑页面之间跳转优化
-        IconButton(
-          icon: const Icon(Icons.grid_view),
-          onPressed:
-              isStreaming
-                  ? null
-                  : () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => BriefAITools()),
-                    ).then((value) async {
-                      // 2025-04-08 嫌麻烦，从工具栏回来都重新初始化
-                      // 不只初始化模型是因为模型列表变化了，之前对话的模型不一定是当前加载后选中的模型
-                      await initialize();
-                    });
-                  },
-        ),
+        // 2025-04-28 功能暂不完善，先不启用
+        // IconButton(
+        //   icon: const Icon(Icons.grid_view),
+        //   onPressed:
+        //       isStreaming
+        //           ? null
+        //           : () {
+        //             Navigator.push(
+        //               context,
+        //               MaterialPageRoute(builder: (context) => BriefAITools()),
+        //             ).then((value) async {
+        //               // 2025-04-08 嫌麻烦，从工具栏回来都重新初始化
+        //               // 不只初始化模型是因为模型列表变化了，之前对话的模型不一定是当前加载后选中的模型
+        //               await initialize();
+        //             });
+        //           },
+        // ),
       ],
     );
 

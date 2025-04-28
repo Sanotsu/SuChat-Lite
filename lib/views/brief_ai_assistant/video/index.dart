@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../common/components/loading_overlay.dart';
 import '../../../common/components/toast_utils.dart';
 import '../../../common/components/tool_widget.dart';
 import '../../../common/constants/constants.dart';
@@ -11,9 +12,9 @@ import '../../../common/utils/screen_helper.dart';
 import '../../../models/brief_ai_tools/media_generation_history/media_generation_history.dart';
 import '../../../services/video_generation_service.dart';
 import '../../../views/brief_ai_assistant/common/media_generation_base.dart';
+
 import 'mime_video_manager.dart';
 import 'video_player_screen.dart';
-import '../../../common/components/loading_overlay.dart';
 
 class BriefVideoScreen extends MediaGenerationBase {
   const BriefVideoScreen({super.key});
@@ -74,7 +75,7 @@ class _BriefVideoScreenState
 - 部分模型可以选择是否上传参考图片
 - 视频生成耗时较长，可稍后查询任务状态
 - 生成的视频会自动保存在设备的以下目录:
-  - /SuChat/video_generation
+  - /SuChatFiles/video_generation
 - 视频生成任务记录可以长按删除
 ''';
 
@@ -264,12 +265,15 @@ class _BriefVideoScreenState
     if (!checkGeneratePrerequisites()) return;
 
     setState(() => isGenerating = true);
-    
+
     // 显示生成遮罩
-    LoadingOverlay.showVideoGeneration(context, onCancel: () {
-      // 取消生成
-      setState(() => isGenerating = false);
-    });
+    LoadingOverlay.showVideoGeneration(
+      context,
+      onCancel: () {
+        // 取消生成
+        setState(() => isGenerating = false);
+      },
+    );
 
     try {
       // 2025-02-19 暂时只配置模型，如果是图生视频，多一个参考图，其他都不传
@@ -328,7 +332,7 @@ class _BriefVideoScreenState
     } finally {
       // 隐藏生成遮罩
       LoadingOverlay.hide();
-      
+
       if (mounted) {
         setState(() => isGenerating = false);
       }

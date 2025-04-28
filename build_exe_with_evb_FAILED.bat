@@ -56,7 +56,7 @@ if not exist "%ENIGMA_GUI%" (
 )
 
 REM Create output directory
-set "OUTPUT_DIR=%PROJECT_ROOT%\portable"
+set "OUTPUT_DIR=%PROJECT_ROOT%\dist\evb"
 if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
 
 REM Set output filename

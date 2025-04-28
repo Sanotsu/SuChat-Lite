@@ -7,7 +7,13 @@
 
 SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API 驱动的、简洁版 AI 聊天应用，支持简单自定义角色。
 
-![SuChat Lite 预览](./_doc/snapshots/screenshot-home.png)
+桌面主页面预览:
+
+![SuChat Lite 预览](./_doc/snapshots/screenshot-home-desktop.png)
+
+移动端截图:
+
+![SuChat Lite 预览](./_doc/snapshots/screenshot-mobile.jpg)
 
 ## 特性
 
@@ -16,6 +22,7 @@ SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API �
   - 未预设的云平台可以单个手动填写：请求地址、模型名、API Key 即可使用
 - **本地数据存储**
   - 所有对话保留在设备本地(但不同的平台记录各自独立)
+  - 桌面端在`/文档/SuChatFiles`，移动端在`/设备根目录/SuChatFiles`
 - **Markdown, Latex & 代码高亮**
   - 简单的 Markdown, Latex 语法支持和代码高亮的支持
 - **更丰富的消息处理**
@@ -195,6 +202,8 @@ enum LLModelType {
 后续我会放一些整理好的各个平台我常用的大模型规格 json 文件在项目的 **[\_cus_model_jsons](./_cus_model_jsons)** 文件夹中，可以参考使用。
 
 </details>
+
+---
 
 ## 项目结构
 

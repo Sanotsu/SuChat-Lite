@@ -6,6 +6,8 @@ class FeatureGridCard extends StatelessWidget {
   final IconData icon;
   final Color? accentColor;
   final bool isNew;
+  // 组合是否新功能，但可以自定义显示内容
+  final String? newLabel;
 
   const FeatureGridCard({
     super.key,
@@ -14,6 +16,7 @@ class FeatureGridCard extends StatelessWidget {
     required this.icon,
     this.accentColor,
     this.isNew = false,
+    this.newLabel,
   });
 
   @override
@@ -76,7 +79,7 @@ class FeatureGridCard extends StatelessWidget {
                     ],
                   ),
                   child: Text(
-                    '新',
+                    newLabel ?? '新',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 12,

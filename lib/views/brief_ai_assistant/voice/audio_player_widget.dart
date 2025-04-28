@@ -21,7 +21,7 @@ class AudioPlayerWidget extends StatefulWidget {
     required this.audioUrl,
     this.sourceType = 'file',
     this.primaryColor = Colors.blue,
-    this.secondaryColor = Colors.grey,
+    this.secondaryColor = Colors.lightBlue,
     this.autoPlay = false,
     this.showWaveform = false,
   });

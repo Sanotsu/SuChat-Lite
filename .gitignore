@@ -163,6 +163,7 @@ macos
 android/app/.cxx/
 
 # 打包的安装包和临时配置文件
+dist/
 installer/
 portable/
 temp/

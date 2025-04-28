@@ -45,7 +45,7 @@ class _HomePageState extends State<HomePage> {
         } else {
           // 第一次按返回键，更新时间并显示提示
           _lastPressedAt = now;
-          ToastUtils.showInfo('再按一次退出应用');
+          ToastUtils.showInfo('再按一次退出应用', align: Alignment.center);
         }
       },
       child: BranchChatPage(character: widget.character),
