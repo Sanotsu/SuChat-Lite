@@ -212,6 +212,14 @@ class CharacterStore {
       // 只导出非系统角色
       final userCharacters = characters.where((c) => !c.isSystem).toList();
       final jsonList = userCharacters.map((c) => c.toJson()).toList();
+
+      // 如果角色有预设模型，置为null，因为导出时存在的模型导入时不一定还在
+      for (var i = 0; i < jsonList.length; i++) {
+        if (jsonList[i]['preferredModel'] != null) {
+          jsonList[i]['preferredModel'] = null;
+        }
+      }
+
       await file.writeAsString(jsonEncode(jsonList));
 
       return filePath;
@@ -265,6 +273,11 @@ class CharacterStore {
           // 如果文件有id，则将其string类型的id转为number类型
           if (json['id'] != null) {
             json['id'] = identityHashCode(json['id']);
+          }
+
+          // 如果文件有预设模型，置为null，因为导出时的模型导入时不一定还在
+          if (json['preferredModel'] != null) {
+            json['preferredModel'] = null;
           }
 
           final character = CharacterCard.fromJson(json);

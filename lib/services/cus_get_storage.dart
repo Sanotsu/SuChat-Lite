@@ -184,4 +184,47 @@ class MyGetStorage {
   }
 
   String? getBigmodelApiKey() => box.read(bigmodelApiKey);
+  
+  ///
+  /// GitHub存储配置相关
+  ///
+  static const String githubUsernameKey = 'github_username';
+  static const String githubRepoKey = 'github_repo';
+  static const String githubTokenKey = 'github_token';
+  
+  // 设置GitHub用户名
+  Future<void> setGithubUsername(String? username) async {
+    if (username == null || username.isEmpty) {
+      await box.remove(githubUsernameKey);
+    } else {
+      await box.write(githubUsernameKey, username);
+    }
+  }
+  
+  // 获取GitHub用户名
+  String getGithubUsername() => box.read(githubUsernameKey) ?? '';
+  
+  // 设置GitHub仓库名
+  Future<void> setGithubRepo(String? repo) async {
+    if (repo == null || repo.isEmpty) {
+      await box.remove(githubRepoKey);
+    } else {
+      await box.write(githubRepoKey, repo);
+    }
+  }
+  
+  // 获取GitHub仓库名
+  String getGithubRepo() => box.read(githubRepoKey) ?? '';
+  
+  // 设置GitHub访问令牌
+  Future<void> setGithubToken(String? token) async {
+    if (token == null || token.isEmpty) {
+      await box.remove(githubTokenKey);
+    } else {
+      await box.write(githubTokenKey, token);
+    }
+  }
+  
+  // 获取GitHub访问令牌
+  String getGithubToken() => box.read(githubTokenKey) ?? '';
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../services/voice_generation_service.dart';
-import 'audio_player_widget.dart';
+import '../../../../services/voice_generation_service.dart';
+import '../audio_player_widget.dart';
 
 class VoiceTrialListeningPage extends StatefulWidget {
   const VoiceTrialListeningPage({super.key});

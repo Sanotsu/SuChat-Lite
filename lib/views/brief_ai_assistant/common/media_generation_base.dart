@@ -8,6 +8,7 @@ import '../../../common/utils/db_tools/db_brief_ai_tool_helper.dart';
 import '../../../common/components/tool_widget.dart';
 import '../../../common/utils/screen_helper.dart';
 import '../../../services/model_manager_service.dart';
+import '../../../services/voice_clone_service.dart';
 import '../../../services/voice_generation_service.dart';
 
 abstract class MediaGenerationBase extends StatefulWidget {
@@ -339,39 +340,53 @@ abstract class MediaGenerationBaseState<T extends MediaGenerationBase>
         height: 48,
         hintLabel: "选择模型",
         alignment: Alignment.centerLeft,
-        onChanged:
-            isGenerating
-                ? null
-                : (value) {
-                  setState(() {
-                    selectedModel = value!;
-
-                    // 2025-04-25 虽然不严谨，但暂时图省事这样写
-                    if (selectedModel?.modelType == LLModelType.tts) {
-                      if (selectedModel?.model == "cosyvoice-v1") {
-                        voiceOptions =
-                            VoiceGenerationService.getV1AvailableVoices();
-                      } else if (selectedModel?.model == "cosyvoice-v2") {
-                        voiceOptions =
-                            VoiceGenerationService.getV2AvailableVoices();
-                      } else if (selectedModel?.model == "sambert") {
-                        voiceOptions =
-                            VoiceGenerationService.getSambertVoices();
-                      } else if (selectedModel?.model != null &&
-                          selectedModel!.model.contains('qwen-tts')) {
-                        voiceOptions =
-                            VoiceGenerationService.getQwenTTSVoices();
-                      }
-
-                      selectedVoice = voiceOptions.first;
-                    }
-                  });
-                },
+        onChanged: isGenerating ? null : modelChanged,
         itemToString:
             (e) =>
                 "${CP_NAME_MAP[(e as CusBriefLLMSpec).platform]} - ${e.name}",
       ),
     );
+  }
+
+  modelChanged(CusBriefLLMSpec? value) async {
+    setState(() {
+      selectedModel = value!;
+    });
+
+    // 2025-04-25 虽然不严谨，但暂时图省事这样写
+    if (selectedModel?.modelType == LLModelType.tts) {
+      final voices = await VoiceCloneService.getClonedVoices();
+
+      List<AliyunVoiceType> clonedList =
+          voices.map((e) {
+            // 理论上api查询结果中都有这个id的
+
+            // 作为name时不需要前面的cosyvoice-固定内容
+            // var name = e.voiceId!.substring(10);
+            var tempList = e.voiceId!.split("-");
+            var name = "${tempList[1]}-${tempList[2]}";
+            return AliyunVoiceType(name, e.voiceId!, "", "", "", "");
+          }).toList();
+
+      if (selectedModel?.model == "cosyvoice-v1") {
+        voiceOptions =
+            VoiceGenerationService.getV1AvailableVoices() +
+            clonedList.where((e) => e.id.startsWith("cosyvoice-v1")).toList();
+      } else if (selectedModel?.model == "cosyvoice-v2") {
+        voiceOptions =
+            VoiceGenerationService.getV2AvailableVoices() +
+            clonedList.where((e) => e.id.startsWith("cosyvoice-v2")).toList();
+      } else if (selectedModel?.model == "sambert") {
+        voiceOptions = VoiceGenerationService.getSambertVoices();
+      } else if (selectedModel?.model != null &&
+          selectedModel!.model.contains('qwen-tts')) {
+        voiceOptions = VoiceGenerationService.getQwenTTSVoices();
+      }
+
+      selectedVoice = voiceOptions.first;
+      // 刷新状态
+      setState(() {});
+    }
   }
 
   // 提示词输入框

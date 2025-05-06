@@ -20,7 +20,8 @@ import '../common/media_generation_base.dart';
 
 import 'mime_voice_manager.dart';
 import 'audio_player_widget.dart';
-import 'voice_trial_listening_page.dart';
+import 'pages/voice_clone_page.dart';
+import 'pages/voice_trial_listening_page.dart';
 
 class BriefVoiceScreen extends MediaGenerationBase {
   const BriefVoiceScreen({super.key});
@@ -276,6 +277,12 @@ class _BriefVoiceScreenState
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: SingleChildScrollView(child: Text(task.prompt)),
+                  ),
+                ),
                 AudioPlayerWidget(
                   audioUrl: task.audioUrls!.first,
                   autoPlay: true,
@@ -326,6 +333,12 @@ class _BriefVoiceScreenState
                     ],
                   ),
                 ),
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: SingleChildScrollView(child: Text(task.prompt)),
+                  ),
+                ),
                 Padding(
                   padding: EdgeInsets.symmetric(vertical: 32, horizontal: 8),
                   child: AudioPlayerWidget(
@@ -339,20 +352,51 @@ class _BriefVoiceScreenState
     );
   }
 
-  @override
-  List<Widget> buildAppBarActions() {
-    return [
-      // 试听音色
-      IconButton(
-        icon: Icon(Icons.music_note_outlined),
-        onPressed: () {
+  // 弹窗菜单按钮
+  Widget buildPopupMenuButton() {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_horiz_sharp),
+      // 调整弹出按钮的位置
+      position: PopupMenuPosition.under,
+      // 弹出按钮的偏移
+      // offset: Offset(-25, 0),
+      onSelected: (String value) async {
+        // 处理选中的菜单项
+        if (value == 'trial_listening') {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => VoiceTrialListeningPage()),
           );
-        },
-        tooltip: '试听音色',
-      ),
+        } else if (value == 'voice_clone') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => VoiceClonePage()),
+          );
+        }
+      },
+      itemBuilder:
+          (BuildContext context) => <PopupMenuItem<String>>[
+            buildCusPopupMenuItem(
+              context,
+              "trial_listening",
+              "试听音色",
+              Icons.music_note_outlined,
+            ),
+            buildCusPopupMenuItem(
+              context,
+              "voice_clone",
+              "声音复刻",
+              Icons.record_voice_over,
+            ),
+          ],
+    );
+  }
+
+  @override
+  List<Widget> buildAppBarActions() {
+    return [
+      // 声音复刻 和 试听音色
+      buildPopupMenuButton(),
       // 管理语音文件
       IconButton(
         icon: const Icon(Icons.photo_library_outlined),

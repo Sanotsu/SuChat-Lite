@@ -745,3 +745,8 @@ Future<Directory> getVideoGenDir() async {
 Future<Directory> getVoiceGenDir() async {
   return getAppHomeDirectory(subfolder: "voice_generation");
 }
+
+// 用于声音复制时录制的声音存放
+Future<Directory> getVoiceCloneRecordDir() async {
+  return getAppHomeDirectory(subfolder: "voice_clone_recordings");
+}

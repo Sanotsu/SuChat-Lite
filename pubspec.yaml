@@ -121,6 +121,7 @@ dependencies:
   media_kit_libs_windows_video: ^1.0.11
   media_kit_libs_linux: ^1.2.1
 
+  record: ^6.0.0
   audio_waveforms: ^1.3.0
   image: ^4.3.0
 

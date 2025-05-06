@@ -55,6 +55,30 @@ class HttpUtils {
     );
   }
 
+  /// post
+  static Future put({
+    required String path,
+    dynamic data,
+    dynamic headers,
+    CusRespType? responseType,
+    String? contentType,
+    CancelToken? cancelToken,
+    bool showLoading = true,
+    bool showErrorMessage = true,
+  }) {
+    return httpRequest.request(
+      path: path,
+      method: CusHttpMethod.put,
+      data: data,
+      responseType: responseType,
+      contentType: contentType,
+      headers: headers,
+      cancelToken: cancelToken,
+      showLoading: showLoading,
+      showErrorMessage: showErrorMessage,
+    );
+  }
+
   /// delete
   static Future delete({
     required String path,
