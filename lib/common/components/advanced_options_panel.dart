@@ -52,7 +52,7 @@ class _AdvancedOptionsPanelState extends State<AdvancedOptionsPanel> {
     }
 
     _options.forEach((key, value) {
-      print('高级选项panel中的初始值 > key: $key, value: $value');
+      debugPrint('高级选项panel中的初始值 > key: $key, value: $value');
     });
   }
 

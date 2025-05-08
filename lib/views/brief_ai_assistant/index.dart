@@ -6,6 +6,7 @@ import '../../common/utils/screen_helper.dart';
 import 'image/index.dart';
 import 'video/index.dart';
 import 'voice/index.dart';
+import 'voice_recog/voice_recognition_page.dart';
 
 class BriefAITools extends StatefulWidget {
   const BriefAITools({super.key});
@@ -153,6 +154,17 @@ class _BriefAIToolsState extends State<BriefAITools> {
                         height: 200,
                         child: FeatureGridCard(
                           isNew: true,
+                          targetPage: const VoiceRecognitionPage(),
+                          title: "录音识别",
+                          icon: Icons.audio_file,
+                          accentColor: Colors.red.shade600,
+                        ),
+                      ),
+                      SizedBox(
+                        width: 200,
+                        height: 200,
+                        child: FeatureGridCard(
+                          isNew: true,
                           targetPage: const BriefVoiceScreen(),
                           title: "语音合成",
                           icon: Icons.audiotrack,
@@ -206,6 +218,13 @@ class _BriefAIToolsState extends State<BriefAITools> {
                       //   icon: Icons.people_alt,
                       //   accentColor: Colors.purple.shade600,
                       // ),
+                      FeatureGridCard(
+                        isNew: true,
+                        targetPage: const VoiceRecognitionPage(),
+                        title: "录音识别",
+                        icon: Icons.audio_file,
+                        accentColor: Colors.red.shade600,
+                      ),
                       FeatureGridCard(
                         isNew: true,
                         targetPage: const BriefVoiceScreen(),

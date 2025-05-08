@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:path/path.dart' as path;
 import 'package:flutter/foundation.dart';
 import '../common/utils/dio_client/cus_http_client.dart';
@@ -96,15 +97,22 @@ class GitHubStorageService {
       };
 
       // 发送创建文件请求
-      final response = await HttpUtils.put(
-        path: '$_baseApiUrl/repos/$username/$repoName/contents/$filePath',
-        headers: _authHeaders,
-        data: requestData,
-        showLoading: true,
-        showErrorMessage: true,
-      );
+      // final response = await HttpUtils.put(xxx)
+      // print("github uploadFile 的响应:$response");
+      // await HttpUtils.put(
+      //   path: '$_baseApiUrl/repos/$username/$repoName/contents/$filePath',
+      //   headers: _authHeaders,
+      //   data: requestData,
+      //   showLoading: false,
+      //   showErrorMessage: true,
+      // );
 
-      print("github uploadFile 的响应:$response");
+      // 使用 HttpUtils 有设置默认超时1分钟，文件过大上传到github可能不止1分钟
+      await Dio().put(
+        '$_baseApiUrl/repos/$username/$repoName/contents/$filePath',
+        data: requestData,
+        options: Options(headers: _authHeaders),
+      );
 
       // 获取并返回文件的公开访问URL
       // GitHub Raw URL格式: https://raw.githubusercontent.com/{username}/{repoName}/{branch}/{filePath}
@@ -151,7 +159,7 @@ class GitHubStorageService {
           headers: _authHeaders,
           data: requestData,
           contentType: 'application/json',
-          showLoading: true,
+          showLoading: false,
           showErrorMessage: true,
         );
 

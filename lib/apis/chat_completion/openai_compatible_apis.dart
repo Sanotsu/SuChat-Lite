@@ -68,7 +68,7 @@ Future<(Stream<String>, VoidCallback)> getStreamOnlyStringResponse(
                   streamController.add(response.cusText);
                 }
               } catch (e) {
-                debugPrint('解析响应数据出错: $e');
+                debugPrint('getStreamOnlyStringResponse解析响应数据出错: $e');
                 // 流式响应出错时，继续处理下一行
                 continue;
               }
@@ -195,7 +195,8 @@ Future<(Stream<ChatCompletionResponse>, VoidCallback)> getStreamResponse(
                     streamController.add(commonRespBody);
                   }
                 } catch (e) {
-                  debugPrint('解析响应数据出错: $e');
+                  // 2025-05-06 实测openRouter的响应中有空白行，会报错，但内容看起来没有缺少
+                  debugPrint('getStreamResponse解析响应数据出错: $e');
                   debugPrint('event.data: ${event.data}');
                   // 流式响应出错时，继续处理下一行
                   return;

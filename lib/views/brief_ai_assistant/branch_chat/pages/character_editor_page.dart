@@ -368,7 +368,7 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
       child: ListTile(
         title: Text('偏好模型', style: TextStyle(fontSize: 14)),
         subtitle: Text(
-          _preferredModel?.name ?? '未设置',
+          " ${CP_NAME_MAP[_preferredModel?.platform] ?? '未设置平台'} - ${_preferredModel?.name ?? '未设置模型'}",
           style: TextStyle(fontSize: 12),
         ),
         trailing: Icon(Icons.arrow_forward_ios, size: 16),

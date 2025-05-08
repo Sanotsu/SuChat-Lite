@@ -750,3 +750,8 @@ Future<Directory> getVoiceGenDir() async {
 Future<Directory> getVoiceCloneRecordDir() async {
   return getAppHomeDirectory(subfolder: "voice_clone_recordings");
 }
+
+/// 获取语音识别录音保存目录
+Future<Directory> getVoiceRecognitionRecordDir() async {
+  return getAppHomeDirectory(subfolder: "voice_recognition_records");
+}

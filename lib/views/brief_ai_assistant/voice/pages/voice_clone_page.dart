@@ -16,6 +16,7 @@ import '../../../../../../common/components/cus_loading_indicator.dart';
 import 'github_storage_settings_page.dart';
 
 /// TODO audio_waveforms 不支持桌面端，想办法换一个，还是桌面不展示波形和播放试听？？？
+/// 2025-05-06 暂时桌面端不展示波形和播放试听
 class VoiceClonePage extends StatefulWidget {
   const VoiceClonePage({super.key});
 
@@ -57,7 +58,9 @@ class _VoiceClonePageState extends State<VoiceClonePage> {
     _prefixController.dispose();
     _amplitudeSubscription?.cancel();
     _audioRecorder.dispose();
-    _playerController?.dispose();
+    if (ScreenHelper.isMobile()) {
+      _playerController?.dispose();
+    }
     super.dispose();
   }
 
@@ -180,6 +183,10 @@ class _VoiceClonePageState extends State<VoiceClonePage> {
 
   // 初始化音频播放器
   Future<void> _initPlayer(String path) async {
+    if (ScreenHelper.isDesktop()) {
+      return;
+    }
+
     try {
       // 释放现有的播放器
       _playerController?.dispose();
@@ -229,7 +236,7 @@ class _VoiceClonePageState extends State<VoiceClonePage> {
 
   // 播放或暂停录音
   void _togglePlayback() async {
-    if (_playerController == null) return;
+    if (ScreenHelper.isDesktop() || _playerController == null) return;
 
     try {
       if (_isPlaying) {
@@ -280,8 +287,10 @@ class _VoiceClonePageState extends State<VoiceClonePage> {
       _prefixController.clear();
       setState(() {
         _recordingPath = null;
-        _playerController?.dispose();
-        _playerController = null;
+        if (ScreenHelper.isMobile()) {
+          _playerController?.dispose();
+          _playerController = null;
+        }
       });
 
       // 刷新音色列表
@@ -541,44 +550,46 @@ class _VoiceClonePageState extends State<VoiceClonePage> {
           ),
         ] else if (_playerController != null && _recordingPath != null) ...[
           // 音频播放波形
-          Center(
-            child: Container(
-              height: isDesktop ? 150 : 100,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              padding: const EdgeInsets.all(8),
-              child: AudioFileWaveforms(
-                size: Size(
-                  isDesktop
-                      ? MediaQuery.of(context).size.width * 0.3
-                      : MediaQuery.of(context).size.width - 80,
-                  isDesktop ? 120 : 80,
+          if (ScreenHelper.isMobile())
+            Center(
+              child: Container(
+                height: isDesktop ? 150 : 100,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                playerController: _playerController!,
-                enableSeekGesture: true,
-                waveformType: WaveformType.fitWidth,
-                playerWaveStyle: PlayerWaveStyle(
-                  fixedWaveColor: Colors.grey[400]!,
-                  liveWaveColor: AppColors.primary,
-                  spacing: 6,
-                  showBottom: false,
-                  showSeekLine: true,
+                padding: const EdgeInsets.all(8),
+                child: AudioFileWaveforms(
+                  size: Size(
+                    isDesktop
+                        ? MediaQuery.of(context).size.width * 0.3
+                        : MediaQuery.of(context).size.width - 80,
+                    isDesktop ? 120 : 80,
+                  ),
+                  playerController: _playerController!,
+                  enableSeekGesture: true,
+                  waveformType: WaveformType.fitWidth,
+                  playerWaveStyle: PlayerWaveStyle(
+                    fixedWaveColor: Colors.grey[400]!,
+                    liveWaveColor: AppColors.primary,
+                    spacing: 6,
+                    showBottom: false,
+                    showSeekLine: true,
+                  ),
                 ),
               ),
             ),
-          ),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              IconButton(
-                icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
-                onPressed: _togglePlayback,
-                color: AppColors.primary,
-                iconSize: 32,
-              ),
+              if (ScreenHelper.isMobile())
+                IconButton(
+                  icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
+                  onPressed: _togglePlayback,
+                  color: AppColors.primary,
+                  iconSize: 32,
+                ),
               Expanded(
                 child: Text(
                   _recordingPath?.split('/').last ?? '',
@@ -595,8 +606,10 @@ class _VoiceClonePageState extends State<VoiceClonePage> {
                 onPressed: () {
                   setState(() {
                     _recordingPath = null;
-                    _playerController?.dispose();
-                    _playerController = null;
+                    if (ScreenHelper.isMobile()) {
+                      _playerController?.dispose();
+                      _playerController = null;
+                    }
                     _isPlaying = false;
                   });
                 },

@@ -167,9 +167,6 @@ class _BranchChatPageState extends State<BranchChatPage>
     // 设置当前角色
     currentCharacter = widget.character;
 
-    // 加载背景图片设置
-    loadBackgroundSettings();
-
     // 初始化桌面端侧边栏状态
     isSidebarVisible = ScreenHelper.isDesktop();
 
@@ -252,9 +249,12 @@ class _BranchChatPageState extends State<BranchChatPage>
       await _initSession();
 
       // 如果初始化时有角色，默认简洁显示
-      if (currentCharacter != null) {
-        setState(() => isBriefDisplay = true);
-      }
+      // if (currentCharacter != null) {
+      //   setState(() => isBriefDisplay = true);
+      // }
+
+      // 加载背景图片设置
+      loadBackgroundSettings();
     } finally {
       if (mounted) {
         setState(() => isLoading = false);
@@ -1615,15 +1615,21 @@ class _BranchChatPageState extends State<BranchChatPage>
           }
 
           // 1. 更新内容
+          // 2025-05-06 实测openRouter的响应中，思考是使用reasoning字段，其他的都是reasoning_content
+          // 注意，直接在content中用<think></think>包裹的思考内容没有特殊处理，都当做正文显示了
           streamingContent += chunk.cusText;
           streamingReasoningContent +=
               chunk.choices.isNotEmpty
-                  ? (chunk.choices.first.delta?["reasoning_content"] ?? '')
+                  ? (chunk.choices.first.delta?["reasoning_content"] ??
+                      chunk.choices.first.delta?["reasoning"] ??
+                      '')
                   : '';
           finalContent += chunk.cusText;
           finalReasoningContent +=
               chunk.choices.isNotEmpty
-                  ? (chunk.choices.first.delta?["reasoning_content"] ?? '')
+                  ? (chunk.choices.first.delta?["reasoning_content"] ??
+                      chunk.choices.first.delta?["reasoning"] ??
+                      '')
                   : '';
 
           // 计算思考时间(从发起调用开始，到当流式内容不为空时计算结束)
