@@ -14,6 +14,7 @@ import '../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../common/utils/db_tools/db_brief_ai_tool_helper.dart';
 import '../../../common/utils/db_tools/ddl_brief_ai_tool.dart';
 import '../../../common/utils/db_tools/init_db.dart';
+import '../../../common/utils/file_picker_helper.dart';
 import '../../../common/utils/screen_helper.dart';
 import '../../../common/utils/tools.dart';
 import '../../../models/brief_ai_tools/branch_chat/branch_chat_export_data.dart';
@@ -279,24 +280,23 @@ class _BackupAndRestoreState extends State<BackupAndRestore> {
   ///   3.5 json文件导入成功，则删除临时备份文件
   ///
   Future<void> restoreDataFromBackup() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      allowMultiple: false,
+    File? file = await FilePickerHelper.pickAndSaveFile(
+      fileType: CusFileType.custom,
+      // 导出时指定为zip，所以这里也限制为zip
+      allowedExtensions: ['zip'],
     );
-    if (result != null) {
+
+    if (file != null) {
       if (isLoading) return;
 
       setState(() {
         isLoading = true;
       });
 
-      // 不允许多选，理论就是第一个文件，且不为空
-      File file = File(result.files.first.path!);
-
       debugPrint("获取的上传zip文件路径：${p.basename(file.path)}");
-      debugPrint("获取的上传zip文件路径 result： $result");
 
       // 这个判断虽然不准确，但先这样
-      if (p.basename(file.path).toUpperCase().startsWith(ZIP_FILE_PREFIX) &&
+      if (p.basename(file.path).startsWith(ZIP_FILE_PREFIX) &&
           p.basename(file.path).toLowerCase().endsWith('.zip')) {
         try {
           // 等待解压完成

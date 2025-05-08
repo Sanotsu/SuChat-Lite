@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:image_picker/image_picker.dart';
 import 'dart:math';
 
 import '../../../common/components/toast_utils.dart';
@@ -1413,9 +1412,9 @@ class _BranchChatPageState extends State<BranchChatPage>
         text: message.content,
         audio:
             message.contentVoicePath != null
-                ? XFile(message.contentVoicePath!)
+                ? File(message.contentVoicePath!)
                 : null,
-        images: message.imagesUrl?.split(',').map((img) => XFile(img)).toList(),
+        images: message.imagesUrl?.split(',').map((img) => File(img)).toList(),
       ),
     );
   }
@@ -1920,7 +1919,7 @@ class _BranchChatPageState extends State<BranchChatPage>
     //       // 本地文件
     //       wrappedContent = DocumentUtils.wrapDocumentContent(
     //         messageData.fileContent!,
-    //         messageData.file!.name,
+    //         messageData.file!.path.split('/').last,
     //       );
     //     }
 

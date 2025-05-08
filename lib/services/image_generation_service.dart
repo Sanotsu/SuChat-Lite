@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 import '../common/constants/default_models.dart';
 import '../common/llm_spec/cus_brief_llm_model.dart';
 import '../common/llm_spec/constant_llm_enum.dart';
+import '../common/utils/db_tools/db_brief_ai_tool_helper.dart';
 import '../common/utils/dio_client/cus_http_client.dart';
+import '../common/utils/tools.dart';
 import '../models/brief_ai_tools/image_generation/image_generation_request.dart';
 import '../models/brief_ai_tools/image_generation/image_generation_response.dart';
 import 'cus_get_storage.dart';
@@ -99,16 +102,24 @@ class ImageGenerationService {
     String prompt, {
     int? n,
     String? size,
+    File? refImage,
+    required String requestId,
     Map<String, dynamic>? extraParams,
   }) async {
     final headers = await _getHeaders(model);
     final baseUrl = _getBaseUrl(model.platform);
+
+    if (refImage != null) {
+      extraParams ??= {};
+      extraParams['ref_image'] = (await getImageBase64String(refImage));
+    }
 
     final request = ImageGenerationRequest(
       model: model.model,
       prompt: prompt,
       n: n,
       size: size,
+      refImage: extraParams?['ref_image'],
     );
 
     final requestBody = {
@@ -130,6 +141,16 @@ class ImageGenerationService {
     if (model.platform == ApiPlatform.aliyun) {
       if (resp.output != null) {
         var taskId = resp.output!.taskId;
+
+        // 2025-05-08 这里保存任务ID到数据库，如果轮询得到了结果，在上一层调用的地方会更新数据库状态
+        // 这里只是保证没正常得到图片时，还有任务ID可以获取
+        final DBBriefAIToolHelper dbHelper = DBBriefAIToolHelper();
+        await dbHelper.updateMediaGenerationHistoryByRequestId(requestId, {
+          'taskId': taskId,
+          'isSuccess': 0,
+          'isProcessing': 1,
+        });
+
         return pollTaskStatus(model, taskId);
       } else {
         throw Exception('阿里云返回的任务ID为空');
@@ -143,8 +164,8 @@ class ImageGenerationService {
     CusBriefLLMSpec model,
     String taskId,
   ) async {
-    const maxAttempts = 30; // 最大轮询次数
-    const interval = Duration(seconds: 2); // 轮询间隔
+    const maxAttempts = 60; // 最大轮询次数
+    const interval = Duration(seconds: 5); // 轮询间隔
 
     for (var i = 0; i < maxAttempts; i++) {
       final response = await _queryTaskStatus(model, taskId);
@@ -159,13 +180,22 @@ class ImageGenerationService {
 
       if (response.output.taskStatus == 'FAILED' ||
           response.output.taskStatus == 'UNKNOWN') {
-        throw Exception(response.message ?? '图片生成失败');
+        // throw Exception(response.message ?? '图片生成失败');
+
+        return ImageGenerationResponse(
+          requestId: taskId,
+          created: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          results: null,
+          code: response.code,
+          message: response.message,
+        );
       }
 
       await Future.delayed(interval);
     }
 
-    throw Exception('任务超时');
+    // 超时了任务编号也没有了？？？
+    throw Exception('图片生成任务超时(5分钟)');
   }
 
   static Future<AliyunWanxV2Resp> _queryTaskStatus(

@@ -2,15 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
-import 'package:proste_logger/proste_logger.dart';
 
 import '../../../common/utils/tools.dart';
 import '../../../objectbox.g.dart';
 import '../../../common/components/toast_utils.dart';
 import '../../../common/llm_spec/cus_brief_llm_model.dart';
 import 'character_card.dart';
-
-final pl = ProsteLogger();
 
 class CharacterStore {
   // 单例模式

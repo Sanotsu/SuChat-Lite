@@ -171,8 +171,8 @@ class VideoGenerationService {
     CusBriefLLMSpec model, {
     VideoGenerationSubmitResponse? submitResp,
   }) async {
-    const maxAttempts = 30; // 最大轮询次数
-    const interval = Duration(seconds: 2); // 轮询间隔
+    const maxAttempts = 60; // 最大轮询次数
+    const interval = Duration(seconds: 5); // 轮询间隔
 
     for (var i = 0; i < maxAttempts; i++) {
       final response = await queryTaskStatus(taskId, model);
@@ -226,7 +226,7 @@ class VideoGenerationService {
       await Future.delayed(interval);
     }
 
-    throw Exception('任务超时');
+    throw Exception('视频生成任务超时(5分钟)');
   }
 
   // 查询任务状态

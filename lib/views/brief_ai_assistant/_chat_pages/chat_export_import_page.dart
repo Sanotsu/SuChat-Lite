@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../../../models/brief_ai_tools/branch_chat/branch_chat_export_data.dart';
 import '../../../../models/brief_ai_tools/branch_chat/branch_store.dart';
 import '../../../common/components/tool_widget.dart';
+import '../../../common/utils/file_picker_helper.dart';
 import '../../../common/utils/screen_helper.dart';
 
 class ChatExportImportPage extends StatefulWidget {
@@ -345,14 +346,14 @@ class _ChatExportImportPageState extends State<ChatExportImportPage> {
 
     try {
       // 1. 选择文件
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
+      File? result = await FilePickerHelper.pickAndSaveFile(
+        fileType: CusFileType.custom,
         allowedExtensions: ['json'],
       );
 
       if (result != null) {
         // 2. 读取文件内容
-        final file = File(result.files.single.path!);
+        final file = File(result.path);
         final store = await BranchStore.create();
         final importResult = await store.importSessionHistory(file);
 

@@ -1,11 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../common/llm_spec/constant_llm_enum.dart';
 import '../../../common/utils/db_tools/db_brief_ai_tool_helper.dart';
 import '../../../common/components/tool_widget.dart';
+import '../../../common/utils/image_picker_helper.dart';
 import '../../../common/utils/screen_helper.dart';
 import '../../../services/model_manager_service.dart';
 import '../../../services/voice_clone_service.dart';
@@ -90,8 +90,7 @@ abstract class MediaGenerationBaseState<T extends MediaGenerationBase>
   }
 
   Future<void> pickReferenceImage() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    final image = await ImagePickerHelper.pickSingleImage();
 
     if (image != null) {
       setState(() => referenceImage = File(image.path));

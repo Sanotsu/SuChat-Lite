@@ -1,6 +1,6 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/intl.dart';
 import 'package:record/record.dart';
@@ -14,6 +14,7 @@ import '../../../common/components/tool_widget.dart';
 import '../../../common/constants/constants.dart';
 import '../../../common/llm_spec/constant_llm_enum.dart';
 import '../../../common/llm_spec/cus_brief_llm_model.dart';
+import '../../../common/utils/file_picker_helper.dart';
 import '../../../common/utils/tools.dart';
 import '../../../common/utils/screen_helper.dart';
 import '../../../common/utils/db_tools/db_brief_ai_tool_helper.dart';
@@ -309,23 +310,19 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
 
   // 选择音频文件
   Future<void> _pickAudioFile() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.audio,
-      allowMultiple: false,
+    File? result = await FilePickerHelper.pickAndSaveFile(
+      fileType: CusFileType.audio,
     );
 
-    if (result != null && result.files.isNotEmpty) {
-      final path = result.files.first.path;
-      if (path != null) {
-        setState(() {
-          _recordingPath = path;
-        });
+    if (result != null) {
+      setState(() {
+        _recordingPath = result.path;
+      });
 
-        // 初始化播放器以便预览选择的音频
-        _initPlayer(path);
+      // 初始化播放器以便预览选择的音频
+      _initPlayer(result.path);
 
-        ToastUtils.showToast('已选择文件: ${result.files.first.name}');
-      }
+      ToastUtils.showToast('已选择文件: ${result.path.split("/").last}');
     }
   }
 
@@ -365,7 +362,7 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
     LoadingOverlay.show(
       context,
       title: '正在提交识别任务...',
-      messages: ["请耐心等待一会儿", "请勿退出当前页面", "如果录音文件过大上传会比较耗时"],
+      messages: ["请耐心等待一会儿", "请勿退出当前页面", "录音文件过大上传会比较耗时"],
     );
 
     try {

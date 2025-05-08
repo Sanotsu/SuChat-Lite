@@ -2,14 +2,12 @@ import 'dart:io';
 
 import 'package:doc_text/doc_text.dart';
 import 'package:docx_to_text/docx_to_text.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_charset_detector/flutter_charset_detector.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
 
 import '../../../apis/voice_recognition/xunfei_apis.dart';
@@ -19,6 +17,8 @@ import '../../../common/components/tool_widget.dart';
 import '../../../common/llm_spec/constant_llm_enum.dart';
 import '../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../common/utils/document_parser.dart';
+import '../../../common/utils/file_picker_helper.dart';
+import '../../../common/utils/image_picker_helper.dart';
 import '../../../common/utils/screen_helper.dart';
 import '../../../common/utils/tools.dart';
 import '../branch_chat/pages/file_upload_to_bigmodel_page.dart';
@@ -26,15 +26,15 @@ import '../branch_chat/pages/file_upload_to_bigmodel_page.dart';
 // 定义消息数据类
 class MessageData {
   final String text;
-  final List<XFile>? images;
-  final XFile? audio;
+  final List<File>? images;
+  final File? audio;
   // 本地可用获取文档文件
-  final PlatformFile? file;
+  final File? file;
   // 云端只能获取文档的文件名
   final String? cloudFileName;
   // 本地云端都使用同一个文档内容变量，两者不会同时存在
   final String? fileContent;
-  final List<XFile>? videos;
+  final List<File>? videos;
   // 可以根据需要添加更多类型
 
   const MessageData({
@@ -84,17 +84,16 @@ class ChatInputBar extends StatefulWidget {
 
 class _ChatInputBarState extends State<ChatInputBar> {
   bool _showToolbar = false;
-  final _picker = ImagePicker();
 
   // 选中的图片
-  List<XFile>? _selectedImages;
+  List<File>? _selectedImages;
   // 选中的音频
-  XFile? _selectedAudio;
+  File? _selectedAudio;
 
   // 文件是否在解析中
   bool isLoadingDocument = false;
   // 被选中的文件
-  PlatformFile? _selectedFile;
+  File? _selectedFile;
   // 解析后的文件内容(本地和云端同时只能有一个，所以用一个变量记录)
   String _fileContent = '';
   // 云端文档的文件名(本地能获取到文件，云端只有文件名)
@@ -119,14 +118,14 @@ class _ChatInputBarState extends State<ChatInputBar> {
             icon: Icons.image,
             label: '相册',
             type: 'upload_image',
-            onTap: () => _handleImagePick(ImageSource.gallery),
+            onTap: () => _handleImagePick(CusImageSource.gallery),
           ),
           if (!ScreenHelper.isDesktop())
             ToolItem(
               icon: Icons.camera_alt,
               label: '拍照',
               type: 'take_photo',
-              onTap: () => _handleImagePick(ImageSource.camera),
+              onTap: () => _handleImagePick(CusImageSource.camera),
             ),
         ]);
         break;
@@ -212,15 +211,18 @@ class _ChatInputBarState extends State<ChatInputBar> {
   }
 
   // 处理图片选择
-  Future<void> _handleImagePick(ImageSource source) async {
+  Future<void> _handleImagePick(CusImageSource source) async {
     try {
-      if (source == ImageSource.gallery) {
-        final images = await _picker.pickMultiImage();
+      // 相册可选多张
+      if (source == CusImageSource.gallery) {
+        final images = await ImagePickerHelper.pickMultipleImages();
+
         if (images.isNotEmpty) {
           setState(() => _selectedImages = images);
         }
       } else {
-        final image = await _picker.pickImage(source: source);
+        // 拍照只有1张
+        final image = await ImagePickerHelper.takePhotoAndSave();
         if (image != null) {
           setState(() => _selectedImages = [image]);
         }
@@ -262,16 +264,15 @@ class _ChatInputBarState extends State<ChatInputBar> {
     });
 
     /// 选择文件，并解析出文本内容
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
+    File? file = await FilePickerHelper.pickAndSaveFile(
+      fileType: CusFileType.custom,
       allowedExtensions:
           ScreenHelper.isDesktop()
               ? ['pdf', 'docx', 'doc']
               : ['pdf', 'txt', 'docx', 'doc'],
-      allowMultiple: false,
     );
 
-    if (result != null) {
+    if (file != null) {
       setState(() {
         isLoadingDocument = true;
         _fileContent = '';
@@ -280,25 +281,22 @@ class _ChatInputBarState extends State<ChatInputBar> {
         _cloudFileName = "";
       });
 
-      PlatformFile file = result.files.first;
+      String fileExtension = file.path.split('.').last;
 
       try {
         var text = "";
-        switch (file.extension) {
+        switch (fileExtension) {
           case 'txt':
             DecodingResult result = await CharsetDetector.autoDecode(
-              File(file.path!).readAsBytesSync(),
+              File(file.path).readAsBytesSync(),
             );
             text = result.string;
           case 'pdf':
-            text = await compute(extractTextFromPdf, file.path!);
+            text = await compute(extractTextFromPdf, file.path);
           case 'docx':
-            text = await compute(
-              docxToText,
-              File(file.path!).readAsBytesSync(),
-            );
+            text = await compute(docxToText, File(file.path).readAsBytesSync());
           case 'doc':
-            text = await DocText().extractTextFromDoc(file.path!) ?? "";
+            text = await DocText().extractTextFromDoc(file.path) ?? "";
           default:
             debugPrint("默认的,暂时啥都不做");
         }
@@ -508,7 +506,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          _selectedFile?.name ?? _cloudFileName,
+          _selectedFile?.path.split('/').last ?? _cloudFileName,
           maxLines: 2,
           style: TextStyle(fontSize: 12),
         ),
@@ -520,7 +518,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
             children: [
               if (_selectedFile != null)
                 TextSpan(
-                  text: formatFileSize(_selectedFile?.size ?? 0),
+                  text: formatFileSize(_selectedFile?.lengthSync() ?? 0),
                   style: TextStyle(color: Colors.black, fontSize: 12),
                 ),
               TextSpan(
@@ -703,7 +701,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                     final messageData = MessageData(
                       text: transcription,
                       images: _selectedImages,
-                      audio: XFile("$tempPath.m4a"),
+                      audio: File("$tempPath.m4a"),
                       file: _selectedFile,
                       fileContent: _fileContent,
                     );

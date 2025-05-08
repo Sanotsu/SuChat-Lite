@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../../common/components/tool_widget.dart';
 import '../../../common/constants/constants.dart';
 import '../../../common/llm_spec/constant_llm_enum.dart';
+import '../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../common/utils/tools.dart';
 import '../../../common/utils/screen_helper.dart';
 import '../../../models/brief_ai_tools/media_generation_history/media_generation_history.dart';
@@ -23,29 +24,9 @@ class _BriefImageScreenState
     extends MediaGenerationBaseState<BriefImageScreen> {
   final List<String> _generatedImages = [];
 
-  final List<CusLabel> _imageSizeOptions = [
-    // 阿里通义万相：图像宽高边长的像素范围为：[768, 1440]，单位像素。可任意组合以设置不同的图像分辨率
-    // 阿里Flux系列：    1024*1024 512*1024, 768*512, 768*1024, 1024*576, 576*1024,
-
-    // 硅基流动的
-    // stabilityai系列 1024x1024, 512x1024, 768x512, 768x1024, 1024x576, 576x1024
-    // FLUX.1-schnell 1024x1024, 512x1024, 768x512, 768x1024, 1024x576, 576x1024
-    // FLUX.1-dev     1024x1024, 960x1280, 768x1024, 720x1440, 720x1280, others
-    // FLUX.1-pro     生成图像的宽度范围：[256 < x < 1440]，必须是 32 的倍数。
+  // 根据模型切换后才更新对应模型支持的尺寸
+  List<CusLabel> _imageSizeOptions = [
     CusLabel(cnLabel: "1:1", value: "1024x1024"),
-    CusLabel(cnLabel: "1:2", value: "512x1024"),
-    CusLabel(cnLabel: "3:2", value: "768x512"),
-    CusLabel(cnLabel: "3:4", value: "768x1024"),
-    CusLabel(cnLabel: "16:9", value: "1024x576"),
-    CusLabel(cnLabel: "9:16", value: "576x1024"),
-    // 智谱(传参时修改为比例接近的尺寸)
-    //  CusLabel(cnLabel: "1:1", value: "1024x1024"),
-    // CusLabel(cnLabel: "4:7", value: "768x1344"),
-    // CusLabel(cnLabel: "3:4", value: "864x1152"),
-    // CusLabel(cnLabel: "7:4", value: "1344x768"),
-    // CusLabel(cnLabel: "4:3", value: "1152x864"),
-    // CusLabel(cnLabel: "2:1", value: "1440x720"),
-    // CusLabel(cnLabel: "1:2", value: "720x1440"),
   ];
 
   late CusLabel _selectedImageSize;
@@ -94,6 +75,58 @@ class _BriefImageScreenState
     );
   }
 
+  // 当生图的模型切换后，更新可选的尺寸列表
+  // 注意，有些是x，有些是*
+  @override
+  modelChanged(CusBriefLLMSpec? model) {
+    if (model == null) return;
+
+    setState(() {
+      selectedModel = model;
+    });
+
+    if (model.platform == ApiPlatform.siliconCloud) {
+      _imageSizeOptions = [
+        CusLabel(cnLabel: "1:1", value: "1024x1024"),
+        CusLabel(cnLabel: "1:2", value: "720x1440"),
+        CusLabel(cnLabel: "3:4(大)", value: "960x1280"),
+        CusLabel(cnLabel: "3:4(小)", value: "768x1024"),
+        CusLabel(cnLabel: "9:16", value: "720x1280"),
+        CusLabel(cnLabel: "16:9", value: "1280x720"),
+      ];
+    }
+
+    if (model.platform == ApiPlatform.zhipu) {
+      _imageSizeOptions = [
+        CusLabel(cnLabel: "1:1", value: "1024x1024"),
+        CusLabel(cnLabel: "4:7", value: "768x1344"),
+        CusLabel(cnLabel: "3:4", value: "864x1152"),
+        CusLabel(cnLabel: "7:4", value: "1344x768"),
+        CusLabel(cnLabel: "4:3", value: "1152x864"),
+        CusLabel(cnLabel: "2:1", value: "1440x720"),
+        CusLabel(cnLabel: "1:2", value: "720x1440"),
+      ];
+    }
+
+    if (model.platform == ApiPlatform.aliyun) {
+      // flux只有6中默认尺寸，但通义万相-文生图V2宽高边长的像素范围为[512, 1440]的任意尺寸，最大200w像素
+      // 所以默认使用flux的尺寸就好
+      // if (model.model.contains("flux")) {
+      _imageSizeOptions = [
+        CusLabel(cnLabel: "1:1", value: "1024*1024"),
+        CusLabel(cnLabel: "1:2", value: "512*1024"),
+        CusLabel(cnLabel: "3:2", value: "768*512"),
+        CusLabel(cnLabel: "3:4", value: "768*1024"),
+        CusLabel(cnLabel: "16:9", value: "1024*576"),
+        CusLabel(cnLabel: "9:16", value: "576*1024"),
+      ];
+      // }
+    }
+    referenceImage = null;
+    _selectedImageSize = _imageSizeOptions.first;
+    setState(() {});
+  }
+
   @override
   Widget buildGeneratedList() {
     if (_generatedImages.isEmpty) {
@@ -118,12 +151,15 @@ class _BriefImageScreenState
     if (!checkGeneratePrerequisites()) return;
 
     setState(() => isGenerating = true);
-    
+
     // 显示生成遮罩
-    LoadingOverlay.showImageGeneration(context, onCancel: () {
-      // 取消生成
-      setState(() => isGenerating = false);
-    });
+    LoadingOverlay.showImageGeneration(
+      context,
+      onCancel: () {
+        // 取消生成
+        setState(() => isGenerating = false);
+      },
+    );
 
     try {
       // 创建历史记录
@@ -141,45 +177,18 @@ class _BriefImageScreenState
 
       final requestId = await dbHelper.insertMediaGenerationHistory(history);
 
-      // 生成图片(这里返回的就已经是生成图片的结果了)
-      // 2025-02-20 因为智谱的文生图比例和其他的差异过大，所以这里特殊处理
-      // 使用比例接近的尺寸
-      String tempSize = _selectedImageSize.value;
-
-      if (selectedModel?.platform == ApiPlatform.zhipu) {
-        switch (_selectedImageSize.cnLabel) {
-          case "1:1":
-            tempSize = "1024x1024";
-            break;
-          case "1:2":
-            tempSize = "720x1440";
-            break;
-          case "3:2":
-            tempSize = "1344x768";
-            break;
-          case "3:4":
-            tempSize = "864x1152";
-            break;
-          case "16:9":
-            tempSize = "1440x720";
-            break;
-          case "9:16":
-            tempSize = "768x1344";
-            break;
-          default:
-            tempSize = "1024x1024";
-            break;
-        }
-      }
-
       final response = await ImageGenerationService.generateImage(
         selectedModel!,
         promptController.text.trim(),
         n: 1,
-        size:
-            selectedModel?.platform == ApiPlatform.aliyun
-                ? tempSize.replaceAll('x', '*')
-                : tempSize,
+        size: _selectedImageSize.value,
+        refImage:
+            (selectedModel?.modelType == LLModelType.image ||
+                    selectedModel?.modelType == LLModelType.iti)
+                ? referenceImage
+                : null,
+        // 必须传入requestId，否则阿里云平台的job没有无法保存到数据库，那这里的查询未完成job永远都是0
+        requestId: requestId,
       );
 
       if (!mounted) return;
@@ -221,7 +230,7 @@ class _BriefImageScreenState
     } finally {
       // 隐藏生成遮罩
       LoadingOverlay.hide();
-      
+
       if (mounted) {
         setState(() => isGenerating = false);
       }
@@ -242,6 +251,7 @@ class _BriefImageScreenState
     super.initState();
 
     _selectedImageSize = _imageSizeOptions.first;
+
     _checkUnfinishedTasks();
   }
 
@@ -261,6 +271,10 @@ class _BriefImageScreenState
     for (final task in unfinishedTasks) {
       if (task.taskId != null) {
         try {
+          // 2025-05-08 注意，这里是自定义的图片生成结果
+          // 如果轮询过程中有结果了，直接在result中取值
+          // 如果还在处理中，则不会返回；
+          // 如果报错或者失败了，会有code和message
           final response = await ImageGenerationService.pollTaskStatus(
             modelList.firstWhere(
               (model) => model.platform == task.llmSpec.platform,
@@ -268,23 +282,41 @@ class _BriefImageScreenState
             task.taskId!,
           );
 
-          if (response.output?.taskStatus == 'SUCCEEDED') {
-            await dbHelper
-                .updateMediaGenerationHistoryByRequestId(task.requestId, {
-                  'isSuccess': 1,
-                  'imageUrls':
-                      response.output?.results
-                          ?.map((r) => r.url)
-                          .toList()
-                          .join(',') ??
-                      '',
-                });
-          } else if (response.output?.taskStatus == 'FAILED' ||
-              response.output?.taskStatus == 'UNKNOWN') {
+          if (response.code != null || response.message != null) {
             await dbHelper.updateMediaGenerationHistoryByRequestId(
               task.requestId,
               {'isFailed': 1},
             );
+          } else if (response.results.isNotEmpty) {
+            if (!mounted) return;
+
+            // 保存返回的网络图片到本地
+            var imageUrls = response.results.map((r) => r.url).toList();
+            List<String> newUrls = [];
+            for (final url in imageUrls) {
+              var localPath = await saveImageToLocal(
+                url,
+                dlDir: await getImageGenDir(),
+                showSaveHint: false,
+              );
+
+              if (localPath != null) {
+                newUrls.add(localPath);
+              }
+            }
+
+            // 更新UI(这里使用网络地址或本地地址没差，毕竟历史记录在其他页面，这里只有当前页面还在时才有图片展示)
+            if (!mounted) return;
+            setState(() {
+              _generatedImages.addAll(newUrls);
+            });
+
+            await dbHelper
+                .updateMediaGenerationHistoryByRequestId(task.requestId, {
+                  'isSuccess': 1,
+                  'isProcessing': 0,
+                  'imageUrls': _generatedImages.join(','),
+                });
           }
         } catch (e) {
           debugPrint('检查任务状态失败: $e');

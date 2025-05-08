@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:uuid/uuid.dart';
@@ -11,6 +10,7 @@ import '../../../../common/components/tool_widget.dart';
 import '../../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../../common/llm_spec/constant_llm_enum.dart';
 import '../../../../common/utils/db_tools/db_brief_ai_tool_helper.dart';
+import '../../../../common/utils/file_picker_helper.dart';
 import '../../../../common/utils/screen_helper.dart';
 import '../../../../common/utils/tools.dart';
 import '../../../../services/model_manager_service.dart';
@@ -120,16 +120,15 @@ class _ModelListState extends State<ModelList> {
 
   // 从JSON文件导入模型
   Future<void> _importFromJson() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
+    File? file = await FilePickerHelper.pickAndSaveFile(
+      fileType: CusFileType.custom,
       allowedExtensions: ['json'],
     );
 
-    if (result == null) return;
+    if (file == null) return;
 
     setState(() => _isImporting = true);
     try {
-      final file = File(result.files.single.path!);
       final jsonStr = await file.readAsString();
       final jsonList = json.decode(jsonStr) as List;
 

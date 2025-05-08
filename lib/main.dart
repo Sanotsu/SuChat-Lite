@@ -8,13 +8,13 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:proste_logger/proste_logger.dart';
 import 'package:video_player_media_kit/video_player_media_kit.dart';
 
 import 'models/brief_ai_tools/branch_chat/branch_store.dart';
 import 'common/components/toast_utils.dart';
 import 'common/components/min_size_layout.dart';
 import 'common/utils/screen_helper.dart';
+import 'common/utils/tools.dart';
 import 'services/cus_get_storage.dart';
 import 'services/model_manager_service.dart';
 import 'services/network_service.dart';
@@ -25,8 +25,6 @@ GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() {
   AppCatchError().run();
 }
-
-final pl = ProsteLogger();
 
 //全局异常的捕捉
 class AppCatchError {

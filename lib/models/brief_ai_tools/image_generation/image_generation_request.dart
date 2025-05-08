@@ -8,105 +8,75 @@ part 'image_generation_request.g.dart';
 
 @JsonSerializable(explicitToJson: true)
 class ImageGenerationRequest {
-  // OpenAI 标准参数
+  // 标准必填参数
   final String model;
   final String prompt;
+  // 这两个是页面功能设计时传入的生成数量和尺寸，在实际构建请求参数时再赋值给特定参数
+  // 比如硅基流动中，size是image_size，n 是 batch_size
+  // 智谱AI中 size是size，没有n
   final int? n;
   final String? size;
 
-  /// 2025-02-17 硅基流动中，不同模型也有不同特定参数
-  // 【deepseekai系列】
-  //  必填 model prompt
-  //  可选 seed
-  // 【stabilityai系列】
-  //  必填 model prompt image_size batch_size num_inference_steps guidance_scale
-  //  可选 negative_prompt seed prompt_enhancement
-  // 【FLUX.1-schnell】
-  //  必填 model prompt image_size
-  //  可选 seed prompt_enhancement
-  // 【FLUX.1-dev】
-  //  必填 model prompt image_size num_inference_steps
-  //  可选 seed prompt_enhancement
-  // 【FLUX.1-pro】
-  //  必填 model prompt width height
-  //  可选 image_prompt prompt_upsampling seed steps guidance safety_tolerance interval output_format
-  @JsonKey(name: 'image_size')
-  final String? imageSize;
-  @JsonKey(name: 'batch_size')
-  final int? batchSize;
+  /// 2025-05-08 硅基流动中，现在只有 Kwai-Kolors/Kolors
+  //  必填 model prompt image_size(即size) batch_size(即n) num_inference_steps guidance_scale
+  //  可选 negative_prompt seed image(参考图)
   @JsonKey(name: 'num_inference_steps')
   final int? numInferenceSteps;
   @JsonKey(name: 'guidance_scale')
   final double? guidanceScale;
   @JsonKey(name: 'negative_prompt')
   final String? negativePrompt;
-  @JsonKey(name: 'prompt_enhancement')
-  final bool? promptEnhancement;
-  @JsonKey(name: 'width')
-  final int? width;
-  @JsonKey(name: 'height')
-  final int? height;
-  @JsonKey(name: 'image_prompt')
-  final String? imagePrompt;
-  @JsonKey(name: 'prompt_upsampling')
-  final bool? promptUpsampling;
-  @JsonKey(name: 'guidance')
-  final double? guidance;
-  @JsonKey(name: 'safety_tolerance')
-  final int? safetyTolerance;
-  @JsonKey(name: 'interval')
-  final int? interval;
-  @JsonKey(name: 'output_format')
-  final String? outputFormat;
   @JsonKey(name: 'seed')
   final int? seed;
-  @JsonKey(name: 'steps')
-  final int? steps;
+  // 参考图在非硅基流动中使用时也可能有，所以改为更通用的名称，在构建body时再赋值给特定参数
+  @JsonKey(name: 'ref_image')
+  final String? refImage;
 
-  // 阿里云特有参数
+  /// 阿里云特有参数
+  // 通义万相-文生图V2版
+  // 必填 model input
+  // 选填 parameters
   final AliyunWanxV2Input? input;
   final AliyunWanxV2Parameter? parameters;
+
+  // 阿里云上的Flux
+  // 必填 model prompt
+  // 可选 size seed steps guidance offload add_sampling_metadata
+  @JsonKey(name: 'steps')
+  final int? steps;
+  @JsonKey(name: 'guidance')
+  final int? guidance;
+  @JsonKey(name: 'offload')
   final double? offload;
   @JsonKey(name: 'add_sampling_metadata')
   final String? addSamplingMetadata;
 
-  // 智谱AI特有参数
+  // 智谱平台 cogview
+  // 必填 model prompt
+  // 可选 size user_id quality(此参数仅支持cogview-4-250304)
   @JsonKey(name: 'user_id')
   final String? userId;
+  @JsonKey(name: 'quality')
+  final String? quality;
 
   const ImageGenerationRequest({
     required this.model,
     required this.prompt,
-    this.n = 1,
+    this.n,
     this.size,
-    this.seed,
-    this.steps,
-    this.guidance,
-
-    // 硅基流动
-    this.imageSize,
-    this.batchSize,
     this.numInferenceSteps,
     this.guidanceScale,
     this.negativePrompt,
-    this.promptEnhancement,
-    // 【FLUX.1-pro】
-    this.width,
-    this.height,
-    this.imagePrompt,
-    this.promptUpsampling,
-    this.safetyTolerance,
-    this.interval,
-    this.outputFormat = "png",
-
-    // 阿里云特有参数
+    this.seed,
+    this.refImage,
     this.input,
     this.parameters,
+    this.steps,
+    this.guidance,
     this.offload,
     this.addSamplingMetadata,
-
-    // 智谱AI特有参数
     this.userId,
+    this.quality,
   });
 
   // 从字符串转
@@ -128,24 +98,14 @@ class ImageGenerationRequest {
       case ApiPlatform.siliconCloud:
         return {
           ...base,
-          if (seed != null) 'seed': seed,
-          if (steps != null) 'steps': steps,
-          if (imageSize != null) 'image_size': imageSize,
-          if (batchSize != null) 'batch_size': batchSize,
+          if (size != null) 'image_size': size,
+          if (n != null) 'batch_size': n,
           if (numInferenceSteps != null)
             'num_inference_steps': numInferenceSteps,
           if (guidanceScale != null) 'guidance_scale': guidanceScale,
           if (negativePrompt != null) 'negative_prompt': negativePrompt,
-          if (promptEnhancement != null)
-            'prompt_enhancement': promptEnhancement,
-          if (width != null) 'width': width,
-          if (height != null) 'height': height,
-          if (imagePrompt != null) 'image_prompt': imagePrompt,
-          if (promptUpsampling != null) 'prompt_upsampling': promptUpsampling,
-          if (guidance != null) 'guidance': guidance,
-          if (safetyTolerance != null) 'safety_tolerance': safetyTolerance,
-          if (interval != null) 'interval': interval,
-          if (outputFormat != null) 'output_format': outputFormat,
+          if (seed != null) 'seed': seed,
+          if (refImage != null) 'image': refImage,
         };
 
       case ApiPlatform.aliyun:
@@ -164,6 +124,7 @@ class ImageGenerationRequest {
 
           if (input != null) 'input': input?.toJson(),
           if (parameters != null) 'parameters': parameters?.toJson(),
+          // 但阿里云的flux还是这样一个个传入的
           if (size != null) 'size': size,
           if (seed != null) 'seed': seed,
           if (steps != null) 'steps': steps,
@@ -177,6 +138,7 @@ class ImageGenerationRequest {
         return {
           ...base,
           if (size != null) 'size': size,
+          if (quality != null) 'quality': quality,
           if (userId != null) 'user_id': userId,
         };
 

@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+
 import '../../../../common/llm_spec/constant_llm_enum.dart';
+import '../../../../common/utils/file_picker_helper.dart';
 import '../../../../common/utils/screen_helper.dart';
 import '../../../../services/cus_get_storage.dart';
 
@@ -35,15 +36,14 @@ class _ApiKeyConfigState extends State<ApiKeyConfig> {
   }
 
   Future<void> _importFromJson() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
+    File? file = await FilePickerHelper.pickAndSaveFile(
+      fileType: CusFileType.custom,
       allowedExtensions: ['json'],
     );
 
-    if (result == null) return;
+    if (file == null) return;
 
     try {
-      final file = File(result.files.single.path!);
       final jsonStr = await file.readAsString();
       final Map<String, dynamic> json = jsonDecode(jsonStr);
 

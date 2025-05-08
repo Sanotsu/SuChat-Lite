@@ -1,11 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 import '../../../common/components/toast_utils.dart';
 import '../../../common/components/tool_widget.dart';
 import '../../../common/utils/image_color_helper.dart';
+import '../../../common/utils/image_picker_helper.dart';
 import '../../../models/brief_ai_tools/branch_chat/character_card.dart';
 import '../../../services/cus_get_storage.dart';
 import '../../../common/utils/screen_helper.dart';
@@ -618,8 +618,7 @@ class _ChatBackgroundPickerPageState extends State<ChatBackgroundPickerPage>
   }
 
   Future<void> _pickCustomBackground() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await ImagePickerHelper.pickSingleImage();
 
     if (pickedFile != null) {
       setState(() {

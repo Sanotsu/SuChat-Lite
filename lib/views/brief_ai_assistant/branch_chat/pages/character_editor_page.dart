@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
 import '../../../../common/components/tool_widget.dart';
 import '../../../../common/llm_spec/constant_llm_enum.dart';
+import '../../../../common/utils/image_picker_helper.dart';
 import '../../../../common/utils/tools.dart';
 import '../../../../models/brief_ai_tools/branch_chat/branch_store.dart';
 import '../../../../models/brief_ai_tools/branch_chat/character_card.dart';
@@ -602,7 +602,7 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
           title: const Text('相册'),
           onTap: () {
             Navigator.pop(context);
-            _pickImageFromCameraOrGallery(type, ImageSource.gallery);
+            _pickImageFromCameraOrGallery(type, CusImageSource.gallery);
           },
         ),
         if (ScreenHelper.isMobile())
@@ -611,7 +611,7 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
             title: const Text('拍照'),
             onTap: () {
               Navigator.pop(context);
-              _pickImageFromCameraOrGallery(type, ImageSource.camera);
+              _pickImageFromCameraOrGallery(type, CusImageSource.camera);
             },
           ),
         ListTile(
@@ -642,10 +642,15 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
   // type: avatar 头像, bg 背景
   Future<void> _pickImageFromCameraOrGallery(
     String type,
-    ImageSource source,
+    CusImageSource source,
   ) async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: source);
+    File? pickedFile;
+    // 相册
+    if (source == CusImageSource.gallery) {
+      pickedFile = await ImagePickerHelper.pickSingleImage();
+    } else {
+      pickedFile = await ImagePickerHelper.takePhotoAndSave();
+    }
 
     if (pickedFile != null) {
       // 复制图片到应用目录

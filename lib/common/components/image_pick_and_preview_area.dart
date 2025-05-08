@@ -1,13 +1,13 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
+import '../utils/image_picker_helper.dart';
 import 'tool_widget.dart';
 
 // 新版本可以用在图片选择和预览的地方
 class ImagePickAndPreviewArea extends StatelessWidget {
-  final Function(ImageSource) imageSelectedHandle;
+  final Function(CusImageSource) imageSelectedHandle;
   final Function() imageClearHandle;
   final File? selectedImage;
   final String imagePlaceholder;
@@ -43,14 +43,14 @@ class ImagePickAndPreviewArea extends StatelessWidget {
                       TextButton(
                         onPressed: () {
                           Navigator.of(context).pop();
-                          imageSelectedHandle(ImageSource.camera);
+                          imageSelectedHandle(CusImageSource.camera);
                         },
                         child: Text("拍照", style: TextStyle(fontSize: 16)),
                       ),
                       TextButton(
                         onPressed: () {
                           Navigator.of(context).pop();
-                          imageSelectedHandle(ImageSource.gallery);
+                          imageSelectedHandle(CusImageSource.gallery);
                         },
                         child: Text("相册", style: TextStyle(fontSize: 16)),
                       ),

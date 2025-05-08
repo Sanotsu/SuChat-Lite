@@ -1,6 +1,6 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/intl.dart';
 import 'package:record/record.dart';
@@ -13,6 +13,7 @@ import '../../../../../../services/voice_clone_service.dart';
 import '../../../../../../common/style/app_colors.dart';
 import '../../../../../../common/components/toast_utils.dart';
 import '../../../../../../common/components/cus_loading_indicator.dart';
+import '../../../../common/utils/file_picker_helper.dart';
 import 'github_storage_settings_page.dart';
 
 /// TODO audio_waveforms 不支持桌面端，想办法换一个，还是桌面不展示波形和播放试听？？？
@@ -214,23 +215,19 @@ class _VoiceClonePageState extends State<VoiceClonePage> {
 
   // 选择音频文件
   Future<void> _pickAudioFile() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.audio,
-      allowMultiple: false,
+    File? result = await FilePickerHelper.pickAndSaveFile(
+      fileType: CusFileType.audio,
     );
 
-    if (result != null && result.files.isNotEmpty) {
-      final path = result.files.first.path;
-      if (path != null) {
-        setState(() {
-          _recordingPath = path;
-        });
+    if (result != null) {
+      setState(() {
+        _recordingPath = result.path;
+      });
 
-        // 初始化播放器以便预览选择的音频
-        _initPlayer(path);
+      // 初始化播放器以便预览选择的音频
+      _initPlayer(result.path);
 
-        ToastUtils.showToast('已选择文件: ${result.files.first.name}');
-      }
+      ToastUtils.showToast('已选择文件: ${result.path.split("/").last}');
     }
   }
 

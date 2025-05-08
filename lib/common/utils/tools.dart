@@ -13,10 +13,14 @@ import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:proste_logger/proste_logger.dart';
 
 import '../components/toast_utils.dart';
 import '../constants/constants.dart';
 import 'screen_helper.dart';
+
+/// 全局单例，所有保留print但不想有提示或者使用debugPrint的，都用这个
+final pl = ProsteLogger();
 
 /// 请求各种权限
 /// 目前存储类的权限要分安卓版本，所以单独处理
@@ -754,4 +758,16 @@ Future<Directory> getVoiceCloneRecordDir() async {
 /// 获取语音识别录音保存目录
 Future<Directory> getVoiceRecognitionRecordDir() async {
   return getAppHomeDirectory(subfolder: "voice_recognition_records");
+}
+
+/// 使用file_picker选择文件时，保存文件的目录
+/// 所有文件选择都放在同一个位置，重复时直接返回已存在的内容
+Future<Directory> getFilePickerSaveDir() async {
+  return getAppHomeDirectory(subfolder: "file_picker_files");
+}
+
+/// 使用image_picker选择文件时，保存文件的目录
+/// 所有文件选择都放在同一个位置，重复时直接返回已存在的内容
+Future<Directory> getImagePickerSaveDir() async {
+  return getAppHomeDirectory(subfolder: "image_picker_files");
 }

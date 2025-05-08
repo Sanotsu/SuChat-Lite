@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../../common/components/tool_widget.dart';
+import '../../../../common/utils/file_picker_helper.dart';
 import '../../../../common/utils/screen_helper.dart';
 import '../../../../common/utils/tools.dart';
 import '../../../../models/brief_ai_tools/branch_chat/character_card.dart';
@@ -349,20 +352,16 @@ class _CharacterListPageState extends State<CharacterListPage> {
 
   Future<void> _importCharacters() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
+      // 1. 选择文件
+      File? result = await FilePickerHelper.pickAndSaveFile(
+        fileType: CusFileType.custom,
         allowedExtensions: ['json'],
       );
 
-      if (result == null || result.files.isEmpty) return;
-
-      final filePath = result.files.first.path;
-      if (filePath == null) return;
-
-      final importResult = await _store.importCharacters(filePath);
+      if (result == null) return;
+      final importResult = await _store.importCharacters(result.path);
 
       if (!mounted) return;
-
       String message;
       if (importResult.importedCount > 0) {
         message = '成功导入 ${importResult.importedCount} 个角色';

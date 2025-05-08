@@ -1,12 +1,11 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 
 import '../../../../common/components/toast_utils.dart';
 import '../../../../common/components/tool_widget.dart';
+import '../../../../common/utils/file_picker_helper.dart';
 import '../../../../common/utils/screen_helper.dart';
 import '../../../../models/brief_ai_tools/chat_completions/bigmodel_file_manage.dart';
 import '../../../../services/bigmodel_file_service.dart';
@@ -24,7 +23,7 @@ class FileUploadPage extends StatefulWidget {
 }
 
 class _FileUploadPageState extends State<FileUploadPage> {
-  PlatformFile? _selectedFile;
+  File? _selectedFile;
   double _uploadProgress = 0.0;
   String _uploadStatus = '未选择文件';
   final TextEditingController _apiKeyController = TextEditingController();
@@ -74,15 +73,14 @@ class _FileUploadPageState extends State<FileUploadPage> {
       return;
     }
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.any, // 可以选择任何类型文件
-        allowMultiple: false, // 单选
+      File? file = await FilePickerHelper.pickAndSaveFile(
+        fileType: CusFileType.any,
       );
 
-      if (result != null) {
+      if (file != null) {
         setState(() {
-          _selectedFile = result.files.first;
-          _uploadStatus = '已选择: ${_selectedFile!.name}';
+          _selectedFile = file;
+          _uploadStatus = '已选择: ${_selectedFile!.path.split('/').last}';
           _uploadProgress = 0.0;
         });
       }
@@ -109,7 +107,7 @@ class _FileUploadPageState extends State<FileUploadPage> {
     try {
       BigmodelFileUploadResult response =
           await BigmodelFileService.uploadFilesToBigmodel(
-            File(_selectedFile!.path!),
+            File(_selectedFile!.path),
             "file-extract",
           );
 
@@ -286,15 +284,7 @@ class _FileUploadPageState extends State<FileUploadPage> {
 
     try {
       // 如果是本地文件，直接打开
-      if (_selectedFile!.path != null) {
-        await OpenFile.open(_selectedFile!.path);
-      } else {
-        // 如果是web平台或其他情况，可能需要下载临时文件
-        final tempDir = await getTemporaryDirectory();
-        final tempFile = File('${tempDir.path}/${_selectedFile!.name}');
-        await tempFile.writeAsBytes(_selectedFile!.bytes!);
-        await OpenFile.open(tempFile.path);
-      }
+      await OpenFile.open(_selectedFile!.path);
     } catch (e) {
       if (!mounted) return;
       commonExceptionDialog(context, '无法打开文件', e.toString());
@@ -510,11 +500,11 @@ class _FileUploadPageState extends State<FileUploadPage> {
                           )
                           : null,
                   title: Text(
-                    _selectedFile!.name,
+                    _selectedFile!.path.split('/').last,
                     style: TextStyle(fontSize: ScreenHelper.getFontSize(14)),
                   ),
                   subtitle: Text(
-                    '${(_selectedFile!.size / 1024).toStringAsFixed(2)} KB',
+                    '${(_selectedFile!.lengthSync() / 1024).toStringAsFixed(2)} KB',
                     style: TextStyle(fontSize: ScreenHelper.getFontSize(12)),
                   ),
                   trailing: IconButton(
