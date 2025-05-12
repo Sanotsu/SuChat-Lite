@@ -75,6 +75,7 @@ class _FileUploadPageState extends State<FileUploadPage> {
     try {
       File? file = await FilePickerHelper.pickAndSaveFile(
         fileType: CusFileType.any,
+        overwrite: true,
       );
 
       if (file != null) {

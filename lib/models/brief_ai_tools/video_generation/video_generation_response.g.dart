@@ -6,9 +6,9 @@ part of 'video_generation_response.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-VideoGenerationResponse _$VideoGenerationResponseFromJson(
+CusUnifiedVideoGenResp _$CusUnifiedVideoGenRespFromJson(
         Map<String, dynamic> json) =>
-    VideoGenerationResponse(
+    CusUnifiedVideoGenResp(
       requestId: json['request_id'] as String?,
       taskId: json['task_id'] as String?,
       status: json['status'] as String?,
@@ -19,8 +19,8 @@ VideoGenerationResponse _$VideoGenerationResponseFromJson(
       message: json['message'] as String?,
     );
 
-Map<String, dynamic> _$VideoGenerationResponseToJson(
-        VideoGenerationResponse instance) =>
+Map<String, dynamic> _$CusUnifiedVideoGenRespToJson(
+        CusUnifiedVideoGenResp instance) =>
     <String, dynamic>{
       'request_id': instance.requestId,
       'task_id': instance.taskId,
@@ -71,14 +71,12 @@ VideoGenerationTaskResponse _$VideoGenerationTaskResponseFromJson(
         Map<String, dynamic> json) =>
     VideoGenerationTaskResponse(
       status: json['status'] as String?,
-      position: (json['position'] as num?)?.toInt(),
       reason: json['reason'] as String?,
       results: json['results'] == null
           ? null
           : SiliconflowVideoStatusResult.fromJson(
               json['results'] as Map<String, dynamic>),
       requestId: json['request_id'] as String?,
-      id: json['id'] as String?,
       model: json['model'] as String?,
       taskStatus: json['task_status'] as String?,
       videoResult: (json['video_result'] as List<dynamic>?)
@@ -96,14 +94,12 @@ Map<String, dynamic> _$VideoGenerationTaskResponseToJson(
         VideoGenerationTaskResponse instance) =>
     <String, dynamic>{
       'status': instance.status,
-      'position': instance.position,
       'reason': instance.reason,
       'results': instance.results?.toJson(),
       'model': instance.model,
       'video_result': instance.videoResult?.map((e) => e.toJson()).toList(),
       'task_status': instance.taskStatus,
       'request_id': instance.requestId,
-      'id': instance.id,
       'output': instance.output?.toJson(),
       'usage': instance.usage?.toJson(),
     };
@@ -118,6 +114,8 @@ AliyunVideoOutput _$AliyunVideoOutputFromJson(Map<String, dynamic> json) =>
       json['video_url'] as String?,
       json['code'] as String?,
       json['message'] as String?,
+      json['orig_prompt '] as String?,
+      json['actual_prompt  '] as String?,
     );
 
 Map<String, dynamic> _$AliyunVideoOutputToJson(AliyunVideoOutput instance) =>
@@ -130,12 +128,14 @@ Map<String, dynamic> _$AliyunVideoOutputToJson(AliyunVideoOutput instance) =>
       'video_url': instance.videoUrl,
       'code': instance.code,
       'message': instance.message,
+      'orig_prompt ': instance.origPrompt,
+      'actual_prompt  ': instance.actualPrompt,
     };
 
 AliyunVideoUsage _$AliyunVideoUsageFromJson(Map<String, dynamic> json) =>
     AliyunVideoUsage(
-      json['video_count'] as String?,
-      json['video_duration'] as String?,
+      (json['video_count'] as num?)?.toInt(),
+      (json['video_duration'] as num?)?.toInt(),
       json['video_ratio'] as String?,
     );
 

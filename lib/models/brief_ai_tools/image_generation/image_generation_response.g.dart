@@ -6,9 +6,9 @@ part of 'image_generation_response.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-ImageGenerationResponse _$ImageGenerationResponseFromJson(
+CusUnifiedImageGenResp _$CusUnifiedImageGenRespFromJson(
         Map<String, dynamic> json) =>
-    ImageGenerationResponse(
+    CusUnifiedImageGenResp(
       created: (json['created'] as num?)?.toInt(),
       output: json['output'] == null
           ? null
@@ -37,8 +37,8 @@ ImageGenerationResponse _$ImageGenerationResponseFromJson(
           .toList(),
     );
 
-Map<String, dynamic> _$ImageGenerationResponseToJson(
-        ImageGenerationResponse instance) =>
+Map<String, dynamic> _$CusUnifiedImageGenRespToJson(
+        CusUnifiedImageGenResp instance) =>
     <String, dynamic>{
       'request_id': instance.requestId,
       'output': instance.output?.toJson(),
@@ -59,6 +59,8 @@ ImageGenerationResult _$ImageGenerationResultFromJson(
       url: json['url'] as String,
       origPrompt: json['orig_prompt'] as String?,
       actualPrompt: json['actual_prompt'] as String?,
+      code: json['code'] as String?,
+      message: json['message'] as String?,
     );
 
 Map<String, dynamic> _$ImageGenerationResultToJson(
@@ -67,6 +69,8 @@ Map<String, dynamic> _$ImageGenerationResultToJson(
       'url': instance.url,
       'orig_prompt': instance.origPrompt,
       'actual_prompt': instance.actualPrompt,
+      'code': instance.code,
+      'message': instance.message,
     };
 
 AliyunWanxV2Resp _$AliyunWanxV2RespFromJson(Map<String, dynamic> json) =>
@@ -94,6 +98,11 @@ AliyunWanxV2Output _$AliyunWanxV2OutputFromJson(Map<String, dynamic> json) =>
     AliyunWanxV2Output(
       json['task_id'] as String,
       json['task_status'] as String,
+      json['submit_time'] as String?,
+      json['scheduled_time'] as String?,
+      json['end_time'] as String?,
+      json['code'] as String?,
+      json['message'] as String?,
       (json['results'] as List<dynamic>?)
           ?.map(
               (e) => ImageGenerationResult.fromJson(e as Map<String, dynamic>))
@@ -108,6 +117,11 @@ Map<String, dynamic> _$AliyunWanxV2OutputToJson(AliyunWanxV2Output instance) =>
     <String, dynamic>{
       'task_id': instance.taskId,
       'task_status': instance.taskStatus,
+      'submit_time': instance.submitTime,
+      'scheduled_time': instance.scheduledTime,
+      'end_time': instance.endTime,
+      'code': instance.code,
+      'message': instance.message,
       'results': instance.results?.map((e) => e.toJson()).toList(),
       'task_metrics': instance.taskMetrics?.toJson(),
     };

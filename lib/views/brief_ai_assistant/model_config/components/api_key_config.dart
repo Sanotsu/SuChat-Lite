@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../../../common/components/toast_utils.dart';
 import '../../../../common/llm_spec/constant_llm_enum.dart';
 import '../../../../common/utils/file_picker_helper.dart';
 import '../../../../common/utils/screen_helper.dart';
@@ -39,6 +40,7 @@ class _ApiKeyConfigState extends State<ApiKeyConfig> {
     File? file = await FilePickerHelper.pickAndSaveFile(
       fileType: CusFileType.custom,
       allowedExtensions: ['json'],
+      overwrite: true,
     );
 
     if (file == null) return;
@@ -54,15 +56,9 @@ class _ApiKeyConfigState extends State<ApiKeyConfig> {
 
       _loadApiKeys();
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('API KEY 导入成功')));
+      ToastUtils.showSuccess('API KEY 导入成功');
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('导入失败: $e')));
+      ToastUtils.showError('导入失败: $e', duration: Duration(seconds: 5));
     }
   }
 
@@ -89,11 +85,7 @@ class _ApiKeyConfigState extends State<ApiKeyConfig> {
     if (confirm == true) {
       await MyGetStorage().clearUserAKMap();
       _loadApiKeys(); // 重新加载数据
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('已清除所有 API Key')));
+      ToastUtils.showSuccess('已清除所有 API Key');
     }
   }
 
@@ -386,9 +378,7 @@ class _ApiKeyConfigState extends State<ApiKeyConfig> {
                     var platform = _selectedPlatformKeyLabel?.name;
 
                     if (platform == null || platform.isEmpty || key.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('平台名称和API Key不能为空')),
-                      );
+                      ToastUtils.showError('平台名称和API Key不能为空');
                       return;
                     }
 
@@ -419,10 +409,7 @@ class _ApiKeyConfigState extends State<ApiKeyConfig> {
       await MyGetStorage().setUserAKMap(newKeys);
       _loadApiKeys();
 
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(isEditing ? 'API Key已更新' : '新API Key已添加')),
-      );
+      ToastUtils.showSuccess(isEditing ? 'API Key已更新' : '新API Key已添加');
     }
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../components/advanced_options_bottom_sheet.dart';
 import '../components/advanced_options_dialog.dart';
 import '../components/advanced_options_panel.dart';
+import '../components/toast_utils.dart';
 import '../llm_spec/constant_llm_enum.dart';
 import '../constants/advanced_options_presets.dart';
 import '../utils/screen_helper.dart';
@@ -37,10 +38,7 @@ class AdvancedOptionsUtils {
     }
 
     if (options.isEmpty) {
-      if (!context.mounted) return null;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('当前模型没有可配置的高级参数')));
+      ToastUtils.showWarning('当前模型没有可配置的高级参数');
       return null;
     }
 

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 
+import '../../../common/components/toast_utils.dart';
 import '../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../common/llm_spec/constant_llm_enum.dart';
 import '../../../common/utils/db_tools/db_brief_ai_tool_helper.dart';
@@ -8,8 +9,8 @@ import '../../../common/components/tool_widget.dart';
 import '../../../common/utils/image_picker_helper.dart';
 import '../../../common/utils/screen_helper.dart';
 import '../../../services/model_manager_service.dart';
-import '../../../services/voice_clone_service.dart';
 import '../../../services/voice_generation_service.dart';
+import '../../../models/brief_ai_tools/media_generation_history/media_generation_history.dart';
 
 abstract class MediaGenerationBase extends StatefulWidget {
   const MediaGenerationBase({super.key});
@@ -100,17 +101,13 @@ abstract class MediaGenerationBaseState<T extends MediaGenerationBase>
   // 检查生成前的必要条件
   bool checkGeneratePrerequisites() {
     if (selectedModel == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先选择模型'), backgroundColor: Colors.red),
-      );
+      ToastUtils.showError('请先选择模型');
       return false;
     }
 
     final prompt = promptController.text.trim();
     if (prompt.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入提示词'), backgroundColor: Colors.red),
-      );
+      ToastUtils.showError('请输入提示词');
       return false;
     }
 
@@ -351,41 +348,6 @@ abstract class MediaGenerationBaseState<T extends MediaGenerationBase>
     setState(() {
       selectedModel = value!;
     });
-
-    // 2025-04-25 虽然不严谨，但暂时图省事这样写
-    if (selectedModel?.modelType == LLModelType.tts) {
-      final voices = await VoiceCloneService.getClonedVoices();
-
-      List<AliyunVoiceType> clonedList =
-          voices.map((e) {
-            // 理论上api查询结果中都有这个id的
-
-            // 作为name时不需要前面的cosyvoice-固定内容
-            // var name = e.voiceId!.substring(10);
-            var tempList = e.voiceId!.split("-");
-            var name = "${tempList[1]}-${tempList[2]}";
-            return AliyunVoiceType(name, e.voiceId!, "", "", "", "");
-          }).toList();
-
-      if (selectedModel?.model == "cosyvoice-v1") {
-        voiceOptions =
-            VoiceGenerationService.getV1AvailableVoices() +
-            clonedList.where((e) => e.id.startsWith("cosyvoice-v1")).toList();
-      } else if (selectedModel?.model == "cosyvoice-v2") {
-        voiceOptions =
-            VoiceGenerationService.getV2AvailableVoices() +
-            clonedList.where((e) => e.id.startsWith("cosyvoice-v2")).toList();
-      } else if (selectedModel?.model == "sambert") {
-        voiceOptions = VoiceGenerationService.getSambertVoices();
-      } else if (selectedModel?.model != null &&
-          selectedModel!.model.contains('qwen-tts')) {
-        voiceOptions = VoiceGenerationService.getQwenTTSVoices();
-      }
-
-      selectedVoice = voiceOptions.first;
-      // 刷新状态
-      setState(() {});
-    }
   }
 
   // 提示词输入框
@@ -408,5 +370,151 @@ abstract class MediaGenerationBaseState<T extends MediaGenerationBase>
   void dispose() {
     promptController.dispose();
     super.dispose();
+  }
+
+  // =============================================
+  // 以下是添加的公共任务卡片组件方法
+  // =============================================
+
+  /// 构建通用的任务状态指示器
+  Widget buildTaskStatusIndicator(MediaGenerationHistory task) {
+    Color color;
+    IconData icon;
+    String label;
+
+    if (task.isSuccess == true) {
+      color = Colors.green;
+      icon = Icons.check_circle;
+      label = '完成';
+    } else if (task.isFailed == true) {
+      color = Colors.red;
+      icon = Icons.error;
+      label = '失败';
+    } else if (task.isProcessing == true) {
+      color = Colors.blue;
+      icon = Icons.hourglass_empty;
+      label = '处理中';
+    } else {
+      color = Colors.orange;
+      icon = Icons.warning;
+      label = '未知';
+    }
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          SizedBox(width: 4),
+          Text(label, style: TextStyle(fontSize: 10, color: color)),
+        ],
+      ),
+    );
+  }
+
+  /// 构建通用的任务卡片
+  ///
+  /// [task] - 媒体生成任务记录
+  /// [onTap] - 点击卡片时的回调
+  /// [onLongPress] - 长按卡片时的回调
+  /// [mediaPreview] - 媒体预览小部件，如图片缩略图或视频图标
+  /// [isGrid] - 是否使用网格布局
+  Widget buildMediaTaskCard({
+    required MediaGenerationHistory task,
+    required Function() onTap,
+    required Function() onLongPress,
+    required Widget mediaPreview,
+    bool isGrid = false,
+  }) {
+    // 列表视图时的卡片内容
+    Widget listCardChild = Padding(
+      padding: const EdgeInsets.all(4.0),
+      child: Row(
+        children: [
+          // 媒体预览
+          mediaPreview,
+          SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      "${CP_NAME_MAP[task.llmSpec.platform] ?? ''} ${task.llmSpec.model}",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Spacer(),
+                    buildTaskStatusIndicator(task),
+                  ],
+                ),
+                Text(task.gmtCreate.toString(), style: TextStyle(fontSize: 12)),
+                // 提示词
+                SizedBox(
+                  height: 40,
+                  child: Text(
+                    task.prompt,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      margin: EdgeInsets.all(5),
+      child: InkWell(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: isGrid ? mediaPreview : listCardChild,
+      ),
+    );
+  }
+
+  /// 创建通用的确认删除对话框
+  Future<bool?> showDeleteTaskConfirmDialog(
+    BuildContext context,
+    String mediaType,
+  ) {
+    return showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text('删除$mediaType生成任务', style: TextStyle(fontSize: 16)),
+            content: Text(
+              '删除后，$mediaType生成任务记录将不再显示，但不会影响已保存的$mediaType文件。',
+              style: TextStyle(fontSize: 14),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text('取消', style: TextStyle(fontSize: 14)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text('确定', style: TextStyle(fontSize: 14)),
+              ),
+            ],
+          ),
+    );
   }
 }

@@ -15,8 +15,8 @@ class ImagePickerHelper {
   static final ImagePicker _picker = ImagePicker();
 
   /// 从相册选择单张图片并保存到指定目录
-  /// [saveDir] - 指定保存目录路径，为null时使用应用文档目录
-  /// [customFileName] - 自定义文件名，为null时使用时间戳命名
+  /// [saveDir] - 指定保存目录路径，为null时使用通用图片保存目录
+  /// [customFileName] - 自定义文件名，为null时使用原文件名
   /// [quality] - 图片质量(0-100)
   /// [maxWidth/maxHeight] - 图片最大宽高
   static Future<File?> pickSingleImage({
@@ -25,6 +25,7 @@ class ImagePickerHelper {
     int quality = 80,
     double? maxWidth,
     double? maxHeight,
+    bool overwrite = false,
   }) async {
     try {
       final XFile? image = await _picker.pickImage(
@@ -40,6 +41,7 @@ class ImagePickerHelper {
         xfile: image,
         saveDir: saveDir,
         customFileName: customFileName,
+        overwrite: overwrite,
       );
     } catch (e) {
       pl.e('从相册选择图片错误: $e');
@@ -55,6 +57,7 @@ class ImagePickerHelper {
     double? maxWidth,
     double? maxHeight,
     bool requestFullMetadata = true,
+    bool overwrite = false,
   }) async {
     try {
       final List<XFile> images = await _picker.pickMultiImage(
@@ -73,6 +76,7 @@ class ImagePickerHelper {
         final savedFile = await _saveXFileReturnFile(
           xfile: image,
           saveDir: targetDir.path,
+          overwrite: overwrite,
         );
         if (savedFile != null) {
           savedFiles.add(savedFile);
@@ -92,6 +96,7 @@ class ImagePickerHelper {
     int quality = 80,
     double? maxWidth,
     double? maxHeight,
+    bool overwrite = false,
   }) async {
     try {
       final XFile? photo = await _picker.pickImage(
@@ -108,6 +113,7 @@ class ImagePickerHelper {
         xfile: photo,
         saveDir: saveDir,
         customFileName: customFileName,
+        overwrite: overwrite,
       );
     } catch (e) {
       pl.e('拍照保存错误: $e');
@@ -122,6 +128,7 @@ class ImagePickerHelper {
     String? customFileName,
     CameraDevice preferredCameraDevice = CameraDevice.rear,
     Duration? maxDuration,
+    bool overwrite = false,
   }) async {
     try {
       final XFile? video = await _picker.pickVideo(
@@ -136,6 +143,7 @@ class ImagePickerHelper {
         xfile: video,
         saveDir: saveDir,
         customFileName: customFileName,
+        overwrite: overwrite,
       );
     } catch (e) {
       pl.e('选择视频错误: $e');
@@ -148,18 +156,21 @@ class ImagePickerHelper {
     required XFile xfile,
     String? saveDir,
     String? customFileName,
+    bool overwrite = false,
   }) async {
     try {
       // 获取目标目录
       Directory targetDir = await _getTargetDirectory(saveDir);
 
       // 确定文件名
-      String extension = path.extension(xfile.name);
-      String fileName =
-          customFileName ??
-          '${DateTime.now().millisecondsSinceEpoch}$extension';
-
+      String fileName = customFileName ?? xfile.name;
       String filePath = path.join(targetDir.path, fileName);
+
+      // 检查文件是否已存在(如果存在且overwrite为false，则返回原文件)
+      if (await File(filePath).exists() && !overwrite) {
+        // throw Exception('文件已存在: $filePath');
+        return File(filePath);
+      }
 
       // 读取原始文件字节
       final data = await xfile.readAsBytes();
@@ -180,16 +191,19 @@ class ImagePickerHelper {
     required XFile xfile,
     String? saveDir,
     String? customFileName,
+    bool overwrite = false,
   }) async {
     try {
       Directory targetDir = await _getTargetDirectory(saveDir);
 
-      String extension = path.extension(xfile.name);
-      String fileName =
-          customFileName ??
-          '${DateTime.now().millisecondsSinceEpoch}$extension';
-
+      String fileName = customFileName ?? xfile.name;
       String filePath = path.join(targetDir.path, fileName);
+
+      // 检查文件是否已存在(如果存在且overwrite为false，则返回原文件)
+      if (await File(filePath).exists() && !overwrite) {
+        // throw Exception('文件已存在: $filePath');
+        return XFile(filePath);
+      }
 
       // 将文件保存到新位置
       File newFile = File(filePath);

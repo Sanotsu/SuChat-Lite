@@ -5,26 +5,34 @@ import '../../../common/llm_spec/constant_llm_enum.dart';
 
 part 'video_generation_request.g.dart';
 
+/// 2025-05-10 有再确认参数
+/// 阿里、智谱、硅基流动都是先提交job，返回requestId或taskId。再轮询job状态
+/// 这个请求体是提交job的请求体
 @JsonSerializable(explicitToJson: true)
 class VideoGenerationRequest {
   final String model;
   final String prompt;
+  // 尺寸和参考图各个模型都有，但参数名可能不一样，所以统一参数放在外面，实际参数再构建
+  final String? size;
+  @JsonKey(name: 'ref_image')
+  final String? refImage;
 
-  /// 阿里云特有参数: model input parameters
+  /// 阿里云万相参数: model input parameters
   final AliyunVideoInput? input;
   final AliyunVideoParameter? parameters;
+  // 阿里的itv不叫size，而是resolution，在这个类里不好处理就都留着
+  final String? resolution;
+  // 时长
+  final int? duration;
 
   /// 智谱AI特有参数: model prompt quality with_audio image_url size fps request_id user_id
+  /// cogvideox-flash：不支持quality 、size 、fps 参数设置
   // 输出模式，默认为 "speed"。 "quality"：质量优先，生成质量高。 "speed"：速度优先，生成时间更快，质量相对降低。
   final String? quality;
   // 是否生成 AI 音效。默认值: False（不生成音效）。
   @JsonKey(name: 'with_audio')
   final bool? withAudio;
-  // 支持通过URL或Base64编码 【image_url和prompt二选一或者同时传入】
-  @JsonKey(name: 'image_url')
-  final String? imageUrl;
-  // 分辨率选项：720x480、1024x1024、1280x960、960x1280、1920x1080、1080x1920、2048x1080、3840x2160
-  final String? size;
+
   // 视频帧率（FPS），可选值为 30 或 60。默认值: 30。
   final int? fps;
   // 由用户端传参，需保证唯一性；用于区分每次请求的唯一标识，用户端不传时平台会默认生成。
@@ -35,31 +43,29 @@ class VideoGenerationRequest {
   @JsonKey(name: 'user_id')
   final String? userId;
 
-  // 硅基流动特有参数 2025-02-19
-  // Lightricks/LTX-Video: model prompt seed image
-  // tencent/HunyuanVideo: model prompt seed
-  // genmo/mochi-1-preview: model prompt seed guidance_scale
-  // 这个参考图暂时只能是url
-  final String? image;
+  // 硅基流动特有参数 2025-05-12
+  // Wan-AI: (必填)model prompt image_size (可选)negative_prompt image seed
+  // tencent/HunyuanVideo:(必填) model prompt (可选) seed
+  @JsonKey(name: 'negative_prompt')
+  final String? negativePrompt;
   final int? seed;
-  @JsonKey(name: 'guidance_scale')
-  final double? guidanceScale;
 
   VideoGenerationRequest({
     required this.model,
     required this.prompt,
+    this.size,
+    this.refImage,
+    this.input,
+    this.parameters,
+    this.resolution,
+    this.duration,
+    this.negativePrompt,
     this.quality,
     this.withAudio,
-    this.imageUrl,
-    this.size,
     this.fps,
     this.requestId,
     this.userId,
-    this.image,
     this.seed,
-    this.guidanceScale,
-    this.input,
-    this.parameters,
   });
 
   // 从字符串转
@@ -81,23 +87,36 @@ class VideoGenerationRequest {
       case ApiPlatform.siliconCloud:
         return {
           ...base,
-          if (image != null) 'image': image,
+          if (refImage != null) 'image': refImage,
+          if (size != null) 'image_size': size,
           if (seed != null) 'seed': seed,
-          if (guidanceScale != null) 'guidance_scale': guidanceScale,
+          if (negativePrompt != null) 'negative_prompt': negativePrompt,
         };
 
       case ApiPlatform.aliyun:
         var inputJson = {};
         inputJson['prompt'] = prompt;
-        if (imageUrl != null) {
-          inputJson['img_url'] = imageUrl;
+        if (refImage != null) {
+          inputJson['img_url'] = refImage;
         }
+
+        var parameterJson = {};
+        parameterJson['prompt_extend'] = true;
+        if (size != null) {
+          parameterJson['size'] = size;
+        }
+        if (resolution != null) {
+          parameterJson['resolution'] = resolution;
+        }
+        if (duration != null) {
+          inputJson['duration'] = duration;
+        }
+
         return {
           // 阿里云的输入参数是单独的
           'model': model,
-          // "input": AliyunVideoInput(prompt: prompt, imgUrl: imageUrl).toJson(),
           "input": inputJson,
-          "parameters": AliyunVideoParameter(size: size, seed: seed).toJson(),
+          "parameters": parameterJson,
           if (input != null) 'input': input?.toJson(),
           if (parameters != null) 'parameters': parameters?.toJson(),
         };
@@ -106,7 +125,7 @@ class VideoGenerationRequest {
         return {
           ...base,
           if (withAudio != null) 'with_audio': withAudio,
-          if (imageUrl != null) 'image_url': imageUrl,
+          if (refImage != null) 'image_url': refImage,
           if (requestId != null) 'request_id': requestId,
           if (userId != null) 'user_id': userId,
           // cogvideox-flash：不支持quality 、size 、fps 参数设置
@@ -143,10 +162,15 @@ class AliyunVideoInput {
 @JsonSerializable(explicitToJson: true)
 class AliyunVideoParameter {
   // 文生成视频的分辨率。默认值1280*720。其中，1280代表宽度，720代表高度。
-  // 【图生视频没看到这个参数】
   // 目前支持5档分辨率选择：1280*720、960*960、720*1280、1088*832、 832*1088。
   final String? size;
-  // 生成视频的时长，默认为5，单位为秒。2025-02-19 目前仅支持5秒固定时长生成。
+  // 2025-05-12 图生视频没有size，而是resolution
+  // wanx2.1-i2v-turbo：480P、720P wanx2.1-i2v-plus：720P。
+  final String? resolution;
+
+  /// 这3个文生/图生视频都有
+  // 文生成视频的时长，默认为5，单位为秒。2025-02-19 目前仅支持5秒固定时长生成。
+  // wanx2.1-i2v-turbo：可选值为3、4或5。wanx2.1-i2v-plus：目前仅支持5秒固定时长生成。
   final int? duration;
   // 是否开启prompt智能改写。开启后使用大模型对输入prompt进行智能改写。对于较短的prompt生成效果提升明显，但会增加耗时。
   @JsonKey(name: 'prompt_extend')
@@ -156,6 +180,7 @@ class AliyunVideoParameter {
 
   AliyunVideoParameter({
     this.size,
+    this.resolution,
     this.seed,
     this.duration = 5,
     this.promptExtend = true,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
+import '../../../../common/components/toast_utils.dart';
 import '../../../../services/cus_get_storage.dart';
 
 class MessageColorSettingsPage extends StatefulWidget {
@@ -30,10 +31,7 @@ class _MessageColorSettingsPageState extends State<MessageColorSettingsPage> {
 
   Future<void> _saveConfig() async {
     await MyGetStorage().saveMessageColorConfig(_config);
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('颜色设置已保存')));
+    ToastUtils.showSuccess('颜色设置已保存');
   }
 
   Future<void> _selectColor(BuildContext context, String colorType) async {

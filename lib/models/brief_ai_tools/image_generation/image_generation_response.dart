@@ -7,9 +7,10 @@ part 'image_generation_response.g.dart';
 /// 2025-02-17 图片生成的响应，各个平台返回的格式不一样
 /// 最主要的例如硅基流动，是直接返回图片结果，阿里云是返回任务id，然后轮询任务结果
 
-// 这个是得到结果的内容，任务id那种会另外处理：轮询到完成后把图片结果放到这个response中来
+// 这个是统一自定义的得到图片生成结果的内容，
+// 任务id那种会另外处理：轮询到完成后把图片结果放到这个response中来
 @JsonSerializable(explicitToJson: true)
-class ImageGenerationResponse {
+class CusUnifiedImageGenResp {
   /// 阿里云的Flux
   // 系统生成的标志本次调用的id。
   @JsonKey(name: 'request_id')
@@ -40,7 +41,7 @@ class ImageGenerationResponse {
   /// 自定义的返回结果
   List<ImageGenerationResult> results;
 
-  ImageGenerationResponse({
+  CusUnifiedImageGenResp({
     this.created,
     this.output,
     this.requestId,
@@ -52,37 +53,39 @@ class ImageGenerationResponse {
     this.data,
     this.contentFilter,
     List<ImageGenerationResult>? results,
-  }) : results = results ?? _generatecusText(data, images);
+  }) : results = results ?? _generateCusResult(data, images);
 
-  static List<ImageGenerationResult> _generatecusText(
+  static List<ImageGenerationResult> _generateCusResult(
     List<ImageGenerationResult>? data,
     List<ImageGenerationResult>? images,
   ) {
-    // 非流式的
+    // 智谱的图片结构栏位
     if (data != null && data.isNotEmpty) {
       return data;
     }
-    // 流式的
+    // 硅基流动的图片结构栏位
     if (images != null && images.isNotEmpty) {
       return images;
     }
 
     return [];
+    // 阿里云的图片结构栏位直接就是results，所以不需要处理
   }
 
   // 从字符串转
-  factory ImageGenerationResponse.fromRawJson(String str) =>
-      ImageGenerationResponse.fromJson(json.decode(str));
+  factory CusUnifiedImageGenResp.fromRawJson(String str) =>
+      CusUnifiedImageGenResp.fromJson(json.decode(str));
   // 转为字符串
   String toRawJson() => json.encode(toJson());
 
-  factory ImageGenerationResponse.fromJson(Map<String, dynamic> srcJson) =>
-      _$ImageGenerationResponseFromJson(srcJson);
+  factory CusUnifiedImageGenResp.fromJson(Map<String, dynamic> srcJson) =>
+      _$CusUnifiedImageGenRespFromJson(srcJson);
 
-  Map<String, dynamic> toJson() => _$ImageGenerationResponseToJson(this);
+  Map<String, dynamic> toJson() => _$CusUnifiedImageGenRespToJson(this);
 }
 
 // 统一的图片生成结果
+// 智谱和硅基流动响应的图片结构都只有一个url，阿里云的多几个其他的，不影响放在一起取url使用
 @JsonSerializable(explicitToJson: true)
 class ImageGenerationResult {
   final String url;
@@ -91,10 +94,18 @@ class ImageGenerationResult {
   @JsonKey(name: 'actual_prompt')
   final String? actualPrompt;
 
+  // 生成多个图片时，成功是上面3个栏位，如果有失败的，也有图片而不是任务的错误code和message
+  @JsonKey(name: 'code')
+  final String? code;
+  @JsonKey(name: 'message')
+  final String? message;
+
   ImageGenerationResult({
     required this.url,
     this.origPrompt,
     this.actualPrompt,
+    this.code,
+    this.message,
   });
 
   // 从字符串转
@@ -160,6 +171,8 @@ class AliyunWanxV2Resp {
   Map<String, dynamic> toJson() => _$AliyunWanxV2RespToJson(this);
 }
 
+// 2025-05-09 有新的改动字段
+// https://help.aliyun.com/zh/model-studio/text-to-image-v2-api-reference#2c7095ee9avlt
 @JsonSerializable(explicitToJson: true)
 class AliyunWanxV2Output {
   // 本次请求的异步任务的作业 id，实际作业结果需要通过异步任务查询接口获取。
@@ -175,6 +188,18 @@ class AliyunWanxV2Output {
   @JsonKey(name: 'task_status')
   String taskStatus;
 
+  // 2025-05-09 新增字段
+  @JsonKey(name: 'submit_time')
+  String? submitTime;
+  @JsonKey(name: 'scheduled_time')
+  String? scheduledTime;
+  @JsonKey(name: 'end_time')
+  String? endTime;
+  @JsonKey(name: 'code')
+  String? code;
+  @JsonKey(name: 'message')
+  String? message;
+
   // 文生图成功后，结果列表(不用单独独立阿里云的，和其他平台结构类似)
   @JsonKey(name: 'results')
   List<ImageGenerationResult>? results;
@@ -186,6 +211,11 @@ class AliyunWanxV2Output {
   AliyunWanxV2Output(
     this.taskId,
     this.taskStatus,
+    this.submitTime,
+    this.scheduledTime,
+    this.endTime,
+    this.code,
+    this.message,
     this.results,
     this.taskMetrics,
   );

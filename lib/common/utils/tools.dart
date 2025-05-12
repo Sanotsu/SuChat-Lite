@@ -734,18 +734,27 @@ Future<Directory> getAppSubDir(String folderName) async {
   return getAppHomeDirectory(subfolder: folderName);
 }
 
+/// 获取sqlite数据库文件保存的目录
+Future<Directory> getSqliteDbDir() async {
+  return getAppHomeDirectory(subfolder: "sqlite_db");
+}
+
+/// 语音输入时，录音文件保存的目录
 Future<Directory> getChatAudioDir() async {
   return getAppHomeDirectory(subfolder: "chat_audio");
 }
 
+/// 图片生成时，图片文件保存的目录
 Future<Directory> getImageGenDir() async {
   return getAppHomeDirectory(subfolder: "image_generation");
 }
 
+/// 视频生成时，视频文件保存的目录
 Future<Directory> getVideoGenDir() async {
   return getAppHomeDirectory(subfolder: "video_generation");
 }
 
+/// 语音生成时，语音文件保存的目录
 Future<Directory> getVoiceGenDir() async {
   return getAppHomeDirectory(subfolder: "voice_generation");
 }

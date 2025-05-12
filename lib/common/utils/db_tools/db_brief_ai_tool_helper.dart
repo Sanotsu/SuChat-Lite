@@ -1,7 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../../../models/brief_ai_tools/media_generation_history/media_generation_history.dart';
-
+import '../../../models/brief_ai_tools/voice_recognition/voice_recognition_task_info.dart';
 import '../../llm_spec/cus_brief_llm_model.dart';
 import '../../llm_spec/constant_llm_enum.dart';
 
@@ -123,7 +123,7 @@ class DBBriefAIToolHelper {
   /// 文生视频（后续语音合成也可能）也用这个
   ///
 
-  // 插入图片生成历史
+  // 插入媒体资源生成历史
   Future<String> insertMediaGenerationHistory(
     MediaGenerationHistory history,
   ) async {
@@ -135,7 +135,21 @@ class DBBriefAIToolHelper {
     return history.requestId;
   }
 
-  // 指定requestId更新图片生成历史
+  // 批量插入媒体资源生成记录
+  Future<List<Object?>> insertMediaGenerationHistoryList(
+    List<MediaGenerationHistory> histories,
+  ) async {
+    var batch = (await database).batch();
+    for (var item in histories) {
+      batch.insert(
+        BriefAIToolDdl.tableNameOfMediaGenerationHistory,
+        item.toMap(),
+      );
+    }
+    return await batch.commit();
+  }
+
+  // 指定requestId更新媒体资源生成历史
   Future<void> updateMediaGenerationHistoryByRequestId(
     String requestId,
     Map<String, dynamic> values,
@@ -149,6 +163,7 @@ class DBBriefAIToolHelper {
     );
   }
 
+  // 实例更新媒体资源生成历史
   Future<void> updateMediaGenerationHistory(MediaGenerationHistory item) async {
     Database db = await database;
     await db.update(
@@ -159,7 +174,7 @@ class DBBriefAIToolHelper {
     );
   }
 
-  // 指定requestId更新图片生成历史
+  // 指定requestId删除媒体资源生成历史
   Future<void> deleteMediaGenerationHistoryByRequestId(String requestId) async {
     Database db = await database;
     await db.delete(
@@ -169,7 +184,7 @@ class DBBriefAIToolHelper {
     );
   }
 
-  // 查询图片生成历史
+  // 查询媒体资源生成历史
   Future<List<MediaGenerationHistory>> queryMediaGenerationHistory({
     bool? isSuccess,
     bool? isProcessing,
@@ -207,8 +222,106 @@ class DBBriefAIToolHelper {
       BriefAIToolDdl.tableNameOfMediaGenerationHistory,
       where: where.isNotEmpty ? where.join(' AND ') : null,
       whereArgs: whereArgs.isNotEmpty ? whereArgs : null,
+      orderBy: 'gmtCreate DESC',
     );
 
     return rows.map((row) => MediaGenerationHistory.fromMap(row)).toList();
+  }
+
+  ///***********************************************/
+  /// 录音识别任务相关操作
+  ///
+
+  /// 保存录音识别任务到数据库
+  Future<void> insertVoiceRecognitionTask(VoiceRecognitionTaskInfo task) async {
+    Database db = await database;
+    await db.insert(
+      BriefAIToolDdl.tableNameOfVoiceRecognitionTask,
+      task.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace, // 如果已存在则替换
+    );
+  }
+
+  /// 批量保存录音识别任务到数据库
+  Future<void> insertVoiceRecognitionTasks(
+    List<VoiceRecognitionTaskInfo> tasks,
+  ) async {
+    Database db = await database;
+
+    // 使用事务操作批量插入
+    await db.transaction((txn) async {
+      for (var task in tasks) {
+        await txn.insert(
+          BriefAIToolDdl.tableNameOfVoiceRecognitionTask,
+          task.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    });
+  }
+
+  /// 更新录音识别任务
+  Future<void> updateVoiceRecognitionTask(VoiceRecognitionTaskInfo task) async {
+    Database db = await database;
+    await db.update(
+      BriefAIToolDdl.tableNameOfVoiceRecognitionTask,
+      task.toMap(),
+      where: 'taskId = ?',
+      whereArgs: [task.taskId],
+    );
+  }
+
+  /// 删除录音识别任务
+  Future<void> deleteVoiceRecognitionTask(String taskId) async {
+    Database db = await database;
+    await db.delete(
+      BriefAIToolDdl.tableNameOfVoiceRecognitionTask,
+      where: 'taskId = ?',
+      whereArgs: [taskId],
+    );
+  }
+
+  /// 获取所有录音识别任务
+  Future<List<VoiceRecognitionTaskInfo>> getAllVoiceRecognitionTasks() async {
+    Database db = await database;
+    final rows = await db.query(
+      BriefAIToolDdl.tableNameOfVoiceRecognitionTask,
+      orderBy: 'gmtCreate DESC', // 按创建时间降序排序
+    );
+
+    return rows.map((row) => VoiceRecognitionTaskInfo.fromMap(row)).toList();
+  }
+
+  /// 根据任务ID获取录音识别任务
+  Future<VoiceRecognitionTaskInfo?> getVoiceRecognitionTaskById(
+    String taskId,
+  ) async {
+    Database db = await database;
+    final rows = await db.query(
+      BriefAIToolDdl.tableNameOfVoiceRecognitionTask,
+      where: 'taskId = ?',
+      whereArgs: [taskId],
+    );
+
+    if (rows.isEmpty) {
+      return null;
+    }
+
+    return VoiceRecognitionTaskInfo.fromMap(rows.first);
+  }
+
+  /// 根据任务状态获取录音识别任务
+  Future<List<VoiceRecognitionTaskInfo>> getVoiceRecognitionTasksByStatus(
+    String status,
+  ) async {
+    Database db = await database;
+    final rows = await db.query(
+      BriefAIToolDdl.tableNameOfVoiceRecognitionTask,
+      where: 'taskStatus = ?',
+      whereArgs: [status],
+      orderBy: 'gmtCreate DESC',
+    );
+
+    return rows.map((row) => VoiceRecognitionTaskInfo.fromMap(row)).toList();
   }
 }

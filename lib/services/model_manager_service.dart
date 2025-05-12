@@ -156,6 +156,16 @@ class ModelManagerService {
         return false;
       }
 
+      // 2025-05-12 如果是自定义平台，还需要baseurl 和 apikey
+      if (json['platform'] == ApiPlatform.custom.name) {
+        if (json['baseUrl'] == null ||
+            (json['baseUrl'] as String).trim().isEmpty ||
+            json['apiKey'] == null ||
+            (json['apiKey'] as String).trim().isEmpty) {
+          return false;
+        }
+      }
+
       return true;
     } catch (e) {
       rethrow;

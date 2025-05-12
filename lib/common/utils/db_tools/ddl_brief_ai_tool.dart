@@ -61,4 +61,24 @@ class BriefAIToolDdl {
       UNIQUE(platform,model,modelType)
     );
     """;
+
+  // 2025-05-08 录音识别任务表
+  // 专门用于存储录音识别的详细信息
+  static const tableNameOfVoiceRecognitionTask =
+      '${DB_TABLE_PREFIX}voice_recognition_task';
+
+  static const String ddlForVoiceRecognitionTask = """
+    CREATE TABLE $tableNameOfVoiceRecognitionTask (
+      taskId              TEXT    NOT NULL,
+      localAudioPath      TEXT,
+      githubAudioUrl      TEXT,
+      languageHint        TEXT,
+      taskStatus          TEXT,
+      gmtCreate           TEXT,
+      llmSpec             TEXT,
+      jobResponse         TEXT,
+      recognitionResponse TEXT,
+      PRIMARY KEY(taskId)
+    );
+    """;
 }

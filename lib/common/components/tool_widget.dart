@@ -5,13 +5,11 @@ import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:form_builder_file_picker/form_builder_file_picker.dart';
 import 'package:multi_select_flutter/multi_select_flutter.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
@@ -114,7 +112,9 @@ commonExceptionDialog(BuildContext context, String title, String message) {
     builder: (context) {
       return AlertDialog(
         title: Text(title),
-        content: Text(message, style: const TextStyle(fontSize: 13)),
+        content: SingleChildScrollView(
+          child: Text(message, style: const TextStyle(fontSize: 13)),
+        ),
         actions: [
           TextButton(
             onPressed: () {
@@ -907,29 +907,6 @@ _buildImageCarouselSliderType(
         child: buildNetworkOrFileImage(imageUrl),
       );
   }
-}
-
-// 将图片字符串，转为文件多选框中支持的图片平台文件
-// formbuilder的图片地址拼接的字符串，要转回平台文件列表
-List<PlatformFile> convertStringToPlatformFiles(String imagesString) {
-  List<String> imageUrls = imagesString.split(','); // 拆分字符串
-  // 如果本身就是空字符串，直接返回空平台文件数组
-  if (imagesString.trim().isEmpty || imageUrls.isEmpty) {
-    return [];
-  }
-
-  List<PlatformFile> platformFiles = []; // 存储 PlatformFile 对象的列表
-
-  for (var imageUrl in imageUrls) {
-    PlatformFile file = PlatformFile(
-      name: imageUrl,
-      path: imageUrl,
-      size: 32, // 假设图片地址即为文件路径
-    );
-    platformFiles.add(file);
-  }
-
-  return platformFiles;
 }
 
 /// 显示本地路径图片，点击可弹窗显示并缩放

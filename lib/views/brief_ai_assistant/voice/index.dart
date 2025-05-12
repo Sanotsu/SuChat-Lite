@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -10,10 +11,12 @@ import '../../../common/components/toast_utils.dart';
 import '../../../common/components/tool_widget.dart';
 import '../../../common/constants/constants.dart';
 import '../../../common/llm_spec/constant_llm_enum.dart';
+import '../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../common/utils/screen_helper.dart';
 import '../../../common/utils/tools.dart';
 import '../../../models/brief_ai_tools/media_generation_history/media_generation_history.dart';
 import '../../../services/qwen_tts_service.dart';
+import '../../../services/voice_clone_service.dart';
 import '../../../services/voice_generation_service.dart';
 
 import '../common/media_generation_base.dart';
@@ -72,6 +75,49 @@ class _BriefVoiceScreenState
   }
 
   @override
+  modelChanged(CusBriefLLMSpec? model) async {
+    if (model == null) return;
+    setState(() {
+      selectedModel = model;
+    });
+
+    // 2025-04-25 虽然不严谨，但暂时图省事这样写
+    if (selectedModel?.modelType == LLModelType.tts) {
+      final voices = await VoiceCloneService.getClonedVoices();
+
+      List<AliyunVoiceType> clonedList =
+          voices.map((e) {
+            // 理论上api查询结果中都有这个id的
+
+            // 作为name时不需要前面的cosyvoice-固定内容
+            // var name = e.voiceId!.substring(10);
+            var tempList = e.voiceId!.split("-");
+            var name = "${tempList[1]}-${tempList[2]}";
+            return AliyunVoiceType(name, e.voiceId!, "", "", "", "");
+          }).toList();
+
+      if (selectedModel?.model == "cosyvoice-v1") {
+        voiceOptions =
+            VoiceGenerationService.getV1AvailableVoices() +
+            clonedList.where((e) => e.id.startsWith("cosyvoice-v1")).toList();
+      } else if (selectedModel?.model == "cosyvoice-v2") {
+        voiceOptions =
+            VoiceGenerationService.getV2AvailableVoices() +
+            clonedList.where((e) => e.id.startsWith("cosyvoice-v2")).toList();
+      } else if (selectedModel?.model == "sambert") {
+        voiceOptions = VoiceGenerationService.getSambertVoices();
+      } else if (selectedModel?.model != null &&
+          selectedModel!.model.contains('qwen-tts')) {
+        voiceOptions = VoiceGenerationService.getQwenTTSVoices();
+      }
+
+      selectedVoice = voiceOptions.first;
+      // 刷新状态
+      setState(() {});
+    }
+  }
+
+  @override
   Widget buildGeneratedList() {
     return FutureBuilder<List<MediaGenerationHistory>>(
       future: dbHelper.queryMediaGenerationHistory(
@@ -108,6 +154,25 @@ class _BriefVoiceScreenState
         // 取消生成
         setState(() => isGenerating = false);
       },
+    );
+
+    // 2025-05-10 目前语音合成是直接得到结果，成功失败都要存入数据库
+    // 先创建一个类实例，实际用到时更新属性
+    final history = MediaGenerationHistory(
+      requestId: const Uuid().v4(),
+      prompt: promptController.text.trim(),
+      negativePrompt: '',
+      taskId: null,
+      imageUrls: null,
+      audioUrls: null,
+      voice: selectedVoice.name,
+      refImageUrls: null,
+      gmtCreate: DateTime.now(),
+      llmSpec: selectedModel!,
+      modelType: LLModelType.tts,
+      isProcessing: true,
+      isSuccess: false,
+      isFailed: false,
     );
 
     try {
@@ -152,21 +217,11 @@ class _BriefVoiceScreenState
       // 复制到目标目录
       await File(voicePath).copy(outputPath);
 
-      // 创建历史记录
-      final history = MediaGenerationHistory(
-        requestId: const Uuid().v4(),
-        prompt: promptController.text.trim(),
-        negativePrompt: '',
-        taskId: null,
-        imageUrls: null,
-        audioUrls: [outputPath], // audioUrls是List<String>类型
-        voice: selectedVoice.name,
-        refImageUrls: [],
-        gmtCreate: DateTime.now(),
-        llmSpec: selectedModel!,
-        modelType: LLModelType.tts,
-        isSuccess: true,
-      );
+      // 2025-05-10 目前语音合成是直接得到结果，所以到这里就成功了，要创建历史记录
+      history.audioUrls = [outputPath];
+      history.isSuccess = true;
+      history.isProcessing = false;
+      history.isFailed = false;
 
       // 保存到数据库
       await dbHelper.insertMediaGenerationHistory(history);
@@ -177,16 +232,18 @@ class _BriefVoiceScreenState
           promptController.clear();
         });
 
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('语音生成成功')));
+        ToastUtils.showSuccess('语音生成成功');
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('生成失败: $e'), backgroundColor: Colors.red),
-        );
-      }
+      ToastUtils.showError('生成失败: $e', duration: Duration(seconds: 5));
+      // 生成失败，也要创建历史记录
+      history.isSuccess = false;
+      history.isProcessing = false;
+      history.isFailed = true;
+      history.otherParams = jsonEncode({"errorMsg": e.toString()});
+
+      // 保存到数据库
+      await dbHelper.insertMediaGenerationHistory(history);
     } finally {
       // 隐藏生成遮罩
       LoadingOverlay.hide();
@@ -197,75 +254,135 @@ class _BriefVoiceScreenState
     }
   }
 
-  // 删除任务记录
-  Future<void> _deleteTask(MediaGenerationHistory task) async {
-    await dbHelper.deleteMediaGenerationHistoryByRequestId(task.requestId);
-    setState(() {});
-  }
-
   @override
   Widget buildManagerScreen() => const MimeVoiceManager();
 
+  // 构建任务卡片(音频、视频、图片都相似结构)
   Widget _buildTaskCard(MediaGenerationHistory task) {
-    return Card(
-      margin: EdgeInsets.all(5),
-      child: ListTile(
-        leading: Icon(
-          Icons.music_note,
-          size: ScreenHelper.isDesktop() ? 48 : 24,
-        ),
-        title: Text(
-          "${CP_NAME_MAP[task.llmSpec.platform] ?? ''} ${task.llmSpec.model} ${task.voice}",
-          style: TextStyle(fontSize: 14),
-        ),
-        subtitle: Text(
-          task.prompt,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 12),
-        ),
-        // 语音生成任务完成且有结果
-        trailing:
-            task.isSuccess &&
-                    task.audioUrls != null &&
-                    task.audioUrls!.isNotEmpty
-                ? IconButton(
-                  onPressed: () {
-                    // 显示音频播放对话框
-                    ScreenHelper.isDesktop()
-                        ? _desktopPlay(task)
-                        : _mobilePlay(task);
-                  },
-                  icon: Icon(Icons.play_circle, size: 36, color: Colors.blue),
-                )
-                : Icon(Icons.hourglass_empty, size: 36),
-        // 长按删除
-        onLongPress: () {
-          showDialog(
-            context: context,
-            builder:
-                (context) => AlertDialog(
-                  title: Text('删除记录'),
-                  content: Text('确定要删除此记录吗？'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text('取消'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        _deleteTask(task);
-                        Navigator.pop(context);
-                      },
-                      child: Text('确定'),
-                    ),
-                  ],
-                ),
+    Widget mediaPreview = Icon(Icons.music_note, size: 36);
+    return buildMediaTaskCard(
+      task: task,
+      mediaPreview: mediaPreview,
+      // 点击播放
+      onTap: () {
+        if (task.isSuccess == true &&
+            task.audioUrls != null &&
+            task.audioUrls!.isNotEmpty) {
+          // 显示音频播放对话框
+          ScreenHelper.isDesktop() ? _desktopPlay(task) : _mobilePlay(task);
+        } else if (task.isFailed == true) {
+          if (task.otherParams != null) {
+            var otherParams = jsonDecode(task.otherParams!);
+
+            if (otherParams['errorMsg'] != null) {
+              commonExceptionDialog(
+                context,
+                "AI语音生成失败",
+                otherParams['errorMsg'],
+              );
+            } else {
+              commonExceptionDialog(context, "AI语音生成失败", '具体错误未知，可删除任务后重新生成');
+            }
+          }
+        }
+      },
+      onLongPress: () async {
+        final result = await showDeleteTaskConfirmDialog(context, "音频");
+
+        if (result == true) {
+          await dbHelper.deleteMediaGenerationHistoryByRequestId(
+            task.requestId,
           );
-        },
-      ),
+        }
+      },
     );
   }
+
+  // Widget _buildTaskCard(MediaGenerationHistory task) {
+  //   return Card(
+  //     margin: EdgeInsets.all(5),
+  //     child: ListTile(
+  //       dense: true,
+  //       leading: Icon(
+  //         Icons.music_note,
+  //         size: ScreenHelper.isDesktop() ? 48 : 24,
+  //       ),
+  //       title: Row(
+  //         children: [
+  //           Expanded(
+  //             child: Text(
+  //               "${CP_NAME_MAP[task.llmSpec.platform] ?? ''} ${task.llmSpec.model}",
+  //               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+  //               maxLines: 2,
+  //               overflow: TextOverflow.ellipsis,
+  //             ),
+  //           ),
+  //           buildTaskStatusIndicator(task),
+  //         ],
+  //       ),
+  //       subtitle: SizedBox(
+  //         height: 56,
+  //         child: Text(
+  //           "${task.gmtCreate}\n${task.prompt}",
+  //           maxLines: 3,
+  //           overflow: TextOverflow.ellipsis,
+  //           style: TextStyle(fontSize: 12),
+  //         ),
+  //       ),
+  //       // 点击播放
+  //       onTap: () {
+  //         if (task.isSuccess == true &&
+  //             task.audioUrls != null &&
+  //             task.audioUrls!.isNotEmpty) {
+  //           // 显示音频播放对话框
+  //           ScreenHelper.isDesktop() ? _desktopPlay(task) : _mobilePlay(task);
+  //         } else if (task.isFailed == true) {
+  //           if (task.otherParams != null) {
+  //             var otherParams = jsonDecode(task.otherParams!);
+
+  //             if (otherParams['errorMsg'] != null) {
+  //               commonExceptionDialog(
+  //                 context,
+  //                 "AI语音生成失败",
+  //                 otherParams['errorMsg'],
+  //               );
+  //             } else {
+  //               commonExceptionDialog(context, "AI语音生成失败", '具体错误未知，可删除任务后重新生成');
+  //             }
+  //           }
+  //         }
+  //       },
+  //       // 长按删除
+  //       onLongPress: () {
+  //         showDialog(
+  //           context: context,
+  //           builder:
+  //               (context) => AlertDialog(
+  //                 title: Text('删除记录'),
+  //                 content: Text('确定要删除此记录吗？'),
+  //                 actions: [
+  //                   TextButton(
+  //                     onPressed: () => Navigator.pop(context),
+  //                     child: Text('取消'),
+  //                   ),
+  //                   TextButton(
+  //                     onPressed: () async {
+  //                       await dbHelper.deleteMediaGenerationHistoryByRequestId(
+  //                         task.requestId,
+  //                       );
+  //                       setState(() {});
+  //                       if (!context.mounted) return;
+  //                       Navigator.pop(context);
+  //                     },
+  //                     child: Text('确定'),
+  //                   ),
+  //                 ],
+  //               ),
+  //         );
+  //       },
+  //     ),
+  //   );
+  // }
 
   _desktopPlay(MediaGenerationHistory task) {
     showDialog(

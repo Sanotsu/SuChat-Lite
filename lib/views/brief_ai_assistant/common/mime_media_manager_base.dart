@@ -97,10 +97,7 @@ abstract class MimeMediaManagerBaseState<T extends MimeMediaManagerBase>
         ToastUtils.showSuccess('分享成功!');
       }
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('分享失败: $e')));
+      ToastUtils.showError('分享失败: $e', duration: Duration(seconds: 5));
     }
   }
 
@@ -143,10 +140,7 @@ abstract class MimeMediaManagerBaseState<T extends MimeMediaManagerBase>
 
       ToastUtils.showSuccess('删除成功!');
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('删除失败: $e')));
+      ToastUtils.showError('删除失败: $e', duration: Duration(seconds: 5));
     }
   }
 

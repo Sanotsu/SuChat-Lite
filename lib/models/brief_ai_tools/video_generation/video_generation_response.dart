@@ -12,11 +12,11 @@ part 'video_generation_response.g.dart';
 // 所以这里
 // VideoGenerationSubmitResponse 调用大模型得到任务信息的响应
 // VideoGenerationTaskResponse 是提交任务的响应，轮询得到的结果，最后结果也是从这里轮询结束后得到
-// VideoGenerationResponse  最后的视频生成的结果，合并多个平台的最后结果
+// CusUnifiedVideoGenResp  最后的视频生成的结果，合并多个平台的最后结果
 
 // 最后合并的结果
 @JsonSerializable(explicitToJson: true)
-class VideoGenerationResponse {
+class CusUnifiedVideoGenResp {
   @JsonKey(name: 'request_id')
   final String? requestId;
   @JsonKey(name: 'task_id')
@@ -26,7 +26,7 @@ class VideoGenerationResponse {
   final String? code;
   final String? message;
 
-  VideoGenerationResponse({
+  CusUnifiedVideoGenResp({
     this.requestId,
     this.taskId,
     this.status,
@@ -36,15 +36,15 @@ class VideoGenerationResponse {
   });
 
   // 从字符串转
-  factory VideoGenerationResponse.fromRawJson(String str) =>
-      VideoGenerationResponse.fromJson(json.decode(str));
+  factory CusUnifiedVideoGenResp.fromRawJson(String str) =>
+      CusUnifiedVideoGenResp.fromJson(json.decode(str));
   // 转为字符串
   String toRawJson() => json.encode(toJson());
 
-  factory VideoGenerationResponse.fromJson(Map<String, dynamic> json) =>
-      _$VideoGenerationResponseFromJson(json);
+  factory CusUnifiedVideoGenResp.fromJson(Map<String, dynamic> json) =>
+      _$CusUnifiedVideoGenRespFromJson(json);
 
-  Map<String, dynamic> toJson() => _$VideoGenerationResponseToJson(this);
+  Map<String, dynamic> toJson() => _$CusUnifiedVideoGenRespToJson(this);
 }
 
 @JsonSerializable(explicitToJson: true)
@@ -61,12 +61,11 @@ class VideoResult {
   Map<String, dynamic> toJson() => _$VideoResultToJson(this);
 }
 
-// 调用大模型得到任务信息的响应
+/// 调用大模型得到任务信息的响应
+// 阿里、智谱、硅基流动都是先提交任务，再轮询任务结果，这里是提交得到任务信息
 @JsonSerializable(explicitToJson: true)
 class VideoGenerationSubmitResponse {
-  // 硅基流动: requestId
-  // 只返回请求编号，轮询请求编号得到任务信息
-  // @JsonKey(name: 'request_id')
+  // 硅基流动: 只返回requestId
   // 2025-02-19 硅基流动的请求编号是requestId，其他的是request_id
   @JsonKey(readValue: readJsonValue)
   final String? requestId;
@@ -152,17 +151,14 @@ class VideoGenerationSubmitResponse {
 @JsonSerializable(explicitToJson: true)
 class VideoGenerationTaskResponse {
   /// 硅基流动: status position reason results
-
-  // 状态: Succeed, InProgress
+  // 状态: Succeed, InQueue, InProgress, Failed
   final String? status;
-  // Position in the result set
-  final int? position;
   // Reason for the operation
   final String? reason;
   // 结果
   final SiliconflowVideoStatusResult? results;
 
-  /// 智谱AI: model video_result task_status request_id id
+  /// 智谱AI: model video_result task_status request_id
   final String? model;
   @JsonKey(name: 'video_result')
   final List<VideoResult>? videoResult;
@@ -171,7 +167,6 @@ class VideoGenerationTaskResponse {
   final String? taskStatus;
   @JsonKey(name: 'request_id')
   final String? requestId;
-  final String? id;
 
   /// 阿里云: output usage request_id
   final AliyunVideoOutput? output;
@@ -179,11 +174,9 @@ class VideoGenerationTaskResponse {
 
   VideoGenerationTaskResponse({
     this.status,
-    this.position,
     this.reason,
     this.results,
     this.requestId,
-    this.id,
     this.model,
     this.taskStatus,
     this.videoResult,
@@ -210,7 +203,6 @@ class VideoGenerationTaskResponse {
       case ApiPlatform.siliconCloud:
         return VideoGenerationTaskResponse(
           status: json['status'] as String?,
-          position: json['position'] as int?,
           reason: json['reason'] as String?,
           results:
               json['results'] != null
@@ -240,7 +232,6 @@ class VideoGenerationTaskResponse {
       case ApiPlatform.zhipu:
         return VideoGenerationTaskResponse(
           requestId: json['request_id'] as String?,
-          id: json['id'] as String?,
           model: json['model'] as String?,
           taskStatus: json['task_status'] as String?,
           videoResult:
@@ -262,6 +253,7 @@ class VideoGenerationTaskResponse {
 }
 
 // 阿里云视频生成的额外类
+// 2025-05-10 有更新
 @JsonSerializable(explicitToJson: true)
 class AliyunVideoOutput {
   // 本次请求的异步任务的作业 id，实际作业结果需要通过异步任务查询接口获取。
@@ -293,6 +285,13 @@ class AliyunVideoOutput {
   final String? code;
   final String? message;
 
+  // 2025-05-10 文生视频有
+  @JsonKey(name: 'orig_prompt ')
+  String? origPrompt;
+
+  @JsonKey(name: 'actual_prompt  ')
+  String? actualPrompt;
+
   AliyunVideoOutput(
     this.taskId,
     this.taskStatus,
@@ -302,6 +301,8 @@ class AliyunVideoOutput {
     this.videoUrl,
     this.code,
     this.message,
+    this.origPrompt,
+    this.actualPrompt,
   );
 
   // 从字符串转
@@ -316,14 +317,14 @@ class AliyunVideoOutput {
   Map<String, dynamic> toJson() => _$AliyunVideoOutputToJson(this);
 }
 
+// 2025-05-10 有一个更新
 @JsonSerializable(explicitToJson: true)
 class AliyunVideoUsage {
   @JsonKey(name: 'video_count')
-  String? videoCount;
+  int? videoCount;
 
-  // 文生视频就上面一个，图生视频有这两个属性
   @JsonKey(name: 'video_duration')
-  String? videoDuration;
+  int? videoDuration;
 
   @JsonKey(name: 'video_ratio')
   String? videoRatio;

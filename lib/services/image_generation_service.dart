@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import '../common/constants/default_models.dart';
 import '../common/llm_spec/cus_brief_llm_model.dart';
@@ -97,7 +98,7 @@ class ImageGenerationService {
     }
   }
 
-  static Future<ImageGenerationResponse> generateImage(
+  static Future<CusUnifiedImageGenResp> generateImage(
     CusBriefLLMSpec model,
     String prompt, {
     int? n,
@@ -135,7 +136,7 @@ class ImageGenerationService {
     );
 
     // 先解析响应
-    var resp = ImageGenerationResponse.fromJson(response);
+    var resp = CusUnifiedImageGenResp.fromJson(response);
 
     // 如果是阿里云平台的，需要轮询任务状态
     if (model.platform == ApiPlatform.aliyun) {
@@ -149,9 +150,10 @@ class ImageGenerationService {
           'taskId': taskId,
           'isSuccess': 0,
           'isProcessing': 1,
+          'taskStatus': resp.output!.taskStatus,
         });
 
-        return pollTaskStatus(model, taskId);
+        return pollTaskStatus(requestId, model, taskId);
       } else {
         throw Exception('阿里云返回的任务ID为空');
       }
@@ -160,7 +162,8 @@ class ImageGenerationService {
     }
   }
 
-  static Future<ImageGenerationResponse> pollTaskStatus(
+  static Future<CusUnifiedImageGenResp> pollTaskStatus(
+    String requestId,
     CusBriefLLMSpec model,
     String taskId,
   ) async {
@@ -170,27 +173,57 @@ class ImageGenerationService {
     for (var i = 0; i < maxAttempts; i++) {
       final response = await _queryTaskStatus(model, taskId);
 
-      if (response.output.taskStatus == 'SUCCEEDED') {
-        return ImageGenerationResponse(
-          requestId: taskId,
-          created: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          results: response.output.results ?? [],
+      // 2025-05-09 既然这个service已经引入了db操作，那就简单点在每次任务检查时，顺便更新一下数据库
+      final DBBriefAIToolHelper dbHelper = DBBriefAIToolHelper();
+
+      var tempStatus = response.output.taskStatus;
+
+      var imageUrls = response.output.results?.map((r) => r.url).toList();
+      List<String> newUrls = [];
+      for (final url in imageUrls ?? []) {
+        var localPath = await saveImageToLocal(
+          url,
+          dlDir: await getImageGenDir(),
+          showSaveHint: false,
         );
+
+        if (localPath != null) {
+          newUrls.add(localPath);
+        }
       }
 
-      if (response.output.taskStatus == 'FAILED' ||
-          response.output.taskStatus == 'UNKNOWN') {
-        // throw Exception(response.message ?? '图片生成失败');
+      // 创建一个包含识别结果的其他参数对象
+      final otherParamsMap = {
+        'request_id': response.requestId,
+        'usage': response.usage,
+        // 阿里万相的优化后的prompt也在这里面
+        'output': response.output,
+      };
 
-        return ImageGenerationResponse(
+      await dbHelper.updateMediaGenerationHistoryByRequestId(requestId, {
+        'taskId': taskId,
+        'isSuccess': tempStatus == 'SUCCEEDED' ? 1 : 0,
+        'isFailed': tempStatus == 'FAILED' ? 1 : 0,
+        'isProcessing':
+            tempStatus == 'RUNNING' || tempStatus == 'PENDING' ? 1 : 0,
+        'taskStatus': tempStatus,
+        'imageUrls': newUrls.join(';'),
+        "otherParams": jsonEncode(otherParamsMap),
+      });
+
+      // 2025-05-09 简单一点，不管成功失败，只要没在继续处理，都返回结果
+      // 返回之后，在上一层调用的地方，只需要更新成功时的prompt和图片地址了
+      if (response.output.taskStatus != 'PENDING' &&
+          response.output.taskStatus != 'RUNNING') {
+        return CusUnifiedImageGenResp(
           requestId: taskId,
           created: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          results: null,
+          results: response.output.results,
           code: response.code,
           message: response.message,
+          output: response.output,
         );
       }
-
       await Future.delayed(interval);
     }
 

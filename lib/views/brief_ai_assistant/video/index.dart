@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:uuid/uuid.dart';
@@ -10,6 +12,7 @@ import '../../../common/llm_spec/constant_llm_enum.dart';
 import '../../../common/utils/tools.dart';
 import '../../../common/utils/screen_helper.dart';
 import '../../../models/brief_ai_tools/media_generation_history/media_generation_history.dart';
+import '../../../models/brief_ai_tools/video_generation/video_generation_response.dart';
 import '../../../services/video_generation_service.dart';
 import '../../../views/brief_ai_assistant/common/media_generation_base.dart';
 
@@ -159,6 +162,7 @@ class _BriefVideoScreenState
                 "视频生成任务",
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
+              const Spacer(),
               IconButton(
                 onPressed: () => _checkUnfinishedTasks(),
                 icon: Icon(Icons.refresh, color: Colors.blue),
@@ -185,78 +189,60 @@ class _BriefVideoScreenState
 
   // 构建任务卡片
   Widget _buildTaskCard(MediaGenerationHistory task) {
-    return Card(
-      margin: EdgeInsets.all(5),
-      child: ListTile(
-        leading: Icon(Icons.video_file, size: 48),
-        title: Text(
-          CP_NAME_MAP[task.llmSpec.platform] ?? '',
-          style: TextStyle(fontSize: 14),
-        ),
-        subtitle: Text(
-          task.prompt,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 12),
-        ),
-        // 视频生成任务，虽然设计时可能有多个，但实际只是有一个元素的数组
-        trailing:
-            task.isSuccess &&
-                    task.videoUrls?.first != null &&
-                    task.videoUrls?.first.trim() != ''
-                ? IconButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder:
-                            (_) => VideoPlayerScreen(
-                              videoUrl: task.videoUrls!.first.trim(),
-                            ),
-                      ),
-                    );
-                  },
-                  icon: Icon(Icons.play_circle, size: 36, color: Colors.blue),
-                )
-                : Icon(Icons.hourglass_empty, size: 36),
-        // 长按删除
-        onLongPress: () async {
-          final result = await showDialog<bool>(
-            context: context,
-            builder:
-                (context) => AlertDialog(
-                  title: Text('删除视频生成任务', style: TextStyle(fontSize: 16)),
-                  content: Text(
-                    '删除后，视频生成任务记录将不再显示，但不会影响已保存的视频文件。',
-                    style: TextStyle(fontSize: 14),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context, false);
-                      },
-                      child: Text('取消', style: TextStyle(fontSize: 14)),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context, true);
-                      },
-                      child: Text('确定', style: TextStyle(fontSize: 14)),
-                    ),
-                  ],
-                ),
+    // 视频任务卡片的媒体预览组件
+    Widget mediaPreview = Icon(Icons.video_file, size: 36);
+
+    return buildMediaTaskCard(
+      task: task,
+      mediaPreview: mediaPreview,
+      onTap: () {
+        if (task.isSuccess &&
+            task.videoUrls?.first != null &&
+            task.videoUrls?.first.trim() != '') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (_) =>
+                      VideoPlayerScreen(videoUrl: task.videoUrls!.first.trim()),
+            ),
           );
+        } else if (task.isFailed == true) {
+          if (task.otherParams != null) {
+            var otherParams = jsonDecode(task.otherParams!);
 
-          if (result == true) {
-            await dbHelper.deleteMediaGenerationHistoryByRequestId(
-              task.requestId,
-            );
+            if (otherParams['output'] != null) {
+              AliyunVideoOutput output = AliyunVideoOutput.fromJson(
+                otherParams['output'],
+              );
+
+              commonExceptionDialog(
+                context,
+                "AI视频生成失败",
+                "任务状态: ${output.taskStatus}\n错误代码\n${output.code}\n错误信息\n${output.message}",
+              );
+            } else if (otherParams['errorMsg'] != null) {
+              commonExceptionDialog(
+                context,
+                "AI视频生成失败",
+                otherParams['errorMsg'],
+              );
+            }
           }
+        }
+      },
+      onLongPress: () async {
+        final result = await showDeleteTaskConfirmDialog(context, "视频");
 
-          if (!mounted) return;
-          await _queryAllTasks();
-        },
-      ),
+        if (result == true) {
+          await dbHelper.deleteMediaGenerationHistoryByRequestId(
+            task.requestId,
+          );
+        }
+
+        if (!mounted) return;
+        await _queryAllTasks();
+      },
     );
   }
 
@@ -307,7 +293,8 @@ class _BriefVideoScreenState
       final history = MediaGenerationHistory(
         requestId: response.requestId ?? const Uuid().v4(),
         prompt: promptController.text.trim(),
-        refImageUrls: [],
+        refImageUrls:
+            referenceImage?.path != null ? [referenceImage!.path] : null,
         taskId: taskId,
         isSuccess: false,
         isProcessing: true,
@@ -325,10 +312,7 @@ class _BriefVideoScreenState
       // 提交新任务之后，重新查询所有任务并更新UI
       await _queryAllTasks();
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('生成失败: $e')));
+      ToastUtils.showError('生成失败: $e');
     } finally {
       // 隐藏生成遮罩
       LoadingOverlay.hide();
@@ -378,9 +362,9 @@ class _BriefVideoScreenState
 
       if (unfinishedTasks.isEmpty) return;
 
-      // 并行处理未完成的任务，查询任务状态(不轮询，让用户手动刷新)
-      await Future.wait(
-        unfinishedTasks.map((task) async {
+      // 处理未完成的任务
+      handleunfinishedTask(MediaGenerationHistory task) async {
+        try {
           if (task.taskId != null) {
             final model = modelList.firstWhere(
               (m) => m.platform == task.llmSpec.platform,
@@ -395,7 +379,11 @@ class _BriefVideoScreenState
             var item = MediaGenerationHistory.fromMap(task.toMap());
 
             // 统一状态，然后在实际响应的状态的再次更新
-            item.taskStatus = response.taskStatus;
+            item.taskStatus =
+                response.taskStatus ?? response.output?.taskStatus;
+            if (response.output != null) {
+              item.otherParams = jsonEncode({"output": response.output});
+            }
 
             // 如果有成功或者失败的，视频地址栏位也要更新
 
@@ -456,16 +444,24 @@ class _BriefVideoScreenState
             }
 
             await dbHelper.updateMediaGenerationHistory(item);
-
-            // 更新UI
-            // if (mounted) {
-            //   setState(() {
-            //     _allTasks
-            //         .firstWhere((e) => e.requestId == task.requestId)
-            //         .videoUrls = newUrls;
-            //   });
-            // }
           }
+        } catch (e) {
+          // 使用查询到的任务状态更新数据库(大体栏位是一样的，就更新部分状态和结果栏位)
+          var item = MediaGenerationHistory.fromMap(task.toMap());
+          item.isFailed = false;
+          item.isProcessing = false;
+          item.isFailed = true;
+          // 统一状态，然后在实际响应的状态的再次更新
+          item.otherParams = jsonEncode({"errorMsg": e.toString()});
+
+          await dbHelper.updateMediaGenerationHistory(item);
+        }
+      }
+
+      // 并行处理未完成的任务，查询任务状态(不轮询，让用户手动刷新)
+      await Future.wait(
+        unfinishedTasks.map((task) async {
+          handleunfinishedTask(task);
         }),
       );
 
@@ -473,12 +469,9 @@ class _BriefVideoScreenState
       await _queryAllTasks();
     } catch (e) {
       debugPrint('检查任务状态失败: $e');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('检查任务状态失败: $e'),
-          duration: const Duration(seconds: 5),
-        ),
+      ToastUtils.showError(
+        '检查任务状态失败: $e',
+        duration: const Duration(seconds: 5),
       );
     }
   }

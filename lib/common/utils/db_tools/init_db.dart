@@ -87,13 +87,9 @@ class DBInit {
       }
     }
 
-    // 获取Android和iOS存储数据库的目录路径(用户看不到，在Android/data/……里看不到)。
-    Directory directory = await getAppHomeDirectory();
+    // 自定义的sqlite数据库文件保存的目录
+    Directory directory = await getSqliteDbDir();
     String path = "${directory.path}/${DBInitConfig.databaseName}";
-
-    // IOS不支持这个方法，所以可能取不到这个地址
-    // Directory? directory2 = await getExternalStorageDirectory();
-    // String path = "${directory2?.path}/${DBInitConfig.databaseName}";
 
     print("初始化 DB sqlite数据库存放的地址：$path");
 
@@ -110,6 +106,7 @@ class DBInit {
     await db.transaction((txn) async {
       txn.execute(BriefAIToolDdl.ddlForMediaGenerationHistory);
       txn.execute(BriefAIToolDdl.ddlForCusBriefLlmSpec);
+      txn.execute(BriefAIToolDdl.ddlForVoiceRecognitionTask);
     });
   }
 

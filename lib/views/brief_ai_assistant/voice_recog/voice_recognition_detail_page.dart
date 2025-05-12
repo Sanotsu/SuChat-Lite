@@ -8,6 +8,7 @@ import '../../../common/components/toast_utils.dart';
 import '../../../common/constants/constants.dart';
 import '../../../common/style/app_colors.dart';
 import '../../../common/utils/screen_helper.dart';
+import '../../../models/brief_ai_tools/voice_recognition/voice_recognition_task_info.dart';
 import '../../../services/voice_recognition_service.dart';
 
 class VoiceRecognitionDetailPage extends StatefulWidget {

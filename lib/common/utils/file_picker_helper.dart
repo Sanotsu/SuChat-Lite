@@ -13,7 +13,7 @@ import 'tools.dart';
 class FilePickerHelper {
   /// 选择单个文件并保存到指定目录
   /// [allowedExtensions] - 允许的文件扩展名列表，如 ['pdf', 'docx']
-  /// [saveDir] - 指定保存目录路径，为null时使用应用文档目录
+  /// [saveDir] - 指定保存目录路径，为null时使用通用文件保存目录
   /// [customFileName] - 自定义文件名，为null时使用原文件名
   /// [overwrite] - 是否覆盖同名文件
   static Future<File?> pickAndSaveFile({

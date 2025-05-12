@@ -19,6 +19,7 @@ import '../../../common/utils/tools.dart';
 import '../../../common/utils/screen_helper.dart';
 import '../../../common/utils/db_tools/db_brief_ai_tool_helper.dart';
 import '../../../common/style/app_colors.dart';
+import '../../../models/brief_ai_tools/voice_recognition/voice_recognition_task_info.dart';
 import '../../../services/voice_recognition_service.dart';
 
 import '../voice/pages/github_storage_settings_page.dart';

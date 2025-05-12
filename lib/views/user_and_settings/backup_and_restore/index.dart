@@ -9,6 +9,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../../common/components/toast_utils.dart';
 import '../../../common/components/tool_widget.dart';
 import '../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../common/utils/db_tools/db_brief_ai_tool_helper.dart';
@@ -21,6 +22,7 @@ import '../../../models/brief_ai_tools/branch_chat/branch_chat_export_data.dart'
 import '../../../models/brief_ai_tools/branch_chat/branch_store.dart';
 import '../../../models/brief_ai_tools/branch_chat/character_store.dart';
 import '../../../models/brief_ai_tools/media_generation_history/media_generation_history.dart';
+import '../../../models/brief_ai_tools/voice_recognition/voice_recognition_task_info.dart';
 
 ///
 /// 2023-12-26 备份恢复还可以优化，就暂时不做
@@ -90,8 +92,7 @@ class _BackupAndRestoreState extends State<BackupAndRestore> {
     // 用户没有授权，简单提示一下
     if (!mounted) return;
     if (!isPermissionGranted) {
-      showSnackMessage(
-        context,
+      ToastUtils.showError(
         "用户已禁止访问内部存储,无法进行json文件导入。\n如需启用，请到应用的权限管理中授权读写手机存储。",
       );
       return;
@@ -109,11 +110,11 @@ class _BackupAndRestoreState extends State<BackupAndRestore> {
 
       // 获取应用文档目录路径
       // 这个获取缓存目录即可
-      Directory appDocDir = await getApplicationCacheDirectory();
+      Directory tempDir = await getTemporaryDirectory();
       // 临时存放zip文件的路径
       var tempZipDir =
           await Directory(
-            p.join(appDocDir.path, ZIP_TEMP_DIR_AT_EXPORT),
+            p.join(tempDir.path, ZIP_TEMP_DIR_AT_EXPORT),
           ).create();
       // zip 文件的名称
       String zipName =
@@ -146,12 +147,7 @@ class _BackupAndRestoreState extends State<BackupAndRestore> {
           isLoading = false;
         });
 
-        if (!mounted) return;
-        showSnackMessage(
-          context,
-          "已经保存到$selectedDirectory",
-          backgroundColor: Colors.green,
-        );
+        ToastUtils.showSuccess("已经保存到$selectedDirectory");
       } catch (e) {
         debugPrint('保存操作出现错误: $e');
         setState(() {
@@ -315,11 +311,11 @@ class _BackupAndRestoreState extends State<BackupAndRestore> {
           /// 删除前可以先备份一下到临时文件，避免出错后完成无法使用(最多确认恢复成功之后再删除就好了)
 
           // 获取应用文档目录路径
-          Directory appDocDir = await getAppHomeDirectory();
+          Directory tempDir = await getTemporaryDirectory();
           // 临时存放zip文件的路径
           var tempZipDir =
               await Directory(
-                p.join(appDocDir.path, ZIP_TEMP_DIR_AT_RESTORE),
+                p.join(tempDir.path, ZIP_TEMP_DIR_AT_RESTORE),
               ).create();
           // zip 文件的名称
           String zipName =
@@ -345,12 +341,7 @@ class _BackupAndRestoreState extends State<BackupAndRestore> {
             isLoading = false;
           });
 
-          if (!mounted) return;
-          showSnackMessage(
-            context,
-            "原有数据已删除，备份数据已恢复。",
-            backgroundColor: Colors.green,
-          );
+          ToastUtils.showSuccess("原有数据已删除，备份数据已恢复。");
         } catch (e) {
           // 弹出报错提示框
           if (!mounted) return;
@@ -368,12 +359,7 @@ class _BackupAndRestoreState extends State<BackupAndRestore> {
           return;
         }
       } else {
-        if (!mounted) return;
-        showSnackMessage(
-          context,
-          "用于恢复的备份文件格式不对，恢复已取消。",
-          backgroundColor: Colors.red,
-        );
+        ToastUtils.showError("用于恢复的备份文件格式不对，恢复已取消。");
       }
       // 这个判断不准确，但先这样
       setState(() {
@@ -430,10 +416,10 @@ class _BackupAndRestoreState extends State<BackupAndRestore> {
   _saveJsonFileDataToDb(List<File> jsonFiles) async {
     // 解压之后获取到所有的json文件，逐个添加到数据库，会先清空数据库的数据
     for (File file in jsonFiles) {
-      debugPrint("执行json保存到db时对应的json文件：${file.path}");
-
       // 获取文件名
       var filename = p.basename(file.path).toLowerCase();
+
+      debugPrint("执行json保存到db时对应的json文件：${file.path} 文件名：$filename");
 
       // 2025-03-26 这里是角色会话和分支会话的还原
       if (filename == BRANCH_CHAT_HISTORY_FILE_NAME) {
@@ -461,11 +447,14 @@ class _BackupAndRestoreState extends State<BackupAndRestore> {
         );
       } else if (filename ==
           "${BriefAIToolDdl.tableNameOfMediaGenerationHistory}.json") {
-        for (var element in jsonMapList) {
-          _dbBriefAIToolHelper.insertMediaGenerationHistory(
-            MediaGenerationHistory.fromMap(element),
-          );
-        }
+        await _dbBriefAIToolHelper.insertMediaGenerationHistoryList(
+          jsonMapList.map((e) => MediaGenerationHistory.fromMap(e)).toList(),
+        );
+      } else if (filename ==
+          "${BriefAIToolDdl.tableNameOfVoiceRecognitionTask}.json") {
+        await _dbBriefAIToolHelper.insertVoiceRecognitionTasks(
+          jsonMapList.map((e) => VoiceRecognitionTaskInfo.fromMap(e)).toList(),
+        );
       }
     }
   }

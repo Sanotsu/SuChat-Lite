@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../../models/brief_ai_tools/branch_chat/branch_chat_export_data.dart';
 import '../../../../models/brief_ai_tools/branch_chat/branch_store.dart';
+import '../../../common/components/toast_utils.dart';
 import '../../../common/components/tool_widget.dart';
 import '../../../common/utils/file_picker_helper.dart';
 import '../../../common/utils/screen_helper.dart';
@@ -301,10 +302,10 @@ class _ChatExportImportPageState extends State<ChatExportImportPage> {
             const JsonEncoder.withIndent('  ').convert(exportData.toJson()),
           );
 
-          if (!mounted) return;
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('导出成功：${file.path}')));
+          ToastUtils.showSuccess(
+            '导出成功：${file.path}',
+            duration: Duration(seconds: 5),
+          );
         }
       } catch (e) {
         if (!mounted) return;
@@ -349,6 +350,7 @@ class _ChatExportImportPageState extends State<ChatExportImportPage> {
       File? result = await FilePickerHelper.pickAndSaveFile(
         fileType: CusFileType.custom,
         allowedExtensions: ['json'],
+        overwrite: true,
       );
 
       if (result != null) {
@@ -368,12 +370,11 @@ class _ChatExportImportPageState extends State<ChatExportImportPage> {
           if (skippedCount > 0) {
             message += '，跳过 $skippedCount 个重复会话';
           }
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(message)));
+          ToastUtils.showInfo(message, duration: Duration(seconds: 5));
         } else if (skippedCount > 0) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('所有会话($skippedCount 个)均已存在，未导入任何内容')),
+          ToastUtils.showInfo(
+            '所有会话($skippedCount 个)均已存在，未导入任何内容',
+            duration: Duration(seconds: 5),
           );
         }
       }

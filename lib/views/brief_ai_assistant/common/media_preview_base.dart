@@ -30,10 +30,7 @@ abstract class MediaPreviewBase extends StatelessWidget {
         ToastUtils.showSuccess('分享成功!');
       }
     } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('分享失败: $e')));
+      ToastUtils.showError('分享失败: $e', duration: Duration(seconds: 5));
     }
   }
 
@@ -73,10 +70,7 @@ abstract class MediaPreviewBase extends StatelessWidget {
       if (!context.mounted) return;
       Navigator.pop(context);
     } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('删除失败: $e')));
+      ToastUtils.showError('删除失败: $e', duration: Duration(seconds: 5));
     }
   }
 

@@ -1151,9 +1151,7 @@ class _BranchChatPageState extends State<BranchChatPage>
         modelList.where((m) => m.modelType == selectedType).toList();
 
     if (filteredModels.isEmpty && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('当前类型没有可用的模型')));
+      ToastUtils.showError('当前类型没有可用的模型');
       return;
     }
 

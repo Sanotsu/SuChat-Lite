@@ -1,17 +1,23 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../common/components/toast_utils.dart';
 import '../../../common/components/tool_widget.dart';
 import '../../../common/constants/constants.dart';
 import '../../../common/llm_spec/constant_llm_enum.dart';
 import '../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../common/utils/tools.dart';
 import '../../../common/utils/screen_helper.dart';
+import '../../../common/components/loading_overlay.dart';
+import '../../../models/brief_ai_tools/image_generation/image_generation_response.dart';
 import '../../../models/brief_ai_tools/media_generation_history/media_generation_history.dart';
 import '../../../services/image_generation_service.dart';
 import '../../../views/brief_ai_assistant/common/media_generation_base.dart';
 import 'mime_image_manager.dart';
-import '../../../common/components/loading_overlay.dart';
 
 class BriefImageScreen extends MediaGenerationBase {
   const BriefImageScreen({super.key});
@@ -22,7 +28,8 @@ class BriefImageScreen extends MediaGenerationBase {
 
 class _BriefImageScreenState
     extends MediaGenerationBaseState<BriefImageScreen> {
-  final List<String> _generatedImages = [];
+  // 所有的图片生成任务
+  final List<MediaGenerationHistory> _allTasks = [];
 
   // 根据模型切换后才更新对应模型支持的尺寸
   List<CusLabel> _imageSizeOptions = [
@@ -30,6 +37,9 @@ class _BriefImageScreenState
   ];
 
   late CusLabel _selectedImageSize;
+
+  /// 图片任务展示
+  bool isGrid = false;
 
   @override
   List<LLModelType> get mediaTypes => [
@@ -129,20 +139,162 @@ class _BriefImageScreenState
 
   @override
   Widget buildGeneratedList() {
-    if (_generatedImages.isEmpty) {
+    if (_allTasks.isEmpty) {
       return Center(child: Text('暂无生成的图片', style: TextStyle(fontSize: 16)));
     }
 
-    /// 图片展示
     return Column(
       children: [
-        /// 文生图的结果
-        if (_generatedImages.isNotEmpty)
-          ...buildImageResultGrid(
-            _generatedImages,
-            "${selectedModel?.platform.name}_${selectedModel?.name}",
+        Divider(height: 5),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                "图片生成任务",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: () => _checkUnfinishedTasks(),
+                icon: Icon(Icons.refresh, color: Colors.blue),
+              ),
+              IconButton(
+                onPressed: () => setState(() => isGrid = !isGrid),
+                icon: Icon(
+                  isGrid ? Icons.list : Icons.grid_view,
+                  color: Colors.blue,
+                ),
+              ),
+            ],
           ),
+        ),
+        Divider(height: 5),
+        Expanded(child: _buildTaskList(isGrid)),
       ],
+    );
+  }
+
+  // 构建任务列表
+  Widget _buildTaskList(bool isGrid) {
+    //
+    return isGrid
+        ? GridView.builder(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 4,
+            childAspectRatio: 1,
+          ),
+          itemCount: _allTasks.length,
+          itemBuilder: (context, index) {
+            var task = _allTasks[index];
+            return _buildImageTaskCard(task, isGrid: isGrid);
+          },
+        )
+        : ListView.builder(
+          itemCount: _allTasks.length,
+          itemBuilder: (context, index) {
+            var task = _allTasks[index];
+            return _buildImageTaskCard(task, isGrid: isGrid);
+          },
+        );
+  }
+
+  // 构建图片任务卡片
+  Widget _buildImageTaskCard(
+    MediaGenerationHistory task, {
+    bool isGrid = false,
+  }) {
+    // 图片预览区域
+    Widget buildImagePreview() {
+      if (task.isSuccess == true &&
+          task.imageUrls != null &&
+          task.imageUrls!.isNotEmpty) {
+        // 修复：imageUrls可能是一个用逗号分隔的字符串，我们需要先检查它是否是字符串
+        String imagePath = task.imageUrls!.first;
+
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: SizedBox(
+            height: 80,
+            width: 80,
+            // child: buildImageGridTile(context, imagePath, fit: BoxFit.cover),
+            child: Image.file(
+              File(imagePath),
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Image.asset(placeholderImageUrl, fit: BoxFit.scaleDown);
+              },
+            ),
+          ),
+        );
+      } else {
+        return Container(
+          height: 80,
+          width: 80,
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Center(
+            child: Icon(
+              task.isProcessing == true ? Icons.hourglass_empty : Icons.image,
+              size: 40,
+              color: Colors.grey,
+            ),
+          ),
+        );
+      }
+    }
+
+    return buildMediaTaskCard(
+      task: task,
+      isGrid: isGrid,
+      mediaPreview: buildImagePreview(),
+      onTap: () {
+        if (task.isSuccess == true &&
+            task.imageUrls != null &&
+            task.imageUrls!.isNotEmpty) {
+          // 查看大图，此时一定有生产的图片列表(job预览时是单个，但是大图预览时，可能是一次性有多个图片)
+          _viewFullImage(task);
+        } else if (task.isProcessing == true) {
+          // 检查任务状态
+          _checkTaskStatus(task);
+        } else if (task.isFailed == true) {
+          if (task.otherParams != null) {
+            var otherParams = jsonDecode(task.otherParams!);
+
+            if (otherParams['output'] != null) {
+              AliyunWanxV2Output output = AliyunWanxV2Output.fromJson(
+                otherParams['output'],
+              );
+
+              commonExceptionDialog(
+                context,
+                "AI图片生成失败",
+                "任务状态: ${output.taskStatus}\n错误代码\n${output.code}\n错误信息\n${output.message}",
+              );
+            } else if (otherParams['errorMsg'] != null) {
+              commonExceptionDialog(
+                context,
+                "AI图片生成失败",
+                otherParams['errorMsg'],
+              );
+            }
+          }
+        }
+      },
+      onLongPress: () async {
+        final result = await showDeleteTaskConfirmDialog(context, "图片");
+
+        if (result == true) {
+          await dbHelper.deleteMediaGenerationHistoryByRequestId(
+            task.requestId,
+          );
+          if (!mounted) return;
+          await _queryAllTasks();
+        }
+      },
     );
   }
 
@@ -169,7 +321,8 @@ class _BriefImageScreenState
         negativePrompt: '',
         taskId: null,
         imageUrls: null,
-        refImageUrls: [],
+        refImageUrls:
+            referenceImage?.path != null ? [referenceImage!.path] : null,
         gmtCreate: DateTime.now(),
         llmSpec: selectedModel!,
         modelType: selectedModel!.modelType,
@@ -177,56 +330,73 @@ class _BriefImageScreenState
 
       final requestId = await dbHelper.insertMediaGenerationHistory(history);
 
-      final response = await ImageGenerationService.generateImage(
-        selectedModel!,
-        promptController.text.trim(),
-        n: 1,
-        size: _selectedImageSize.value,
-        refImage:
-            (selectedModel?.modelType == LLModelType.image ||
-                    selectedModel?.modelType == LLModelType.iti)
-                ? referenceImage
-                : null,
-        // 必须传入requestId，否则阿里云平台的job没有无法保存到数据库，那这里的查询未完成job永远都是0
-        requestId: requestId,
-      );
-
-      if (!mounted) return;
-
-      // 保存返回的网络图片到本地
-      var imageUrls = response.results.map((r) => r.url).toList();
-      List<String> newUrls = [];
-      for (final url in imageUrls) {
-        var localPath = await saveImageToLocal(
-          url,
-          dlDir: await getImageGenDir(),
-          showSaveHint: false,
+      try {
+        final response = await ImageGenerationService.generateImage(
+          selectedModel!,
+          promptController.text.trim(),
+          n: 1,
+          size: _selectedImageSize.value,
+          refImage:
+              (selectedModel?.modelType == LLModelType.image ||
+                      selectedModel?.modelType == LLModelType.iti)
+                  ? referenceImage
+                  : null,
+          // 必须传入requestId，否则阿里云平台的job没有无法保存到数据库，那这里的查询未完成job永远都是0
+          requestId: requestId,
         );
 
-        if (localPath != null) {
-          newUrls.add(localPath);
+        if (!mounted) return;
+        // 如果用户没有取消掉遮罩，那么到这里就是已经是获得了图片的响应，保存返回的网络图片到本地
+        var imageUrls = response.results.map((r) => r.url).toList();
+        List<String> newUrls = [];
+        for (final url in imageUrls) {
+          var localPath = await saveImageToLocal(
+            url,
+            dlDir: await getImageGenDir(),
+            showSaveHint: false,
+          );
+
+          if (localPath != null) {
+            newUrls.add(localPath);
+          }
         }
+
+        // 2025-05-10 如果是阿里云平台，在job轮询时就已经更新了数据库，这里不必重复更新
+        // 所以这里只处理非阿里云平台的情况
+        // ？？？注意，其他平台生成图片报错还没准确处理
+        if (selectedModel?.platform != ApiPlatform.aliyun) {
+          await dbHelper.updateMediaGenerationHistoryByRequestId(requestId, {
+            'taskId':
+                selectedModel?.platform == ApiPlatform.aliyun
+                    ? response.output?.taskId
+                    : null,
+            'isSuccess': 1,
+            'isProcessing': 0,
+            'taskStatus': response.output?.taskStatus,
+            // 2025-05-09 注意在MediaGenerationHistory类的toMap方法中，imageUrls是分号分割的
+            'imageUrls': newUrls.join(';'),
+            'prompt': promptController.text.trim(),
+          });
+        }
+      } catch (e) {
+        // 2025-05-10 这里统一处理错误，直接报错的会有弹窗，但没有存入数据库
+        // 阿里云的如果能提交job，那么job生成出错在消息体内，也是正常完成；
+        // 如果提交job就失败(比如提示词就违规)，那就和硅基流动和智谱一样，会直接http层面的抛错
+        await dbHelper.updateMediaGenerationHistoryByRequestId(requestId, {
+          'taskId': null,
+          'isSuccess': 0,
+          'isProcessing': 0,
+          'isFailed': 1,
+          'taskStatus': "FAILED",
+          'imageUrls': null,
+          "otherParams": jsonEncode({"errorMsg": e.toString()}),
+        });
       }
-
-      // 更新UI(这里使用网络地址或本地地址没差，毕竟历史记录在其他页面，这里只有当前页面还在时才有图片展示)
-      if (!mounted) return;
-      setState(() {
-        _generatedImages.addAll(newUrls);
-      });
-
-      // 更新数据库历史记录。如果是阿里云平台，则需要保存任务ID和已完成的标识
-      await dbHelper.updateMediaGenerationHistoryByRequestId(requestId, {
-        'taskId':
-            selectedModel?.platform == ApiPlatform.aliyun
-                ? response.output?.taskId
-                : null,
-        'isSuccess': 1,
-        'imageUrls': _generatedImages.join(','),
-      });
+      // 提交新任务之后，重新查询所有任务并更新UI
+      await _queryAllTasks();
     } catch (e) {
       if (!mounted) return;
       commonExceptionDialog(context, "异常提示", "AI图片生成失败: $e");
-      rethrow;
     } finally {
       // 隐藏生成遮罩
       LoadingOverlay.hide();
@@ -255,115 +425,222 @@ class _BriefImageScreenState
     _checkUnfinishedTasks();
   }
 
-  // 检查未完成的任务
-  // 2025-02-20 和视频生成中不一样，图片生成目前就阿里云的通义万相-文生图V2版需要任务查询，其他直接返回的
-  // 耗时不会特别长，所以这里调用轮询
-  Future<void> _checkUnfinishedTasks() async {
-    // 查询未完成的任务
+  // 查看大图
+  void _viewFullImage(MediaGenerationHistory task) {
+    var prompt = task.prompt;
+
+    // ？？？2025-05-10 这里暂时没有针对一次性生成多个图片时，每个图片单独显示实际提示词，而是放在一起
+    if (task.llmSpec.model.contains("wanx") && task.otherParams != null) {
+      var otherParams = jsonDecode(task.otherParams!);
+
+      AliyunWanxV2Output output = AliyunWanxV2Output.fromJson(
+        otherParams['output'],
+      );
+
+      var actualPrompt =
+          output.results?.map((e) => e.actualPrompt ?? '').join('\n') ?? '';
+
+      prompt += '\n$actualPrompt';
+    }
+
+    Widget promptCard = Card(
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text('提示词', style: Theme.of(context).textTheme.titleSmall),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.copy, size: 20),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: prompt));
+                    ToastUtils.showToast('已复制到剪贴板');
+                  },
+                ),
+              ],
+            ),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: ConstrainedBox(
+                // 最大高度150，超过则滚动
+                constraints: BoxConstraints(maxHeight: 150),
+                child: SingleChildScrollView(
+                  child: SelectableText(
+                    prompt,
+                    textAlign: TextAlign.justify, // 双端对齐
+                    style: const TextStyle(color: Colors.blue),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(0),
+            ),
+            insetPadding: ScreenHelper.isMobile() ? EdgeInsets.all(8) : null,
+            child: Container(
+              width: 800, // 桌面端限制宽度，手机端一般都达不到800的
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.8,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppBar(
+                    title: Text('图片预览(共${task.imageUrls?.length}张)'),
+                    actions: [
+                      IconButton(
+                        icon: Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    height: 160,
+                    padding: EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        buildImageCarouselSlider(
+                          task.imageUrls!,
+                          aspectRatio: 1,
+                        ),
+                        SizedBox(width: 10),
+
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  task.gmtCreate.toString(),
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                Text(
+                                  CP_NAME_MAP[task.llmSpec.platform] ?? '',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                Text(
+                                  task.llmSpec.model,
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Padding(
+                    padding: EdgeInsets.all(8),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SelectableText(task.imageUrls?.join(';') ?? ''),
+                    ),
+                  ),
+
+                  promptCard,
+                  SizedBox(height: 10),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+
+  // 查询所有图片生成任务
+  Future<void> _queryAllTasks() async {
     final all = await dbHelper.queryMediaGenerationHistory(
       modelTypes: [LLModelType.image, LLModelType.tti, LLModelType.iti],
     );
 
-    // 过滤出未完成的任务
-    final unfinishedTasks = all.where((e) => e.isProcessing == true).toList();
+    if (!mounted) return;
+    setState(() {
+      _allTasks.clear();
+      _allTasks.addAll(all);
+    });
+  }
 
-    // 遍历未完成的任务
-    for (final task in unfinishedTasks) {
-      if (task.taskId != null) {
-        try {
-          // 2025-05-08 注意，这里是自定义的图片生成结果
-          // 如果轮询过程中有结果了，直接在result中取值
-          // 如果还在处理中，则不会返回；
-          // 如果报错或者失败了，会有code和message
-          final response = await ImageGenerationService.pollTaskStatus(
-            modelList.firstWhere(
-              (model) => model.platform == task.llmSpec.platform,
-            ),
-            task.taskId!,
-          );
+  // 检查未完成的任务
+  Future<void> _checkUnfinishedTasks() async {
+    try {
+      // 查询所有图片生成任务
+      await _queryAllTasks();
 
-          if (response.code != null || response.message != null) {
-            await dbHelper.updateMediaGenerationHistoryByRequestId(
-              task.requestId,
-              {'isFailed': 1},
+      // 过滤出未完成的任务
+      final unfinishedTasks =
+          _allTasks.where((e) => e.isProcessing == true).toList();
+
+      if (unfinishedTasks.isEmpty) return;
+
+      // 状态等待中的任务需要检查
+      for (final task in unfinishedTasks) {
+        if (task.taskId != null) {
+          try {
+            // 检查任务状态
+            _checkTaskStatus(task);
+          } catch (e) {
+            debugPrint('检查任务状态失败: $e');
+            ToastUtils.showError(
+              '检查任务状态失败: $e',
+              duration: Duration(seconds: 5),
             );
-          } else if (response.results.isNotEmpty) {
-            if (!mounted) return;
-
-            // 保存返回的网络图片到本地
-            var imageUrls = response.results.map((r) => r.url).toList();
-            List<String> newUrls = [];
-            for (final url in imageUrls) {
-              var localPath = await saveImageToLocal(
-                url,
-                dlDir: await getImageGenDir(),
-                showSaveHint: false,
-              );
-
-              if (localPath != null) {
-                newUrls.add(localPath);
-              }
-            }
-
-            // 更新UI(这里使用网络地址或本地地址没差，毕竟历史记录在其他页面，这里只有当前页面还在时才有图片展示)
-            if (!mounted) return;
-            setState(() {
-              _generatedImages.addAll(newUrls);
-            });
-
-            await dbHelper
-                .updateMediaGenerationHistoryByRequestId(task.requestId, {
-                  'isSuccess': 1,
-                  'isProcessing': 0,
-                  'imageUrls': _generatedImages.join(','),
-                });
           }
-        } catch (e) {
-          debugPrint('检查任务状态失败: $e');
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('检查任务状态失败: $e'),
-              duration: const Duration(seconds: 5),
-            ),
-          );
         }
       }
+    } catch (e) {
+      debugPrint('查询未完成任务失败: $e');
+      ToastUtils.showError('查询未完成任务失败: $e');
     }
   }
 
-  /// 构建生成的图片区域
-  List<Widget> buildImageResultGrid(List<String> urls, String? prefix) {
-    return [
-      const Divider(),
+  // 检查任务状态
+  Future<void> _checkTaskStatus(MediaGenerationHistory task) async {
+    if (task.taskId == null) return;
 
-      // 文生图结果提示行
-      Padding(
-        padding: EdgeInsets.all(5),
-        child: Text(
-          "生成的图片(点击查看、长按保存)",
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-      ),
+    try {
+      // 显示加载状态
+      LoadingOverlay.show(context, title: '正在检查任务状态...');
 
-      // 图片展示区域
-      Expanded(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              Padding(
-                padding: EdgeInsets.all(5),
-                child: buildNetworkImageViewGrid(
-                  context,
-                  urls,
-                  crossAxisCount: ScreenHelper.isDesktop() ? 3 : 2,
-                  prefix: prefix,
-                ),
-              ),
-            ],
-          ),
+      // 在service中有更新任务状态到数据库，所以这里直接轮询结果就好
+      final response = await ImageGenerationService.pollTaskStatus(
+        task.requestId,
+        modelList.firstWhere(
+          (model) => model.platform == task.llmSpec.platform,
         ),
-      ),
-    ];
+        task.taskId!,
+      );
+
+      if (response.results.isNotEmpty) {
+        ToastUtils.showSuccess('图片生成任务已完成');
+      }
+
+      // 刷新任务列表
+      await _queryAllTasks();
+    } catch (e) {
+      debugPrint('检查图片生成任务状态失败: $e');
+      ToastUtils.showError('检查图片生成任务状态失败: $e');
+    } finally {
+      // 隐藏加载状态
+      LoadingOverlay.hide();
+    }
   }
 }

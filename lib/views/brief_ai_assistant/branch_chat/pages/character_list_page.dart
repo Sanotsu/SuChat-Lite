@@ -356,6 +356,7 @@ class _CharacterListPageState extends State<CharacterListPage> {
       File? result = await FilePickerHelper.pickAndSaveFile(
         fileType: CusFileType.custom,
         allowedExtensions: ['json'],
+        overwrite: true,
       );
 
       if (result == null) return;

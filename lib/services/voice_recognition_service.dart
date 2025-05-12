@@ -1,178 +1,22 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:get_storage/get_storage.dart';
-import 'package:suchat_lite/common/constants/constants.dart';
-import 'package:uuid/uuid.dart';
 import 'package:dio/dio.dart';
 
+import '../common/constants/constants.dart';
 import '../common/llm_spec/constant_llm_enum.dart';
 import '../common/llm_spec/cus_brief_llm_model.dart';
 import '../common/utils/dio_client/cus_http_client.dart';
 import '../common/utils/db_tools/db_brief_ai_tool_helper.dart';
-import '../models/brief_ai_tools/media_generation_history/media_generation_history.dart';
+import '../models/brief_ai_tools/voice_recognition/voice_recognition_task_info.dart';
 import '../models/voice_recognition/sense_voice.dart';
 
 import 'cus_get_storage.dart';
 import 'github_storage_service.dart';
 
-// 与 cus_get_storage.dart 中保持一致
-final box = GetStorage('SuChatGetStorage');
-
-/// 本地存储的任务模型，包含阿里云任务信息和本地信息
-class VoiceRecognitionTaskInfo {
-  final String taskId;
-  final String? localAudioPath; // 本地音频文件路径
-  final String? githubAudioUrl; // GitHub上的音频URL
-  final String? languageHint; // 语言类型
-  final String? taskStatus; // 任务状态
-  final DateTime? gmtCreate; // 创建时间
-  final CusBriefLLMSpec? llmSpec; // 任务模型
-  final SenseVoiceJobResp? jobResponse; // 阿里云任务响应
-  final SenseVoiceRecogResp? recognitionResponse; // 阿里云识别结果
-
-  VoiceRecognitionTaskInfo({
-    required this.taskId,
-    this.localAudioPath,
-    this.githubAudioUrl,
-    this.languageHint,
-    this.taskStatus,
-    this.gmtCreate,
-    this.llmSpec,
-    this.jobResponse,
-    this.recognitionResponse,
-  });
-
-  // 从JSON创建任务
-  factory VoiceRecognitionTaskInfo.fromJson(Map<String, dynamic> json) {
-    return VoiceRecognitionTaskInfo(
-      taskId: json['taskId'],
-      localAudioPath: json['localAudioPath'],
-      githubAudioUrl: json['githubAudioUrl'],
-      languageHint: json['languageHint'],
-      taskStatus: json['taskStatus'],
-      gmtCreate:
-          json['gmtCreate'] != null ? DateTime.parse(json['gmtCreate']) : null,
-      llmSpec:
-          json['llmSpec'] != null
-              ? CusBriefLLMSpec.fromJson(jsonDecode(json['llmSpec']))
-              : null,
-      jobResponse:
-          json['jobResponse'] != null
-              ? SenseVoiceJobResp.fromJson(jsonDecode(json['jobResponse']))
-              : null,
-      recognitionResponse:
-          json['recognitionResponse'] != null
-              ? SenseVoiceRecogResp.fromJson(
-                jsonDecode(json['recognitionResponse']),
-              )
-              : null,
-    );
-  }
-
-  // 转换为JSON
-  Map<String, dynamic> toJson() {
-    return {
-      'taskId': taskId,
-      'localAudioPath': localAudioPath,
-      'githubAudioUrl': githubAudioUrl,
-      'languageHint': languageHint,
-      'taskStatus': taskStatus,
-      'gmtCreate': gmtCreate?.toIso8601String(),
-      'llmSpec': llmSpec != null ? jsonEncode(llmSpec!.toJson()) : null,
-      'jobResponse':
-          jobResponse != null ? jsonEncode(jobResponse!.toJson()) : null,
-      'recognitionResponse':
-          recognitionResponse != null
-              ? jsonEncode(recognitionResponse!.toJson())
-              : null,
-    };
-  }
-
-  // 复制对象并更新部分属性
-  VoiceRecognitionTaskInfo copyWith({
-    String? taskId,
-    String? localAudioPath,
-    String? githubAudioUrl,
-    String? languageHint,
-    String? taskStatus,
-    DateTime? gmtCreate,
-    CusBriefLLMSpec? llmSpec,
-    SenseVoiceJobResp? jobResponse,
-    SenseVoiceRecogResp? recognitionResponse,
-  }) {
-    return VoiceRecognitionTaskInfo(
-      taskId: taskId ?? this.taskId,
-      localAudioPath: localAudioPath ?? this.localAudioPath,
-      githubAudioUrl: githubAudioUrl ?? this.githubAudioUrl,
-      languageHint: languageHint ?? this.languageHint,
-      taskStatus: taskStatus ?? this.taskStatus,
-      gmtCreate: gmtCreate ?? this.gmtCreate,
-      llmSpec: llmSpec ?? this.llmSpec,
-      jobResponse: jobResponse ?? this.jobResponse,
-      recognitionResponse: recognitionResponse ?? this.recognitionResponse,
-    );
-  }
-
-  // 获取识别文本
-  String? get recognizedText {
-    if (recognitionResponse?.transcripts != null &&
-        recognitionResponse!.transcripts!.isNotEmpty) {
-      return recognitionResponse!.transcripts!.first.text;
-    }
-    return null;
-  }
-
-  // 获取错误信息
-  String? get errorMessage {
-    // 从jobResponse中提取错误信息，如果有的话
-    if (jobResponse?.output?.code != null &&
-        jobResponse!.output!.code!.isNotEmpty) {
-      return '${jobResponse!.output!.code} - ${jobResponse?.output?.message}';
-    }
-    return null;
-  }
-
-  // 获取分段句子列表
-  List<SenseVoiceRRTranscriptSentence>? get sentences {
-    if (recognitionResponse?.transcripts != null &&
-        recognitionResponse!.transcripts!.isNotEmpty) {
-      return recognitionResponse!.transcripts!.first.sentences;
-    }
-    return null;
-  }
-
-  // 获取音频文件URL
-  String? get audioFileUrl {
-    // 优先使用本地路径
-    return localAudioPath ?? githubAudioUrl;
-  }
-
-  // 获取音频时长（毫秒）
-  int? get audioDurationMs {
-    if (recognitionResponse?.properties?.originalDurationInMilliseconds !=
-        null) {
-      return recognitionResponse!.properties!.originalDurationInMilliseconds;
-    }
-    return null;
-  }
-
-  // 获取识别结果URL
-  String? get transcriptionUrl {
-    if (jobResponse?.output?.results != null &&
-        jobResponse!.output!.results!.isNotEmpty) {
-      return jobResponse!.output!.results!.first.transcriptionUrl;
-    }
-    return null;
-  }
-}
-
 ///
 /// 阿里云录音识别服务
 ///
 class VoiceRecognitionService {
-  static const _recognitionTasksKey = 'voice_recognition_tasks';
-
   // 创建dio实例用于网络请求
   static final _dio = Dio();
 
@@ -293,26 +137,8 @@ class VoiceRecognitionService {
           jobResponse: senseVoiceResp,
         );
 
-        // 保存任务到本地存储
-        await _saveTaskInfo(taskInfo);
-
-        // 保存任务到数据库，表示处理中状态
-        final mediaHistory = _taskInfoToMediaGenerationHistory(taskInfo);
-
-        // 查询数据库中是否已存在该任务
-        final existingHistories = await _dbHelper.queryMediaGenerationHistory(
-          isProcessing: true,
-        );
-
-        final existingHistory =
-            existingHistories
-                .where((h) => h.taskId == taskId || h.requestId == taskId)
-                .toList();
-
-        if (existingHistory.isEmpty) {
-          // 如果不存在，则插入
-          await _dbHelper.insertMediaGenerationHistory(mediaHistory);
-        }
+        // 保存任务到数据库
+        await _dbHelper.insertVoiceRecognitionTask(taskInfo);
 
         return taskId;
       } else {
@@ -348,16 +174,13 @@ class VoiceRecognitionService {
         final senseVoiceResp = SenseVoiceJobResp.fromJson(response);
 
         // 获取已存在的任务信息
-        final existingTasks = await getRecognitionTasks();
-        final existingTask = existingTasks.firstWhere(
-          (t) => t.taskId == taskId,
-          orElse:
-              () => VoiceRecognitionTaskInfo(
-                taskId: taskId,
-                languageHint: 'auto',
-                gmtCreate: DateTime.now(),
-              ),
+        final existingTask = await _dbHelper.getVoiceRecognitionTaskById(
+          taskId,
         );
+
+        if (existingTask == null) {
+          throw Exception('未找到ID为 $taskId 的语音识别任务');
+        }
 
         // 更新基本任务信息
         var updatedTask = existingTask.copyWith(
@@ -381,36 +204,8 @@ class VoiceRecognitionService {
           }
         }
 
-        // 保存更新后的任务到本地存储
-        await _updateTaskInfo(updatedTask);
-
-        // 如果任务已完成，更新数据库记录
-        if (updatedTask.taskStatus == 'SUCCEEDED' &&
-            updatedTask.recognizedText != null) {
-          final mediaHistory = _taskInfoToMediaGenerationHistory(updatedTask);
-
-          // 查询数据库中是否已存在该任务
-          final existingHistories = await _dbHelper.queryMediaGenerationHistory(
-            isProcessing: true,
-          );
-          final existingHistory =
-              existingHistories
-                  .where((h) => h.taskId == taskId || h.requestId == taskId)
-                  .toList();
-
-          if (existingHistory.isNotEmpty) {
-            // 如果已存在，则更新
-            await _dbHelper.updateMediaGenerationHistoryByRequestId(taskId, {
-              'isSuccess': 1,
-              'isProcessing': 0,
-              'isFailed': 0,
-              'otherParams': mediaHistory.otherParams,
-            });
-          } else {
-            // 如果不存在，则插入
-            await _dbHelper.insertMediaGenerationHistory(mediaHistory);
-          }
-        }
+        // 保存更新后的任务到数据库
+        await _dbHelper.updateVoiceRecognitionTask(updatedTask);
 
         return updatedTask;
       } else {
@@ -447,8 +242,8 @@ class VoiceRecognitionService {
   /// 删除录音识别任务
   static Future<void> deleteRecognitionTask(String taskId) async {
     try {
-      // 从本地存储中删除任务
-      await _removeTaskInfo(taskId);
+      // 从数据库中删除任务记录
+      await _dbHelper.deleteVoiceRecognitionTask(taskId);
 
       // 从数据库中删除任务记录
       await _dbHelper.deleteMediaGenerationHistoryByRequestId(taskId);
@@ -461,13 +256,7 @@ class VoiceRecognitionService {
   /// 获取所有录音识别任务
   static Future<List<VoiceRecognitionTaskInfo>> getRecognitionTasks() async {
     try {
-      final tasks = await _getLocalTaskInfos();
-      // 按照创建时间倒序排序，最新的任务显示在前面
-      tasks.sort(
-        (a, b) => (b.gmtCreate ?? DateTime.now()).compareTo(
-          a.gmtCreate ?? DateTime.now(),
-        ),
-      );
+      final tasks = await _dbHelper.getAllVoiceRecognitionTasks();
       return tasks;
     } catch (e) {
       debugPrint('获取录音识别任务列表失败: $e');
@@ -516,126 +305,12 @@ class VoiceRecognitionService {
     }
   }
 
-  /// 从本地存储获取录音识别任务列表
-  static Future<List<VoiceRecognitionTaskInfo>> _getLocalTaskInfos() async {
-    try {
-      final tasksData = box.read(_recognitionTasksKey);
-      if (tasksData == null) return [];
-
-      final tasksJson = tasksData as List<dynamic>;
-
-      return tasksJson
-          .map((json) => VoiceRecognitionTaskInfo.fromJson(json))
-          .toList();
-    } catch (e) {
-      debugPrint('获取本地录音识别任务失败：$e');
-      return [];
-    }
-  }
-
-  /// 保存录音识别任务到本地存储
-  static Future<void> _saveTaskInfo(VoiceRecognitionTaskInfo taskInfo) async {
-    try {
-      final tasks = await _getLocalTaskInfos();
-      tasks.add(taskInfo);
-      await _saveLocalTaskInfos(tasks);
-    } catch (e) {
-      debugPrint('保存录音识别任务到本地失败：$e');
-    }
-  }
-
-  /// 更新本地存储中的录音识别任务
-  static Future<void> _updateTaskInfo(
-    VoiceRecognitionTaskInfo updatedTask,
-  ) async {
-    try {
-      final tasks = await _getLocalTaskInfos();
-      final index = tasks.indexWhere(
-        (task) => task.taskId == updatedTask.taskId,
-      );
-
-      if (index != -1) {
-        tasks[index] = updatedTask;
-        await _saveLocalTaskInfos(tasks);
-      } else {
-        // 如果任务不存在，则添加
-        await _saveTaskInfo(updatedTask);
-      }
-    } catch (e) {
-      debugPrint('更新录音识别任务失败：$e');
-    }
-  }
-
-  /// 从本地存储中删除录音识别任务
-  static Future<void> _removeTaskInfo(String taskId) async {
-    try {
-      final tasks = await _getLocalTaskInfos();
-      tasks.removeWhere((task) => task.taskId == taskId);
-      await _saveLocalTaskInfos(tasks);
-    } catch (e) {
-      debugPrint('删除录音识别任务失败：$e');
-    }
-  }
-
-  /// 保存录音识别任务列表到本地存储
-  static Future<void> _saveLocalTaskInfos(
-    List<VoiceRecognitionTaskInfo> tasks,
-  ) async {
-    try {
-      final tasksJson = tasks.map((task) => task.toJson()).toList();
-      await box.write(_recognitionTasksKey, tasksJson);
-    } catch (e) {
-      debugPrint('保存录音识别任务到本地失败：$e');
-    }
-  }
-
-  /// 转换录音识别任务为MediaGenerationHistory (用于数据库存储)
-  static MediaGenerationHistory _taskInfoToMediaGenerationHistory(
-    VoiceRecognitionTaskInfo taskInfo,
-  ) {
-    // 创建一个包含识别结果的其他参数对象
-    final otherParamsMap = {
-      'recognizedText': taskInfo.recognizedText,
-      'errorMessage': taskInfo.errorMessage,
-      'fileUrl': taskInfo.audioFileUrl,
-      'audioDuration': taskInfo.audioDurationMs,
-    };
-
-    return MediaGenerationHistory(
-      requestId: taskInfo.taskId,
-      taskId: taskInfo.taskId,
-      prompt: taskInfo.languageHint ?? 'auto',
-      refImageUrls: [],
-      videoUrls: null,
-      isSuccess: taskInfo.taskStatus == 'SUCCEEDED',
-      isProcessing:
-          taskInfo.taskStatus == 'RUNNING' || taskInfo.taskStatus == 'PENDING',
-      isFailed: taskInfo.taskStatus == 'FAILED',
-      otherParams: jsonEncode(otherParamsMap),
-      gmtCreate: taskInfo.gmtCreate ?? DateTime.now(),
-      llmSpec:
-          taskInfo.llmSpec ??
-          CusBriefLLMSpec(
-            ApiPlatform.aliyun,
-            'paraformer-v1',
-            LLModelType.asr,
-            cusLlmSpecId: const Uuid().v4(),
-          ),
-      modelType: LLModelType.asr,
-    );
-  }
-
   /// 通过任务ID获取录音识别任务
   static Future<VoiceRecognitionTaskInfo?> getRecognitionTaskById(
     String taskId,
   ) async {
     try {
-      final tasks = await _getLocalTaskInfos();
-      final task = tasks.firstWhere(
-        (task) => task.taskId == taskId,
-        orElse: () => throw Exception('未找到ID为 $taskId 的录音识别任务'),
-      );
-      return task;
+      return await _dbHelper.getVoiceRecognitionTaskById(taskId);
     } catch (e) {
       debugPrint('获取录音识别任务失败: $e');
       return null;

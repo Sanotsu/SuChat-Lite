@@ -118,8 +118,7 @@ class VideoGenerationService {
     final request = VideoGenerationRequest(
       model: model.model,
       prompt: prompt,
-      image: referenceImage,
-      imageUrl: referenceImage,
+      refImage: referenceImage,
       // fps: fps,
       // size: size,
     );
@@ -140,33 +139,9 @@ class VideoGenerationService {
       response,
       model.platform,
     );
-
-    // // 先解析任务提交响应
-    // var resp = VideoGenerationSubmitResponse.fromResponseBody(
-    //   response,
-    //   model.platform,
-    // );
-
-    // String taskId = "";
-
-    // switch (model.platform) {
-    //   case ApiPlatform.siliconCloud:
-    //     taskId = resp.requestId ?? "";
-    //     break;
-    //   case ApiPlatform.aliyun:
-    //     taskId = resp.output?.taskId ?? "";
-    //     break;
-    //   case ApiPlatform.zhipu:
-    //     taskId = resp.id ?? "";
-    //     break;
-    //   default:
-    //     throw Exception('不支持的平台');
-    // }
-
-    // return pollTaskStatus(taskId, model, submitResp: resp);
   }
 
-  static Future<VideoGenerationResponse> pollTaskStatus(
+  static Future<CusUnifiedVideoGenResp> pollTaskStatus(
     String taskId,
     CusBriefLLMSpec model, {
     VideoGenerationSubmitResponse? submitResp,
@@ -181,7 +156,7 @@ class VideoGenerationService {
       switch (model.platform) {
         case ApiPlatform.siliconCloud:
           if (response.taskStatus == 'Succeed') {
-            return VideoGenerationResponse(
+            return CusUnifiedVideoGenResp(
               requestId: submitResp?.requestId,
               taskId: taskId,
               status: 'SUCCEEDED',
@@ -191,7 +166,7 @@ class VideoGenerationService {
           break;
         case ApiPlatform.aliyun:
           if (response.output?.taskStatus == 'SUCCEEDED') {
-            return VideoGenerationResponse(
+            return CusUnifiedVideoGenResp(
               requestId: submitResp?.requestId,
               taskId: taskId,
               status: 'SUCCEEDED',
@@ -208,7 +183,7 @@ class VideoGenerationService {
           break;
         case ApiPlatform.zhipu:
           if (response.taskStatus == 'SUCCESS') {
-            return VideoGenerationResponse(
+            return CusUnifiedVideoGenResp(
               requestId: submitResp?.requestId,
               taskId: taskId,
               status: 'SUCCEEDED',
@@ -244,6 +219,7 @@ class VideoGenerationService {
           path: _getBaseTaskUrl(model.platform),
           headers: headers,
           data: {'requestId': taskId},
+          showErrorMessage: false,
         );
         break;
 
@@ -251,6 +227,7 @@ class VideoGenerationService {
         taskResponse = await HttpUtils.get(
           path: "${_getBaseTaskUrl(model.platform)}/$taskId",
           headers: headers,
+          showErrorMessage: false,
         );
         break;
 
@@ -258,6 +235,7 @@ class VideoGenerationService {
         taskResponse = await HttpUtils.get(
           path: "${_getBaseTaskUrl(model.platform)}/$taskId",
           headers: headers,
+          showErrorMessage: false,
         );
         break;
 

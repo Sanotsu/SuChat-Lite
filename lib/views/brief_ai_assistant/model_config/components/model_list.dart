@@ -31,10 +31,29 @@ class _ModelListState extends State<ModelList> {
   int _sortColumnIndex = 0; // 当前排序的列索引
   bool _sortAscending = true; // 是否升序
 
+  // 搜索相关变量
+  final TextEditingController _searchController = TextEditingController();
+  String _searchKeyword = '';
+  final FocusNode _searchFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
     _loadModels();
+
+    // 添加搜索监听
+    _searchController.addListener(() {
+      setState(() {
+        _searchKeyword = _searchController.text.toLowerCase().trim();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
   }
 
   // 加载模型列表
@@ -123,6 +142,7 @@ class _ModelListState extends State<ModelList> {
     File? file = await FilePickerHelper.pickAndSaveFile(
       fileType: CusFileType.custom,
       allowedExtensions: ['json'],
+      overwrite: true,
     );
 
     if (file == null) return;
@@ -213,6 +233,24 @@ class _ModelListState extends State<ModelList> {
     });
   }
 
+  // 过滤模型列表
+  List<CusBriefLLMSpec> get _filteredModels {
+    if (_searchKeyword.isEmpty) return _models;
+
+    return _models.where((model) {
+      return (model.name?.toLowerCase().contains(_searchKeyword) ?? false) ||
+          model.model.toLowerCase().contains(_searchKeyword) ||
+          (CP_NAME_MAP[model.platform]?.toLowerCase().contains(
+                _searchKeyword,
+              ) ??
+              false) ||
+          (MT_NAME_MAP[model.modelType]?.toLowerCase().contains(
+                _searchKeyword,
+              ) ??
+              false);
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -256,50 +294,108 @@ class _ModelListState extends State<ModelList> {
 
   // 表格标题行
   Widget _buildHeader() {
-    return Row(
+    return Column(
       children: [
-        Padding(
-          padding: EdgeInsets.all(16),
-          child: Text(
-            '已导入 ${_models.length} 个模型',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-        ),
-        const Spacer(),
-        IconButton(
-          icon: const Icon(Icons.add_circle_outline),
-          onPressed: () async {
-            final result = await Navigator.push<CusBriefLLMSpec>(
-              context,
-              MaterialPageRoute(builder: (context) => const AddModelPage()),
-            );
-
-            if (result != null) {
-              _loadModels();
-            }
-          },
-          tooltip: '添加新模型',
-        ),
-        IconButton(
-          icon: const Icon(Icons.delete_outline),
-          onPressed: () => _clearAllModels(context),
-          tooltip: '清除所有自定义模型，并恢复内置模型',
-        ),
-        if (_isImporting)
-          Padding(
-            padding: EdgeInsets.only(right: 16),
-            child: SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
+        Row(
+          children: [
+            Padding(
+              padding: EdgeInsets.all(16),
+              // child: Text(
+              //   '共${_models.length}个模型${_searchKeyword.isNotEmpty ? "(筛选${_filteredModels.length}个)" : ""}',
+              //   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              // ),
+              child: RichText(
+                softWrap: true,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: "共${_models.length}个模型",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    TextSpan(
+                      text:
+                          _searchKeyword.isNotEmpty
+                              ? "(${_filteredModels.length})"
+                              : "",
+                      style: TextStyle(color: Colors.green, fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          )
-        else
-          IconButton(
-            icon: const Icon(Icons.upload_file_outlined),
-            onPressed: () => _importFromJson(),
-            tooltip: '导入模型配置json',
+            const Spacer(),
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              onPressed: () async {
+                final result = await Navigator.push<CusBriefLLMSpec>(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AddModelPage()),
+                );
+
+                if (result != null) {
+                  _loadModels();
+                }
+              },
+              tooltip: '添加新模型',
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              onPressed: () => _clearAllModels(context),
+              tooltip: '清除所有自定义模型，并恢复内置模型',
+            ),
+            if (_isImporting)
+              Padding(
+                padding: EdgeInsets.only(right: 16),
+                child: SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            else
+              IconButton(
+                icon: const Icon(Icons.upload_file_outlined),
+                onPressed: () => _importFromJson(),
+                tooltip: '导入模型配置json',
+              ),
+          ],
+        ),
+
+        // 搜索框
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: TextField(
+            controller: _searchController,
+            focusNode: _searchFocusNode,
+            decoration: InputDecoration(
+              hintText: '搜索模型（名称、平台、类型）',
+              prefixIcon: Icon(Icons.search),
+              suffixIcon:
+                  _searchKeyword.isNotEmpty
+                      ? IconButton(
+                        icon: Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          _searchFocusNode.unfocus();
+                        },
+                      )
+                      : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: Colors.grey.withValues(alpha: 0.3),
+                ),
+              ),
+              contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            ),
           ),
+        ),
       ],
     );
   }
@@ -383,7 +479,9 @@ class _ModelListState extends State<ModelList> {
               ),
             ),
           ),
-          Expanded(child: Text(value, style: TextStyle(fontSize: 14))),
+          Expanded(
+            child: SelectableText(value, style: TextStyle(fontSize: 14)),
+          ),
         ],
       ),
     );
@@ -391,6 +489,8 @@ class _ModelListState extends State<ModelList> {
 
   // 简单的表格实现，避免DataTable的约束问题
   Widget _buildSimpleTable() {
+    final filteredModels = _filteredModels;
+
     return Column(
       children: [
         // 表头
@@ -444,45 +544,63 @@ class _ModelListState extends State<ModelList> {
 
         // 表格内容，使用ListView可以垂直滚动
         Expanded(
-          child: ListView.builder(
-            itemCount: _models.length,
-            itemBuilder: (context, index) {
-              final model = _models[index];
-              final isEven = index.isEven;
-
-              return GestureDetector(
-                // 移动端长按显示详情，桌面端右键显示菜单
-                onLongPress:
-                    ScreenHelper.isMobile()
-                        ? () => showModelInfo(context, model)
-                        : null,
-                onSecondaryTapDown:
-                    ScreenHelper.isDesktop()
-                        ? (details) => _showContextMenu(
-                          context,
-                          model,
-                          details.globalPosition,
-                        )
-                        : null,
-                child: Container(
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color:
-                        isEven
-                            ? Colors.grey.withValues(alpha: 0.05)
-                            : Colors.white,
-                    border: Border(
-                      bottom: BorderSide(
-                        color: Colors.grey.withValues(alpha: 0.1),
-                      ),
+          child:
+              filteredModels.isEmpty
+                  ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.search_off, size: 48, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text(
+                          '没有找到匹配的模型',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ],
                     ),
+                  )
+                  : ListView.builder(
+                    itemCount: filteredModels.length,
+                    itemBuilder: (context, index) {
+                      final model = filteredModels[index];
+                      final isEven = index.isEven;
+
+                      return GestureDetector(
+                        // 移动端长按显示详情，桌面端右键显示菜单
+                        onLongPress:
+                            ScreenHelper.isMobile()
+                                ? () => showModelInfo(context, model)
+                                : null,
+                        onSecondaryTapDown:
+                            ScreenHelper.isDesktop()
+                                ? (details) => _showContextMenu(
+                                  context,
+                                  model,
+                                  details.globalPosition,
+                                )
+                                : null,
+                        child: Container(
+                          height: 60,
+                          decoration: BoxDecoration(
+                            color:
+                                isEven
+                                    ? Colors.grey.withValues(alpha: 0.05)
+                                    : Colors.white,
+                            border: Border(
+                              bottom: BorderSide(
+                                color: Colors.grey.withValues(alpha: 0.1),
+                              ),
+                            ),
+                          ),
+                          padding: EdgeInsets.all(8),
+                          child: _buildItemRow(model),
+                        ),
+                      );
+                    },
                   ),
-                  padding: EdgeInsets.all(8),
-                  child: _buildItemRow(model),
-                ),
-              );
-            },
-          ),
         ),
       ],
     );
