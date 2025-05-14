@@ -1,22 +1,17 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/intl.dart';
-import 'package:record/record.dart';
-import 'package:audio_waveforms/audio_waveforms.dart';
 
-import '../../../../../../common/constants/constants.dart';
-import '../../../../../../common/utils/tools.dart';
 import '../../../../../../common/utils/screen_helper.dart';
 import '../../../../../../services/voice_clone_service.dart';
-import '../../../../../../common/style/app_colors.dart';
 import '../../../../../../common/components/toast_utils.dart';
 import '../../../../../../common/components/cus_loading_indicator.dart';
-import '../../../../common/utils/file_picker_helper.dart';
+import '../../../../common/components/tool_widget.dart';
+import '../../../../common/constants/constants.dart';
+import '../components/audio_operation_widgets.dart';
 import 'github_storage_settings_page.dart';
 
-/// TODO audio_waveforms 不支持桌面端，想办法换一个，还是桌面不展示波形和播放试听？？？
+/// audio_waveforms 不支持桌面端，想办法换一个，还是桌面不展示波形和播放试听？？？
 /// 2025-05-06 暂时桌面端不展示波形和播放试听
 class VoiceClonePage extends StatefulWidget {
   const VoiceClonePage({super.key});
@@ -27,50 +22,82 @@ class VoiceClonePage extends StatefulWidget {
 
 class _VoiceClonePageState extends State<VoiceClonePage> {
   final TextEditingController _prefixController = TextEditingController();
+  final TextEditingController _cloudAudioUrlController =
+      TextEditingController();
+  bool _useCloudAudio = false;
+
   String _selectedModel = 'cosyvoice-v2'; // 默认选择V2模型
   bool _isLoading = false;
   List<ClonedVoice> _clonedVoices = [];
 
   bool _isUploading = false;
-  bool _isRecording = false;
   String? _recordingPath;
 
-  // 音频录制相关
-  final _audioRecorder = AudioRecorder();
-  StreamSubscription<Amplitude>? _amplitudeSubscription;
-  final List<double> _amplitudes = [];
-
-  // 音频波形显示
-  PlayerController? _playerController;
-  bool _isPlaying = false;
+  // 音频管理器和远程音频播放器
+  late AudioRecordManager _audioRecordManager;
+  late RemoteAudioPlayer _remoteAudioPlayer;
+  bool _isDownloading = false;
 
   @override
   void initState() {
     super.initState();
 
+    // 初始化音频管理器
+    _audioRecordManager = AudioRecordManager(
+      onAmplitudesChanged: (amplitudes) {
+        setState(() {});
+      },
+      onRecordingStateChanged: (isRecording) {
+        setState(() {});
+      },
+      onRecordingPathChanged: (path) {
+        setState(() {
+          _recordingPath = path;
+        });
+      },
+      onPlayingStateChanged: (isPlaying) {
+        setState(() {});
+      },
+      onPlayerControllerChanged: (controller) {
+        setState(() {});
+      },
+    );
+
+    // 初始化远程音频播放器
+    _remoteAudioPlayer = RemoteAudioPlayer(
+      onDownloadStateChanged: (isDownloading) {
+        setState(() {
+          _isDownloading = isDownloading;
+        });
+      },
+      onLocalPathChanged: (path) {
+        setState(() {
+          _recordingPath = path;
+        });
+      },
+    );
+
     if (ScreenHelper.isMobile()) {
-      _checkMicrophonePermission();
+      _audioRecordManager.checkMicrophonePermission();
     }
     _refreshVoiceList();
   }
 
   @override
-  void dispose() {
-    _prefixController.dispose();
-    _amplitudeSubscription?.cancel();
-    _audioRecorder.dispose();
-    if (ScreenHelper.isMobile()) {
-      _playerController?.dispose();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 在context可用时设置AudioRecordManager的context
+    if (mounted) {
+      _audioRecordManager.setContext(context);
     }
-    super.dispose();
   }
 
-  // 检查麦克风权限
-  Future<void> _checkMicrophonePermission() async {
-    final status = await Permission.microphone.request();
-    if (status != PermissionStatus.granted) {
-      ToastUtils.showError('需要麦克风权限以录制声音');
-    }
+  @override
+  void dispose() {
+    _prefixController.dispose();
+    _cloudAudioUrlController.dispose();
+    _audioRecordManager.dispose();
+    super.dispose();
   }
 
   // 刷新克隆音色列表
@@ -94,168 +121,27 @@ class _VoiceClonePageState extends State<VoiceClonePage> {
   }
 
   // 开始录音
-  Future<void> _startRecording() async {
-    try {
-      // 检查权限
-      if (!await _audioRecorder.hasPermission()) {
-        ToastUtils.showError('需要麦克风权限以录制声音');
-        return;
-      }
-
-      // 准备录制路径
-      final tempDir = await getVoiceCloneRecordDir();
-      final filePath =
-          '${tempDir.path}/voice_recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
-
-      // 设置录音配置
-      final config = RecordConfig(
-        encoder: AudioEncoder.aacLc, // 使用AAC编码
-        bitRate: 128000, // 128kbps比特率
-        sampleRate: 44100, // 44.1kHz采样率
-        numChannels: 1, // 单声道
-      );
-
-      // 开始录音
-      await _audioRecorder.start(config, path: filePath);
-
-      // 监听录音振幅以更新波形
-      _amplitudes.clear();
-      _amplitudeSubscription = _audioRecorder
-          .onAmplitudeChanged(const Duration(milliseconds: 100))
-          .listen((amplitude) {
-            setState(() {
-              // 将dB值转换为0-1之间的相对振幅
-              // dB通常为负值，0dB为最大，-160dB为最小
-              final normalized = (amplitude.current + 160) / 160;
-              _amplitudes.add(normalized.clamp(0.0, 1.0));
-
-              // 保持数组在合理大小内
-              if (_amplitudes.length > 100) {
-                _amplitudes.removeAt(0);
-              }
-            });
-          });
-
-      setState(() {
-        _isRecording = true;
-        _recordingPath = filePath;
-      });
-
-      ToastUtils.showToast('开始录音...');
-    } catch (e) {
-      ToastUtils.showError('录音启动失败: $e');
-    }
+  void _startRecording() {
+    _audioRecordManager.startRecording(context);
   }
 
   // 停止录音
   Future<void> _stopRecording() async {
-    try {
-      // 停止录音并获取录音文件路径
-      final path = await _audioRecorder.stop();
-
-      // 取消振幅监听
-      _amplitudeSubscription?.cancel();
-      _amplitudeSubscription = null;
-
-      if (path != null) {
-        setState(() {
-          _isRecording = false;
-          _recordingPath = path;
-        });
-
-        // 录音完成后初始化播放器以便预览录音
-        _initPlayer(path);
-
-        ToastUtils.showToast('录音完成: ${path.split('/').last}');
-      } else {
-        setState(() {
-          _isRecording = false;
-          _recordingPath = null;
-        });
-        ToastUtils.showError('录音失败');
-      }
-    } catch (e) {
-      setState(() {
-        _isRecording = false;
-      });
-      ToastUtils.showError('停止录音失败: $e');
-    }
-  }
-
-  // 初始化音频播放器
-  Future<void> _initPlayer(String path) async {
-    if (ScreenHelper.isDesktop()) {
-      return;
-    }
-
-    try {
-      // 释放现有的播放器
-      _playerController?.dispose();
-
-      // 创建新的播放器
-      _playerController = PlayerController();
-      await _playerController!.preparePlayer(
-        path: path,
-        noOfSamples: MediaQuery.of(context).size.width ~/ 8,
-      );
-
-      // 添加播放完成监听
-      _playerController!.onCompletion.listen((_) {
-        // 播放完成后播放标志置为false
-        if (mounted) {
-          setState(() => _isPlaying = false);
-        }
-      });
-
-      setState(() {});
-    } catch (e) {
-      debugPrint('初始化播放器失败: $e');
-    }
-  }
-
-  // 选择音频文件
-  Future<void> _pickAudioFile() async {
-    File? result = await FilePickerHelper.pickAndSaveFile(
-      fileType: CusFileType.audio,
-    );
-
-    if (result != null) {
-      setState(() {
-        _recordingPath = result.path;
-      });
-
-      // 初始化播放器以便预览选择的音频
-      _initPlayer(result.path);
-
-      ToastUtils.showToast('已选择文件: ${result.path.split("/").last}');
-    }
-  }
-
-  // 播放或暂停录音
-  void _togglePlayback() async {
-    if (ScreenHelper.isDesktop() || _playerController == null) return;
-
-    try {
-      if (_isPlaying) {
-        await _playerController!.pausePlayer();
-      } else {
-        await _playerController!.startPlayer();
-        // 设置播放完成模式为暂停可以重复播放(默认是stop，播放完资源就释放了)
-        _playerController!.setFinishMode(finishMode: FinishMode.pause);
-      }
-
-      setState(() {
-        _isPlaying = !_isPlaying;
-      });
-    } catch (e) {
-      ToastUtils.showError('播放操作失败: $e');
-    }
+    await _audioRecordManager.stopRecording();
   }
 
   // 上传音频并克隆声音
   Future<void> _cloneVoice() async {
-    if (_recordingPath == null) {
+    if (!_useCloudAudio && _recordingPath == null) {
       ToastUtils.showError('请先录制或选择音频文件');
+      return;
+    }
+
+    if (_useCloudAudio &&
+        (_cloudAudioUrlController.text.isEmpty ||
+            (!_cloudAudioUrlController.text.startsWith('http://') &&
+                !_cloudAudioUrlController.text.startsWith('https://')))) {
+      ToastUtils.showError('请输入有效的云端音频URL，必须以http://或https://开头');
       return;
     }
 
@@ -275,18 +161,20 @@ class _VoiceClonePageState extends State<VoiceClonePage> {
 
     try {
       final voiceId = await VoiceCloneService.cloneVoice(
-        audioPath: _recordingPath!,
+        audioPath: _recordingPath ?? '',
+        cloudAudioUrl: _useCloudAudio ? _cloudAudioUrlController.text : null,
         prefix: _prefixController.text,
         targetModel: _selectedModel,
       );
 
-      ToastUtils.showToast('声音克隆成功，音色ID: $voiceId');
+      // ToastUtils.showToast('声音克隆成功，音色ID: $voiceId');
+      if (!mounted) return;
+      commonHintDialog(context, '声音克隆成功', '音色ID: $voiceId');
       _prefixController.clear();
       setState(() {
         _recordingPath = null;
-        if (ScreenHelper.isMobile()) {
-          _playerController?.dispose();
-          _playerController = null;
+        if (_useCloudAudio) {
+          _cloudAudioUrlController.clear();
         }
       });
 
@@ -360,108 +248,23 @@ class _VoiceClonePageState extends State<VoiceClonePage> {
             child: _buildRecordingSection(),
           ),
         ),
-
-        // 中间分隔线
-        Container(
-          width: 1,
-          height: double.infinity,
-          color: Colors.grey.withValues(alpha: 0.3),
-        ),
-
         // 右侧音色列表
         Expanded(
           flex: 3,
-          child: Column(
-            children: [
-              // 标题部分
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 8.0),
-                child: Row(
-                  children: [
-                    const Text(
-                      '已克隆的音色',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.refresh),
-                      onPressed: _refreshVoiceList,
-                    ),
-                  ],
-                ),
-              ),
-
-              // 列表部分 - 使用Expanded包裹让它占据剩余空间
-              Expanded(
-                child:
-                    _clonedVoices.isEmpty
-                        ? const Center(
-                          child: Text(
-                            '暂无克隆音色',
-                            style: TextStyle(color: Colors.grey, fontSize: 16),
-                          ),
-                        )
-                        : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(
-                            24.0,
-                            8.0,
-                            24.0,
-                            24.0,
-                          ),
-                          itemCount: _clonedVoices.length,
-                          itemBuilder: (context, index) {
-                            final voice = _clonedVoices[index];
-
-                            return Card(
-                              elevation: 0.5,
-                              margin: const EdgeInsets.symmetric(vertical: 8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: ListTile(
-                                title: Text(
-                                  '${voice.voiceId}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '创建时间: ${DateFormat(constDatetimeFormat).format(voice.gmtCreate ?? voice.gmtModified ?? DateTime.now())}',
-                                      style: const TextStyle(fontSize: 12),
-                                    ),
-                                  ],
-                                ),
-                                trailing: IconButton(
-                                  icon: const Icon(
-                                    Icons.delete,
-                                    color: Colors.red,
-                                  ),
-                                  onPressed: () => _confirmDeleteVoice(voice),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-              ),
-            ],
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: _buildClonedVoicesList(),
           ),
         ),
       ],
     );
   }
 
-  // 移动端布局 - 原有的垂直布局
+  // 移动端布局 - 垂直布局
   Widget _buildMobileLayout() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      padding: const EdgeInsets.all(8.0),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildRecordingSection(),
           const SizedBox(height: 24),
@@ -471,9 +274,8 @@ class _VoiceClonePageState extends State<VoiceClonePage> {
     );
   }
 
-  // 录音和上传部分UI
+  // 录音部分UI
   Widget _buildRecordingSection() {
-    // 判断是否为桌面端
     final isDesktop = ScreenHelper.isDesktop();
 
     return Column(
@@ -518,180 +320,111 @@ class _VoiceClonePageState extends State<VoiceClonePage> {
             ),
           ],
         ),
+
+        // 使用通用音频源选择器组件
+        AudioSourceSelector(
+          useCloudAudio: _useCloudAudio,
+          onValueChanged: (value) {
+            setState(() {
+              _useCloudAudio = value ?? false;
+              if (_useCloudAudio) {
+                // 切换到云端URL模式时清空本地录音
+                _recordingPath = null;
+              }
+            });
+          },
+        ),
+
+        // 使用通用云端URL输入组件
+        if (_useCloudAudio)
+          CloudAudioUrlInput(
+            controller: _cloudAudioUrlController,
+            enabled: !_isUploading && !_isDownloading,
+            onClear: () {
+              setState(() {
+                _cloudAudioUrlController.clear();
+              });
+              unfocusHandle();
+            },
+            onChanged: (value) {
+              setState(() {});
+            },
+            onTryListen:
+                () => _remoteAudioPlayer.playRemoteAudio(
+                  _cloudAudioUrlController.text,
+                  _audioRecordManager,
+                  context: context,
+                ),
+            isDownloading: _isDownloading,
+          ),
+
         const SizedBox(height: 16),
-        // 录音波形显示
-        if (_isRecording) ...[
-          Container(
-            height: isDesktop ? 150 : 100,
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(8),
-            ),
-            padding: const EdgeInsets.all(8),
-            child: Center(
-              child: CustomPaint(
-                size: Size(double.infinity, isDesktop ? 120 : 80),
-                painter: WaveformPainter(
-                  amplitudes: _amplitudes,
-                  color: AppColors.primary,
-                ),
-              ),
-            ),
+
+        // 录音波形显示和音频播放相关UI
+        if (_isDownloading) ...[
+          const DownloadingIndicator(),
+        ] else if (!_useCloudAudio && _audioRecordManager.isRecording) ...[
+          RecordingWaveform(
+            amplitudes: _audioRecordManager.amplitudes,
+            isDesktop: isDesktop,
           ),
-          const SizedBox(height: 8),
-          Center(
-            child: Text(
-              '正在录音...',
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-            ),
+        ] else if (ScreenHelper.isMobile() &&
+            _audioRecordManager.playerController != null &&
+            _recordingPath != null) ...[
+          // 音频播放波形组件
+          AudioPlayerWaveform(
+            playerController: _audioRecordManager.playerController!,
+            isDesktop: isDesktop,
+            recordingPath: _recordingPath!,
+            isPlaying: _audioRecordManager.isPlaying,
+            onPlayToggle: () => _audioRecordManager.togglePlayback(),
+            onClose: () {
+              setState(() {
+                _recordingPath = null;
+              });
+            },
           ),
-        ] else if (_playerController != null && _recordingPath != null) ...[
-          // 音频播放波形
-          if (ScreenHelper.isMobile())
-            Center(
-              child: Container(
-                height: isDesktop ? 150 : 100,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                padding: const EdgeInsets.all(8),
-                child: AudioFileWaveforms(
-                  size: Size(
-                    isDesktop
-                        ? MediaQuery.of(context).size.width * 0.3
-                        : MediaQuery.of(context).size.width - 80,
-                    isDesktop ? 120 : 80,
-                  ),
-                  playerController: _playerController!,
-                  enableSeekGesture: true,
-                  waveformType: WaveformType.fitWidth,
-                  playerWaveStyle: PlayerWaveStyle(
-                    fixedWaveColor: Colors.grey[400]!,
-                    liveWaveColor: AppColors.primary,
-                    spacing: 6,
-                    showBottom: false,
-                    showSeekLine: true,
-                  ),
-                ),
-              ),
-            ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (ScreenHelper.isMobile())
-                IconButton(
-                  icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
-                  onPressed: _togglePlayback,
-                  color: AppColors.primary,
-                  iconSize: 32,
-                ),
-              Expanded(
-                child: Text(
-                  _recordingPath?.split('/').last ?? '',
-                  maxLines: 4,
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () {
-                  setState(() {
-                    _recordingPath = null;
-                    if (ScreenHelper.isMobile()) {
-                      _playerController?.dispose();
-                      _playerController = null;
-                    }
-                    _isPlaying = false;
-                  });
-                },
-              ),
-            ],
+        ] else if (_recordingPath != null) ...[
+          // 非移动端或无法显示波形时的文件名显示
+          AudioFileInfo(
+            recordingPath: _recordingPath!,
+            onClose: () {
+              setState(() {
+                _recordingPath = null;
+              });
+            },
           ),
         ],
+
         const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            // 录音按钮
-            ElevatedButton.icon(
-              onPressed: _isRecording ? _stopRecording : _startRecording,
-              icon: Icon(_isRecording ? Icons.stop : Icons.mic),
-              label: Text(_isRecording ? '停止录音' : '开始录音'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _isRecording ? Colors.red : AppColors.primary,
-                foregroundColor: Colors.white,
-                padding:
-                    isDesktop
-                        ? const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 16,
-                        )
-                        : null,
-              ),
-            ),
-            // 选择录音文件按钮
-            ElevatedButton.icon(
-              onPressed: _isRecording ? null : _pickAudioFile,
-              icon: const Icon(Icons.folder_open),
-              label: const Text('选择音频'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.success,
-                foregroundColor: Colors.white,
-                padding:
-                    isDesktop
-                        ? const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 16,
-                        )
-                        : null,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed:
-                (_isRecording ||
-                        _recordingPath == null ||
-                        _prefixController.text.isEmpty ||
-                        _isUploading)
-                    ? null
-                    : _cloneVoice,
-            style: ElevatedButton.styleFrom(
-              padding: EdgeInsets.symmetric(
-                vertical: isDesktop ? 16 : 12,
-                horizontal: isDesktop ? 32 : 16,
-              ),
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-            ),
-            child:
-                _isUploading
-                    ? const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        Text('处理中...'),
-                      ],
-                    )
-                    : const Text('克隆声音'),
+
+        // 录音按钮区域 - 仅在非云端URL模式下显示
+        if (!_useCloudAudio)
+          RecordingButtonGroup(
+            isRecording: _audioRecordManager.isRecording,
+            onStartRecording: _startRecording,
+            onStopRecording: _stopRecording,
+            onPickAudioFile: () {
+              // 确保先设置context
+              _audioRecordManager.setContext(context);
+              _audioRecordManager.pickAudioFile();
+            },
+            isDesktop: isDesktop,
           ),
+
+        const SizedBox(height: 24),
+
+        // 提交按钮
+        SubmitButton(
+          isSubmitting: _isUploading,
+          isEnabled:
+              (_prefixController.text.isNotEmpty) &&
+              ((!_useCloudAudio && _recordingPath != null) ||
+                  (_useCloudAudio && _cloudAudioUrlController.text.isNotEmpty)),
+          onSubmit: _cloneVoice,
+          buttonText: '克隆声音',
+          loadingText: '处理中...',
+          isDesktop: isDesktop,
         ),
       ],
     );
@@ -738,7 +471,6 @@ class _VoiceClonePageState extends State<VoiceClonePage> {
             itemCount: _clonedVoices.length,
             itemBuilder: (context, index) {
               final voice = _clonedVoices[index];
-
               return Card(
                 elevation: 0.5,
                 margin: const EdgeInsets.symmetric(vertical: 8),
@@ -748,20 +480,26 @@ class _VoiceClonePageState extends State<VoiceClonePage> {
                 child: ListTile(
                   title: Text(
                     '${voice.voiceId}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '创建时间: ${DateFormat(constDatetimeFormat).format(voice.gmtCreate ?? voice.gmtModified ?? DateTime.now())}',
+                        '创建时间: ${DateFormat(constDatetimeFormat).format(voice.gmtCreate ?? voice.gmtModified ?? DateTime.now())}\n'
+                        '状态: ${voice.status}',
                         style: const TextStyle(fontSize: 12),
                       ),
                     ],
                   ),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => _confirmDeleteVoice(voice),
+                    onPressed: () => _deleteVoice(voice),
                   ),
                 ),
               );
@@ -769,72 +507,5 @@ class _VoiceClonePageState extends State<VoiceClonePage> {
           ),
       ],
     );
-  }
-
-  // 确认删除对话框
-  Future<void> _confirmDeleteVoice(ClonedVoice voice) async {
-    return showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('确认删除'),
-          content: Text('确定要删除音色 "${voice.voiceId}" 吗？此操作不可恢复。'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('取消'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _deleteVoice(voice);
-              },
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('删除'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-// 自定义波形画笔
-class WaveformPainter extends CustomPainter {
-  final List<double> amplitudes;
-  final Color color;
-
-  WaveformPainter({required this.amplitudes, required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (amplitudes.isEmpty) return;
-
-    final paint =
-        Paint()
-          ..color = color
-          ..strokeWidth = 3
-          ..strokeCap = StrokeCap.round;
-
-    final centerY = size.height / 2;
-    final width = size.width;
-
-    // 计算每个点的x坐标间距
-    final dx = width / (amplitudes.length - 1);
-
-    // 绘制波形
-    for (int i = 0; i < amplitudes.length - 1; i++) {
-      final x1 = i * dx;
-      final y1 = centerY * (1 - amplitudes[i]);
-      final x2 = (i + 1) * dx;
-      final y2 = centerY * (1 - amplitudes[i + 1]);
-
-      canvas.drawLine(Offset(x1, y1), Offset(x2, y2), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(WaveformPainter oldDelegate) {
-    return oldDelegate.amplitudes != amplitudes || oldDelegate.color != color;
   }
 }

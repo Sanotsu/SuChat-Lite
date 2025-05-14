@@ -168,6 +168,7 @@ flutter:
     - assets/chat_backgrounds/
     - assets/characters/
     - assets/platform_icons/
+    - assets/platform_icons/small/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

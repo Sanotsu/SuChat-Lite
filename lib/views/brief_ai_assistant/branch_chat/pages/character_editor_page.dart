@@ -90,8 +90,9 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
   Future<void> _selectModel() async {
     final availableModels = await ModelManagerService.getAvailableModelByTypes([
       LLModelType.cc,
-      LLModelType.vision,
       LLModelType.reasoner,
+      LLModelType.vision,
+      LLModelType.vision_reasoner,
     ]);
 
     if (!mounted) return;
@@ -653,18 +654,10 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
     }
 
     if (pickedFile != null) {
-      // 复制图片到应用目录
-      final appDir = await getAppHomeDirectory();
-      final fileName =
-          '${type == 'avatar' ? 'character_avatar' : 'character_bg'}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-
-      // 创建角色图片文件夹路径
-      final Directory fileDir = Directory('${appDir.path}/character_images');
-
-      // 检查文件夹是否存在，如果不存在则创建
-      if (!await fileDir.exists()) {
-        await fileDir.create(recursive: true);
-      }
+      // 复制图片到应用目录(避免重复，加前缀保留原文件名)
+      final fileDir = await getCharacterDir();
+      var typePer = type == 'avatar' ? 'character_avatar' : 'character_bg';
+      final fileName = '${typePer}_${pickedFile.path.split('/').last}';
 
       final savedImage = await File(
         pickedFile.path,

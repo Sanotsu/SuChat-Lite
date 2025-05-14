@@ -35,8 +35,8 @@ class CharacterStore {
   // 初始化 ObjectBox
   Future<void> _init() async {
     try {
-      final docsDir = await getAppHomeDirectory();
-      final dbDirectory = p.join(docsDir.path, "objectbox", "characters");
+      final docsDir = await getObjectBoxDir();
+      final dbDirectory = p.join(docsDir.path, "characters");
 
       // 确保目录存在
       final dir = Directory(dbDirectory);
@@ -196,12 +196,10 @@ class CharacterStore {
     try {
       String filePath;
       if (customPath != null) {
-        filePath =
-            '$customPath/角色列表_${DateTime.now().millisecondsSinceEpoch}.json';
+        filePath = '$customPath/角色列表_${fileTs(DateTime.now())}.json';
       } else {
-        final directory = await getAppHomeDirectory();
-        filePath =
-            '${directory.path}/角色列表_${DateTime.now().millisecondsSinceEpoch}.json';
+        final directory = await getBackupDir();
+        filePath = '${directory.path}/角色列表_${fileTs(DateTime.now())}.json';
       }
 
       final file = File(filePath);

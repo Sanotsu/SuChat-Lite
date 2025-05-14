@@ -118,7 +118,7 @@ class SoundsRecorderController {
 
       // 外部存储权限的获取在按下说话按钮前就判断了，能到这里来一定是有权限了
       final file = File(
-        '${(await getChatAudioDir()).path}/${DateTime.now().microsecondsSinceEpoch}.m4a',
+        '${(await getChatAudioDir()).path}/${fileTs(DateTime.now())}.m4a',
       );
 
       // 录制(path参数 是可选的，这里指定固定位置)

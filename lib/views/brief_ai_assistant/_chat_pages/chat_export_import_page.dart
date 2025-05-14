@@ -10,6 +10,7 @@ import '../../../common/components/toast_utils.dart';
 import '../../../common/components/tool_widget.dart';
 import '../../../common/utils/file_picker_helper.dart';
 import '../../../common/utils/screen_helper.dart';
+import '../../../common/utils/tools.dart';
 
 class ChatExportImportPage extends StatefulWidget {
   const ChatExportImportPage({super.key});
@@ -287,8 +288,7 @@ class _ChatExportImportPageState extends State<ChatExportImportPage> {
       );
 
       // 3. 获取下载目录并创建文件
-      final fileName =
-          'SuChat对话记录_${DateTime.now().millisecondsSinceEpoch}.json';
+      final fileName = 'SuChat对话记录_${fileTs(DateTime.now())}.json';
 
       try {
         // 先尝试使用 FilePicker 选择保存位置

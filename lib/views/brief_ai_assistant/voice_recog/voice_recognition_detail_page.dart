@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 
 import '../../../common/components/toast_utils.dart';
@@ -10,6 +8,8 @@ import '../../../common/style/app_colors.dart';
 import '../../../common/utils/screen_helper.dart';
 import '../../../models/brief_ai_tools/voice_recognition/voice_recognition_task_info.dart';
 import '../../../services/voice_recognition_service.dart';
+import '../voice/audio_player_widget.dart';
+import '../voice/components/audio_operation_widgets.dart';
 
 class VoiceRecognitionDetailPage extends StatefulWidget {
   final VoiceRecognitionTaskInfo task;
@@ -23,21 +23,64 @@ class VoiceRecognitionDetailPage extends StatefulWidget {
 
 class _VoiceRecognitionDetailPageState
     extends State<VoiceRecognitionDetailPage> {
-  // 音频波形显示
-  bool _isPlaying = false;
-  PlayerController? _playerController;
-
+  late AudioRecordManager _audioRecordManager;
+  late RemoteAudioPlayer _remoteAudioPlayer;
+  bool _isDownloading = false;
   String? _audioUrl;
   bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
+
+    // 初始化音频管理器
+    _audioRecordManager = AudioRecordManager(
+      onAmplitudesChanged: (amplitudes) {
+        setState(() {});
+      },
+      onRecordingStateChanged: (isRecording) {
+        setState(() {});
+      },
+      onRecordingPathChanged: (path) {
+        setState(() {});
+      },
+      onPlayingStateChanged: (isPlaying) {
+        setState(() {});
+      },
+      onPlayerControllerChanged: (controller) {
+        setState(() {});
+      },
+    );
+
+    // 初始化远程音频播放器
+    _remoteAudioPlayer = RemoteAudioPlayer(
+      onDownloadStateChanged: (isDownloading) {
+        setState(() {
+          _isDownloading = isDownloading;
+        });
+      },
+      onLocalPathChanged: (path) {
+        if (path == null) {
+          debugPrint("◉ 警告: onLocalPathChanged收到了null路径!");
+          return;
+        }
+
+        setState(() {
+          _audioUrl = path;
+        });
+      },
+    );
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+
+    // 设置AudioRecordManager的context
+    if (mounted) {
+      _audioRecordManager.setContext(context);
+    }
+
     // 不在initState中初始化，而是在didChangeDependencies中进行，避免在界面未初始化时就修改状态导致报错
     // 防止重复初始化
     if (!_isInitialized) {
@@ -48,56 +91,47 @@ class _VoiceRecognitionDetailPageState
 
   @override
   void dispose() {
-    _playerController?.dispose();
+    _audioRecordManager.dispose();
     super.dispose();
   }
 
   Future<void> _initAudioPlayer() async {
     if (widget.task.audioFileUrl == null) return;
 
+    setState(() {
+      _isDownloading = true;
+    });
+
     try {
       // 初始化音频播放器
-      _audioUrl = widget.task.audioFileUrl;
+      final fileUrl = widget.task.audioFileUrl!;
+      debugPrint('音频URL: $fileUrl');
 
-      // 如果是移动端，初始化波形显示
-      if (ScreenHelper.isMobile()) {
-        // 释放现有的播放器
-        _playerController?.dispose();
-        _playerController = PlayerController();
-        await _playerController!.preparePlayer(
-          path: _audioUrl!,
-          noOfSamples: MediaQuery.of(context).size.width ~/ 8,
+      // 判断是本地文件还是云端URL
+      if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
+        // 云端音频，使用远程音频播放器下载
+        await _remoteAudioPlayer.playRemoteAudio(
+          fileUrl,
+          _audioRecordManager,
+          context: context,
         );
-
-        // 添加播放完成监听
-        _playerController!.onCompletion.listen((_) {
-          // 播放完成后播放标志置为false
-          if (mounted) {
-            setState(() => _isPlaying = false);
-          }
-        });
+      } else {
+        // 本地文件，直接使用
+        _audioUrl = fileUrl;
+        if (ScreenHelper.isMobile()) {
+          // 传递context
+          await _audioRecordManager.initPlayer(fileUrl, context: context);
+        }
       }
-      setState(() {});
     } catch (e) {
       debugPrint('初始化音频播放器失败: $e');
-    }
-  }
-
-  Future<void> _togglePlayback() async {
-    if (ScreenHelper.isDesktop() || _playerController == null) return;
-
-    try {
-      if (_isPlaying) {
-        await _playerController!.pausePlayer();
-      } else {
-        await _playerController!.startPlayer();
-        // 设置播放完成模式为暂停可以重复播放(默认是stop，播放完资源就释放了)
-        _playerController!.setFinishMode(finishMode: FinishMode.pause);
+      ToastUtils.showError('初始化音频播放器失败: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+        });
       }
-
-      setState(() => _isPlaying = !_isPlaying);
-    } catch (e) {
-      debugPrint('播放控制失败: $e');
     }
   }
 
@@ -146,7 +180,7 @@ class _VoiceRecognitionDetailPageState
             const SizedBox(height: 16),
 
             /// 音频播放部分
-            if (_audioUrl != null) ...[
+            if (widget.task.audioFileUrl != null) ...[
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
@@ -158,48 +192,68 @@ class _VoiceRecognitionDetailPageState
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: 16),
-                      _buildInfoRow('缓存位置', widget.task.localAudioPath ?? '未知'),
-                      _buildInfoRow('云端地址', widget.task.githubAudioUrl ?? '未知'),
+                      if (widget.task.localAudioPath != null)
+                        _buildInfoRow('本地路径', widget.task.localAudioPath!),
+                      _buildInfoRow(
+                        widget.task.localAudioPath != null ? '云端地址' : '音频地址',
+                        widget.task.githubAudioUrl ?? '未知',
+                      ),
 
+                      // if (widget.task.localAudioPath != null)
+                      //   _buildInfoRow('本地路径', widget.task.localAudioPath!),
+
+                      // if (widget.task.githubAudioUrl != null)
+                      //   _buildInfoRow('云端地址', widget.task.githubAudioUrl!),
+
+                      // _buildInfoRow('播放音频', _audioUrl ?? '未知'),
                       const SizedBox(height: 16),
-                      if (ScreenHelper.isMobile() && _playerController != null)
+
+                      if (_isDownloading) ...[
+                        // 加载指示器
+                        const DownloadingIndicator(),
+                      ] else if (ScreenHelper.isMobile() &&
+                          _audioRecordManager.playerController != null &&
+                          _audioUrl != null) ...[
+                        // 音频波形显示
+                        AudioPlayerWaveform(
+                          playerController:
+                              _audioRecordManager.playerController!,
+                          isDesktop: false,
+                          recordingPath: _audioUrl!,
+                          isPlaying: _audioRecordManager.isPlaying,
+                          onPlayToggle:
+                              () => _audioRecordManager.togglePlayback(),
+                          // 详情页面不需要关闭功能
+                          onClose: () {},
+                        ),
+                      ] else if (_audioUrl != null) ...[
+                        // 在桌面端虽然不能使用audio_waveforms的播放器进行播放，但是可以使用AudioPlayerWidget播放
+                        // 而且由于初始化时有AudioRecordManager的init，所以云端音频也都下载到本地了，所以全当做本地音频播放即可
+                        AudioPlayerWidget(audioUrl: _audioUrl!, autoPlay: true),
+                      ] else ...[
+                        // 音频准备失败的情况
                         Center(
-                          child: AudioFileWaveforms(
-                            size: Size(1.sw - 80, 50),
-                            playerController: _playerController!,
-                            enableSeekGesture: true,
-                            waveformType: WaveformType.fitWidth,
-                            playerWaveStyle: PlayerWaveStyle(
-                              fixedWaveColor: Colors.grey[400]!,
-                              liveWaveColor: AppColors.primary,
-                              spacing: 6,
-                              showBottom: false,
-                              showSeekLine: true,
-                            ),
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                size: 48,
+                                color: Colors.red,
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                '音频文件准备失败 (URL: ${widget.task.audioFileUrl})',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                              if (!_isDownloading)
+                                ElevatedButton(
+                                  onPressed: _initAudioPlayer,
+                                  child: Text('重试加载音频'),
+                                ),
+                            ],
                           ),
                         ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          IconButton(
-                            icon: Icon(
-                              _isPlaying ? Icons.pause : Icons.play_arrow,
-                            ),
-                            onPressed: _togglePlayback,
-                            color: AppColors.primary,
-                            iconSize: 32,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _audioUrl!.split('/').last,
-                              maxLines: 4,
-                              style: const TextStyle(color: Colors.green),
-                            ),
-                          ),
-                        ],
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -264,21 +318,6 @@ class _VoiceRecognitionDetailPageState
                       ),
 
                       Divider(),
-                      // 2025-05-07 除了senseVoice 其他模型好像原始和处理后的没什么区别，可以只显示一个
-                      // Text(
-                      //   '原始识别结果',
-                      //   style: Theme.of(context).textTheme.titleMedium,
-                      // ),
-                      // Container(
-                      //   width: double.infinity,
-                      //   padding: const EdgeInsets.all(8),
-                      //   child: ConstrainedBox(
-                      //     constraints: BoxConstraints(maxHeight: 200),
-                      //     child: SingleChildScrollView(
-                      //       child: Text(widget.task.recognizedText!),
-                      //     ),
-                      //   ),
-                      // ),
                     ],
                   ),
                 ),
@@ -403,10 +442,6 @@ class _VoiceRecognitionDetailPageState
                             ],
                           ),
                         ),
-                      // Text(
-                      //   '说话人 $speakerId',
-                      //   style: const TextStyle(fontSize: 10),
-                      // ),
                       SelectableText(text),
                     ],
                   ),

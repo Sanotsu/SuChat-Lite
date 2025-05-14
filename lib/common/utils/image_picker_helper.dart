@@ -22,7 +22,7 @@ class ImagePickerHelper {
   static Future<File?> pickSingleImage({
     String? saveDir,
     String? customFileName,
-    int quality = 80,
+    int quality = 100,
     double? maxWidth,
     double? maxHeight,
     bool overwrite = false,
@@ -53,7 +53,7 @@ class ImagePickerHelper {
   /// 返回保存在目标位置的XFile列表
   static Future<List<File>> pickMultipleImages({
     String? saveDir,
-    int quality = 80,
+    int quality = 100,
     double? maxWidth,
     double? maxHeight,
     bool requestFullMetadata = true,
@@ -93,7 +93,7 @@ class ImagePickerHelper {
   static Future<File?> takePhotoAndSave({
     String? saveDir,
     String? customFileName,
-    int quality = 80,
+    int quality = 100,
     double? maxWidth,
     double? maxHeight,
     bool overwrite = false,

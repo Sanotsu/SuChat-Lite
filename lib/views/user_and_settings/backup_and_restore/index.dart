@@ -117,8 +117,7 @@ class _BackupAndRestoreState extends State<BackupAndRestore> {
             p.join(tempDir.path, ZIP_TEMP_DIR_AT_EXPORT),
           ).create();
       // zip 文件的名称
-      String zipName =
-          "$ZIP_FILE_PREFIX${DateTime.now().millisecondsSinceEpoch}.zip";
+      String zipName = "$ZIP_FILE_PREFIX${fileTs(DateTime.now())}.zip";
 
       try {
         // 执行将db数据导出到临时json路径和构建临时zip文件(？？？应该有错误检查)
@@ -318,8 +317,7 @@ class _BackupAndRestoreState extends State<BackupAndRestore> {
                 p.join(tempDir.path, ZIP_TEMP_DIR_AT_RESTORE),
               ).create();
           // zip 文件的名称
-          String zipName =
-              "$ZIP_FILE_PREFIX${DateTime.now().millisecondsSinceEpoch}.zip";
+          String zipName = "$ZIP_FILE_PREFIX${fileTs(DateTime.now())}.zip";
           // 执行将db数据导出到临时json路径和构建临时zip文件(？？？应该有错误检查)
           await _backupDbData(zipName, tempZipDir.path);
 

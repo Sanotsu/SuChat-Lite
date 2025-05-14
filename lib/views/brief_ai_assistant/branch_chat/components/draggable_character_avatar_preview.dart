@@ -50,7 +50,7 @@ class _DraggableCharacterAvatarPreviewState
   // 悬浮层Entry
   OverlayEntry? _overlayEntry;
 
-  // 调整大小相关
+  // 调整大小相关 - 桌面端
   bool _isResizing = false;
   int _activeResizeCorner = -1; // -1: 没有, 0: 左上, 1: 右上, 2: 左下, 3: 右下
   double _originalWidth = 0;
@@ -59,6 +59,12 @@ class _DraggableCharacterAvatarPreviewState
   double _originalY = 0;
   double _startResizeX = 0;
   double _startResizeY = 0;
+
+  // 移动端缩放控制
+  bool _isScaling = false;
+  double _initialWidth = 0;
+  double _initialHeight = 0;
+  Offset? _lastFocalPoint;
 
   // 缩放约束
   double _minPreviewWidth = 200;
@@ -197,110 +203,27 @@ class _DraggableCharacterAvatarPreviewState
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                // 预览容器
-                GestureDetector(
-                  // 处理拖动
-                  onPanStart: (details) {
-                    // 只有不是调整大小状态才能拖动
-                    if (!_isResizing) {
-                      _activeResizeCorner = -1;
-                    }
-                  },
-                  onPanUpdate: (details) {
-                    // 只有不是调整大小状态才能拖动
-                    if (!_isResizing && _activeResizeCorner == -1) {
-                      // 更新位置
-                      _previewX += details.delta.dx;
-                      _previewY += details.delta.dy;
+                // 预览容器 - 移动端使用GestureDetector处理单指拖动和双指缩放
+                ScreenHelper.isMobile()
+                    ? _buildMobilePreviewContainer(screenSize)
+                    : _buildDesktopPreviewContainer(),
 
-                      // 重建悬浮层以更新位置
-                      _overlayEntry?.markNeedsBuild();
-                    }
-                  },
-                  child: Container(
-                    width: _previewWidth,
-                    height: _previewHeight,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(2),
-                      border: Border.all(color: Colors.grey.shade300, width: 1),
-                    ),
-                    child: Stack(
-                      children: [
-                        // 图像
-                        Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(2),
-                            child: buildAvatarClipOval(
-                              widget.character.avatar,
-                              clipBehavior: Clip.none,
-                            ),
-                          ),
-                        ),
-                        // 关闭按钮
-                        Positioned(
-                          top: 0,
-                          right: 0,
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.close,
-                              color: Colors.black54,
-                            ),
-                            onPressed: () {
-                              _removeOverlay();
-                            },
-                          ),
-                        ),
-                        // 拖动提示标签
-                        Positioned(
-                          top: 4,
-                          left: 4,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black26,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.drag_indicator,
-                                  size: 16,
-                                  color: Colors.white70,
-                                ),
-                                SizedBox(width: 4),
-                                Text(
-                                  "可拖动 + 调整大小",
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                // 仅在桌面端显示调整大小手柄
+                if (ScreenHelper.isDesktop()) ...[
+                  /// 2025-04-19 原本设计4个角缩放大小，暂时只保留右上角
 
-                /// 2025-04-19 原本设计4个角缩放大小，暂时只保留右上角
+                  // 左上角调整大小手柄
+                  // _buildResizeHandle(0, screenSize),
 
-                // 左上角调整大小手柄
-                // _buildResizeHandle(0, screenSize),
+                  // 右上角调整大小手柄
+                  _buildResizeHandle(1, screenSize),
 
-                // 右上角调整大小手柄
-                _buildResizeHandle(1, screenSize),
+                  // 左下角调整大小手柄
+                  // _buildResizeHandle(2, screenSize),
 
-                // 左下角调整大小手柄
-                // _buildResizeHandle(2, screenSize),
-
-                // 右下角调整大小手柄
-                // _buildResizeHandle(3, screenSize),
+                  // 右下角调整大小手柄
+                  // _buildResizeHandle(3, screenSize),
+                ],
               ],
             ),
           ),
@@ -312,7 +235,216 @@ class _DraggableCharacterAvatarPreviewState
     overlay.insert(_overlayEntry!);
   }
 
-  // 构建调整大小的手柄
+  // 移动端预览容器 - 处理单指拖动和双指缩放
+  Widget _buildMobilePreviewContainer(Size screenSize) {
+    return GestureDetector(
+      // 使用Scale手势处理器同时处理拖动和缩放
+      onScaleStart: (details) {
+        if (details.pointerCount >= 2) {
+          // 双指操作 - 缩放模式
+          _isScaling = true;
+          _initialWidth = _previewWidth;
+          _initialHeight = _previewHeight;
+        } else {
+          // 单指操作 - 拖动模式
+          _isScaling = false;
+        }
+        _lastFocalPoint = details.focalPoint;
+      },
+
+      onScaleUpdate: (details) {
+        if (_lastFocalPoint == null) return;
+
+        if (details.pointerCount >= 2 && _isScaling) {
+          // 双指缩放 - 缩放整个预览窗口
+          // 计算新的宽度和高度，保持纵横比
+          double newWidth = _initialWidth * details.scale;
+
+          // 确保宽度在最小和最大值之间
+          newWidth = newWidth.clamp(_minPreviewWidth, _maxPreviewWidth);
+
+          // 保持纵横比
+          double aspectRatio = _initialWidth / _initialHeight;
+          double newHeight = newWidth / aspectRatio;
+
+          // 确保高度不超过屏幕高度的90%
+          if (newHeight > screenSize.height * 0.9) {
+            newHeight = screenSize.height * 0.9;
+            newWidth = newHeight * aspectRatio;
+          }
+
+          // 更新窗口大小
+          _previewWidth = newWidth;
+          _previewHeight = newHeight;
+        }
+
+        // 移动操作 - 处理焦点变化以移动窗口
+        // 无论是单指拖动还是双指缩放时的整体移动，都需要处理位置变化
+        double dx = details.focalPoint.dx - _lastFocalPoint!.dx;
+        double dy = details.focalPoint.dy - _lastFocalPoint!.dy;
+
+        _previewX += dx;
+        _previewY += dy;
+
+        // 确保不超出屏幕边界
+        _previewX = _previewX.clamp(
+          0.0,
+          max(0.0, screenSize.width - _previewWidth),
+        );
+        _previewY = _previewY.clamp(
+          0.0,
+          max(0.0, screenSize.height - _previewHeight),
+        );
+
+        // 更新焦点位置
+        _lastFocalPoint = details.focalPoint;
+
+        // 重建悬浮层以更新大小和位置
+        _overlayEntry?.markNeedsBuild();
+      },
+
+      onScaleEnd: (details) {
+        _isScaling = false;
+        _lastFocalPoint = null;
+      },
+
+      child: Container(
+        width: _previewWidth,
+        height: _previewHeight,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(2),
+          border: Border.all(color: Colors.grey.shade300, width: 1),
+        ),
+        child: Stack(
+          children: [
+            // 图像
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(2),
+                child: buildAvatarClipOval(
+                  widget.character.avatar,
+                  clipBehavior: Clip.none,
+                ),
+              ),
+            ),
+            // 关闭按钮
+            Positioned(
+              top: 0,
+              right: 0,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.black54),
+                onPressed: () {
+                  _removeOverlay();
+                },
+              ),
+            ),
+            // 拖动提示标签
+            // Positioned(
+            //   top: 4,
+            //   left: 4,
+            //   child: Container(
+            //     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            //     decoration: BoxDecoration(
+            //       color: Colors.black26,
+            //       borderRadius: BorderRadius.circular(4),
+            //     ),
+            //     child: Row(
+            //       mainAxisSize: MainAxisSize.min,
+            //       children: [
+            //         Icon(Icons.drag_indicator, size: 16, color: Colors.white70),
+            //         SizedBox(width: 4),
+            //         Text(
+            //           "单指拖动 + 双指缩放",
+            //           style: TextStyle(fontSize: 10, color: Colors.white),
+            //         ),
+            //       ],
+            //     ),
+            //   ),
+            // ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 桌面端预览容器
+  Widget _buildDesktopPreviewContainer() {
+    return GestureDetector(
+      onPanStart: (details) {
+        if (!_isResizing) {
+          _activeResizeCorner = -1;
+        }
+      },
+      onPanUpdate: (details) {
+        if (!_isResizing && _activeResizeCorner == -1) {
+          // 更新位置
+          _previewX += details.delta.dx;
+          _previewY += details.delta.dy;
+
+          // 重建悬浮层以更新位置
+          _overlayEntry?.markNeedsBuild();
+        }
+      },
+      child: Container(
+        width: _previewWidth,
+        height: _previewHeight,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(2),
+          border: Border.all(color: Colors.grey.shade300, width: 1),
+        ),
+        child: Stack(
+          children: [
+            // 图像
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(2),
+                child: buildAvatarClipOval(
+                  widget.character.avatar,
+                  clipBehavior: Clip.none,
+                ),
+              ),
+            ),
+            // 关闭按钮
+            Positioned(
+              top: 0,
+              right: 0,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.black54),
+                onPressed: () {
+                  _removeOverlay();
+                },
+              ),
+            ),
+            // 拖动提示标签
+            // Positioned(
+            //   top: 4,
+            //   left: 4,
+            //   child: Container(
+            //     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            //     decoration: BoxDecoration(
+            //       color: Colors.black26,
+            //       borderRadius: BorderRadius.circular(4),
+            //     ),
+            //     child: Row(
+            //       mainAxisSize: MainAxisSize.min,
+            //       children: [
+            //         Icon(Icons.drag_indicator, size: 16, color: Colors.white70),
+            //         SizedBox(width: 4),
+            //         Text(
+            //           "可拖动 + 调整大小",
+            //           style: TextStyle(fontSize: 10, color: Colors.white),
+            //         ),
+            //       ],
+            //     ),
+            //   ),
+            // ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 构建调整大小的手柄 - 仅用于桌面端
   Widget _buildResizeHandle(int corner, Size screenSize) {
     double handleSize = 20;
 
@@ -464,6 +596,8 @@ class _DraggableCharacterAvatarPreviewState
         _isPreviewInitialized = false; // 重置位置初始化状态
         _previewWidth = 0; // 重置大小
         _previewHeight = 0;
+        _isScaling = false;
+        _lastFocalPoint = null;
       });
     }
   }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../common/utils/screen_helper.dart';
 import '../../../../common/llm_spec/cus_brief_llm_model.dart';
 import '../../../../common/llm_spec/constant_llm_enum.dart';
@@ -33,7 +32,7 @@ class PlatformLogo extends StatelessWidget {
         width: size.width,
         height: size.height,
         child: Image.asset(
-          _getPlatformIcon(),
+          _getPlatformIcon(isSmall: size.width == size.height),
           width: size.width,
           height: size.height,
           fit: BoxFit.fitWidth,
@@ -53,27 +52,29 @@ class PlatformLogo extends StatelessWidget {
   }
 
   // 根据平台获取本地图标
-  String _getPlatformIcon() {
+  String _getPlatformIcon({bool isSmall = false}) {
+    var commonIcon =
+        isSmall ? 'assets/platform_icons/small/' : 'assets/platform_icons/';
     switch (platform) {
       case ApiPlatform.lingyiwanwu:
-        return 'assets/platform_icons/lingyiwanwu.png';
+        return '${commonIcon}lingyiwanwu.png';
       case ApiPlatform.deepseek:
-        return 'assets/platform_icons/deepseek.png';
+        return '${commonIcon}deepseek.png';
       case ApiPlatform.zhipu:
-        return 'assets/platform_icons/zhipu.png';
+        return '${commonIcon}zhipu.png';
       case ApiPlatform.baidu:
-        return 'assets/platform_icons/baidu.png';
+        return '${commonIcon}baidu.png';
       case ApiPlatform.volcengine:
       case ApiPlatform.volcesBot:
-        return 'assets/platform_icons/volcengine.png';
+        return '${commonIcon}volcengine.png';
       case ApiPlatform.tencent:
-        return 'assets/platform_icons/tencent.png';
+        return '${commonIcon}tencent.png';
       case ApiPlatform.aliyun:
-        return 'assets/platform_icons/aliyun.png';
+        return '${commonIcon}aliyun.png';
       case ApiPlatform.siliconCloud:
-        return 'assets/platform_icons/siliconcloud.png';
+        return '${commonIcon}siliconcloud.png';
       case ApiPlatform.infini:
-        return 'assets/platform_icons/infini.png';
+        return '${commonIcon}infini.png';
       default:
         return 'assets/images/no_image.png';
     }
@@ -311,20 +312,31 @@ class _MobileModelSelectorState extends State<MobileModelSelector> {
               itemCount: _filteredModels.length,
               itemBuilder: (context, index) {
                 final model = _filteredModels[index];
+                // 自定义导入未预设平台的模型，平台名称从url中取
+                var cusPlat = CP_NAME_MAP[model.platform];
+                if (model.baseUrl != null && model.baseUrl!.isNotEmpty) {
+                  var temps = model.baseUrl!.split('/');
+                  if (temps.length > 2) {
+                    cusPlat = temps[2];
+                  }
+                }
                 return ListTile(
                   leading: SizedBox(
-                    width: 0.2.sw,
+                    width: 32,
                     height: 32,
                     child: PlatformLogo(
                       platform: model.platform,
                       modelType: model.modelType,
+                      size: Size(32, 32),
                     ),
                   ),
-                  title: Text('${CP_NAME_MAP[model.platform]}'),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [Text(model.name ?? model.model)],
-                  ),
+                  // title: Text(cusPlat ?? '<未知>'),
+                  // subtitle: Column(
+                  //   crossAxisAlignment: CrossAxisAlignment.start,
+                  //   children: [Text(model.name ?? model.model)],
+                  // ),
+                  title: Text(model.name ?? model.model),
+                  subtitle: Text(cusPlat ?? '<未知>'),
                   selected: model == widget.selectedModel,
                   onTap: () => widget.onModelChanged(model),
                   trailing:
@@ -501,6 +513,16 @@ class _DesktopModelSelectorState extends State<DesktopModelSelector> {
                 itemCount: _filteredModels.length,
                 itemBuilder: (context, index) {
                   final model = _filteredModels[index];
+
+                  // 自定义导入未预设平台的模型，平台名称从url中取
+                  var cusPlat = CP_NAME_MAP[model.platform];
+                  if (model.baseUrl != null && model.baseUrl!.isNotEmpty) {
+                    var temps = model.baseUrl!.split('/');
+                    if (temps.length > 2) {
+                      cusPlat = temps[2];
+                    }
+                  }
+
                   return ListTile(
                     leading: SizedBox(
                       width: 120,
@@ -511,7 +533,7 @@ class _DesktopModelSelectorState extends State<DesktopModelSelector> {
                       ),
                     ),
                     title: Text(model.name ?? model.model),
-                    subtitle: Text(CP_NAME_MAP[model.platform] ?? '<未知>'),
+                    subtitle: Text(cusPlat ?? '<未知>'),
                     selected: model == _selectedModel,
                     selectedTileColor: Colors.grey.shade200,
                     onTap: () {

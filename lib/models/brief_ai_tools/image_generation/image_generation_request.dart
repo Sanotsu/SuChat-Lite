@@ -100,9 +100,14 @@ class ImageGenerationRequest {
           ...base,
           if (size != null) 'image_size': size,
           if (n != null) 'batch_size': n,
-          if (numInferenceSteps != null)
-            'num_inference_steps': numInferenceSteps,
-          if (guidanceScale != null) 'guidance_scale': guidanceScale,
+
+          // if (numInferenceSteps != null)
+          //   'num_inference_steps': numInferenceSteps,
+          // if (guidanceScale != null) 'guidance_scale': guidanceScale,
+
+          // 2025-05-14 暂时使用默认，不自定义
+          'num_inference_steps': numInferenceSteps ?? 20,
+          'guidance_scale': guidanceScale ?? 7.5,
           if (negativePrompt != null) 'negative_prompt': negativePrompt,
           if (seed != null) 'seed': seed,
           if (refImage != null) 'image': refImage,

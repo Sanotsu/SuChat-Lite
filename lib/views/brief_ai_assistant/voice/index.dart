@@ -51,7 +51,7 @@ class _BriefVoiceScreenState
   - Sambert(最大输入 1 万字符)
 - 文字越多耗时越久，**请勿在生成过程中退出**
 - 生成的语音会保存在设备的以下目录:
-  - /SuChatFiles/voice_generation
+  - /SuChatFiles/AI_GEN/voices
 ''';
 
   @override
@@ -214,7 +214,7 @@ class _BriefVoiceScreenState
         return;
       }
 
-      // 复制到目标目录
+      // 复制到目标目录(？？？生成时是放在TemporaryDir，这里可以考虑保存db成功之后删除)
       await File(voicePath).copy(outputPath);
 
       // 2025-05-10 目前语音合成是直接得到结果，所以到这里就成功了，要创建历史记录

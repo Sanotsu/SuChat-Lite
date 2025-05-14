@@ -45,25 +45,40 @@ class VoiceRecognitionService {
 
   /// 提交录音识别任务
   /// [audioPath] - 音频文件路径
+  /// [cloudAudioUrl] - 云端音频URL，如果提供则优先使用
   /// 2025-05-07 暂时没用到
   /// [languageHint] - 语音中的语言代码，例如中文为"zh"，英文为"en"
   /// 返回识别任务ID
   static Future<String> submitRecognitionTask({
     required CusBriefLLMSpec model,
     required String audioPath,
+    String? cloudAudioUrl,
     String? languageHint,
   }) async {
     try {
-      // 检查音频文件是否存在
-      final audioFile = File(audioPath);
-      if (!await audioFile.exists()) {
-        throw '音频文件不存在';
-      }
+      String audioUrl;
 
-      // 1. 上传音频文件到GitHub
-      final audioUrl = await _uploadAudioFile(audioFile);
-      if (audioUrl.isEmpty) {
-        throw '上传音频文件失败';
+      // 如果提供了云端URL，直接使用
+      if (cloudAudioUrl != null && cloudAudioUrl.isNotEmpty) {
+        // 验证URL是否有效
+        if (!cloudAudioUrl.startsWith('http://') &&
+            !cloudAudioUrl.startsWith('https://')) {
+          throw '无效的云端音频URL，必须以 http:// 或 https:// 开头';
+        }
+        audioUrl = cloudAudioUrl;
+      } else {
+        // 没有提供云端URL，使用本地文件并上传到GitHub
+        // 检查音频文件是否存在
+        final audioFile = File(audioPath);
+        if (!await audioFile.exists()) {
+          throw '音频文件不存在';
+        }
+
+        // 上传音频文件到GitHub
+        audioUrl = await _uploadAudioFile(audioFile);
+        if (audioUrl.isEmpty) {
+          throw '上传音频文件失败';
+        }
       }
 
       // 2. 调用阿里云API提交录音识别任务
@@ -128,7 +143,7 @@ class VoiceRecognitionService {
         // 创建本地任务信息
         final taskInfo = VoiceRecognitionTaskInfo(
           taskId: taskId,
-          localAudioPath: audioPath,
+          localAudioPath: cloudAudioUrl == null ? audioPath : null,
           githubAudioUrl: audioUrl,
           languageHint: languageHint ?? 'auto',
           taskStatus: taskStatus,

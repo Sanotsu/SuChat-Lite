@@ -95,6 +95,7 @@ class VoiceCloneService {
   /// 克隆声音
   /// [model] - 使用的模型
   /// [audioPath] - 音频文件路径
+  /// [cloudAudioUrl] - 云端音频URL，如果提供则优先使用
   /// [prefix] - 音色自定义前缀，仅允许数字和小写字母，小于十个字符
   /// [targetModel] - 声音复刻所使用的模型，支持cosyvoice-v1和cosyvoice-v2
   /// 返回克隆后的音色ID
@@ -102,6 +103,7 @@ class VoiceCloneService {
     required String audioPath,
     required String prefix,
     required String targetModel,
+    String? cloudAudioUrl,
   }) async {
     // 验证前缀格式
     if (!RegExp(r'^[a-z0-9]{1,9}$').hasMatch(prefix)) {
@@ -113,14 +115,26 @@ class VoiceCloneService {
       throw Exception('目标模型仅支持cosyvoice-v1和cosyvoice-v2');
     }
 
-    // 检查音频文件是否存在
-    final audioFile = File(audioPath);
-    if (!await audioFile.exists()) {
-      throw Exception('音频文件不存在');
-    }
+    String audioUrl;
+    
+    // 如果提供了云端URL，直接使用
+    if (cloudAudioUrl != null && cloudAudioUrl.isNotEmpty) {
+      // 验证URL是否有效
+      if (!cloudAudioUrl.startsWith('http://') && !cloudAudioUrl.startsWith('https://')) {
+        throw Exception('无效的云端音频URL，必须以 http:// 或 https:// 开头');
+      }
+      audioUrl = cloudAudioUrl;
+    } else {
+      // 没有提供云端URL，使用本地文件并上传到GitHub
+      // 检查音频文件是否存在
+      final audioFile = File(audioPath);
+      if (!await audioFile.exists()) {
+        throw Exception('音频文件不存在');
+      }
 
-    // 上传音频文件到可公开访问的URL
-    final audioUrl = await _uploadAudioFile(audioFile);
+      // 上传音频文件到可公开访问的URL
+      audioUrl = await _uploadAudioFile(audioFile);
+    }
 
     // 调用声音复刻API
     final headers = await _getHeaders();

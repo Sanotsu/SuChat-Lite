@@ -95,6 +95,14 @@ class DBInit {
 
     // 在给定路径上打开/创建数据库
     var db = await openDatabase(path, version: 1, onCreate: _createDb);
+
+    // 为了确保新录音识别记录表被创建，我们需要修改数据库版本号，以触发_createDb方法
+    // var db = await openDatabase(
+    //   path,
+    //   version: 2,
+    //   onCreate: _createDb,
+    //   onUpgrade: _upgradeDb,
+    // );
     dbFilePath = path;
     return db;
   }
@@ -109,6 +117,16 @@ class DBInit {
       txn.execute(BriefAIToolDdl.ddlForVoiceRecognitionTask);
     });
   }
+
+  // // 数据库升级
+  // void _upgradeDb(Database db, int oldVersion, int newVersion) async {
+  //   print("数据库升级 _upgradeDb 从 $oldVersion 到 $newVersion");
+
+  //   if (oldVersion < 2) {
+  //     // 只在版本1升级到版本2时执行
+  //     await db.execute(BriefAIToolDdl.ddlForVoiceRecognitionTask);
+  //   }
+  // }
 
   // 关闭数据库
   Future<bool> closeDB() async {

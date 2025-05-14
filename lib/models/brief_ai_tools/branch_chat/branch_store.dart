@@ -41,8 +41,8 @@ class BranchStore {
 
   Future<void> _init() async {
     try {
-      final docsDir = await getAppHomeDirectory();
-      final dbDirectory = p.join(docsDir.path, "objectbox", "branch_chat");
+      final docsDir = await getObjectBoxDir();
+      final dbDirectory = p.join(docsDir.path, "branch_chat");
 
       // 确保目录存在
       final dir = Directory(dbDirectory);

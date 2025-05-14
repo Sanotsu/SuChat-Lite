@@ -199,6 +199,17 @@ String formatDurationToString2(Duration duration) {
   return "${twoDigits(duration.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
 }
 
+/// 格式化时间戳为带微秒的时间戳
+/// fileTs => fileNameTimestamp
+String fileTs(DateTime dateTime) {
+  final formatted = DateFormat(constDatetimeSuffix).format(dateTime);
+  final us = (dateTime.microsecondsSinceEpoch % 1000000).toString().padLeft(
+    6,
+    '0',
+  );
+  return '${formatted}_$us';
+}
+
 /// 保存文本文件到外部存储(如果是pdf等还需要改造，传入保存方法等)
 Future<void> saveTextFileToStorage(
   String text,
@@ -736,47 +747,62 @@ Future<Directory> getAppSubDir(String folderName) async {
 
 /// 获取sqlite数据库文件保存的目录
 Future<Directory> getSqliteDbDir() async {
-  return getAppHomeDirectory(subfolder: "sqlite_db");
+  return getAppHomeDirectory(subfolder: "DB/sqlite_db");
+}
+
+/// 获取objectbox数据库文件保存的目录
+Future<Directory> getObjectBoxDir() async {
+  return getAppHomeDirectory(subfolder: "DB/objectbox");
 }
 
 /// 语音输入时，录音文件保存的目录
 Future<Directory> getChatAudioDir() async {
-  return getAppHomeDirectory(subfolder: "chat_audio");
+  return getAppHomeDirectory(subfolder: "VOICE_REC/chat_audio");
+}
+
+/// 用于声音复制、录音识别时录制的声音存放
+Future<Directory> getVoiceRecordingDir() async {
+  return getAppHomeDirectory(subfolder: "VOICE_REC/voice_recordings");
 }
 
 /// 图片生成时，图片文件保存的目录
 Future<Directory> getImageGenDir() async {
-  return getAppHomeDirectory(subfolder: "image_generation");
+  return getAppHomeDirectory(subfolder: "AI_GEN/images");
 }
 
 /// 视频生成时，视频文件保存的目录
 Future<Directory> getVideoGenDir() async {
-  return getAppHomeDirectory(subfolder: "video_generation");
+  return getAppHomeDirectory(subfolder: "AI_GEN/videos");
 }
 
 /// 语音生成时，语音文件保存的目录
 Future<Directory> getVoiceGenDir() async {
-  return getAppHomeDirectory(subfolder: "voice_generation");
-}
-
-// 用于声音复制时录制的声音存放
-Future<Directory> getVoiceCloneRecordDir() async {
-  return getAppHomeDirectory(subfolder: "voice_clone_recordings");
-}
-
-/// 获取语音识别录音保存目录
-Future<Directory> getVoiceRecognitionRecordDir() async {
-  return getAppHomeDirectory(subfolder: "voice_recognition_records");
+  return getAppHomeDirectory(subfolder: "AI_GEN/voices");
 }
 
 /// 使用file_picker选择文件时，保存文件的目录
 /// 所有文件选择都放在同一个位置，重复时直接返回已存在的内容
 Future<Directory> getFilePickerSaveDir() async {
-  return getAppHomeDirectory(subfolder: "file_picker_files");
+  return getAppHomeDirectory(subfolder: "FILE_PICK/file_picker_files");
 }
 
 /// 使用image_picker选择文件时，保存文件的目录
 /// 所有文件选择都放在同一个位置，重复时直接返回已存在的内容
 Future<Directory> getImagePickerSaveDir() async {
-  return getAppHomeDirectory(subfolder: "image_picker_files");
+  return getAppHomeDirectory(subfolder: "FILE_PICK/image_picker_files");
+}
+
+/// 获取角色背景图头像的目录
+Future<Directory> getCharacterDir() async {
+  return getAppHomeDirectory(subfolder: "FILE_PICK/character_images");
+}
+
+/// 使用dio下载文件时，保存文件的目录
+Future<Directory> getDioDownloadDir() async {
+  return getAppHomeDirectory(subfolder: "NET_DL/dio_download_files");
+}
+
+/// 语音输入时，录音文件保存的目录
+Future<Directory> getBackupDir() async {
+  return getAppHomeDirectory(subfolder: "BAKUP/backup_files");
 }
