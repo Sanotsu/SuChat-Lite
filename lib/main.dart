@@ -10,15 +10,15 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:video_player_media_kit/video_player_media_kit.dart';
 
-import 'models/brief_ai_tools/branch_chat/branch_store.dart';
-import 'common/components/toast_utils.dart';
-import 'common/components/min_size_layout.dart';
-import 'common/utils/screen_helper.dart';
-import 'common/utils/tools.dart';
-import 'services/cus_get_storage.dart';
-import 'services/model_manager_service.dart';
-import 'services/network_service.dart';
-import 'views/home.dart';
+import 'features/branch_chat/presentation/viewmodels/branch_store.dart';
+import 'shared/widgets/toast_utils.dart';
+import 'shared/widgets/min_size_layout.dart';
+import 'core/utils/screen_helper.dart';
+import 'core/utils/simple_tools.dart';
+import 'core/storage/cus_get_storage.dart';
+import 'shared/services/model_manager_service.dart';
+import 'shared/services/network_service.dart';
+import 'features/branch_chat/presentation/index.dart';
 
 GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -59,9 +59,9 @@ class AppCatchError {
     await GetStorage.init('SuChatGetStorage');
 
     // 只在首次启动时初始化内置模型
-    if (MyGetStorage().isFirstLaunch()) {
+    if (CusGetStorage().isFirstLaunch()) {
       await ModelManagerService.initBuiltinModelsTest();
-      await MyGetStorage().markLaunched();
+      await CusGetStorage().markLaunched();
     }
 
     // 初始化 ObjectBox
