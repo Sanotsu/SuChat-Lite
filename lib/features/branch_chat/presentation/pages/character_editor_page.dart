@@ -14,8 +14,7 @@ import '../../domain/entities/character_card.dart';
 import '../../domain/entities/message_font_color.dart';
 import '../viewmodels/branch_store.dart';
 import '../viewmodels/character_store.dart';
-import '../widgets/_small_tool_widgets.dart';
-import '../widgets/adaptive_model_selector.dart';
+import '../widgets/index.dart';
 
 class CharacterEditorPage extends StatefulWidget {
   final CharacterCard? character;

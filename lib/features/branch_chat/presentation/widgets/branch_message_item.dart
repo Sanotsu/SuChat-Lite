@@ -255,7 +255,12 @@ class _BranchMessageItemState extends State<BranchMessageItem>
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
             SizedBox(width: 10),
-            Text("处理中……"),
+            MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: const TextScaler.linear(1)),
+              child: Text("处理中……"),
+            ),
           ],
         ),
       );

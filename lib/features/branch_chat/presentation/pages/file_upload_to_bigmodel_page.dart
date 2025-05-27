@@ -10,7 +10,7 @@ import '../../../../core/utils/screen_helper.dart';
 import '../../../../core/storage/cus_get_storage.dart';
 import '../../data/models/bigmodel_file_manage.dart';
 import '../../data/repositories/bigmodel_file_service.dart';
-import '../widgets/text_selection_dialog.dart';
+import '../widgets/index.dart';
 
 class FileUploadPage extends StatefulWidget {
   /// 文件内容分析回调函数

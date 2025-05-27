@@ -13,6 +13,7 @@ import 'package:path/path.dart' as path;
 import '../../../../shared/widgets/sounds_message_button/button_widget/sounds_message_button.dart';
 import '../../../../shared/widgets/sounds_message_button/utils/sounds_recorder_controller.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
+import '../../../../shared/widgets/toast_utils.dart';
 import '../../../../shared/constants/constant_llm_enum.dart';
 import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/utils/document_parser.dart';
@@ -21,38 +22,14 @@ import '../../../../core/utils/image_picker_utils.dart';
 import '../../../../core/utils/screen_helper.dart';
 import '../../../../core/utils/simple_tools.dart';
 import '../../data/datasources/xunfei_apis.dart';
+import '../../domain/entities/input_message_data.dart';
 import '../pages/file_upload_to_bigmodel_page.dart';
-
-// 定义消息数据类
-class MessageData {
-  final String text;
-  final List<File>? images;
-  final File? audio;
-  // 本地可用获取文档文件
-  final File? file;
-  // 云端只能获取文档的文件名
-  final String? cloudFileName;
-  // 本地云端都使用同一个文档内容变量，两者不会同时存在
-  final String? fileContent;
-  final List<File>? videos;
-  // 可以根据需要添加更多类型
-
-  const MessageData({
-    required this.text,
-    this.images,
-    this.audio,
-    this.file,
-    this.cloudFileName,
-    this.fileContent,
-    this.videos,
-  });
-}
 
 /// 输入栏组件
 /// 2025-04-10 桌面端不支持语音输入和拍照
 class ChatInputBar extends StatefulWidget {
   final TextEditingController controller;
-  final Function(MessageData) onSend;
+  final Function(InputMessageData) onSend;
   final VoidCallback? onCancel;
   final bool isEditing;
   final bool isStreaming;
@@ -60,9 +37,6 @@ class ChatInputBar extends StatefulWidget {
   final FocusNode? focusNode;
   final CusLLMSpec? model;
   // 输入框高度变化回调
-  // (切换模型后，可能会展开/收起更多工具栏，导致整个输入区域变化。
-  // 而主页面的悬浮开启新对话、滚动到底部按钮是相对固定在输入框上面一点
-  // 输入框高度变化了，也要通知父组件，让父组件重新布局悬浮按钮)
   final ValueChanged<double>? onHeightChanged;
 
   const ChatInputBar({
@@ -83,8 +57,6 @@ class ChatInputBar extends StatefulWidget {
 }
 
 class _ChatInputBarState extends State<ChatInputBar> {
-  bool _showToolbar = false;
-
   // 选中的图片
   List<File>? _selectedImages;
   // 选中的音频
@@ -102,70 +74,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
   // 是否是语音输入模式
   bool _isVoiceMode = false;
 
-  // 获取当前模型支持的工具列表
-  List<ToolItem> get _toolItems {
-    if (widget.model == null) return [];
-
-    final List<ToolItem> tools = [
-      // 基础工具 - 所有模型都支持
-    ];
-
-    // 根据模型类型添加特定工具
-    switch (widget.model!.modelType) {
-      case LLModelType.vision || LLModelType.vision_reasoner:
-        tools.addAll([
-          ToolItem(
-            icon: Icons.image,
-            label: '相册',
-            type: 'upload_image',
-            onTap: () => _handleImagePick(CusImageSource.gallery),
-          ),
-          if (!ScreenHelper.isDesktop())
-            ToolItem(
-              icon: Icons.camera_alt,
-              label: '拍照',
-              type: 'take_photo',
-              onTap: () => _handleImagePick(CusImageSource.camera),
-            ),
-        ]);
-        break;
-      case LLModelType.audio:
-        tools.add(
-          ToolItem(
-            icon: Icons.mic,
-            label: '音频',
-            type: 'upload_audio',
-            onTap: _handleAudioUpload,
-          ),
-        );
-        break;
-      case LLModelType.cc:
-        tools.addAll([
-          ToolItem(
-            icon: Icons.file_open,
-            label: '本地文档',
-            type: 'upload_file',
-            onTap: _handleFileUpload,
-            color: Colors.grey,
-          ),
-          ToolItem(
-            icon: Icons.cloud_upload,
-            label: '云端文档',
-            type: 'upload_cloud_file',
-            onTap: _handleCloudFileUpload,
-            color: Colors.grey,
-          ),
-        ]);
-        break;
-      default:
-        break;
-    }
-
-    return tools;
-  }
-
   // 添加一个变量记录上次通知给父组件输入框的高度
-  // (高度有变化后才重新通知，避免在didUpdateWidget中重复通知)
   double _lastNotifiedHeight = 0;
 
   final GlobalKey _containerKey = GlobalKey();
@@ -330,6 +239,30 @@ class _ChatInputBarState extends State<ChatInputBar> {
     // TODO: 实现音频上传
   }
 
+  // 处理语音通话
+  void _handleVoiceCall() async {
+    if (ScreenHelper.isDesktop()) return;
+    if (!await _checkPermissions()) return;
+
+    // 显示提示
+    ToastUtils.showInfo('正在打开语音通话页面...', duration: Duration(seconds: 2));
+
+    // TODO: 实现跳转到语音通话页面
+    // Navigator.of(context).push(
+    //   MaterialPageRoute(
+    //     builder: (context) => VoiceCallPage(
+    //       model: widget.model,
+    //       onCallEnded: (String transcription) {
+    //         // 通话结束后处理文本
+    //         if (transcription.isNotEmpty) {
+    //           widget.controller.text = transcription;
+    //         }
+    //       },
+    //     ),
+    //   ),
+    // );
+  }
+
   // 清理选中的媒体文件
   void _clearSelectedMedia() {
     setState(() {
@@ -340,8 +273,6 @@ class _ChatInputBarState extends State<ChatInputBar> {
       _cloudFileName = "";
       _fileContent = '';
 
-      // 一般取消、发送完之后都会清除媒体资源，同时也收起工具栏，并通知父组件修改悬浮按钮位置
-      _showToolbar = false;
       _notifyHeightChange();
     });
   }
@@ -359,7 +290,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
     }
 
     // 创建消息数据
-    final messageData = MessageData(
+    final messageData = InputMessageData(
       text: text,
       images: _selectedImages,
       audio: _selectedAudio,
@@ -373,192 +304,128 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
     // 清理状态
     setState(() {
+      widget.controller.clear();
       _clearSelectedMedia();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      key: _containerKey,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        /// 选中的媒体预览
-        if (_selectedImages != null) _buildImagePreviewArea(),
-
-        if (isLoadingDocument ||
-            (_selectedFile != null || _fileContent.isNotEmpty))
-          Container(
-            height: 100,
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey, width: 1),
-            ),
-            child: buildFilePreviewArea(),
-          ),
-
-        /// 输入栏
-        Container(
-          padding: EdgeInsets.symmetric(vertical: 4),
-          decoration: BoxDecoration(color: Colors.transparent),
-          child: Row(
-            children: [
-              /// 工具栏切换按钮
-              if (!widget.isStreaming && widget.model != null)
-                IconButton(
-                  icon: Icon(
-                    _showToolbar ? Icons.keyboard_arrow_down : Icons.add,
-                    color: _showToolbar ? Theme.of(context).primaryColor : null,
-                  ),
-                  onPressed: () {
-                    setState(() => _showToolbar = !_showToolbar);
-                    _notifyHeightChange();
-                  },
-                  tooltip: _showToolbar ? '收起工具栏' : '展开工具栏',
-                ),
-
-              /// 输入区域
-              Expanded(child: _buildInputArea()),
-
-              /// 发送/终止按钮
-              IconButton(
-                icon: Icon(
-                  widget.isStreaming
-                      ? Icons.stop
-                      : (widget.isEditing ? Icons.check : Icons.send),
-                ),
-                onPressed: widget.isStreaming ? widget.onStop : _handleSend,
-                tooltip:
-                    widget.isStreaming
-                        ? '停止生成'
-                        : (widget.isEditing ? '确认编辑' : '发送'),
-              ),
-            ],
-          ),
-        ),
-
-        /// 工具栏
-        if (_showToolbar && _toolItems.isNotEmpty)
-          Container(
-            padding: EdgeInsets.symmetric(vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.transparent,
-              border: Border(top: BorderSide(color: Colors.grey[300]!)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [..._toolItems.map((tool) => _buildToolButton(tool))],
-            ),
-          ),
-      ],
-    );
-  }
-
-  // 选中的图片预览区域
-  Widget _buildImagePreviewArea() {
-    _notifyHeightChange();
-
     return Container(
-      height: 100,
-      padding: EdgeInsets.symmetric(vertical: 8),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: _selectedImages!.length,
-        itemBuilder: (context, index) {
-          return Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4),
-            child: Stack(
-              children: [
-                Image.file(
-                  File(_selectedImages![index].path),
-                  height: 80,
-                  width: 80,
-                  fit: BoxFit.cover,
-                ),
-                Positioned(
-                  right: -16,
-                  top: -16,
-                  child: IconButton(
-                    icon: Icon(Icons.close, size: 20, color: Colors.blue),
-                    onPressed: () {
-                      setState(() {
-                        _selectedImages!.removeAt(index);
-                        if (_selectedImages!.isEmpty) {
-                          _selectedImages = null;
-                        }
-                      });
-                    },
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+      key: _containerKey,
+      margin: EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade700),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 预览区域 (如果有选中的图片或文件)
+          if (_selectedImages != null ||
+              isLoadingDocument ||
+              _selectedFile != null ||
+              _fileContent.isNotEmpty)
+            _buildPreviewArea(),
+
+          // 输入区域
+          _buildInputArea(),
+
+          // 工具栏区域
+          _buildToolbar(),
+        ],
       ),
     );
   }
 
-  // 上传文件按钮和上传的文件名
-  Widget buildFilePreviewArea() {
+  // 预览区域
+  Widget _buildPreviewArea() {
     _notifyHeightChange();
 
-    var mainWidget = Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          _selectedFile?.path.split('/').last ?? _cloudFileName,
-          maxLines: 2,
-          style: TextStyle(fontSize: 12),
-        ),
-        RichText(
-          softWrap: true,
-          overflow: TextOverflow.ellipsis,
-          maxLines: 2,
-          text: TextSpan(
-            children: [
-              if (_selectedFile != null)
-                TextSpan(
-                  text: formatFileSize(_selectedFile?.lengthSync() ?? 0),
-                  style: TextStyle(color: Colors.black, fontSize: 12),
-                ),
-              TextSpan(
-                text: " 文档解析完成 ",
-                style: TextStyle(color: Colors.blue, fontSize: 15),
-              ),
-              TextSpan(
-                text: "共有 ${_fileContent.length} 字符",
-                style: TextStyle(color: Colors.black, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        SizedBox(width: 10),
-        Expanded(
-          child:
-              (_selectedFile != null || _fileContent.isNotEmpty)
-                  ? GestureDetector(
-                    onTap: () {
-                      previewDocumentContent();
-                    },
-                    child: mainWidget,
-                  )
-                  : Center(
-                    child: Text(
-                      isLoadingDocument ? "文档解析中,请勿操作..." : "可点击左侧按钮上传文件",
-                      // style: const TextStyle(color: Colors.grey),
+    if (_selectedImages != null) {
+      return Container(
+        height: 100,
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: _selectedImages!.length,
+          itemBuilder: (context, index) {
+            return Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(
+                      File(_selectedImages![index].path),
+                      height: 80,
+                      width: 80,
+                      fit: BoxFit.cover,
                     ),
                   ),
+                  Positioned(
+                    right: -12,
+                    top: -12,
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.cancel,
+                        size: 20,
+                        color: Colors.grey.shade700,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _selectedImages!.removeAt(index);
+                          if (_selectedImages!.isEmpty) {
+                            _selectedImages = null;
+                          }
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
-        if (_selectedFile != null || _cloudFileName.isNotEmpty)
-          SizedBox(
-            width: 48,
-            child: IconButton(
+      );
+    } else if (isLoadingDocument ||
+        _selectedFile != null ||
+        _fileContent.isNotEmpty) {
+      return Container(
+        height: 100,
+        padding: EdgeInsets.all(8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.insert_drive_file, color: Colors.blue, size: 40),
+            SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _selectedFile?.path.split('/').last ?? _cloudFileName,
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: 4),
+                  if (isLoadingDocument)
+                    Text("文档解析中...", style: TextStyle(color: Colors.grey))
+                  else
+                    GestureDetector(
+                      onTap: () => previewDocumentContent(),
+                      child: Text(
+                        "文档解析完成，共${_fileContent.length}字符 (点击预览)",
+                        style: TextStyle(color: Colors.blue),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.close),
               onPressed: () {
                 setState(() {
                   _fileContent = "";
@@ -567,10 +434,253 @@ class _ChatInputBarState extends State<ChatInputBar> {
                   _notifyHeightChange();
                 });
               },
-              icon: const Icon(Icons.clear),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return SizedBox.shrink();
+  }
+
+  // 输入区域
+  Widget _buildInputArea() {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 8),
+      child: _isVoiceMode ? _buildVoiceInputArea() : _buildTextInputArea(),
+    );
+  }
+
+  // 语音输入区域
+  Widget _buildVoiceInputArea() {
+    return Container(
+      height: 50,
+      margin: EdgeInsets.symmetric(vertical: 8),
+      child: SoundsMessageButton(
+        // 不要边框和阴影等，方便设置背景图片好看
+        customDecoration: BoxDecoration(color: Colors.transparent),
+        onChanged: (status) {},
+        onSendSounds:
+            widget.isStreaming
+                ? (type, content) {
+                  commonExceptionDialog(context, '提示', '等待响应完成或终止后再输入');
+                }
+                : (type, content) async {
+                  if (content.isEmpty) {
+                    commonExceptionDialog(context, '提示', '请输入消息内容');
+                    return;
+                  }
+
+                  if (type == SendContentType.text) {
+                    // 如果输入的是语音转换后的文字，直接发送文字
+                    final messageData = InputMessageData(
+                      text: content,
+                      images: _selectedImages,
+                      audio: _selectedAudio,
+                      file: _selectedFile,
+                      fileContent: _fileContent,
+                    );
+
+                    widget.onSend(messageData);
+                  } else if (type == SendContentType.voice) {
+                    // 如果直接输入的语音，要显示转换后的文本，也要保留语音文件
+                    String tempPath = path.join(
+                      path.dirname(content),
+                      path.basenameWithoutExtension(content),
+                    );
+
+                    var transcription = await getTextFromAudioFromXFYun(
+                      "$tempPath.pcm",
+                    );
+
+                    final messageData = InputMessageData(
+                      text: transcription,
+                      images: _selectedImages,
+                      audio: File("$tempPath.m4a"),
+                      file: _selectedFile,
+                      fileContent: _fileContent,
+                    );
+
+                    widget.onSend(messageData);
+                  }
+
+                  // 清理状态
+                  setState(() {
+                    _clearSelectedMedia();
+                  });
+                },
+      ),
+    );
+  }
+
+  // 文本输入区域
+  Widget _buildTextInputArea() {
+    return Focus(
+      onKeyEvent: (node, event) {
+        // 仅在桌面平台上处理特殊的键盘事件
+        if (ScreenHelper.isDesktop() &&
+            event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.enter) {
+          // 检查是否按下了Shift键
+          final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+
+          // 如果按下Shift键则执行换行（让事件继续传递）
+          // 如果未按下Shift键则发送消息
+          if (!isShiftPressed) {
+            _handleSend();
+            return KeyEventResult.handled; // 阻止默认换行
+          }
+        }
+        return KeyEventResult.ignored; // 其他情况或移动平台上忽略
+      },
+      child: TextField(
+        controller: widget.controller,
+        focusNode: widget.focusNode,
+        enabled: !widget.isStreaming,
+        maxLines: 3,
+        minLines: 1,
+        onChanged: (value) {
+          _notifyHeightChange();
+        },
+        decoration: InputDecoration(
+          hintText: widget.isEditing ? '编辑消息...' : '输入消息...',
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(vertical: 12),
+          prefixIcon:
+              widget.isEditing && widget.onCancel != null
+                  ? IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () {
+                      setState(() {
+                        _clearSelectedMedia();
+                      });
+                      widget.onCancel?.call();
+                    },
+                    tooltip: '取消编辑',
+                  )
+                  : null,
+        ),
+      ),
+    );
+  }
+
+  // 工具栏区域
+  Widget _buildToolbar() {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        // color: Colors.grey.shade50,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(12),
+          bottomRight: Radius.circular(12),
+        ),
+      ),
+      child: Row(
+        children: [
+          // 语音/键盘切换按钮
+          if (ScreenHelper.isMobile())
+            IconButton(
+              icon: Icon(
+                _isVoiceMode ? Icons.keyboard : Icons.keyboard_voice,
+                size: 20,
+              ),
+              onPressed:
+                  widget.isStreaming
+                      ? null
+                      : () async {
+                        if (!_isVoiceMode && !await _checkPermissions()) {
+                          return;
+                        }
+                        setState(() => _isVoiceMode = !_isVoiceMode);
+                      },
+              tooltip: _isVoiceMode ? '切换到键盘' : '切换到语音',
+            ),
+
+          // 图片按钮
+          if (widget.model?.modelType == LLModelType.vision ||
+              widget.model?.modelType == LLModelType.vision_reasoner)
+            IconButton(
+              icon: Icon(Icons.image, size: 20),
+              onPressed:
+                  widget.isStreaming
+                      ? null
+                      : () => _handleImagePick(CusImageSource.gallery),
+              tooltip: '从相册选择图片',
+            ),
+
+          // 拍照按钮 (移动端)
+          if ((widget.model?.modelType == LLModelType.vision ||
+                  widget.model?.modelType == LLModelType.vision_reasoner) &&
+              !ScreenHelper.isDesktop())
+            IconButton(
+              icon: Icon(Icons.camera_alt, size: 20),
+              onPressed:
+                  widget.isStreaming
+                      ? null
+                      : () => _handleImagePick(CusImageSource.camera),
+              tooltip: '拍照',
+            ),
+
+          // 音频按钮
+          if (widget.model?.modelType == LLModelType.audio)
+            IconButton(
+              icon: Icon(Icons.audio_file, size: 20),
+              onPressed: widget.isStreaming ? null : _handleAudioUpload,
+              tooltip: '上传音频',
+            ),
+
+          // 文档按钮
+          if (widget.model?.modelType == LLModelType.cc)
+            Row(
+              children: [
+                IconButton(
+                  icon: Icon(Icons.file_open, color: Colors.grey, size: 20),
+                  onPressed: widget.isStreaming ? null : _handleFileUpload,
+                  tooltip: '上传本地文档',
+                ),
+                IconButton(
+                  icon: Icon(Icons.cloud_upload, color: Colors.grey, size: 20),
+                  onPressed: widget.isStreaming ? null : _handleCloudFileUpload,
+                  tooltip: '上传云端文档',
+                ),
+              ],
+            ),
+
+          // 新增: 语音通话按钮
+          IconButton(
+            icon: Icon(Icons.phone, color: Colors.blue, size: 20),
+            onPressed: widget.isStreaming ? null : _handleVoiceCall,
+            tooltip: '语音通话',
+          ),
+
+          Spacer(),
+
+          // 发送/停止按钮
+          Container(
+            width: 36, // 设置宽度
+            height: 36, // 设置高度
+            decoration: BoxDecoration(
+              color: widget.isStreaming ? Colors.red : Colors.blue,
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: Icon(
+                widget.isStreaming
+                    ? Icons.stop
+                    : (widget.isEditing ? Icons.check : Icons.send),
+                color: Colors.white,
+                size: 20, // 也可以调整图标大小
+              ),
+              onPressed: widget.isStreaming ? widget.onStop : _handleSend,
+              tooltip:
+                  widget.isStreaming
+                      ? '停止生成'
+                      : (widget.isEditing ? '确认编辑' : '发送'),
+              padding: EdgeInsets.zero, // 移除默认的内边距
             ),
           ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -636,192 +746,4 @@ class _ChatInputBarState extends State<ChatInputBar> {
           },
         );
   }
-
-  // 切换语音输入或文本输入按钮（桌面端显示键盘图标，不支持切换）
-  Widget _buildVoiceModeButton() {
-    return ScreenHelper.isMobile()
-        ? IconButton(
-          icon: Icon(
-            _isVoiceMode ? Icons.keyboard : Icons.keyboard_voice,
-            size: 20,
-          ),
-          onPressed:
-              widget.isStreaming
-                  ? null
-                  : () async {
-                    if (!_isVoiceMode && !await _checkPermissions()) {
-                      return;
-                    }
-                    setState(() => _isVoiceMode = !_isVoiceMode);
-                  },
-        )
-        : Icon(Icons.keyboard, size: 20);
-  }
-
-  // 输入区域
-  Widget _buildInputArea() {
-    if (_isVoiceMode) {
-      var smButton = SoundsMessageButton(
-        // 不要边框和阴影等，方便设置背景图片好看
-        customDecoration: BoxDecoration(color: Colors.transparent),
-        onChanged: (status) {},
-        onSendSounds:
-            widget.isStreaming
-                ? (type, content) {
-                  commonExceptionDialog(context, '提示', '等待响应完成或终止后再输入');
-                }
-                : (type, content) async {
-                  if (content.isEmpty) {
-                    commonExceptionDialog(context, '提示', '请输入消息内容');
-                    return;
-                  }
-
-                  if (type == SendContentType.text) {
-                    // 如果输入的是语音转换后的文字，直接发送文字
-                    final messageData = MessageData(
-                      text: content,
-                      images: _selectedImages,
-                      audio: _selectedAudio,
-                      file: _selectedFile,
-                      fileContent: _fileContent,
-                    );
-
-                    widget.onSend(messageData);
-                  } else if (type == SendContentType.voice) {
-                    // 如果直接输入的语音，要显示转换后的文本，也要保留语音文件
-                    String tempPath = path.join(
-                      path.dirname(content),
-                      path.basenameWithoutExtension(content),
-                    );
-
-                    var transcription = await getTextFromAudioFromXFYun(
-                      "$tempPath.pcm",
-                    );
-
-                    final messageData = MessageData(
-                      text: transcription,
-                      images: _selectedImages,
-                      audio: File("$tempPath.m4a"),
-                      file: _selectedFile,
-                      fileContent: _fileContent,
-                    );
-
-                    widget.onSend(messageData);
-                  }
-
-                  // 清理状态
-                  setState(() {
-                    _clearSelectedMedia();
-                  });
-                },
-      );
-
-      return Container(
-        height: 58,
-        decoration: BoxDecoration(
-          // color: Colors.white,
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.grey, width: 1),
-        ),
-        child: Row(
-          children: [
-            _buildVoiceModeButton(),
-            Expanded(child: smButton),
-            // 占位宽度，眼睛看的，大概让"按住说话"几个字居中显示
-            SizedBox(width: 40),
-          ],
-        ),
-      );
-    } else {
-      return Focus(
-        onKeyEvent: (node, event) {
-          // 仅在桌面平台上处理特殊的键盘事件
-          if (ScreenHelper.isDesktop() &&
-              event is KeyDownEvent &&
-              event.logicalKey == LogicalKeyboardKey.enter) {
-            // 检查是否按下了Shift键
-            final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
-
-            // 如果按下Shift键则执行换行（让事件继续传递）
-            // 如果未按下Shift键则发送消息
-            if (!isShiftPressed) {
-              _handleSend();
-              return KeyEventResult.handled; // 阻止默认换行
-            }
-          }
-          return KeyEventResult.ignored; // 其他情况或移动平台上忽略
-        },
-        child: TextField(
-          controller: widget.controller,
-          focusNode: widget.focusNode,
-          enabled: !widget.isStreaming,
-          maxLines: 3,
-          minLines: 1,
-          onChanged: (value) {
-            _notifyHeightChange();
-          },
-          decoration: InputDecoration(
-            hintText: widget.isEditing ? '编辑消息...' : '输入消息...',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-            prefixIcon:
-                (widget.isEditing && widget.onCancel != null)
-                    ? IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () {
-                        setState(() {
-                          _clearSelectedMedia();
-                        });
-                        widget.onCancel?.call();
-                      },
-                      tooltip: '取消编辑',
-                    )
-                    : _buildVoiceModeButton(),
-          ),
-        ),
-      );
-    }
-  }
-
-  // 工具项按钮
-  Widget _buildToolButton(ToolItem tool) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 8),
-      child: InkWell(
-        onTap: tool.onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          color: Colors.transparent,
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(tool.icon, size: 24, color: tool.color),
-              SizedBox(height: 4),
-              Text(
-                tool.label,
-                style: TextStyle(fontSize: 12, color: tool.color),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// 工具项数据类
-class ToolItem {
-  final IconData icon;
-  final String label;
-  final String type;
-  final VoidCallback onTap;
-  final Color? color;
-  const ToolItem({
-    required this.icon,
-    required this.label,
-    required this.type,
-    required this.onTap,
-    this.color,
-  });
 }

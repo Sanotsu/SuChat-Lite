@@ -10,7 +10,7 @@ import '../../../../core/utils/simple_tools.dart';
 import '../index.dart';
 import '../../domain/entities/character_card.dart';
 import '../viewmodels/character_store.dart';
-import '../widgets/character_card_item.dart';
+import '../widgets/index.dart';
 import 'character_editor_page.dart';
 
 class CharacterListPage extends StatefulWidget {
