@@ -1,14 +1,14 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:audio_waveforms/audio_waveforms.dart';
-import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../core/utils/datetime_formatter.dart';
 import '../../../../core/utils/get_dir.dart';
+import './audio_converter.dart';
 
 /// 按住说话最后发送的类型(转换后的文本还是原音频文件)
 enum SendContentType { voice, text }
@@ -145,12 +145,43 @@ class SoundsRecorderController {
         debugPrint(path.value);
         debugPrint("Recorded file size: ${File(path.value!).lengthSync()}");
 
-        // 停止录制后，音频转个码，讯飞才能识别
-        await convertToPcm(
-          inputPath: path.value!,
-          outputPath: pcmPath,
-          sampleRate: 16000,
-        );
+        // 使用新的原生音频转换方法，而不是ffmpeg
+        if (await File(path.value!).exists()) {
+          // 检查平台是否支持原生转换
+          bool isPlatformSupported = await AudioConverter.isPlatformSupported();
+
+          if (isPlatformSupported) {
+            // 使用原生方法转换
+            bool success = await AudioConverter.convertM4aToPcm(
+              inputPath: path.value!,
+              outputPath: pcmPath,
+              sampleRate: 16000,
+              isRawPcm: true, // 讯飞需要原始PCM
+            );
+
+            if (success) {
+              debugPrint("原生方法 m4a 转 pcm 成功");
+            } else {
+              debugPrint("原生方法 m4a 转 pcm 失败，回退到ffmpeg");
+              // 如果原生方法失败，回退到ffmpeg方法
+              // await convertToPcm(
+              //   inputPath: path.value!,
+              //   outputPath: pcmPath,
+              //   sampleRate: 16000,
+              // );
+              _onAllCompleted?.call(null, Duration.zero);
+            }
+          } else {
+            debugPrint("平台不支持原生转换，使用ffmpeg");
+            // 平台不支持原生转换，使用ffmpeg
+            // await convertToPcm(
+            //   inputPath: path.value!,
+            //   outputPath: pcmPath,
+            //   sampleRate: 16000,
+            // );
+            _onAllCompleted?.call(null, Duration.zero);
+          }
+        }
       }
 
       _onAllCompleted?.call(path.value, duration.value);
@@ -190,29 +221,33 @@ class SoundsRecorderController {
   }
 }
 
-// 讯飞识别时需要pcm
-Future<void> convertToPcm({
-  required String inputPath,
-  required String outputPath,
-  required int sampleRate,
-}) async {
-  final command = '-i $inputPath -ac 1 -ar $sampleRate -f s16le $outputPath';
-  final session = await FFmpegKit.execute(command);
-  final returnCode = await session.getReturnCode();
-  if (!ReturnCode.isSuccess(returnCode)) {
-    throw Exception('FFmpeg m4a 转 pcm 失败');
+/// 处理音频数据的辅助方法
+/// 在实际应用中，这应该通过平台通道调用原生代码
+Future<Uint8List> processAudioData(Uint8List inputData, int sampleRate) async {
+  // 使用AudioConverter类处理音频数据
+  final processedData = await AudioConverter.convertDataToPcm(
+    inputData: inputData,
+    sampleRate: sampleRate,
+    isRawPcm: true,
+  );
+
+  if (processedData == null) {
+    throw Exception('音频数据处理失败');
   }
+
+  return processedData;
 }
 
-// 播放时，转换后的pcn audio_waveforms 无法播放，又得转回去
-Future<void> convertToM4a({
-  required String inputPath,
-  required String outputPath,
-}) async {
-  final command = '-f s16le -ar 16000 -ac 1 -i $inputPath $outputPath';
-  final session = await FFmpegKit.execute(command);
-  final returnCode = await session.getReturnCode();
-  if (!ReturnCode.isSuccess(returnCode)) {
-    throw Exception('FFmpeg pcm 转 m4a 失败');
-  }
-}
+// // 讯飞识别时需要pcm
+// Future<void> convertToPcm({
+//   required String inputPath,
+//   required String outputPath,
+//   required int sampleRate,
+// }) async {
+//   final command = '-i $inputPath -ac 1 -ar $sampleRate -f s16le $outputPath';
+//   final session = await FFmpegKit.execute(command);
+//   final returnCode = await session.getReturnCode();
+//   if (!ReturnCode.isSuccess(returnCode)) {
+//     throw Exception('FFmpeg m4a 转 pcm 失败');
+//   }
+// }

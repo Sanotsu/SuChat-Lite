@@ -13,7 +13,6 @@ import 'package:path/path.dart' as path;
 import '../../../../shared/widgets/sounds_message_button/button_widget/sounds_message_button.dart';
 import '../../../../shared/widgets/sounds_message_button/utils/sounds_recorder_controller.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
-import '../../../../shared/widgets/toast_utils.dart';
 import '../../../../shared/constants/constant_llm_enum.dart';
 import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/utils/document_parser.dart';
@@ -234,33 +233,24 @@ class _ChatInputBarState extends State<ChatInputBar> {
     }
   }
 
-  // 处理音频上传
+  // 处理音频上传(预留，暂时没处理音频理解大模型)
   Future<void> _handleAudioUpload() async {
-    // TODO: 实现音频上传
-  }
+    try {
+      // 现在没有实际的音频大模型，所以只能选择一个音频文件
+      File? file = await FilePickerUtils.pickAndSaveFile(
+        fileType: CusFileType.audio,
+      );
 
-  // 处理语音通话
-  void _handleVoiceCall() async {
-    if (ScreenHelper.isDesktop()) return;
-    if (!await _checkPermissions()) return;
-
-    // 显示提示
-    ToastUtils.showInfo('正在打开语音通话页面...', duration: Duration(seconds: 2));
-
-    // TODO: 实现跳转到语音通话页面
-    // Navigator.of(context).push(
-    //   MaterialPageRoute(
-    //     builder: (context) => VoiceCallPage(
-    //       model: widget.model,
-    //       onCallEnded: (String transcription) {
-    //         // 通话结束后处理文本
-    //         if (transcription.isNotEmpty) {
-    //           widget.controller.text = transcription;
-    //         }
-    //       },
-    //     ),
-    //   ),
-    // );
+      if (file != null) {
+        if (!mounted) return;
+        setState(() {
+          _selectedAudio = file;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      commonExceptionDialog(context, '选择音频失败', '选择音频失败: $e');
+    }
   }
 
   // 清理选中的媒体文件
@@ -319,8 +309,8 @@ class _ChatInputBarState extends State<ChatInputBar> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+      mainAxisSize: MainAxisSize.min,
+      children: [
           // 预览区域 (如果有选中的图片或文件)
           if (_selectedImages != null ||
               isLoadingDocument ||
@@ -343,51 +333,51 @@ class _ChatInputBarState extends State<ChatInputBar> {
     _notifyHeightChange();
 
     if (_selectedImages != null) {
-      return Container(
-        height: 100,
-        padding: EdgeInsets.symmetric(vertical: 8),
-        child: ListView.builder(
-          scrollDirection: Axis.horizontal,
-          itemCount: _selectedImages!.length,
-          itemBuilder: (context, index) {
-            return Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4),
-              child: Stack(
-                children: [
+    return Container(
+      height: 100,
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: _selectedImages!.length,
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: EdgeInsets.symmetric(horizontal: 4),
+            child: Stack(
+              children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.file(
-                      File(_selectedImages![index].path),
-                      height: 80,
-                      width: 80,
-                      fit: BoxFit.cover,
+                  File(_selectedImages![index].path),
+                  height: 80,
+                  width: 80,
+                  fit: BoxFit.cover,
                     ),
-                  ),
-                  Positioned(
+                ),
+                Positioned(
                     right: -12,
                     top: -12,
-                    child: IconButton(
+                  child: IconButton(
                       icon: Icon(
                         Icons.cancel,
                         size: 20,
                         color: Colors.grey.shade700,
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _selectedImages!.removeAt(index);
-                          if (_selectedImages!.isEmpty) {
-                            _selectedImages = null;
-                          }
-                        });
-                      },
-                    ),
+                    onPressed: () {
+                      setState(() {
+                        _selectedImages!.removeAt(index);
+                        if (_selectedImages!.isEmpty) {
+                          _selectedImages = null;
+                        }
+                      });
+                    },
                   ),
-                ],
-              ),
-            );
-          },
-        ),
-      );
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
     } else if (isLoadingDocument ||
         _selectedFile != null ||
         _fileContent.isNotEmpty) {
@@ -395,7 +385,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
         height: 100,
         padding: EdgeInsets.all(8),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(Icons.insert_drive_file, color: Colors.blue, size: 40),
             SizedBox(width: 8),
@@ -403,12 +393,12 @@ class _ChatInputBarState extends State<ChatInputBar> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    _selectedFile?.path.split('/').last ?? _cloudFileName,
+      children: [
+        Text(
+          _selectedFile?.path.split('/').last ?? _cloudFileName,
                     style: TextStyle(fontWeight: FontWeight.bold),
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+          overflow: TextOverflow.ellipsis,
                   ),
                   SizedBox(height: 4),
                   if (isLoadingDocument)
@@ -420,10 +410,10 @@ class _ChatInputBarState extends State<ChatInputBar> {
                         "文档解析完成，共${_fileContent.length}字符 (点击预览)",
                         style: TextStyle(color: Colors.blue),
                       ),
-                    ),
-                ],
               ),
-            ),
+            ],
+          ),
+        ),
             IconButton(
               icon: Icon(Icons.close),
               onPressed: () {
@@ -621,16 +611,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
               tooltip: '拍照',
             ),
 
-          // 音频按钮
-          if (widget.model?.modelType == LLModelType.audio)
-            IconButton(
-              icon: Icon(Icons.audio_file, size: 20),
-              onPressed: widget.isStreaming ? null : _handleAudioUpload,
-              tooltip: '上传音频',
-            ),
-
           // 文档按钮
-          if (widget.model?.modelType == LLModelType.cc)
+          if (widget.model?.modelType == LLModelType.cc ||
+              widget.model?.modelType == LLModelType.reasoner)
             Row(
               children: [
                 IconButton(
@@ -646,19 +629,20 @@ class _ChatInputBarState extends State<ChatInputBar> {
               ],
             ),
 
-          // 新增: 语音通话按钮
-          IconButton(
-            icon: Icon(Icons.phone, color: Colors.blue, size: 20),
-            onPressed: widget.isStreaming ? null : _handleVoiceCall,
-            tooltip: '语音通话',
-          ),
+          // 音频按钮
+          if (widget.model?.modelType == LLModelType.audio)
+            IconButton(
+              icon: Icon(Icons.audio_file, size: 20),
+              onPressed: widget.isStreaming ? null : _handleAudioUpload,
+              tooltip: '上传音频',
+            ),
 
           Spacer(),
 
           // 发送/停止按钮
           Container(
-            width: 36, // 设置宽度
-            height: 36, // 设置高度
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               color: widget.isStreaming ? Colors.red : Colors.blue,
               shape: BoxShape.circle,
@@ -669,7 +653,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                     ? Icons.stop
                     : (widget.isEditing ? Icons.check : Icons.send),
                 color: Colors.white,
-                size: 20, // 也可以调整图标大小
+                size: 20,
               ),
               onPressed: widget.isStreaming ? widget.onStop : _handleSend,
               tooltip:
@@ -679,7 +663,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
               padding: EdgeInsets.zero, // 移除默认的内边距
             ),
           ),
-        ],
+      ],
       ),
     );
   }

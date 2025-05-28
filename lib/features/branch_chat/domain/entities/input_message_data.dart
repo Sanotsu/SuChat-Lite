@@ -5,6 +5,7 @@ import 'dart:io';
 class InputMessageData {
   final String text;
   final List<File>? images;
+  // 音频文件(选择音频文件、或者直接语音输入不是使用转文字而是发送语音也是这个变量)
   final File? audio;
   // 本地可用获取文档文件
   final File? file;

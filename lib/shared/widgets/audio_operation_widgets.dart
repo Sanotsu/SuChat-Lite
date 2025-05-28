@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:record/record.dart';
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:dio/dio.dart';
 
@@ -63,8 +62,9 @@ class WaveformPainter extends CustomPainter {
 
 /// 音频录制管理器
 class AudioRecordManager {
-  final _audioRecorder = AudioRecorder();
-  StreamSubscription<Amplitude>? _amplitudeSubscription;
+  final RecorderController _recorderController = RecorderController();
+  StreamSubscription<Duration>? _durationSubscription;
+  StreamSubscription<RecorderState>? _stateSubscription;
   final List<double> _amplitudes = [];
   String? _recordingPath;
   bool _isRecording = false;
@@ -89,7 +89,38 @@ class AudioRecordManager {
     required this.onRecordingPathChanged,
     required this.onPlayingStateChanged,
     required this.onPlayerControllerChanged,
-  });
+  }) {
+    // 初始化RecorderController
+    _recorderController
+      ..androidEncoder = AndroidEncoder.aac
+      ..androidOutputFormat = AndroidOutputFormat.mpeg4
+      ..iosEncoder = IosEncoder.kAudioFormatMPEG4AAC
+      ..sampleRate = 44100;
+
+    // 监听录音状态变化
+    _stateSubscription = _recorderController.onRecorderStateChanged.listen((
+      state,
+    ) {
+      debugPrint("录音状态变化: $state");
+      _isRecording = state == RecorderState.recording;
+      onRecordingStateChanged(_isRecording);
+    });
+
+    // 监听录音时长变化
+    _durationSubscription = _recorderController.onCurrentDuration.listen((
+      duration,
+    ) {
+      debugPrint("录音时长变化: $duration");
+
+      // 获取最新的波形数据
+      _amplitudes.clear();
+      _amplitudes.addAll(_recorderController.waveData.reversed);
+      if (_amplitudes.length > 100) {
+        _amplitudes.removeRange(100, _amplitudes.length);
+      }
+      onAmplitudesChanged(_amplitudes);
+    });
+  }
 
   bool get isRecording => _isRecording;
   String? get recordingPath => _recordingPath;
@@ -129,32 +160,10 @@ class AudioRecordManager {
       final timestamp = fileTs(DateTime.now());
       final filePath = '${directory.path}/recording_$timestamp.m4a';
 
-      // 设置录音配置
-      final config = RecordConfig(
-        encoder: AudioEncoder.aacLc, // 使用AAC编码
-        bitRate: 128000, // 128kbps比特率
-        sampleRate: 44100, // 44.1kHz采样率
-        numChannels: 1, // 单声道
-      );
-
       // 开始录音
-      await _audioRecorder.start(config, path: filePath);
-
-      // 监听振幅变化
-      _amplitudes.clear();
-      _amplitudeSubscription = _audioRecorder
-          .onAmplitudeChanged(const Duration(milliseconds: 100))
-          .listen((amplitude) {
-            _amplitudes.add(amplitude.current);
-            if (_amplitudes.length > 100) {
-              _amplitudes.removeAt(0);
-            }
-            onAmplitudesChanged(_amplitudes);
-          });
+      await _recorderController.record(path: filePath);
 
       _recordingPath = filePath;
-      _isRecording = true;
-      onRecordingStateChanged(_isRecording);
       onRecordingPathChanged(_recordingPath);
     } catch (e) {
       ToastUtils.showError('开始录音失败: $e');
@@ -164,12 +173,8 @@ class AudioRecordManager {
   /// 停止录音
   Future<void> stopRecording() async {
     try {
-      final path = await _audioRecorder.stop();
-      _amplitudeSubscription?.cancel();
+      final path = await _recorderController.stop();
       _recordingPath = path;
-      _isRecording = false;
-
-      onRecordingStateChanged(_isRecording);
       onRecordingPathChanged(_recordingPath);
 
       if (path != null && ScreenHelper.isMobile()) {
@@ -261,8 +266,9 @@ class AudioRecordManager {
 
   /// 清理资源
   void dispose() {
-    _amplitudeSubscription?.cancel();
-    _audioRecorder.dispose();
+    _durationSubscription?.cancel();
+    _stateSubscription?.cancel();
+    _recorderController.dispose();
     _playerController?.dispose();
     _currentContext = null;
   }
@@ -288,11 +294,6 @@ class RemoteAudioPlayer {
     AudioRecordManager audioManager, {
     BuildContext? context,
   }) async {
-    // if (ScreenHelper.isDesktop()) {
-    //   ToastUtils.showToast('桌面端不支持在线播放');
-    //   return;
-    // }
-
     // 虽然audio_waveforms不支持桌面端，也不支持在线
     // 但是可以都下载下来，桌面端使用AudioPlayerWidget播放，没有波形显示而已
     _isDownloading = true;
@@ -644,19 +645,20 @@ class RecordingButtonGroup extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         // 录音按钮
-        ElevatedButton.icon(
-          onPressed: isRecording ? onStopRecording : onStartRecording,
-          icon: Icon(isRecording ? Icons.stop : Icons.mic),
-          label: Text(isRecording ? '停止录音' : '开始录音'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: isRecording ? Colors.red : AppColors.primary,
-            foregroundColor: Colors.white,
-            padding:
-                isDesktop
-                    ? const EdgeInsets.symmetric(horizontal: 24, vertical: 16)
-                    : null,
+        if (ScreenHelper.isMobile())
+          ElevatedButton.icon(
+            onPressed: isRecording ? onStopRecording : onStartRecording,
+            icon: Icon(isRecording ? Icons.stop : Icons.mic),
+            label: Text(isRecording ? '停止录音' : '开始录音'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isRecording ? Colors.red : AppColors.primary,
+              foregroundColor: Colors.white,
+              padding:
+                  isDesktop
+                      ? const EdgeInsets.symmetric(horizontal: 24, vertical: 16)
+                      : null,
+            ),
           ),
-        ),
         // 选择录音文件按钮
         ElevatedButton.icon(
           onPressed: isRecording ? null : onPickAudioFile,

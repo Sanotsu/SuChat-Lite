@@ -156,9 +156,10 @@ class _BranchMessageItemState extends State<BranchMessageItem>
           // 显示消息内容
           _buildMessageContent(context),
 
-          // 如果是语音输入，显示语言文件，可点击播放
+          // 如果是移动端、语音输入，显示语音文件，可点击播放
           if (widget.message.contentVoicePath != null &&
-              widget.message.contentVoicePath!.trim() != "")
+              widget.message.contentVoicePath!.trim() != "" &&
+              ScreenHelper.isMobile())
             _buildVoicePlayer(),
 
           // 显示图片

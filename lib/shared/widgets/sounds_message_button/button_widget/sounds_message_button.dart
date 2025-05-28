@@ -33,7 +33,9 @@ class SoundsMessageButton extends StatefulWidget {
   /// 状态监听， 回调到外部自定义处理
   final Function(SoundsMessageStatus status)? onChanged;
 
-  /// 发送音频 / 发送音频文字
+  /// 发送音频 / 发送音频文字。
+  /// 如果type是SendContentType.voice，content是音频文件路径；
+  /// 如果type是SendContentType.text，content是音频转换后的文字。
   final Function(SendContentType type, String content)? onSendSounds;
 
   /// 语音输入时遮罩配置

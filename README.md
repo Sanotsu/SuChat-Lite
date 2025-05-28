@@ -50,9 +50,9 @@ SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API �
 
 大模型 API 调用**只保留其 HTTP API 兼容 openAI API 结构的**云平台和对话模型。
 
-具体如下(2025-04-18)：
+具体如下(2025-05-27)：
 
-- 对话模型：
+- **对话模型**
   - [阿里](https://help.aliyun.com/zh/model-studio/developer-reference/compatibility-of-openai-with-dashscope)
   - [百度](https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Fm2vrveyu)
   - [腾讯](https://console.cloud.tencent.com/hunyuan/start)
@@ -64,6 +64,21 @@ SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API �
   - [硅基流动](https://docs.siliconflow.cn/cn/api-reference/chat-completions/chat-completions)
 - 其他兼容兼容 openAI API 结构的云平台和 HTTP API 可使用自定义模式添加
   - 此时需要模型管理中平台选择自定义后，添加其请求地址、模型代号、平台密钥
+- **图片生成**
+  - 阿里云: [图像生成-通义万相 文生图 V2 版](https://help.aliyun.com/zh/model-studio/developer-reference/text-to-image-v2-api-reference)、[文生图 FLUX](https://help.aliyun.com/zh/model-studio/developer-reference/flux/)
+  - 智谱 AI: [CogView](https://open.bigmodel.cn/dev/api/image-model/cogview)
+  - 硅基流动: [创建图片生成请求](https://docs.siliconflow.cn/cn/api-reference/images/images-generations)
+- **视频生成**
+  - 阿里云: [视频生成-通义万相](https://help.aliyun.com/zh/model-studio/developer-reference/video-generation-wanx/)
+  - 智谱 AI: [CogVideoX](https://open.bigmodel.cn/dev/api/videomodel/cogvideox)
+  - 硅基流动: [创建视频生成请求](https://docs.siliconflow.cn/cn/api-reference/videos/videos_submit)
+- **语音合成** （仅阿里云，可自行选择模型）
+  - [语音合成-CosyVoice](https://help.aliyun.com/zh/model-studio/cosyvoice-websocket-api)
+  - [语音合成-Sambert](https://help.aliyun.com/zh/model-studio/sambert-websocket-api)
+  - [通义千问-TTS](https://help.aliyun.com/zh/model-studio/qwen-tts)
+- **语音合成** （仅阿里云，内置无法自定义）
+  - [Paraformer-录音文件识别](https://help.aliyun.com/zh/model-studio/paraformer-recorded-speech-recognition-restful-api)
+  - [SenseVoice-录音语音识别](https://help.aliyun.com/zh/model-studio/developer-reference/sensevoice-recorded-speech-recognition-restful-api)
 
 目前只调试了 Android 手机端、Linux 桌面端、Windows 桌面端:
 
@@ -79,9 +94,7 @@ SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API �
 
 ## 使用指南
 
-从 release 直接下载对应平台应用即可，桌面端是封装过的，应该无需安装。
-
-手动封装 AppImage 可参看 [将 flutter 应用构建为 Linux 下 .APPImage 格式](build_appimage_note.md)
+从 [Releases](https://github.com/Sanotsu/SuChat-Lite/releases) 直接下载对应平台应用即可，桌面端是封装过的，应该无需安装。
 
 ### 补充说明
 

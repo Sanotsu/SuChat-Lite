@@ -6,7 +6,6 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../shared/widgets/toast_utils.dart';
-import 'screen_helper.dart';
 import 'simple_tools.dart';
 
 /// 获取应用主目录
@@ -58,46 +57,6 @@ Future<Directory> getAppHomeDirectory({String? subfolder}) async {
     final tempDir = await getTemporaryDirectory();
     return Directory(p.join(tempDir.path, 'SuChatFallback'));
   }
-}
-
-/// 获取不同平台的可访问目录
-Future<Directory> getAppSubDir(String folderName) async {
-  print("path_provider 获取到的各个目录地址(始)=======================");
-
-  if (ScreenHelper.isDesktop() || ScreenHelper.isMobile()) {
-    print('getTemporaryDirectory--> ${await getTemporaryDirectory()}');
-
-    print(
-      'getApplicationSupportDirectory--> ${await getApplicationSupportDirectory()}',
-    );
-    print(
-      'getApplicationDocumentsDirectory--> ${await getApplicationDocumentsDirectory()}',
-    );
-    print(
-      'getApplicationCacheDirectory--> ${await getApplicationCacheDirectory()}',
-    );
-    print('getDownloadsDirectory--> ${await getDownloadsDirectory()}');
-  }
-
-  if (Platform.isAndroid) {
-    print(
-      'getExternalStorageDirectory--> ${await getExternalStorageDirectory()}',
-    );
-    print(
-      'getExternalCacheDirectories--> ${await getExternalCacheDirectories()}',
-    );
-    print(
-      'getExternalStorageDirectories--> ${await getExternalStorageDirectories()}',
-    );
-  }
-
-  if (Platform.isIOS || Platform.isMacOS) {
-    print('getLibraryDirectory--> ${await getLibraryDirectory()}');
-  }
-
-  print("path_provider 获取到的各个目录地址(完)=======================");
-
-  return getAppHomeDirectory(subfolder: folderName);
 }
 
 /// 获取sqlite数据库文件保存的目录

@@ -191,15 +191,14 @@ class _BranchChatHistoryPanelState extends State<BranchChatHistoryPanel> {
               tooltip: "自定义侧边栏背景色",
               icon: Icon(Icons.color_lens, size: 18),
             ),
-            IconButton(
+            ElevatedButton(
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => AITools()),
                 );
               },
-              tooltip: "更多功能",
-              icon: Icon(Icons.grid_view_outlined, color: Colors.blue),
+              child: Icon(Icons.grid_view_outlined),
             ),
             SizedBox(width: 10),
           ],

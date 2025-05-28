@@ -120,11 +120,21 @@ dependencies:
   media_kit_libs_windows_video: ^1.0.11
   media_kit_libs_linux: ^1.2.1
 
-  record: ^6.0.0
+  # 可简单移动端录音(替代record包)和播放音频(还带波形)
   audio_waveforms: ^1.3.0
+  # 选择背景图后，自动获取主色去当做侧边栏背景色
   image: ^4.3.0
 
-  ffmpeg_kit_flutter_new: ^1.6.1
+  # 2025-05-27 使用这个新的包，apk从31M变为50M多
+  # 2025-05-28 因为讯飞语音识别只需要简单的m4a转pcm，所以直接用Android通道编写了一个简单的方法
+  # 暂时没问题，可以不使用这个包，体积反而下降很多
+  # ffmpeg_kit_flutter_new: ^1.6.1
+ 
+  # ffmpeg_kit_flutter:
+  #   git:
+  #     url: https://github.com/MSOB7YY/ffmpeg-kit
+  #     path: flutter/flutter
+  #     ref: 1d29b16
 
 dev_dependencies:
   flutter_test:

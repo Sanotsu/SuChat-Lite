@@ -60,6 +60,42 @@ mobile:
   - [SiliconFlow](https://docs.siliconflow.cn/cn/api-reference/chat-completions/chat-completions)
 - Custom platforms with OpenAI-compatible APIs can be added manually by specifying endpoints, model names, and API keys
 
+Here is a professional and accurate English translation of your README content:
+
+---
+
+Large Model API calls **only retain cloud platforms and conversational models that provide HTTP APIs compatible with the OpenAI API structure**.
+
+Details as follows (2025-05-27):
+
+- **Conversational Models**
+  - [Alibaba](https://help.aliyun.com/zh/model-studio/developer-reference/compatibility-of-openai-with-dashscope)
+  - [Baidu](https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Fm2vrveyu)
+  - [Tencent](https://console.cloud.tencent.com/hunyuan/start)
+  - [Zhipu AI](https://open.bigmodel.cn/dev/api/normal-model/glm-4)
+  - [DeepSeek](https://api-docs.deepseek.com/zh-cn/)
+  - [Volcano Engine (Ark)](https://www.volcengine.com/docs/82379/1330310)
+  - [01.AI](https://platform.lingyiwanwu.com/docs/api-reference)
+  - [Infini-AI](https://docs.infini-ai.com/gen-studio/api/maas.html#/operations/chatCompletions)
+  - [SiliconFlow](https://docs.siliconflow.cn/cn/api-reference/chat-completions/chat-completions)
+  - Other cloud platforms and HTTP APIs compatible with the OpenAI API structure can be added via custom mode
+    - For this, select "Custom" in the platform management section, then add the request URL, model code, and platform API key
+- **Image Generation**
+  - Alibaba Cloud: [Text-to-Image - Tongyi Wanxiang V2](https://help.aliyun.com/zh/model-studio/developer-reference/text-to-image-v2-api-reference), [Text-to-Image FLUX](https://help.aliyun.com/zh/model-studio/developer-reference/flux/)
+  - Zhipu AI: [CogView](https://open.bigmodel.cn/dev/api/image-model/cogview)
+  - SiliconFlow: [Create Image Generation Request](https://docs.siliconflow.cn/cn/api-reference/images/images-generations)
+- **Video Generation**
+  - Alibaba Cloud: [Video Generation - Tongyi Wanxiang](https://help.aliyun.com/zh/model-studio/developer-reference/video-generation-wanx/)
+  - Zhipu AI: [CogVideoX](https://open.bigmodel.cn/dev/api/videomodel/cogvideox)
+  - SiliconFlow: [Create Video Generation Request](https://docs.siliconflow.cn/cn/api-reference/videos/videos_submit)
+- **Text-to-Speech (TTS)** (Alibaba Cloud only, customizable model selection)
+  - [TTS - CosyVoice](https://help.aliyun.com/zh/model-studio/cosyvoice-websocket-api)
+  - [TTS - Sambert](https://help.aliyun.com/zh/model-studio/sambert-websocket-api)
+  - [Qwen-TTS](https://help.aliyun.com/zh/model-studio/qwen-tts)
+- **Speech Recognition** (Alibaba Cloud only, built-in without customization)
+  - [Paraformer - Recorded File Recognition](https://help.aliyun.com/zh/model-studio/paraformer-recorded-speech-recognition-restful-api)
+  - [SenseVoice - Recorded Speech Recognition](https://help.aliyun.com/zh/model-studio/developer-reference/sensevoice-recorded-speech-recognition-restful-api)
+
 **Tested Environments**:
 
 - Ubuntu 22.04 (VirtualBox VM on Windows 7/i5-4460)
@@ -73,7 +109,7 @@ If interested in [SiliconFlow](https://siliconflow.cn/zh-cn/models), consider us
 
 ## Quick Start
 
-Download platform-specific installers from Releases. Desktop versions are portable (no installation required).
+Download platform-specific installers from [Releases](https://github.com/Sanotsu/SuChat-Lite/releases) . Desktop versions are portable (no installation required).
 
 ### Notes
 

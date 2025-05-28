@@ -78,6 +78,10 @@ class AIResponseHandler {
         //     message.contentVoicePath!.isNotEmpty) {
         //   // 处理语音
         //   // 2025-03-18 语音消息暂时不使用
+        //   // 2025-05-28 注意，这里还要判断是否是语音大模型，
+        //   // 因为不管是选择音频文件还是语音输入时都是把音频文件地址存在这个变量中，
+        //   // 但只有多模态或者语音模型才会把音频当做参数传入请求去
+        //   // 可惜如果是阿里云等大模型，可能要云端音频地址，而不能直接本地地址或者base64
         //   // 添加文本内容
         //   if (message.content.isNotEmpty) {
         //     contentList.add({'type': 'text', 'text': message.content});
