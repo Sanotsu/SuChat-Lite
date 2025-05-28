@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../core/utils/screen_helper.dart';
 import '../branch_chat_state/branch_chat_state.dart';
@@ -65,7 +64,7 @@ class _FloatingButtonGroupState extends State<FloatingButtonGroup> {
                     onPressed: _handleNewChat,
                     child: Text(
                       '开启新对话',
-                      style: TextStyle(fontSize: 12.sp, color: Colors.white),
+                      style: TextStyle(fontSize: 12, color: Colors.white),
                     ),
                   ),
                 ),

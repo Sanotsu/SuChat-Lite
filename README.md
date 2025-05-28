@@ -7,9 +7,17 @@
 
 SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API 驱动的、简洁版 AI 聊天应用，支持简单自定义角色。
 
+**2025-05-28**：支持更多 AI 功能
+
+- 点击对话记录侧边栏/抽屉上 grid_view 图标按钮，即可进入更多功能页面，可使用简单的录音识别、语音合成、图片生成、视频生成功能。
+
+更多更新内容可查看 [CHANGELOG](CHANGELOG.md) 文件。
+
+---
+
 桌面主页面预览:
 
-![SuChat Lite 预览](./_doc/snapshots/screenshot-home-desktop.png)
+![SuChat Lite 预览](./_doc/snapshots/screenshot-home-desktop.jpg)
 
 移动端截图:
 
@@ -45,6 +53,7 @@ SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API �
   - 支持数据的导入导出(对话数据、角色数据、模型规格数据等)
     - 可以单个类别导入导出备份，也可以整体打包备份
   - 手机 App 端支持语音转文字输入(使用的讯飞语音听写 API)
+- **2025-05-28新增：简单的录音识别、语音合成、图片生成、视频生成功能**
 
 ---
 
@@ -62,8 +71,15 @@ SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API �
   - [零一万物](https://platform.lingyiwanwu.com/docs/api-reference)
   - [无问芯穹](https://docs.infini-ai.com/gen-studio/api/maas.html#/operations/chatCompletions)
   - [硅基流动](https://docs.siliconflow.cn/cn/api-reference/chat-completions/chat-completions)
-- 其他兼容兼容 openAI API 结构的云平台和 HTTP API 可使用自定义模式添加
+- 其他兼容 openAI API 结构的云平台和 HTTP API，可使用自定义模式添加
   - 此时需要模型管理中平台选择自定义后，添加其请求地址、模型代号、平台密钥
+
+更多功能(2025-05-28)
+
+点击对话记录侧边栏/抽屉上 grid_view 图标按钮，即可进入更多功能页面，即可使用简单的录音识别、语音合成、图片生成、视频生成功能。
+
+具体使用的云平台和大模型 API 如下：
+
 - **图片生成**
   - 阿里云: [图像生成-通义万相 文生图 V2 版](https://help.aliyun.com/zh/model-studio/developer-reference/text-to-image-v2-api-reference)、[文生图 FLUX](https://help.aliyun.com/zh/model-studio/developer-reference/flux/)
   - 智谱 AI: [CogView](https://open.bigmodel.cn/dev/api/image-model/cogview)
@@ -95,6 +111,10 @@ SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API �
 ## 使用指南
 
 从 [Releases](https://github.com/Sanotsu/SuChat-Lite/releases) 直接下载对应平台应用即可，桌面端是封装过的，应该无需安装。
+
+### Changelog
+
+更多更新内容可查看 [CHANGELOG](CHANGELOG.md) 文件。
 
 ### 补充说明
 
@@ -217,31 +237,6 @@ enum LLModelType {
 </details>
 
 ---
-
-## 项目结构
-
-```sh
-lib/
-├── apis/                       # API 接口模块
-├── common/                     # 通用功能模块
-│   ├── components/             # 通用 UI 组件
-│   ├── constants/              # 常量定义
-│   ├── llm_spec/               # 语言模型规格定义
-│   └── utils/                  # 工具类和辅助函数
-├── models/                     # 数据模型
-│   └── brief_ai_tools/         # AI 相关模型
-├── services/                   # 服务层
-├── views/                      # 视图层
-│   ├── brief_ai_assistant/     # AI 相关视图
-│   │   ├── _chat_components/   # 聊天组件
-│   │   ├── branch_chat/        # 主要的对话功能页面
-│   │   └── model_config/       # 模型配置
-│   ├── home.dart               # 主页
-│   └── user_and_settings/      # 用户和设置页面
-├── main.dart                   # 应用入口文件
-├── objectbox.g.dart            # ObjectBox 生成的数据库代码
-└── objectbox-model.json        # ObjectBox 数据模型
-```
 
 ## 开发环境
 

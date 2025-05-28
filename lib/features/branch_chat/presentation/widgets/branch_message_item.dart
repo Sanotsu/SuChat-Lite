@@ -343,7 +343,7 @@ class _BranchMessageItemState extends State<BranchMessageItem>
             child: RepaintBoundary(
               child: CusMarkdownRenderer.instance.render(
                 widget.message.reasoningContent ?? '',
-                textStyle: TextStyle(color: thinkingColor, fontSize: 12),
+                textStyle: TextStyle(color: thinkingColor, fontSize: 14),
               ),
             ),
           ),
