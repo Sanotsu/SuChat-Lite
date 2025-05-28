@@ -7,9 +7,18 @@
 
 SuChat is a concise AI chat application developed using Flutter, powered by calling cloud platform-based large model APIs online. It supports simple custom characters for role-playing.
 
+**2025-05-28 more simple features**
+
+- Image Generation
+- Video Generation
+- Text-to-Speech (TTS)
+- Speech Recognition
+
+---
+
 desktop:
 
-![SuChat desktop Preview](./_doc/snapshots/screenshot-home-desktop.png)
+![SuChat desktop Preview](./_doc/snapshots/screenshot-home-desktop.jpg)
 
 mobile:
 
@@ -43,27 +52,53 @@ mobile:
   - Advanced request parameter configuration per model (use with caution)
   - Data import/export (conversations, roles, model specs) – individual or bundled backups
   - Voice-to-text input on mobile (using iFlytek speech recognition API)
+- **2025-05-28 more simple features**
+  - Image Generation
+  - Video Generation
+  - Text-to-Speech (TTS)
+  - Speech Recognition
 
 ---
 
-**Supported API providers** (as of 2025-04-18) must maintain HTTP API compatibility with OpenAI's structure:
+Large Model API calls **only retain cloud platforms and conversational models that provide HTTP APIs compatible with the OpenAI API structure**.
 
-- Chat Models:
-  - [Alibaba Cloud](https://help.aliyun.com/zh/model-studio/developer-reference/compatibility-of-openai-with-dashscope)
-  - [Baidu Wenxin](https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Fm2vrveyu)
-  - [Tencent Hunyuan](https://console.cloud.tencent.com/hunyuan/start)
+Details as follows (2025-05-27):
+
+- **Conversational Models**
+  - [Alibaba](https://help.aliyun.com/zh/model-studio/developer-reference/compatibility-of-openai-with-dashscope)
+  - [Baidu](https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Fm2vrveyu)
+  - [Tencent](https://console.cloud.tencent.com/hunyuan/start)
   - [Zhipu AI](https://open.bigmodel.cn/dev/api/normal-model/glm-4)
   - [DeepSeek](https://api-docs.deepseek.com/zh-cn/)
-  - [ByteDance Volcano](https://www.volcengine.com/docs/82379/1330310)
+  - [Volcano Engine (Ark)](https://www.volcengine.com/docs/82379/1330310)
   - [01.AI](https://platform.lingyiwanwu.com/docs/api-reference)
   - [Infini-AI](https://docs.infini-ai.com/gen-studio/api/maas.html#/operations/chatCompletions)
   - [SiliconFlow](https://docs.siliconflow.cn/cn/api-reference/chat-completions/chat-completions)
-- Custom platforms with OpenAI-compatible APIs can be added manually by specifying endpoints, model names, and API keys
+  - Other cloud platforms and HTTP APIs compatible with the OpenAI API structure can be added via custom mode
+    - For this, select "Custom" in the platform management section, then add the request URL, model code, and platform API key
+
+2025-05-28 More models supported:
+
+- **Image Generation**
+  - Alibaba Cloud: [Text-to-Image - Tongyi Wanxiang V2](https://help.aliyun.com/zh/model-studio/developer-reference/text-to-image-v2-api-reference), [Text-to-Image FLUX](https://help.aliyun.com/zh/model-studio/developer-reference/flux/)
+  - Zhipu AI: [CogView](https://open.bigmodel.cn/dev/api/image-model/cogview)
+  - SiliconFlow: [Create Image Generation Request](https://docs.siliconflow.cn/cn/api-reference/images/images-generations)
+- **Video Generation**
+  - Alibaba Cloud: [Video Generation - Tongyi Wanxiang](https://help.aliyun.com/zh/model-studio/developer-reference/video-generation-wanx/)
+  - Zhipu AI: [CogVideoX](https://open.bigmodel.cn/dev/api/videomodel/cogvideox)
+  - SiliconFlow: [Create Video Generation Request](https://docs.siliconflow.cn/cn/api-reference/videos/videos_submit)
+- **Text-to-Speech (TTS)** (Alibaba Cloud only, customizable model selection)
+  - [TTS - CosyVoice](https://help.aliyun.com/zh/model-studio/cosyvoice-websocket-api)
+  - [TTS - Sambert](https://help.aliyun.com/zh/model-studio/sambert-websocket-api)
+  - [Qwen-TTS](https://help.aliyun.com/zh/model-studio/qwen-tts)
+- **Speech Recognition** (Alibaba Cloud only, built-in without customization)
+  - [Paraformer - Recorded File Recognition](https://help.aliyun.com/zh/model-studio/paraformer-recorded-speech-recognition-restful-api)
+  - [SenseVoice - Recorded Speech Recognition](https://help.aliyun.com/zh/model-studio/developer-reference/sensevoice-recorded-speech-recognition-restful-api)
 
 **Tested Environments**:
 
 - Ubuntu 22.04 (VirtualBox VM on Windows 7/i5-4460)
-- Android 12/14 (Nubia Z60 Ultra/Xiaomi 6)
+- Android 14/12 (Nubia Z60 Ultra/Xiaomi 6)
 - Windows 11 (MECHREVO Glory 16 Pro)
 
 ---
@@ -73,7 +108,11 @@ If interested in [SiliconFlow](https://siliconflow.cn/zh-cn/models), consider us
 
 ## Quick Start
 
-Download platform-specific installers from Releases. Desktop versions are portable (no installation required).
+Download platform-specific installers from [Releases](https://github.com/Sanotsu/SuChat-Lite/releases) . Desktop versions are portable (no installation required).
+
+### Changelog
+
+More updates can be found in the [CHANGELOG](CHANGELOG.md).
 
 ### Notes
 
@@ -172,37 +211,13 @@ enum LLModelType {
   cc, // Standard chat
   reasoner, // Advanced reasoning
   vision, // Image understanding
+  vision_reasoner, // vision reasoner
 }
 ```
 
 Pre-configured model specs are available in [/\_cus_model_jsons](./_cus_model_jsons).
 
 </details>
-
-## Project Structure
-
-```sh
-lib/
-├── apis/                       # API modules
-├── common/                     # Shared utilities
-│   ├── components/             # UI components
-│   ├── constants/              # Constants
-│   ├── llm_spec/               # LLM specifications
-│   └── utils/                  # Helper functions
-├── models/                     # Data models
-│   └── brief_ai_tools/         # AI-specific models
-├── services/                   # Service layer
-├── views/                      # UI layers
-│   ├── brief_ai_assistant/     # AI views
-│   │   ├── _chat_components/   # Chat widgets
-│   │   ├── branch_chat/        # Main chat UI
-│   │   └── model_config/       # Model settings
-│   ├── home.dart               # Home screen
-│   └── user_and_settings/      # User preferences
-├── main.dart                   # Entry point
-├── objectbox.g.dart            # Generated ORM code
-└── objectbox-model.json        # Database schema
-```
 
 ## Development Environment
 

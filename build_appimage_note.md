@@ -19,10 +19,10 @@ chmod +x build_appimage_script.sh
 ./build_appimage_script.sh
 ```
 
-成功执行之后，打包后的 AppImage 应用应该在`build/linux/x64/release`中，类似：
+成功执行之后，打包后的 AppImage 应用应该在项目根目录下`dist/appimage/`中，类似：
 
 ```sh
-build/linux/x64/release/SuChat-x86_64.AppImage
+dist/appimage/SuChat-x86_64.AppImage
 ```
 
 ## 方法二(旧版本做法)
