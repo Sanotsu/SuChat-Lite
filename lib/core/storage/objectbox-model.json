@@ -5,7 +5,7 @@
   "entities": [
     {
       "id": "1:2148325011734090399",
-      "lastPropertyId": "22:7414314221072378309",
+      "lastPropertyId": "24:4470041442112007887",
       "name": "BranchChatMessage",
       "properties": [
         {
@@ -123,6 +123,16 @@
         {
           "id": "22:7414314221072378309",
           "name": "characterJson",
+          "type": 9
+        },
+        {
+          "id": "23:8432758370704519849",
+          "name": "audiosUrl",
+          "type": 9
+        },
+        {
+          "id": "24:4470041442112007887",
+          "name": "omniAudioVoice",
           "type": 9
         }
       ],

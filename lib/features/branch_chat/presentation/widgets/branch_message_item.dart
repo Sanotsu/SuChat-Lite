@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/utils/datetime_formatter.dart';
+import '../../../../shared/widgets/audio_player_widget.dart';
 import '../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../shared/widgets/voice_chat_bubble.dart';
 import '../../../../shared/constants/constants.dart';
@@ -146,7 +148,7 @@ class _BranchMessageItemState extends State<BranchMessageItem>
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 4),
                     child: Text(
-                      _formatTimeLabel(widget.message.createTime),
+                      formatTimeLabel(widget.message.createTime),
                       style: TextStyle(fontSize: 12),
                     ),
                   ),
@@ -156,10 +158,14 @@ class _BranchMessageItemState extends State<BranchMessageItem>
           // 显示消息内容
           _buildMessageContent(context),
 
-          // 如果是移动端、语音输入，显示语音文件，可点击播放
+          // 如果是有语音转文字的原始语音内容，显示语音文件，可点击播放
           if (widget.message.contentVoicePath != null &&
-              widget.message.contentVoicePath!.trim() != "" &&
-              ScreenHelper.isMobile())
+              widget.message.contentVoicePath!.trim() != "")
+            _buildSttVoicePlayer(),
+
+          // 如果是有大模型响应的语音文件或者用户手动选择的语音文件，显示语音文件，可点击播放
+          if (widget.message.audiosUrl != null &&
+              widget.message.audiosUrl!.trim() != "")
             _buildVoicePlayer(),
 
           // 显示图片
@@ -352,9 +358,55 @@ class _BranchMessageItemState extends State<BranchMessageItem>
     );
   }
 
-  // 简单的音频播放
+  // 简单的语音输入转文字时原音频播放
+  Widget _buildSttVoicePlayer() {
+    var width = MediaQuery.of(context).size.width;
+
+    return Container(
+      decoration: BoxDecoration(
+        // border: Border.all(),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: EdgeInsets.only(left: 12),
+      margin: EdgeInsets.only(bottom: 4),
+      child: Row(
+        mainAxisAlignment: _mainAxisAlignment,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text("原语音", style: TextStyle(fontSize: 12)),
+          AudioPlayerWidget(
+            audioUrl: widget.message.contentVoicePath!,
+            dense: true,
+            witdh: width * (ScreenHelper.isDesktop() ? 0.3 : 0.5),
+            backgroundColor: Colors.transparent,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // AI响应的语音或手动选择的音频文件的音频播放
   Widget _buildVoicePlayer() {
-    return VoiceWaveBubble(path: widget.message.contentVoicePath!);
+    String audios = widget.message.audiosUrl!;
+    var urls = audios.split(',');
+    if (urls.isNotEmpty) {
+      if (ScreenHelper.isDesktop()) {
+        return AudioPlayerWidget(
+          audioUrl: urls.first,
+          dense: true,
+          backgroundColor: Colors.transparent,
+          witdh: MediaQuery.of(context).size.width * 0.3,
+        );
+      }
+
+      return VoiceWaveBubble(
+        path: urls.first,
+        isSender: _isUser,
+        width: 0.4.sw,
+      );
+    }
+
+    return SizedBox.shrink();
   }
 
   // 简单的图片预览
@@ -377,19 +429,5 @@ class _BranchMessageItemState extends State<BranchMessageItem>
         ),
       ),
     );
-  }
-}
-
-String _formatTimeLabel(DateTime time) {
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
-  final messageDate = DateTime(time.year, time.month, time.day);
-
-  if (messageDate == today) {
-    return DateFormat('HH:mm').format(time);
-  } else if (messageDate == today.subtract(const Duration(days: 1))) {
-    return '昨天 ${DateFormat('HH:mm').format(time)}';
-  } else {
-    return DateFormat('MM-dd HH:mm').format(time);
   }
 }

@@ -26,9 +26,16 @@ class BranchChatMessage {
   // 可选字段
   String? reasoningContent;
   int? thinkingDuration;
+  // 这个是用户使用语音输入时，语音转文字的原始音频
   String? contentVoicePath;
   String? imagesUrl;
   String? videosUrl;
+  // 2025-05-30 这个是用户输入时选择的音频文件，也是大模型响应生成的音频(后续图片和视频应该也是类似的)
+  // 因为role不同，用户选择的音频的消息和AI响应生成的消息是2条不同的
+  // objectbox添加可空字段，不会影响数据库结构，旧数据会自动补空
+  String? audiosUrl;
+  // 如果是多模态，可能合成语音的音色
+  String? omniAudioVoice;
 
   // 2025-03-24 联网搜索参考内容
   // 使用字符串存储序列化后的JSON
@@ -134,6 +141,8 @@ class BranchChatMessage {
     this.contentVoicePath,
     this.imagesUrl,
     this.videosUrl,
+    this.audiosUrl,
+    this.omniAudioVoice,
     List<Map<String, dynamic>>? references,
     this.promptTokens,
     this.completionTokens,

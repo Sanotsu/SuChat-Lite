@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/utils/simple_tools.dart';
 import '../../../../shared/constants/constants.dart';
+import '../../../../shared/widgets/simple_tool_widget.dart';
+import '../../../../shared/widgets/toast_utils.dart';
 import '../../domain/entities/branch_chat_message.dart';
 import '../../domain/entities/input_message_data.dart';
 import '../branch_chat_state/branch_chat_state.dart';
@@ -10,10 +12,10 @@ import 'scroll_handler.dart';
 import 'ai_response_handler.dart';
 
 /// 消息处理器，用于处理消息相关的逻辑
-/// 
+///
 /// 1 加载对话所有消息
 /// 2 用户发送消息
-/// 
+///
 class BranchMessageHandler {
   final BranchChatState state;
   final Function setState;
@@ -82,11 +84,12 @@ class BranchMessageHandler {
 
   /// 处理发送消息
   Future<void> handleSendMessage(InputMessageData messageData) async {
-    if (messageData.text.isEmpty &&
-        messageData.images == null &&
-        messageData.audio == null &&
-        messageData.file == null &&
-        messageData.fileContent == null) {
+    setState(() {
+      state.inputMessageData = messageData;
+    });
+
+    // 如果消息体不存在或者属性全为空，直接返回
+    if (state.inputMessageData == null || state.inputMessageData!.isAllEmpty) {
       return;
     }
 
@@ -96,7 +99,7 @@ class BranchMessageHandler {
     }
 
     // 准备用户消息内容
-    String messageContent = messageData.text.trim();
+    String messageContent = state.inputMessageData!.text.trim();
 
     // 处理JSON格式响应
     if (state.advancedEnabled &&
@@ -106,9 +109,9 @@ class BranchMessageHandler {
 
     // 文档处理暂不支持的提示
     // 2025-03-22 暂时不支持文档处理，也没有将解析后的文档内容作为参数传递
-    if (messageData.file != null ||
-        (messageData.fileContent != null &&
-            messageData.fileContent?.trim().isNotEmpty == true)) {
+    if (state.inputMessageData!.file != null ||
+        (state.inputMessageData!.fileContent != null &&
+            state.inputMessageData!.fileContent?.trim().isNotEmpty == true)) {
       _showErrorDialog("暂不支持上传文档，后续有需求再更新");
       return;
     }
@@ -117,13 +120,13 @@ class BranchMessageHandler {
     // // 2025-04-17 目前这个处理只是把手动解析或者智谱开放平台解析后的内容作为消息的参数传递调用API
     // // 感觉还是不够完善，所以暂时还是不加入消息
     // // 后续有专门支持文件的多模态后，直接传文件再处理
-    // if (messageData.fileContent != null &&
-    //     messageData.fileContent!.isNotEmpty) {
+    // if (state.inputMessageData!.fileContent != null &&
+    //      state.inputMessageData!.fileContent!.isNotEmpty) {
     //   final fileName =
-    //       messageData.cloudFileName != null &&
-    //               messageData.cloudFileName!.isNotEmpty
-    //           ? messageData.cloudFileName!
-    //           : (messageData.file?.path.split('/').last ?? '未命名文档');
+    //       state.inputMessageData!.cloudFileName != null &&
+    //               state.inputMessageData!.cloudFileName!.isNotEmpty
+    //           ?  state.inputMessageData!.cloudFileName!
+    //           : (state.inputMessageData!.file?.path.split('/').last ?? '未命名文档');
 
     //   // 生成文档内容的特殊标记
     //   final docStartMark = "${DocumentUtils.DOC_START_PREFIX}$fileName]]";
@@ -145,17 +148,17 @@ class BranchMessageHandler {
     //     // 包装文档内容
     //     var wrappedContent = '';
 
-    //     if (messageData.cloudFileName != null) {
+    //     if (state.inputMessageData!.cloudFileName != null) {
     //       // 云端文件
     //       wrappedContent = DocumentUtils.wrapDocumentContent(
-    //         messageData.fileContent!,
-    //         messageData.cloudFileName!,
+    //         state.inputMessageData!.fileContent!,
+    //         state.inputMessageData!.cloudFileName!,
     //       );
-    //     } else if (messageData.file != null) {
+    //     } else if (state.inputMessageData!.file != null) {
     //       // 本地文件
     //       wrappedContent = DocumentUtils.wrapDocumentContent(
-    //         messageData.fileContent!,
-    //         messageData.file!.path.split('/').last,
+    //         state.inputMessageData!.fileContent!,
+    //         state.inputMessageData!.file!.path.split('/').last,
     //       );
     //     }
 
@@ -193,7 +196,7 @@ class BranchMessageHandler {
 
       // 如果是编辑用户输入过的消息，会和直接发送消息有一些区别
       if (state.currentEditingMessage != null) {
-        await _processingUserMessage(state.currentEditingMessage!, messageData);
+        await _processingUserMessage(state.currentEditingMessage!);
       } else {
         await state.store.addMessage(
           session: state.store.sessionBox.get(state.currentSessionId!)!,
@@ -201,16 +204,31 @@ class BranchMessageHandler {
           role: CusRole.user.name,
           parent:
               state.displayMessages.isEmpty ? null : state.displayMessages.last,
-          // 这个和语音转文字的那个冲突复用了，后续应该单独栏位放置，比如audiosUrl
-          contentVoicePath: messageData.audio?.path,
+          // 这个是语音转文字直接发送的那个音频
+          contentVoicePath: state.inputMessageData!.sttAudio?.path,
           imagesUrl:
-              messageData.images?.isNotEmpty == true
-                  ? messageData.images?.map((i) => i.path).toList().join(',')
+              state.inputMessageData!.images?.isNotEmpty == true
+                  ? state.inputMessageData!.images
+                      ?.map((i) => i.path)
+                      .toList()
+                      .join(',')
                   : null,
           videosUrl:
-              messageData.videos?.isNotEmpty == true
-                  ? messageData.videos?.map((i) => i.path).toList().join(',')
+              state.inputMessageData!.videos?.isNotEmpty == true
+                  ? state.inputMessageData!.videos
+                      ?.map((i) => i.path)
+                      .toList()
+                      .join(',')
                   : null,
+          // 2025-05-30 这个是用户选择的音频。时间上暂时应该固定是一个文件的数组
+          audiosUrl:
+              state.inputMessageData!.audios?.isNotEmpty == true
+                  ? state.inputMessageData!.audios
+                      ?.map((i) => i.path)
+                      .toList()
+                      .join(',')
+                  : null,
+          omniAudioVoice: state.inputMessageData!.omniAudioVoice,
         );
       }
 
@@ -223,15 +241,13 @@ class BranchMessageHandler {
       InitHandler(state, setState).loadSessions();
     } catch (e) {
       _showErrorDialog("发送消息失败: $e");
+      rethrow;
     }
   }
 
   /// 处理重新编辑的用户消息(在发送消息调用API前，还需要创建分支等其他操作)
-  Future<void> _processingUserMessage(
-    BranchChatMessage message,
-    InputMessageData messageData,
-  ) async {
-    final content = messageData.text.trim();
+  Future<void> _processingUserMessage(BranchChatMessage message) async {
+    final content = state.inputMessageData!.text.trim();
     if (content.isEmpty) return;
 
     try {
@@ -282,6 +298,8 @@ class BranchMessageHandler {
         contentVoicePath: message.contentVoicePath,
         imagesUrl: message.imagesUrl,
         videosUrl: message.videosUrl,
+        audiosUrl: message.audiosUrl,
+        omniAudioVoice: message.omniAudioVoice,
       );
 
       // 更新当前分支路径并将正在编辑的消息设置为null
@@ -353,20 +371,15 @@ class BranchMessageHandler {
 
   /// 显示错误对话框
   void _showErrorDialog(String message) {
-    showDialog(
-      context: navigatorKey.currentContext!,
-      builder:
-          (context) => AlertDialog(
-            title: Text("异常提示"),
-            content: Text(message),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text("确定"),
-              ),
-            ],
-          ),
-    );
+    if (navigatorKey.currentContext != null) {
+      commonExceptionDialog(
+        navigatorKey.currentContext!,
+        "异常提示",
+        "重新生成失败: $message",
+      );
+    } else {
+      ToastUtils.showError(message);
+    }
   }
 }
 

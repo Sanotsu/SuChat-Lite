@@ -87,6 +87,21 @@ String formatTimeAgoEn(String timeString) {
   }
 }
 
+// 字符串只保留月日时分
+String formatTimeLabel(DateTime time) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final messageDate = DateTime(time.year, time.month, time.day);
+
+  if (messageDate == today) {
+    return DateFormat('HH:mm').format(time);
+  } else if (messageDate == today.subtract(const Duration(days: 1))) {
+    return '昨天 ${DateFormat('HH:mm').format(time)}';
+  } else {
+    return DateFormat('MM-dd HH:mm').format(time);
+  }
+}
+
 // 把各种时间字符串格式化指定格式的字符串
 String formatDateTimeString(String timeString, {String? formatType}) {
   if (timeString.isEmpty) return "未知";

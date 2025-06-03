@@ -48,6 +48,7 @@ class _AddModelPageState extends State<AddModelPage> {
               LLModelType.vision,
               LLModelType.vision_reasoner,
               LLModelType.tts,
+              LLModelType.omni,
             ];
   }
 

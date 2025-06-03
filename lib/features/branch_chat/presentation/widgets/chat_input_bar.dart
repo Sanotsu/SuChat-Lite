@@ -58,7 +58,7 @@ class ChatInputBar extends StatefulWidget {
 class _ChatInputBarState extends State<ChatInputBar> {
   // 选中的图片
   List<File>? _selectedImages;
-  // 选中的音频
+  // 选中的音频(2025-05-30 用户选择音频暂时只支持单个，但传递时还是去构建一个数组)
   File? _selectedAudio;
 
   // 文件是否在解析中
@@ -75,6 +75,18 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
   // 添加一个变量记录上次通知给父组件输入框的高度
   double _lastNotifiedHeight = 0;
+
+  // 如果是阿里云多模态，可以指定声音音色(如果不是无，则生成音频;如果是无，则不生成音频)
+  String _selectedOmniAudioVoice = '无音频';
+
+  // 千问omni音色选项
+  final List<String> _omniAudioVoiceList = [
+    '无音频',
+    'Cherry',
+    'Serena',
+    'Ethan',
+    'Chelsie',
+  ];
 
   final GlobalKey _containerKey = GlobalKey();
 
@@ -283,10 +295,11 @@ class _ChatInputBarState extends State<ChatInputBar> {
     final messageData = InputMessageData(
       text: text,
       images: _selectedImages,
-      audio: _selectedAudio,
+      audios: _selectedAudio != null ? [_selectedAudio!] : null,
       file: _selectedFile,
       cloudFileName: _cloudFileName,
       fileContent: _fileContent,
+      omniAudioVoice: _selectedOmniAudioVoice,
     );
 
     // 发送消息
@@ -309,13 +322,14 @@ class _ChatInputBarState extends State<ChatInputBar> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
+        mainAxisSize: MainAxisSize.min,
+        children: [
           // 预览区域 (如果有选中的图片或文件)
           if (_selectedImages != null ||
               isLoadingDocument ||
               _selectedFile != null ||
-              _fileContent.isNotEmpty)
+              _fileContent.isNotEmpty ||
+              _selectedAudio != null)
             _buildPreviewArea(),
 
           // 输入区域
@@ -333,51 +347,51 @@ class _ChatInputBarState extends State<ChatInputBar> {
     _notifyHeightChange();
 
     if (_selectedImages != null) {
-    return Container(
-      height: 100,
-      padding: EdgeInsets.symmetric(vertical: 8),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: _selectedImages!.length,
-        itemBuilder: (context, index) {
-          return Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4),
-            child: Stack(
-              children: [
+      return Container(
+        height: 100,
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: _selectedImages!.length,
+          itemBuilder: (context, index) {
+            return Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child: Stack(
+                children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.file(
-                  File(_selectedImages![index].path),
-                  height: 80,
-                  width: 80,
-                  fit: BoxFit.cover,
+                      File(_selectedImages![index].path),
+                      height: 80,
+                      width: 80,
+                      fit: BoxFit.cover,
                     ),
-                ),
-                Positioned(
+                  ),
+                  Positioned(
                     right: -12,
                     top: -12,
-                  child: IconButton(
+                    child: IconButton(
                       icon: Icon(
                         Icons.cancel,
                         size: 20,
                         color: Colors.grey.shade700,
                       ),
-                    onPressed: () {
-                      setState(() {
-                        _selectedImages!.removeAt(index);
-                        if (_selectedImages!.isEmpty) {
-                          _selectedImages = null;
-                        }
-                      });
-                    },
+                      onPressed: () {
+                        setState(() {
+                          _selectedImages!.removeAt(index);
+                          if (_selectedImages!.isEmpty) {
+                            _selectedImages = null;
+                          }
+                        });
+                      },
+                    ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
+                ],
+              ),
+            );
+          },
+        ),
+      );
     } else if (isLoadingDocument ||
         _selectedFile != null ||
         _fileContent.isNotEmpty) {
@@ -385,7 +399,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
         height: 100,
         padding: EdgeInsets.all(8),
         child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(Icons.insert_drive_file, color: Colors.blue, size: 40),
             SizedBox(width: 8),
@@ -393,12 +407,12 @@ class _ChatInputBarState extends State<ChatInputBar> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          _selectedFile?.path.split('/').last ?? _cloudFileName,
+                children: [
+                  Text(
+                    _selectedFile?.path.split('/').last ?? _cloudFileName,
                     style: TextStyle(fontWeight: FontWeight.bold),
                     maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   SizedBox(height: 4),
                   if (isLoadingDocument)
@@ -410,10 +424,10 @@ class _ChatInputBarState extends State<ChatInputBar> {
                         "文档解析完成，共${_fileContent.length}字符 (点击预览)",
                         style: TextStyle(color: Colors.blue),
                       ),
+                    ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
             IconButton(
               icon: Icon(Icons.close),
               onPressed: () {
@@ -421,6 +435,35 @@ class _ChatInputBarState extends State<ChatInputBar> {
                   _fileContent = "";
                   _cloudFileName = "";
                   _selectedFile = null;
+                  _notifyHeightChange();
+                });
+              },
+            ),
+          ],
+        ),
+      );
+    } else if (_selectedAudio != null) {
+      return Container(
+        height: 60,
+        padding: EdgeInsets.all(8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.audiotrack, color: Colors.blue, size: 40),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                _selectedAudio!.path.split('/').last,
+                style: TextStyle(fontWeight: FontWeight.bold),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.close),
+              onPressed: () {
+                setState(() {
+                  _selectedAudio = null;
                   _notifyHeightChange();
                 });
               },
@@ -466,9 +509,11 @@ class _ChatInputBarState extends State<ChatInputBar> {
                     final messageData = InputMessageData(
                       text: content,
                       images: _selectedImages,
-                      audio: _selectedAudio,
+                      audios: _selectedAudio != null ? [_selectedAudio!] : null,
                       file: _selectedFile,
+                      cloudFileName: _cloudFileName,
                       fileContent: _fileContent,
+                      omniAudioVoice: _selectedOmniAudioVoice,
                     );
 
                     widget.onSend(messageData);
@@ -486,9 +531,12 @@ class _ChatInputBarState extends State<ChatInputBar> {
                     final messageData = InputMessageData(
                       text: transcription,
                       images: _selectedImages,
-                      audio: File("$tempPath.m4a"),
+                      sttAudio: File("$tempPath.m4a"),
+                      audios: _selectedAudio != null ? [_selectedAudio!] : null,
                       file: _selectedFile,
+                      cloudFileName: _cloudFileName,
                       fileContent: _fileContent,
+                      omniAudioVoice: _selectedOmniAudioVoice,
                     );
 
                     widget.onSend(messageData);
@@ -588,7 +636,8 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
           // 图片按钮
           if (widget.model?.modelType == LLModelType.vision ||
-              widget.model?.modelType == LLModelType.vision_reasoner)
+              widget.model?.modelType == LLModelType.vision_reasoner ||
+              widget.model?.modelType == LLModelType.omni)
             IconButton(
               icon: Icon(Icons.image, size: 20),
               onPressed:
@@ -630,12 +679,17 @@ class _ChatInputBarState extends State<ChatInputBar> {
             ),
 
           // 音频按钮
-          if (widget.model?.modelType == LLModelType.audio)
+          if (widget.model?.modelType == LLModelType.audio ||
+              widget.model?.modelType == LLModelType.omni)
             IconButton(
               icon: Icon(Icons.audio_file, size: 20),
               onPressed: widget.isStreaming ? null : _handleAudioUpload,
               tooltip: '上传音频',
             ),
+
+          if (widget.model?.modelType == LLModelType.omni &&
+              (widget.model != null && widget.model!.model.contains("omni")))
+            _buildOmniAudioVoiceDropdown(),
 
           Spacer(),
 
@@ -663,7 +717,44 @@ class _ChatInputBarState extends State<ChatInputBar> {
               padding: EdgeInsets.zero, // 移除默认的内边距
             ),
           ),
-      ],
+        ],
+      ),
+    );
+  }
+
+  // 构建图像尺寸选择下拉框
+  Widget _buildOmniAudioVoiceDropdown() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4.0),
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).dividerColor),
+        borderRadius: BorderRadius.circular(4.0),
+      ),
+      child: DropdownButton<String>(
+        value: _selectedOmniAudioVoice,
+        icon: Icon(
+          Icons.audiotrack,
+          size: 16,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        isDense: true,
+        underline: const SizedBox(),
+        style: TextStyle(
+          fontSize: 12,
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
+        onChanged: (String? newValue) {
+          if (newValue != null) {
+            setState(() {
+              _selectedOmniAudioVoice = newValue;
+            });
+          }
+        },
+        items:
+            _omniAudioVoiceList.map<DropdownMenuItem<String>>((String value) {
+              return DropdownMenuItem<String>(value: value, child: Text(value));
+            }).toList(),
       ),
     );
   }

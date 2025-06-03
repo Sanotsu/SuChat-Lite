@@ -74,6 +74,8 @@ class BranchChatMessageExport {
   final String? contentVoicePath;
   final String? imagesUrl;
   final String? videosUrl;
+  final String? audiosUrl;
+  final String? omniAudioVoice;
   final List<Map<String, dynamic>>? references;
   final int? promptTokens;
   final int? completionTokens;
@@ -95,6 +97,8 @@ class BranchChatMessageExport {
     this.contentVoicePath,
     this.imagesUrl,
     this.videosUrl,
+    this.audiosUrl,
+    this.omniAudioVoice,
     this.references,
     this.promptTokens,
     this.completionTokens,
@@ -118,6 +122,8 @@ class BranchChatMessageExport {
       contentVoicePath: message.contentVoicePath,
       imagesUrl: message.imagesUrl,
       videosUrl: message.videosUrl,
+      audiosUrl: message.audiosUrl,
+      omniAudioVoice: message.omniAudioVoice,
       references: message.references,
       promptTokens: message.promptTokens,
       completionTokens: message.completionTokens,

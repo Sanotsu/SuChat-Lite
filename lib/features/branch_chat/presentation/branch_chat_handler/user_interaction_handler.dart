@@ -318,11 +318,13 @@ class UserInteractionHandler {
     BranchMessageHandler(state, setState).handleSendMessage(
       InputMessageData(
         text: message.content,
-        audio:
+        sttAudio:
             message.contentVoicePath != null
                 ? File(message.contentVoicePath!)
                 : null,
         images: message.imagesUrl?.split(',').map((img) => File(img)).toList(),
+        audios: message.audiosUrl?.split(',').map((a) => File(a)).toList(),
+        omniAudioVoice: message.omniAudioVoice,
       ),
     );
   }

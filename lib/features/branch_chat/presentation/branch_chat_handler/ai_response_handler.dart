@@ -3,8 +3,10 @@ import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 
+import '../../../../core/utils/wav_audio_handler.dart';
 import '../../../../shared/constants/constants.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
+import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/repositories/chat_service.dart';
 import '../../domain/entities/branch_chat_message.dart';
 import '../branch_chat_state/branch_chat_state.dart';
@@ -42,75 +44,97 @@ class AIResponseHandler {
       // 跳过空消息
       if (message.content.isEmpty &&
           message.imagesUrl == null &&
-          message.contentVoicePath == null) {
+          message.audiosUrl == null) {
         continue;
       }
 
-      if (message.role == CusRole.user.name) {
-        // 多模态消息
-        final contentList = <Map<String, dynamic>>[];
+      // 先取出消息内容
+      var tmpAudiosUrl = message.audiosUrl;
+      var tmpImagesUrl = message.imagesUrl;
+      var tmpVideosUrl = message.videosUrl;
 
-        // 处理用户消息，可能包含多模态内容
-        if ((message.imagesUrl != null && message.imagesUrl!.isNotEmpty)) {
-          // 添加文本内容
+      // 处理用户消息，可能包含多模态内容
+      if (message.role == CusRole.user.name) {
+        // 如果只有纯文本，直接构建即可
+        if (tmpAudiosUrl == null &&
+            tmpImagesUrl == null &&
+            tmpVideosUrl == null) {
+          // 纯文本消息
+          history.add({'role': CusRole.user.name, 'content': message.content});
+        } else {
+          // 多模态消息
+          final contentList = <Map<String, dynamic>>[];
+
+          // 如果用户消息包含图片
+          if ((tmpImagesUrl != null && tmpImagesUrl.isNotEmpty)) {
+            // 处理图片
+            final imageUrls = tmpImagesUrl.split(',');
+            for (final url in imageUrls) {
+              try {
+                final bytes = File(url.trim()).readAsBytesSync();
+                final base64Image = base64Encode(bytes);
+                contentList.add({
+                  'type': 'image_url',
+                  'image_url': {'url': 'data:image/jpeg;base64,$base64Image'},
+                });
+              } catch (e) {
+                _showErrorDialog('处理图片失败: $e');
+              }
+            }
+          }
+
+          // 如果用户消息包含音频
+          if (tmpAudiosUrl != null && tmpAudiosUrl.isNotEmpty) {
+            // 处理音频
+            // 2025-05-30 omni只支持传单个音频，所以这里只取第一个
+            final audioUrls = tmpAudiosUrl.split(',');
+            if (audioUrls.isNotEmpty) {
+              String audioUrl = audioUrls.first;
+              try {
+                final bytes = File(audioUrl).readAsBytesSync();
+                final base64Audio = base64Encode(bytes);
+                contentList.add({
+                  'type': 'input_audio',
+                  'input_audio': {
+                    'data': 'data:;base64,$base64Audio',
+                    "format": audioUrl.split('.').last,
+                  },
+                });
+              } catch (e) {
+                _showErrorDialog('处理音频失败: $e');
+              }
+            }
+          }
+
+          // // TODO 如果用户消息包含视频(没有云端存储，暂时不弄)
+          // if (tmpVideosUrl != null && tmpVideosUrl.isNotEmpty) {
+          //   try {
+          //     final bytes = File(tmpVideosUrl).readAsBytesSync();
+          //     final base64Audio = base64Encode(bytes);
+          //     contentList.add({
+          //       'type': 'video_url',
+          //       'video_url': {'url': 'data:;base64,$base64Audio'},
+          //     });
+          //   } catch (e) {
+          //     _showErrorDialog('处理视频频失败: $e');
+          //   }
+          // }
+
+          // 都要先添加文本内容
           if (message.content.isNotEmpty) {
             contentList.add({'type': 'text', 'text': message.content});
           }
 
-          // 处理图片
-          final imageUrls = message.imagesUrl!.split(',');
-          for (final url in imageUrls) {
-            try {
-              final bytes = File(url.trim()).readAsBytesSync();
-              final base64Image = base64Encode(bytes);
-              contentList.add({
-                'type': 'image_url',
-                'image_url': {'url': 'data:image/jpeg;base64,$base64Image'},
-              });
-            } catch (e) {
-              _showErrorDialog('处理图片失败: $e');
-            }
-          }
-
+          // 再添加多模态数据
           history.add({'role': CusRole.user.name, 'content': contentList});
-        }
-        // else if (message.contentVoicePath != null &&
-        //     message.contentVoicePath!.isNotEmpty) {
-        //   // 处理语音
-        //   // 2025-03-18 语音消息暂时不使用
-        //   // 2025-05-28 注意，这里还要判断是否是语音大模型，
-        //   // 因为不管是选择音频文件还是语音输入时都是把音频文件地址存在这个变量中，
-        //   // 但只有多模态或者语音模型才会把音频当做参数传入请求去
-        //   // 可惜如果是阿里云等大模型，可能要云端音频地址，而不能直接本地地址或者base64
-        //   // 添加文本内容
-        //   if (message.content.isNotEmpty) {
-        //     contentList.add({'type': 'text', 'text': message.content});
-        //   }
-        //   // 处理音频
-        //   try {
-        //     final bytes = File(message.contentVoicePath!).readAsBytesSync();
-        //     final base64Audio = base64Encode(bytes);
-        //     contentList.add({
-        //       'type': 'audio_url',
-        //       'audio_url': {'url': 'data:audio/mp3;base64,$base64Audio'},
-        //     });
-        //   } catch (e) {
-        //     _showErrorDialog('处理音频失败: $e');
-        //   }
-        // }
-        else {
-          // 纯文本消息
-          history.add({'role': CusRole.user.name, 'content': message.content});
         }
       } else if (message.role == CusRole.assistant.name &&
           message.characterId == state.currentCharacter?.characterId) {
-        // AI助手的回复通常是纯文本
+        // 构建AI助手的回复消息只有纯文本，即便AI响应有合成图片、音频，都不可以加入助手消息列表
         history.add({
           'role': CusRole.assistant.name,
           'content': message.content,
         });
-
-        // 2025-05-26 如果AI响应是多模态的，有生产音频视频之类的，可以根据需求考量是否用于构建消息历史
       }
     }
 
@@ -283,6 +307,9 @@ class AIResponseHandler {
 
     String finalContent = '';
     String finalReasoningContent = '';
+    // 2025-05-30 多模态千问omni可以合成语音，响应中有base64语音片段
+    // 在流响应完成或者手动终止时，才把已经收集到的片段转为语音，再提供播放
+    String finalAudioBase64 = "";
     var startTime = DateTime.now();
     DateTime? endTime;
     var thinkingDuration = 0;
@@ -293,10 +320,21 @@ class AIResponseHandler {
     try {
       final history = prepareChatHistory(contextMessages);
 
-      final (stream, cancelFunc) = await ChatService.sendCharacterMessage(
+      // 2025-05-30 如果开启了高级选项，则把千问omni的音色传入
+      if (state.advancedEnabled && state.advancedOptions != null) {
+        state.advancedOptions!['omni_audio_voice'] =
+            state.inputMessageData!.omniAudioVoice;
+      } else {
+        // 如果没有开启高级选项，就把千问omni音色当做高级选项传入
+        state.advancedOptions = {
+          "omni_audio_voice": state.inputMessageData!.omniAudioVoice,
+        };
+      }
+
+      final (stream, cancelFunc) = await ChatService.sendMessage(
         state.selectedModel!,
         history,
-        advancedOptions: state.advancedEnabled ? state.advancedOptions : null,
+        advancedOptions: state.advancedOptions,
         stream: true,
       );
 
@@ -325,6 +363,11 @@ class AIResponseHandler {
                   ? (chunk.choices.first.delta?["reasoning_content"] ??
                       chunk.choices.first.delta?["reasoning"] ??
                       '')
+                  : '';
+
+          finalAudioBase64 +=
+              chunk.choices.isNotEmpty
+                  ? (chunk.choices.first.delta?["audio"]?['data'] ?? '')
                   : '';
 
           // 计算思考时间(从发起调用开始，到当流式内容不为空时计算结束)
@@ -367,6 +410,15 @@ class AIResponseHandler {
         });
       }
 
+      String voicePath = '';
+      // 如果是多模态有响应音频base64数据，保存到固定的位置
+      if (finalAudioBase64.isNotEmpty) {
+        voicePath = await WavAudioHandler.saveBase64Wav(
+          finalAudioBase64,
+          model: state.selectedModel?.model,
+        );
+      }
+
       // 如果有内容则创建消息(包括正常完成、手动终止和错误响应[错误响应也是一个正常流消息])
       if (finalContent.isNotEmpty || finalReasoningContent.isNotEmpty) {
         aiMessage = await state.store.addMessage(
@@ -379,6 +431,9 @@ class AIResponseHandler {
           references: references,
           modelLabel: parentMessage?.modelLabel ?? state.selectedModel!.name,
           branchIndex: newBranchIndex,
+          // 构建用户消息时，这个是用户选择的音频地址；构建AI响应消息时，这个大模型生成的语音保存后的地址
+          audiosUrl: voicePath,
+          omniAudioVoice: state.inputMessageData!.omniAudioVoice,
         );
 
         // 更新当前分支路径(其他重置在 finally 块中)
@@ -424,6 +479,14 @@ class AIResponseHandler {
 
   /// 显示错误对话框
   void _showErrorDialog(String message) {
-    commonExceptionDialog(navigatorKey.currentContext!, "异常提示", "重新生成失败: $e");
+    if (navigatorKey.currentContext != null) {
+      commonExceptionDialog(
+        navigatorKey.currentContext!,
+        "异常提示",
+        "重新生成失败: $message",
+      );
+    } else {
+      ToastUtils.showError(message);
+    }
   }
 }

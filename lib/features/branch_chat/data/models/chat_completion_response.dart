@@ -57,6 +57,12 @@ class ChatCompletionResponse {
     }
     // 流式的
     if (choices != null && choices.isNotEmpty && choices[0].delta != null) {
+      // 2025-05-30 千问omni多模态时，请求中设置了audio属性，位置和常规不一样
+      String? transcript = choices[0].delta?["audio"]?["transcript"];
+      if (transcript != null && transcript.isNotEmpty) {
+        return transcript;
+      }
+
       return choices[0].delta?["content"] ?? "";
     }
 

@@ -15,7 +15,6 @@ class VoiceWaveBubble extends StatefulWidget {
   // 暂时只支持播放指定路径的语音文件
   final String? path;
   // 声波文件的长度(就是组件的宽度)
-  // 直接使用语音长度来计算(1.sw/60/2*语音时长)，因为最长60s，最长只给一半宽度
   final double? width;
 
   const VoiceWaveBubble({
@@ -88,15 +87,21 @@ class _VoiceWaveBubbleState extends State<VoiceWaveBubble> {
       alignment: widget.isSender ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 5),
+        // height: 36,
+        // width: 0.6.sw,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
           color: widget.isSender ? Colors.blue : Colors.lightGreen,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
             if (!widget.isSender && !controller.playerState.isStopped)
               IconButton(
+                // 减少最小宽度和高度，使点击区域更紧凑
+                constraints: BoxConstraints(minWidth: 24, minHeight: 24),
+                padding: EdgeInsets.zero,
                 onPressed:
                     controller.playerState.isPlaying
                         ? () async {
@@ -124,16 +129,21 @@ class _VoiceWaveBubbleState extends State<VoiceWaveBubble> {
             ),
             SizedBox(width: 5),
             AudioFileWaveforms(
-              // size: Size(widget.width ?? 200, 20),
-              size: Size(1.sw / 60 / 2 * voiceDuration, 20),
+              // 直接使用语音长度来计算(1.sw/60/2*语音时长)，因为最长60s，最长只给一半宽度
+              // size: Size(1.sw / 60 / 2 * voiceDuration, 20),
+              size: Size(widget.width ?? 1.sw / 2, 32),
               playerController: controller,
-              waveformType: WaveformType.fitWidth,
+              waveformType: WaveformType.long,
               playerWaveStyle: playerWaveStyle,
+              padding: EdgeInsets.only(right: 10),
             ),
 
             // 如果是用户发送，按钮在后面
             if (widget.isSender && !controller.playerState.isStopped)
               IconButton(
+                // 减少最小宽度和高度，使点击区域更紧凑
+                constraints: BoxConstraints(minWidth: 24, minHeight: 24),
+                padding: EdgeInsets.zero,
                 onPressed:
                     controller.playerState.isPlaying
                         ? () async {

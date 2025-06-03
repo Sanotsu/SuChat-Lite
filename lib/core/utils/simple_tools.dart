@@ -88,7 +88,7 @@ Future<bool> requestStoragePermission() async {
       return storageStatus.isGranted;
     } else {
       var storageStatus = await Permission.manageExternalStorage.request();
-      return (storageStatus.isGranted);
+      return storageStatus.isGranted;
     }
   } else if (Platform.isIOS) {
     Map<Permission, PermissionStatus> statuses =

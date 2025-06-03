@@ -1,14 +1,11 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:ui';
-import 'dart:io';
 
 import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../shared/constants/constant_llm_enum.dart';
 import '../../../../shared/constants/default_models.dart';
 import '../../../../core/storage/cus_get_storage.dart';
 import '../../domain/advanced_options_presets.dart';
-import '../../domain/entities/branch_chat_message.dart';
 import '../datasources/openai_compatible_apis.dart';
 import '../models/chat_completion_response.dart';
 import '../models/chat_completion_request.dart';
@@ -138,59 +135,8 @@ class ChatService {
     throw Exception('不支持的平台');
   }
 
-  /// 分支对话发送消息调用大模型API(和常规的类似)
-  static Future<(Stream<ChatCompletionResponse>, VoidCallback)>
-  sendBranchMessage(
-    CusLLMSpec model,
-    List<BranchChatMessage> messages, {
-    bool stream = true,
-    Map<String, dynamic>? advancedOptions,
-  }) async {
-    final headers = await _getHeaders(model);
-    final baseUrl = "${_getBaseUrl(model.platform)}/chat/completions";
-
-    // 处理高级参数
-    Map<String, dynamic>? additionalParams;
-    if (advancedOptions != null) {
-      additionalParams = AdvancedOptionsManager.buildAdvancedParams(
-        advancedOptions,
-        model.platform,
-      );
-    }
-
-    // 2025-03-25 文档中智谱AI模型支持 web_search，但实测没有用
-    // 高级的Web-Search-Pro工具0.03元/次，且单独API调用，还要手动处理成输入token处理？
-    if (model.platform == ApiPlatform.zhipu) {
-      additionalParams = {
-        'tools': [
-          {
-            "type": "web_search",
-            "web_search": {
-              "enable": true,
-              "search_result": true,
-              // "search_query": messages.last.content
-            },
-          },
-        ],
-      };
-    }
-
-    final request = ChatCompletionRequest(
-      model: model.model,
-      messages: _buildAPIContent(messages),
-      stream: stream,
-      additionalParams: additionalParams,
-    );
-
-    final requestBody = request.toRequestBody();
-    // print('分支对话请求体: $requestBody');
-
-    return getStreamResponse(baseUrl, headers, requestBody, stream: stream);
-  }
-
-  /// 角色对话发送消息调用大模型API
-  static Future<(Stream<ChatCompletionResponse>, VoidCallback)>
-  sendCharacterMessage(
+  /// 分支/角色对话发送消息调用大模型API
+  static Future<(Stream<ChatCompletionResponse>, VoidCallback)> sendMessage(
     CusLLMSpec model,
     List<Map<String, dynamic>> messages, {
     bool stream = true,
@@ -219,6 +165,33 @@ class ChatService {
       );
     }
 
+    // 阿里云多模态，如果有选择具体音色，则输出文本+语音；如果选择无音色，则只输出文本
+    if (model.platform == ApiPlatform.aliyun &&
+        model.model.contains('qwen-omni')) {
+      // 因为在使用omni如果选择了音色，会把音色放在高级选项中去传递，但在上面build时，可能就过滤掉了
+      // 所以这里手动取得音色数据
+
+      String? audioVoice = advancedOptions?["omni_audio_voice"];
+
+      // 简单处理，如果选择无音色，则不输出音频
+      if (audioVoice != null && audioVoice.contains("无")) {
+        audioVoice = null;
+      }
+
+      additionalParams = {
+        // "stream_options": {"include_usage": true},
+        "modalities": audioVoice != null ? ["text", "audio"] : ['text'],
+      };
+
+      if (audioVoice != null) {
+        // 2025-05-30 注意，添加了这个参数，返回的结构和之前默认的不一样
+        // 文本放在了 {"choices":[{"delta":{"audio":{"transcript":"xxx"}},"finish_reason":null,"index":0,"logprobs":null}]
+        // 音频放在了 {"choices":[{"delta":{"audio":{"data":"<音频base64>","expires_at":1748568662,"id":"audio_240e9bb8-77d4-9b9f-8b96-066ddfef4323"}},
+        // 之前通用是 {"choices":[{"delta":{"content":"'xxx"},"finish_reason":null,"index":0,"logprobs":null}]
+        additionalParams["audio"] = {"voice": audioVoice, "format": "wav"};
+      }
+    }
+
     final request = ChatCompletionRequest(
       model: model.model,
       messages: messages,
@@ -231,67 +204,4 @@ class ChatService {
 
     return getStreamResponse(baseUrl, headers, requestBody, stream: stream);
   }
-}
-
-List<Map<String, dynamic>> _buildAPIContent(List<BranchChatMessage> messages) {
-  final messagesList =
-      messages.map((m) {
-        // 初始化内容列表
-        final contentList = [];
-
-        // 添加文本内容
-        if (m.content.isNotEmpty) {
-          // 如果只有文本内容，则直接添加
-          if (m.imagesUrl != null || m.videosUrl != null) {
-            contentList.add({'type': 'text', 'text': m.content});
-          } else {
-            return {'role': m.role, 'content': m.content};
-          }
-        }
-
-        // 处理图片(按逗号分割图片地址)
-        if (m.imagesUrl != null && m.imagesUrl!.trim().isNotEmpty) {
-          final imageUrls = m.imagesUrl!.split(',');
-          for (final url in imageUrls) {
-            final bytes = File(url.trim()).readAsBytesSync();
-            final base64Image = base64Encode(bytes);
-            contentList.add({
-              'type': 'image_url',
-              'image_url': {'url': 'data:image/jpeg;base64,$base64Image'},
-            });
-          }
-        }
-
-        // 暂时不启用
-        // // 处理视频(按逗号分割视频地址)
-        // if (m.videosUrl != null && m.videosUrl!.trim().isNotEmpty) {
-        //   final videoUrls = m.videosUrl!.split(',');
-        //   for (final url in videoUrls) {
-        //     final bytes = File(url.trim()).readAsBytesSync();
-        //     final base64Video = base64Encode(bytes);
-        //     contentList.add({
-        //       'type': 'video_url',
-        //       'video_url': {'url': 'data:video/mp4;base64,$base64Video'}
-        //     });
-        //   }
-        // }
-
-        // // 处理音频(暂时只有单个音频，仅支持mp3格式)
-        // if (m.contentVoicePath != null && m.contentVoicePath!.trim().isNotEmpty) {
-        //   final bytes = File(m.contentVoicePath!).readAsBytesSync();
-        //   final base64Audio = base64Encode(bytes);
-        //   contentList.add({
-        //     'type': 'input_audio',
-        //     'input_audio': {
-        //       'data': 'data:audio/mp3;base64,$base64Audio',
-        //       'format': 'mp3',
-        //     }
-        //   });
-        // }
-
-        // 返回最终的消息结构
-        return {'role': m.role, 'content': contentList};
-      }).toList();
-
-  return messagesList;
 }

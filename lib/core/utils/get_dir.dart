@@ -94,6 +94,11 @@ Future<Directory> getVoiceGenDir() async {
   return getAppHomeDirectory(subfolder: "AI_GEN/voices");
 }
 
+// 单独的多模态语音合成时文件保存的目录
+Future<Directory> getOmniChatVoiceGenDir() async {
+  return getAppHomeDirectory(subfolder: "AI_GEN/voices/omni_chat");
+}
+
 /// 使用file_picker选择文件时，保存文件的目录
 /// 所有文件选择都放在同一个位置，重复时直接返回已存在的内容
 Future<Directory> getFilePickerSaveDir() async {
