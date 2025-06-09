@@ -190,7 +190,7 @@ class _ModelListState extends State<ModelList> {
         )) {
           duplicateModels.add(model);
         } else {
-          await _dbHelper.insertCusLLMSpecList([model]);
+          await _dbHelper.saveCusLLMSpecs([model]);
         }
       }
 

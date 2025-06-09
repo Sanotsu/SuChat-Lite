@@ -281,7 +281,7 @@ class _AddModelPageState extends State<AddModelPage> {
 
           // 1. 保存模型规格到数据库
           try {
-            await DBHelper().insertCusLLMSpecList([modelSpec]);
+            await DBHelper().saveCusLLMSpecs([modelSpec]);
           } catch (e) {
             if (e.toString().contains("code 2067")) {
               ToastUtils.showError(

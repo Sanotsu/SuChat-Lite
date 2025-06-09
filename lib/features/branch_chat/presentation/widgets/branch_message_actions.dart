@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../shared/widgets/audio_player_widget.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../../../shared/constants/constants.dart';
 import '../../domain/entities/branch_chat_message.dart';
@@ -73,6 +74,13 @@ class BranchMessageActions extends StatelessWidget {
         .map((e) => e.branchIndex)
         .reduce((a, b) => a > b ? a : b);
 
+    // 获取大模型合成音频URL(和用户选择的音频，都是同一个变量，但用户选择的这个组件不处理)
+    List<String> ttsUrls = [];
+    if (message.audiosUrl != null && message.audiosUrl!.trim() != "") {
+      String audios = message.audiosUrl!;
+      ttsUrls = audios.split(',');
+    }
+
     return Container(
       padding: EdgeInsets.all(4),
       child: Row(
@@ -107,6 +115,27 @@ class BranchMessageActions extends StatelessWidget {
           //     height: 16,
           //     child: CircularProgressIndicator(strokeWidth: 2),
           //   ),
+
+          /// 2025-06-09 语音播放按钮
+          /// 只显示大模型合成的音频播放
+          /// （如果是用户选择的语音不在消息功能按钮中显示)
+          if (ttsUrls.isNotEmpty && message.role != CusRole.user.name)
+            AudioPlayerWidget(
+              audioUrl: ttsUrls.first,
+              dense: true,
+              onlyIcon: true,
+              secondaryColor: Colors.green,
+            ),
+
+          // 如果是用户有语音转文字的原始语音内容，显示语音播放按钮
+          // 【这个只有用户消息才会有，上面那个只处理大模型响应，所以理论上不会出现2个音频播放按钮】
+          if (message.contentVoicePath != null &&
+              message.contentVoicePath!.trim() != "")
+            AudioPlayerWidget(
+              audioUrl: message.contentVoicePath!,
+              dense: true,
+              onlyIcon: true,
+            ),
 
           // 分支切换按钮
           if (showBranchControls && onSwitchBranch != null) ...[

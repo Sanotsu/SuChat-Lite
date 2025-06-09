@@ -158,10 +158,11 @@ class _BranchMessageItemState extends State<BranchMessageItem>
           // 显示消息内容
           _buildMessageContent(context),
 
-          // 如果是有语音转文字的原始语音内容，显示语音文件，可点击播放
-          if (widget.message.contentVoicePath != null &&
-              widget.message.contentVoicePath!.trim() != "")
-            _buildSttVoicePlayer(),
+          // /// 2025-06-09 在 BranchMessageActions 中处理
+          // // 如果是有语音转文字的原始语音内容，显示语音文件，可点击播放
+          // if (widget.message.contentVoicePath != null &&
+          //     widget.message.contentVoicePath!.trim() != "")
+          //   _buildSttVoicePlayer(),
 
           // 如果是有大模型响应的语音文件或者用户手动选择的语音文件，显示语音文件，可点击播放
           if (widget.message.audiosUrl != null &&
@@ -302,7 +303,7 @@ class _BranchMessageItemState extends State<BranchMessageItem>
             child: RepaintBoundary(
               child: CusMarkdownRenderer.instance.render(
                 DocumentUtils.getDisplayMessage(widget.message.content),
-                textStyle: TextStyle(color: textColor, fontSize: 16),
+                textStyle: TextStyle(color: textColor),
               ),
             ),
           ),
@@ -349,7 +350,7 @@ class _BranchMessageItemState extends State<BranchMessageItem>
             child: RepaintBoundary(
               child: CusMarkdownRenderer.instance.render(
                 widget.message.reasoningContent ?? '',
-                textStyle: TextStyle(color: thinkingColor, fontSize: 14),
+                textStyle: TextStyle(color: thinkingColor, fontSize: 13),
               ),
             ),
           ),
@@ -358,52 +359,72 @@ class _BranchMessageItemState extends State<BranchMessageItem>
     );
   }
 
-  // 简单的语音输入转文字时原音频播放
-  Widget _buildSttVoicePlayer() {
-    var width = MediaQuery.of(context).size.width;
-
-    return Container(
-      decoration: BoxDecoration(
-        // border: Border.all(),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: EdgeInsets.only(left: 12),
-      margin: EdgeInsets.only(bottom: 4),
-      child: Row(
-        mainAxisAlignment: _mainAxisAlignment,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text("原语音", style: TextStyle(fontSize: 12)),
-          AudioPlayerWidget(
-            audioUrl: widget.message.contentVoicePath!,
-            dense: true,
-            witdh: width * (ScreenHelper.isDesktop() ? 0.3 : 0.5),
-            backgroundColor: Colors.transparent,
-          ),
-        ],
-      ),
-    );
-  }
+  // /// 2025-06-09 减少音频播放组件的混淆，非用户选择的语音(即大模型合成、用户stt语音，都使用只有按钮的音频播放组件)
+  // // 简单的语音输入转文字时原音频播放(只有移动端支持)
+  // Widget _buildSttVoicePlayer() {
+  //   return Container(
+  //     decoration: BoxDecoration(
+  //       // border: Border.all(),
+  //       borderRadius: BorderRadius.circular(12),
+  //     ),
+  //     padding: EdgeInsets.only(left: 12),
+  //     margin: EdgeInsets.only(bottom: 4),
+  //     child: Row(
+  //       mainAxisAlignment: _mainAxisAlignment,
+  //       mainAxisSize: MainAxisSize.min,
+  //       children: [
+  //         // Text("原语音", style: TextStyle(fontSize: 12)),
+  //         AudioPlayerWidget(
+  //           audioUrl: widget.message.contentVoicePath!,
+  //           dense: true,
+  //           onlyIcon: true,
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   // AI响应的语音或手动选择的音频文件的音频播放
   Widget _buildVoicePlayer() {
     String audios = widget.message.audiosUrl!;
     var urls = audios.split(',');
+
     if (urls.isNotEmpty) {
-      if (ScreenHelper.isDesktop()) {
-        return AudioPlayerWidget(
-          audioUrl: urls.first,
-          dense: true,
-          backgroundColor: Colors.transparent,
-          witdh: MediaQuery.of(context).size.width * 0.3,
+      // 如果是用户选择的语音
+      if (widget.message.role == CusRole.user.name) {
+        return Row(
+          mainAxisAlignment: _mainAxisAlignment,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text("选择的音频", style: TextStyle(fontSize: 12)),
+            SizedBox(width: 4),
+            // 桌面端不支持波形，就显示带进度条的音频播放组件
+            ScreenHelper.isDesktop()
+                ? AudioPlayerWidget(
+                  audioUrl: urls.first,
+                  dense: true,
+                  backgroundColor: Colors.transparent,
+                  witdh: MediaQuery.of(context).size.width * 0.3,
+                )
+                // 移动端支持波形，则显示语音波形
+                : VoiceWaveBubble(
+                  path: urls.first,
+                  isSender: _isUser,
+                  width: 0.3.sw,
+                ),
+          ],
         );
       }
 
-      return VoiceWaveBubble(
-        path: urls.first,
-        isSender: _isUser,
-        width: 0.4.sw,
-      );
+      /// 2025-06-09 在 BranchMessageActions 中处理
+      // // 如果是大模型合成的语音，则显示只有按钮的音频播放组件
+      // // AI响应的语音播放按钮理论上应该放在功能操作组件中
+      // return AudioPlayerWidget(
+      //   audioUrl: urls.first,
+      //   dense: true,
+      //   onlyIcon: true,
+      //   secondaryColor: Colors.green,
+      // );
     }
 
     return SizedBox.shrink();

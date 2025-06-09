@@ -222,7 +222,7 @@ class _VoicePageState extends MediaGenerationBaseState<GenVoicePage> {
       history.isFailed = false;
 
       // 保存到数据库
-      await dbHelper.insertMediaGenerationHistory(history);
+      await dbHelper.saveMediaGenerationHistory(history);
 
       // 清空输入
       if (mounted) {
@@ -241,7 +241,7 @@ class _VoicePageState extends MediaGenerationBaseState<GenVoicePage> {
       history.otherParams = jsonEncode({"errorMsg": e.toString()});
 
       // 保存到数据库
-      await dbHelper.insertMediaGenerationHistory(history);
+      await dbHelper.saveMediaGenerationHistory(history);
     } finally {
       // 隐藏生成遮罩
       LoadingOverlay.hide();

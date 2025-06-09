@@ -94,15 +94,13 @@ class DBInit {
     print("初始化 DB sqlite数据库存放的地址：$path");
 
     // 在给定路径上打开/创建数据库
-    var db = await openDatabase(path, version: 1, onCreate: _createDb);
+    var db = await openDatabase(
+      path,
+      version: 2,
+      onCreate: _createDb,
+      onUpgrade: _upgradeDb,
+    );
 
-    // 为了确保新录音识别记录表被创建，我们需要修改数据库版本号，以触发_createDb方法
-    // var db = await openDatabase(
-    //   path,
-    //   version: 2,
-    //   onCreate: _createDb,
-    //   onUpgrade: _upgradeDb,
-    // );
     dbFilePath = path;
     return db;
   }
@@ -115,18 +113,28 @@ class DBInit {
       txn.execute(DBDdl.ddlForMediaGenerationHistory);
       txn.execute(DBDdl.ddlForCusLlmSpec);
       txn.execute(DBDdl.ddlForVoiceRecognitionTask);
+      // 添加训练助手相关表
+      txn.execute(DBDdl.ddlForTrainingUserInfo);
+      txn.execute(DBDdl.ddlForTrainingPlan);
+      txn.execute(DBDdl.ddlForTrainingPlanDetail);
+      txn.execute(DBDdl.ddlForTrainingRecord);
+      txn.execute(DBDdl.ddlForTrainingRecordDetail);
     });
   }
 
-  // // 数据库升级
-  // void _upgradeDb(Database db, int oldVersion, int newVersion) async {
-  //   print("数据库升级 _upgradeDb 从 $oldVersion 到 $newVersion");
+  // 数据库升级
+  void _upgradeDb(Database db, int oldVersion, int newVersion) async {
+    print("数据库升级 _upgradeDb 从 $oldVersion 到 $newVersion");
 
-  //   if (oldVersion < 2) {
-  //     // 只在版本1升级到版本2时执行
-  //     await db.execute(DBDdl.ddlForVoiceRecognitionTask);
-  //   }
-  // }
+    if (oldVersion < 2) {
+      // 添加训练助手相关表
+      await db.execute(DBDdl.ddlForTrainingUserInfo);
+      await db.execute(DBDdl.ddlForTrainingPlan);
+      await db.execute(DBDdl.ddlForTrainingPlanDetail);
+      await db.execute(DBDdl.ddlForTrainingRecord);
+      await db.execute(DBDdl.ddlForTrainingRecordDetail);
+    }
+  }
 
   // 关闭数据库
   Future<bool> closeDB() async {

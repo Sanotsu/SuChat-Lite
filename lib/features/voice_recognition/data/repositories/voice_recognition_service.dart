@@ -152,7 +152,7 @@ class VoiceRecognitionService {
         );
 
         // 保存任务到数据库
-        await _dbHelper.insertVoiceRecognitionTask(taskInfo);
+        await _dbHelper.saveVoiceRecognitionTask(taskInfo);
 
         return taskId;
       } else {

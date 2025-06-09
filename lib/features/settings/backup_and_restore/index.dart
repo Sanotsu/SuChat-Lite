@@ -23,6 +23,7 @@ import '../../branch_chat/data/models/branch_chat_export_data.dart';
 import '../../branch_chat/presentation/viewmodels/branch_store.dart';
 import '../../branch_chat/presentation/viewmodels/character_store.dart';
 import '../../media_generation/common/entities/media_generation_history.dart';
+import '../../training_assistant/domain/entities/index.dart';
 import '../../voice_recognition/domain/entities/voice_recognition_task_info.dart';
 
 ///
@@ -441,16 +442,36 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
 
       // 根据不同文件名，构建不同的数据
       if (filename == "${DBDdl.tableCusLlmSpec}.json") {
-        await _dbHelper.insertCusLLMSpecList(
+        await _dbHelper.saveCusLLMSpecs(
           jsonMapList.map((e) => CusLLMSpec.fromMap(e)).toList(),
         );
       } else if (filename == "${DBDdl.tableMediaGenerationHistory}.json") {
-        await _dbHelper.insertMediaGenerationHistoryList(
+        await _dbHelper.saveMediaGenerationHistories(
           jsonMapList.map((e) => MediaGenerationHistory.fromMap(e)).toList(),
         );
       } else if (filename == "${DBDdl.tableVoiceRecognitionTask}.json") {
-        await _dbHelper.insertVoiceRecognitionTasks(
+        await _dbHelper.saveVoiceRecognitionTasks(
           jsonMapList.map((e) => VoiceRecognitionTaskInfo.fromMap(e)).toList(),
+        );
+      } else if (filename == "${DBDdl.tableTrainingUserInfo}.json") {
+        await _dbHelper.saveTrainingUsers(
+          jsonMapList.map((e) => TrainingUserInfo.fromMap(e)).toList(),
+        );
+      } else if (filename == "${DBDdl.tableTrainingPlan}.json") {
+        await _dbHelper.saveTrainingPlans(
+          jsonMapList.map((e) => TrainingPlan.fromMap(e)).toList(),
+        );
+      } else if (filename == "${DBDdl.tableTrainingPlanDetail}.json") {
+        await _dbHelper.saveTrainingPlanDetails(
+          jsonMapList.map((e) => TrainingPlanDetail.fromMap(e)).toList(),
+        );
+      } else if (filename == "${DBDdl.tableTrainingRecord}.json") {
+        await _dbHelper.saveTrainingRecords(
+          jsonMapList.map((e) => TrainingRecord.fromMap(e)).toList(),
+        );
+      } else if (filename == "${DBDdl.tableTrainingRecordDetail}.json") {
+        await _dbHelper.saveTrainingRecordDetails(
+          jsonMapList.map((e) => TrainingRecordDetail.fromMap(e)).toList(),
         );
       }
     }

@@ -121,6 +121,17 @@ class _BranchChatPageState extends State<BranchChatPage>
         if (ScreenHelper.isMobile())
           _userInteractionHandler.buildPopupMenuButton(),
 
+        // // 训练助手按钮
+        // IconButton(
+        //   onPressed:
+        //       !state.isStreaming
+        //           ? () {
+        //             Navigator.pushNamed(context, AppRoutes.trainingAssistant);
+        //           }
+        //           : null,
+        //   tooltip: '训练助手',
+        //   icon: Icon(Icons.fitness_center),
+        // ),
         IconButton(
           onPressed:
               !state.isStreaming

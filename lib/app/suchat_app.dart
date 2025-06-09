@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:form_builder_validators/localization/l10n.dart';
+import 'package:provider/provider.dart';
 
 import '../core/utils/screen_helper.dart';
-import '../features/branch_chat/presentation/index.dart';
+import '../features/training_assistant/presentation/viewmodels/training_viewmodel.dart';
 import '../shared/widgets/min_size_layout.dart';
+import 'routes.dart';
 
 GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -18,7 +20,7 @@ class SuChatApp extends StatelessWidget {
     // 获取当前平台的设计尺寸
     final designSize = ScreenHelper.getDesignSize();
 
-    return ScreenUtilInit(
+    var providerChild = ScreenUtilInit(
       designSize: designSize,
       // minTextAdapt: true,
       splitScreenMode: true,
@@ -50,7 +52,9 @@ class SuChatApp extends StatelessWidget {
             useMaterial3: true,
           ),
 
-          home: const HomePage(),
+          // 使用路由生成器
+          initialRoute: AppRoutes.home,
+          onGenerateRoute: AppRoutes.generateRoute,
 
           builder: (context, child) {
             // 根据平台调整字体缩放
@@ -82,6 +86,11 @@ class SuChatApp extends StatelessWidget {
           navigatorObservers: [BotToastNavigatorObserver()],
         );
       },
+    );
+
+    return MultiProvider(
+      providers: [ChangeNotifierProvider(create: (_) => TrainingViewModel())],
+      child: providerChild,
     );
   }
 }

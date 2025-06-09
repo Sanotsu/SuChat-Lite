@@ -22,7 +22,7 @@ class ModelManagerService {
       );
 
       if (exists.isEmpty) {
-        await _dbHelper.insertCusLLMSpecList([model]);
+        await _dbHelper.saveCusLLMSpecs([model]);
       }
     }
   }
@@ -42,7 +42,7 @@ class ModelManagerService {
       await _dbHelper.deleteCusLLMSpecById(model.cusLlmSpecId);
     }
 
-    await _dbHelper.insertCusLLMSpecList(models);
+    await _dbHelper.saveCusLLMSpecs(models);
   }
 
   // 获取可用的模型列表(有对应平台 AK 的模型)

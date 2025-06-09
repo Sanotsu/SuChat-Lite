@@ -16,6 +16,7 @@ class AudioPlayerWidget extends StatefulWidget {
   final bool autoPlay;
   final bool showWaveform; // 是否显示波形图，目前还未实现，预留
   final bool dense; // 是否紧凑型(对话主页面就可以只显示一行一个按钮)
+  final bool onlyIcon; // 如果只显示图标，则返回一个按钮(没有进度条、没有前进后退等额外控制按钮)
   final double? witdh;
 
   const AudioPlayerWidget({
@@ -28,6 +29,7 @@ class AudioPlayerWidget extends StatefulWidget {
     this.autoPlay = false,
     this.showWaveform = false,
     this.dense = false,
+    this.onlyIcon = false,
     this.witdh,
   });
 
@@ -166,6 +168,14 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized) {
+      if (widget.onlyIcon || widget.dense) {
+        return SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        );
+      }
+
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -178,6 +188,16 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
             ),
           ],
         ),
+      );
+    }
+
+    // 如果只显示图标，则返回一个按钮(没有进度条、没有前进后退等额外控制按钮)
+    if (widget.onlyIcon) {
+      return _buildIconButton(
+        icon: _isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+        onPressed: _togglePlayPause,
+        color: widget.secondaryColor,
+        sizeFactor: ScreenHelper.isDesktop() ? 1.5 : 2.4,
       );
     }
 

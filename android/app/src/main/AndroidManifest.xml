@@ -55,5 +55,10 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+
+        <!-- Android11以上使用tts需要申明 TextToSpeech.Engine.INTENT_ACTION_TTS_SERVICE (TTS引擎服务) -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
     </queries>
 </manifest>
