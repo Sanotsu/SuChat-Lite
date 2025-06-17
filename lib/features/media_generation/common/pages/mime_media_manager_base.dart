@@ -91,7 +91,9 @@ abstract class MimeMediaManagerBaseState<T extends MimeMediaManagerBase>
 
       if (xFiles.isEmpty) return;
 
-      final result = await Share.shareXFiles(xFiles, text: '思文智能助手');
+      final result = await SharePlus.instance.share(
+        ShareParams(files: xFiles, text: 'SuChat'),
+      );
 
       if (result.status == ShareResultStatus.success) {
         ToastUtils.showSuccess('分享成功!');

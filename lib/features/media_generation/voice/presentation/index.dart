@@ -382,7 +382,7 @@ class _VoicePageState extends MediaGenerationBaseState<GenVoicePage> {
   //   );
   // }
 
-  _desktopPlay(MediaGenerationHistory task) {
+  void _desktopPlay(MediaGenerationHistory task) {
     showDialog(
       barrierDismissible: false,
       context: context,
@@ -415,7 +415,7 @@ class _VoicePageState extends MediaGenerationBaseState<GenVoicePage> {
     );
   }
 
-  _mobilePlay(MediaGenerationHistory task) {
+  void _mobilePlay(MediaGenerationHistory task) {
     showModalBottomSheet(
       isDismissible: false,
       context: context,

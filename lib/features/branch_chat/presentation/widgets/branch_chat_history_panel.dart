@@ -45,7 +45,7 @@ class _BranchChatHistoryPanelState extends State<BranchChatHistoryPanel> {
     getPanelColor();
   }
 
-  getPanelColor() async {
+  Future<void> getPanelColor() async {
     int? colorValue =
         (await CusGetStorage().getBranchChatHistoryPanelBgColor());
 
@@ -58,7 +58,7 @@ class _BranchChatHistoryPanelState extends State<BranchChatHistoryPanel> {
     });
   }
 
-  setDefaultColor() async {
+  Future<void> setDefaultColor() async {
     await CusGetStorage().saveBranchChatHistoryPanelBgColor(
       Colors.grey.shade50.toARGB32(),
     );

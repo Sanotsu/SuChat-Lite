@@ -68,7 +68,7 @@ class SoundsRecorderController {
   Function(String? path, Duration duration)? _onAllCompleted;
 
   /// 录制
-  beginRec({
+  Future<void> beginRec({
     // 录制状态
     ValueChanged<RecorderState>? onStateChanged,
     // 录制时间
@@ -194,12 +194,12 @@ class SoundsRecorderController {
   }
 
   /// 重置(录制时长归零)
-  reset() {
+  void reset() {
     duration.value = Duration.zero;
   }
 
   /// 释放控制器
-  dispose() {
+  void dispose() {
     recorderController?.dispose();
   }
 
@@ -210,7 +210,7 @@ class SoundsRecorderController {
   }
 
   /// 更新状态
-  updateStatus(SoundsMessageStatus value) {
+  void updateStatus(SoundsMessageStatus value) {
     status.value = value;
   }
 

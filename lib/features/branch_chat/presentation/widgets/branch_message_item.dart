@@ -116,7 +116,7 @@ class _BranchMessageItemState extends State<BranchMessageItem>
   }
 
   // 如果什么内容都没有，显示等待中
-  getIsWaiting() {
+  bool getIsWaiting() {
     var msg = widget.message;
     return (!_isUser &&
         (msg.references == null || msg.references!.isEmpty) &&

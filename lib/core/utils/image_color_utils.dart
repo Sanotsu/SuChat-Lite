@@ -4,10 +4,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
-import 'package:palette_generator/palette_generator.dart';
 
 import '../../shared/widgets/toast_utils.dart';
-import '../../shared/constants/constants.dart';
 import 'screen_helper.dart';
 import 'simple_tools.dart';
 
@@ -111,70 +109,5 @@ class ImageColorUtils {
 
     // 返回颜色
     return Color.fromARGB(255, avgR, avgG, avgB);
-  }
-
-  /// 2025-04-14 这个方法的两种实现都需要Flutter的绑定环境的API
-  // 但是隔离线程isolate中不存在Flutter的绑定环境，所以这个方法不能放在隔离线程中
-  static Future<Color> getImageDominantColor(String imagePath) async {
-    ImageProvider imageProvider =
-        imagePath.isEmpty
-            ? AssetImage(defaultAvatarUrl)
-            : imagePath.startsWith('http')
-            ? NetworkImage(imagePath)
-            : imagePath.startsWith('assets/')
-            ? AssetImage(imagePath)
-            : FileImage(File(imagePath));
-
-    // 下面两种方法看起来得到的差不多
-    try {
-      /// 使用工具快速获取主色调
-      final paletteGenerator = await PaletteGenerator.fromImageProvider(
-        imageProvider,
-        size: Size(100, 100), // 缩小图片以加快处理速度
-      );
-      // PaletteGenerator 提供了多种预定义的颜色分类，适合不同 UI 设计场景：
-      // 属性	说明	示例用途
-      // dominantColor	    图片中最突出的颜色（基于像素频率和视觉显著性）	 页面主色调、标题背景
-      // lightVibrantColor	明亮且鲜艳的颜色（适合文字/图标）	            浅色模式下的按钮文字
-      // vibrantColor	      中等亮度的鲜艳颜色（平衡可读性和视觉冲击）	    强调按钮、标签
-      // darkVibrantColor	  深色且鲜艳的颜色（适合深色主题）	            深色模式下的强调色
-      // lightMutedColor	  柔和的浅色（低调不刺眼）	                  卡片背景、次要文本
-      // mutedColor	        中等亮度的柔和色（自然协调）	               中性背景、边框
-      // darkMutedColor	    深色且柔和的颜色（适合阴影或深色UI元素）	     底部导航栏、暗色遮罩
-      return paletteGenerator.lightMutedColor?.color ?? Colors.grey;
-
-      // 测试
-      // throw Exception('获取图片主色调失败');
-    } catch (e) {
-      /// 直接通过 Flutter 的 dart:ui 获取像素数据
-      final ImageStream stream = imageProvider.resolve(
-        ImageConfiguration.empty,
-      );
-      final Completer<ImageInfo> completer = Completer();
-      stream.addListener(
-        ImageStreamListener((info, _) => completer.complete(info)),
-      );
-      final ImageInfo imageInfo = await completer.future;
-      final ByteData? byteData = await imageInfo.image.toByteData();
-
-      if (byteData == null) return Colors.grey;
-
-      final Uint8List pixels = byteData.buffer.asUint8List();
-      int red = 0, green = 0, blue = 0, pixelCount = 0;
-
-      for (int i = 0; i < pixels.length; i += 4) {
-        red += pixels[i];
-        green += pixels[i + 1];
-        blue += pixels[i + 2];
-        pixelCount++;
-      }
-
-      return Color.fromRGBO(
-        (red / pixelCount).round(),
-        (green / pixelCount).round(),
-        (blue / pixelCount).round(),
-        1,
-      );
-    }
   }
 }

@@ -138,7 +138,7 @@ class DBInit {
   }
 
   // 数据库升级和默认都要创建的表
-  _createDietDiaryTable(Transaction txn) async {
+  Future<void> _createDietDiaryTable(Transaction txn) async {
     await txn.execute(DietDiaryDdl.ddlForFoodItem);
     await txn.execute(DietDiaryDdl.ddlForMealRecord);
     await txn.execute(DietDiaryDdl.ddlForMealFoodRecord);
@@ -148,7 +148,7 @@ class DBInit {
     await txn.execute(DietDiaryDdl.ddlForDietRecipe);
   }
 
-  _createDietDiaryIndex(Transaction txn) async {
+  Future<void> _createDietDiaryIndex(Transaction txn) async {
     // 创建一些索引来提高查询性能
     List<String> indexList = [
       'CREATE INDEX idx_meal_record_date ON ${DietDiaryDdl.tableMealRecord} (date)',

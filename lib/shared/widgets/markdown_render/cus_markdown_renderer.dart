@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:gpt_markdown/custom_widgets/selectable_adapter.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 
 import '../../../core/utils/simple_tools.dart';
 import 'cus_code_field.dart';
-import 'optimized_custom_markdown_renderer.dart';
 import 'latex_string_normalize.dart';
 
 /// 优化的Markdown渲染工具类
@@ -157,14 +156,6 @@ class CusMarkdownRenderer {
     String cacheKey,
   ) {
     try {
-      final widget = OptimizedCustomMarkdownRenderer(
-        text: text,
-        textStyle: textStyle,
-      );
-      _addToCache(cacheKey, widget);
-      return widget;
-    } catch (e) {
-      debugPrint('备用渲染器错误: $e');
       final widget = MarkdownBody(
         data: text,
         styleSheet: MarkdownStyleSheet(
@@ -172,6 +163,11 @@ class CusMarkdownRenderer {
           tableColumnWidth: const IntrinsicColumnWidth(),
         ),
       );
+      _addToCache(cacheKey, widget);
+      return widget;
+    } catch (e) {
+      debugPrint('备用渲染器错误: $e');
+      final widget = Text(text);
       _addToCache(cacheKey, widget);
       return widget;
     }

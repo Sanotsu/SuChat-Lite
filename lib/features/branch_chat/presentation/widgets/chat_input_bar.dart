@@ -1,12 +1,10 @@
 import 'dart:io';
 
-import 'package:doc_text/doc_text.dart';
-import 'package:docx_to_text/docx_to_text.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_charset_detector/flutter_charset_detector.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:path/path.dart' as path;
 
@@ -184,12 +182,11 @@ class _ChatInputBarState extends State<ChatInputBar> {
     });
 
     /// 选择文件，并解析出文本内容
+    /// 2025-06-17 由于之前手动解析docx、doc文件的依赖太老，和限制了一些常用依赖使用新版本，
+    /// 前目前没有实际完成上传，所以暂时只支持pdf，移除了doc_text、docx_to_text依赖
     File? file = await FilePickerUtils.pickAndSaveFile(
       fileType: CusFileType.custom,
-      allowedExtensions:
-          ScreenHelper.isDesktop()
-              ? ['pdf', 'docx', 'doc']
-              : ['pdf', 'txt', 'docx', 'doc'],
+      allowedExtensions: ScreenHelper.isDesktop() ? ['pdf'] : ['pdf', 'txt'],
     );
 
     if (file != null) {
@@ -213,10 +210,6 @@ class _ChatInputBarState extends State<ChatInputBar> {
             text = result.string;
           case 'pdf':
             text = await compute(extractTextFromPdf, file.path);
-          case 'docx':
-            text = await compute(docxToText, File(file.path).readAsBytesSync());
-          case 'doc':
-            text = await DocText().extractTextFromDoc(file.path) ?? "";
           default:
             debugPrint("默认的,暂时啥都不做");
         }

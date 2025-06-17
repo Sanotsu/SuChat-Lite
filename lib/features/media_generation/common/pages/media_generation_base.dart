@@ -339,13 +339,12 @@ abstract class MediaGenerationBaseState<T extends MediaGenerationBase>
         alignment: Alignment.centerLeft,
         onChanged: isGenerating ? null : modelChanged,
         itemToString:
-            (e) =>
-                "${CP_NAME_MAP[(e as CusLLMSpec).platform]} - ${e.name}",
+            (e) => "${CP_NAME_MAP[(e as CusLLMSpec).platform]} - ${e.name}",
       ),
     );
   }
 
-  modelChanged(CusLLMSpec? value) async {
+  void modelChanged(CusLLMSpec? value) {
     setState(() {
       selectedModel = value!;
     });

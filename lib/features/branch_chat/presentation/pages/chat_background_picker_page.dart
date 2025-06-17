@@ -629,7 +629,7 @@ class _ChatBackgroundPickerPageState extends State<ChatBackgroundPickerPage>
   }
 
   // 选择图片后保存、取消时恢复初始化都会用到这个
-  saveAllConfig(bool isCancel) async {
+  Future<void> saveAllConfig(bool isCancel) async {
     // 显示加载提示
     final closeToast = ToastUtils.showLoading('对话背景保存中...');
 

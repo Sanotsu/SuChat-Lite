@@ -54,7 +54,7 @@ class _FileUploadPageState extends State<FileUploadPage> {
     super.dispose();
   }
 
-  getApiKey() {
+  void getApiKey() {
     setState(() {
       _apiKeyController.text = CusGetStorage().getBigmodelApiKey() ?? '';
     });
@@ -268,7 +268,7 @@ class _FileUploadPageState extends State<FileUploadPage> {
   }
 
   // 显示文件内容的全屏弹窗
-  _showFileContentDialog() async {
+  Future<void> _showFileContentDialog() async {
     showDialog(
       context: context,
       builder:

@@ -75,7 +75,7 @@ class _SoundsMessageButtonState extends State<SoundsMessageButton> {
   }
 
   // 移除录音时的遮罩
-  _removeMask() {
+  void _removeMask() {
     // 不过是取消、发送原语言还是发送了转换后的文本，操作完成之后都重置转换后的文本为空
     setState(() {
       _soundsRecorder.textProcessedController.text = "";
@@ -90,7 +90,7 @@ class _SoundsMessageButtonState extends State<SoundsMessageButton> {
   }
 
   // 按住说话时显示遮罩
-  _showRecordingMask() {
+  void _showRecordingMask() {
     _entry = OverlayEntry(
       builder: (context) {
         return RepaintBoundary(

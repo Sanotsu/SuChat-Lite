@@ -192,12 +192,12 @@ Widget _buildPhotoGalleryDialog(List<String> imageList) {
       builder:
           (context, index) => PhotoViewGalleryPageOptions(
             imageProvider: getImageProvider(imageList[index]),
-            errorBuilder: (_, __, ___) => const Icon(Icons.error),
+            errorBuilder: (_, _, _) => const Icon(Icons.error),
           ),
       scrollPhysics: const BouncingScrollPhysics(),
       backgroundDecoration: const BoxDecoration(color: Colors.transparent),
       loadingBuilder:
-          (_, __) => const Center(child: CircularProgressIndicator()),
+          (_, _) => const Center(child: CircularProgressIndicator()),
     ),
   );
 }
@@ -216,7 +216,7 @@ Widget _buildPhotoView(
     // 缩放的最大最小限制
     minScale: PhotoViewComputedScale.contained * 0.8,
     maxScale: PhotoViewComputedScale.covered * 2,
-    errorBuilder: (_, __, ___) => const Icon(Icons.error),
+    errorBuilder: (_, _, _) => const Icon(Icons.error),
   );
 }
 
@@ -272,7 +272,7 @@ Widget buildImageView(
           child: Image(
             image: imageProvider,
             fit: BoxFit.scaleDown,
-            errorBuilder: (_, __, ___) => _buildErrorWidget(imageErrorHint),
+            errorBuilder: (_, _, _) => _buildErrorWidget(imageErrorHint),
           ),
         ),
       ),
@@ -317,22 +317,21 @@ Widget buildNetworkOrFileImage(String imageUrl, {BoxFit? fit}) {
 
       /// placeholder 和 progressIndicatorBuilder 只能2选1
       placeholder:
-          (_, __) => const Center(
+          (_, _) => const Center(
             child: SizedBox(
               width: 36,
               height: 36,
               child: CircularProgressIndicator(color: Colors.blue),
             ),
           ),
-      errorWidget: (_, __, ___) => const Icon(Icons.error, size: 36),
+      errorWidget: (_, _, _) => const Icon(Icons.error, size: 36),
     );
   } else {
     return Image(
       image: getImageProvider(imageUrl),
       fit: fit,
       errorBuilder:
-          (_, __, ___) =>
-              Image.asset(placeholderImageUrl, fit: BoxFit.scaleDown),
+          (_, _, _) => Image.asset(placeholderImageUrl, fit: BoxFit.scaleDown),
     );
   }
 }
@@ -341,7 +340,7 @@ Widget buildNetworkOrFileImage(String imageUrl, {BoxFit? fit}) {
 /// 构建文本生成的图片结果列表
 /// 点击预览，长按下载
 ///
-buildNetworkImageViewGrid(
+GridView buildNetworkImageViewGrid(
   BuildContext context,
   List<String> urls, {
   int? crossAxisCount,
@@ -370,7 +369,7 @@ buildNetworkImageViewGrid(
 ///
 // 2024-06-27 在小米6中此放在上面 buildNetworkImageViewGrid 没问题，但Z60U就报错；因为无法调试，错误原因不知
 // 所以在文生图历史记录中点击某个记录时，不使用上面那个，而使用这个
-buildImageList(
+List<GridTile> buildImageList(
   BuildContext context,
   List<String> urls, {
   String? prefix,
@@ -421,7 +420,7 @@ buildImageList(
 }
 
 /// 上面那个是列表，这个是单个图片
-buildImageGridTile(
+GridTile buildImageGridTile(
   BuildContext context,
   String url, {
   String? prefix,
@@ -479,7 +478,7 @@ buildImageGridTile(
 ///
 /// 显示本地路径图片，点击可弹窗显示并缩放
 ///
-buildClickImageDialog(BuildContext context, String imageUrl) {
+GestureDetector buildClickImageDialog(BuildContext context, String imageUrl) {
   return GestureDetector(
     onTap: () {
       // 在当前上下文中查找最近的 FocusScope 并使其失去焦点，从而收起键盘。

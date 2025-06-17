@@ -74,7 +74,7 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
     _getPermission();
   }
 
-  _getPermission() async {
+  Future<void> _getPermission() async {
     bool flag = await requestStoragePermission();
     setState(() {
       isPermissionGranted = flag;
@@ -94,7 +94,7 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
   ///   3.4 将临时地址的压缩文件，复制到用户指定的文件
   ///   3.5 删除临时地址的压缩文件
   ///
-  exportAllData() async {
+  Future<void> exportAllData() async {
     // 用户没有授权，简单提示一下
     if (!mounted) return;
     if (!isPermissionGranted) {
@@ -165,51 +165,54 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
     }
   }
 
-  // 备份db中数据到指定文件夹
-  Future<void> _backupDbData(
-    // 会把所有json文件打包成1个压缩包，这是压缩包的名称
-    String zipName,
-    // 在构建zip文件时，会先放到临时文件夹，构建完成后才复制到用户指定的路径去
-    String tempZipPath,
-  ) async {
-    // 等到所有文件导出，都默认放在同一个文件夹下，所以就不用返回路径了
+  /// 备份db中数据到指定文件夹
+  /// zipName: 会把所有json文件打包成1个压缩包，这是压缩包的名称
+  /// tempZipPath: 在构建zip文件时，会先放到临时文件夹，构建完成后才复制到用户指定的路径去
+  Future<void> _backupDbData(String zipName, String tempZipPath) async {
+    // 导出数据库
     await _dbInit.exportDatabase();
 
     // 创建或检索压缩包临时存放的文件夹
     var tempZipDir = await Directory(tempZipPath).create();
 
-    // 获取临时文件夹目录(在导出函数中是固定了的，所以这里也直接取就好)
-    // 这个获取缓存目录即可
+    // 获取临时文件夹目录
     Directory appDocDir = await getApplicationCacheDirectory();
     String tempJsonsPath = p.join(appDocDir.path, DBInitConfig.exportDir);
     // 临时存放所有json文件的文件夹
     Directory tempDirectory = Directory(tempJsonsPath);
 
-    /// 2025-03-26 非sqlite的高级助手使用的objectbox和角色扮演使用的json文件，也在这里静默导出
+    /// 非sqlite的高级助手使用的objectbox和角色扮演使用的json文件，也在这里静默导出
     await _handleBranchChatExport(tempDirectory);
     await _handleCharacterExport(tempDirectory);
 
-    // 创建压缩文件
-    final encoder = ZipFileEncoder();
-    encoder.create(p.join(tempZipDir.path, zipName));
+    // 创建Archive对象
+    final archive = Archive();
 
-    // 遍历临时文件夹中的所有文件和子文件夹，并将它们添加到压缩文件中
+    // 遍历临时文件夹中的所有文件和子文件夹，并将它们添加到archive中
     await for (FileSystemEntity entity in tempDirectory.list(recursive: true)) {
       if (entity is File) {
-        encoder.addFile(entity);
-      } else if (entity is Directory) {
-        encoder.addDirectory(entity);
+        // 读取文件内容
+        final bytes = await entity.readAsBytes();
+        // 获取相对路径（相对于tempJsonsPath）
+        final relativePath = p.relative(entity.path, from: tempJsonsPath);
+        // 添加到archive
+        archive.addFile(ArchiveFile(relativePath, bytes.length, bytes));
       }
     }
 
-    // 完成并关闭压缩文件
-    encoder.close();
+    // 使用ZipEncoder编码archive为zip文件
+    final encoder = ZipEncoder();
+    final zipBytes = encoder.encode(archive);
+
+    // 写入zip文件
+    final zipFile = File(p.join(tempZipDir.path, zipName));
+    await zipFile.writeAsBytes(zipBytes);
 
     // 压缩完成后，清空临时json文件夹中文件
     await _deleteFilesInDirectory(tempJsonsPath);
   }
 
-  _handleBranchChatExport(Directory tempDirectory) async {
+  Future<void> _handleBranchChatExport(Directory tempDirectory) async {
     try {
       // 1. 获取所有会话数据
       final store = await BranchStore.create();
@@ -235,7 +238,7 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
     }
   }
 
-  _handleCharacterExport(Directory tempDirectory) async {
+  Future<void> _handleCharacterExport(Directory tempDirectory) async {
     try {
       final store = await CharacterStore.create();
 
@@ -300,10 +303,16 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
       if (p.basename(file.path).startsWith(ZIP_FILE_PREFIX) &&
           p.basename(file.path).toLowerCase().endsWith('.zip')) {
         try {
-          // 等待解压完成
-          // 遍历解压后的文件，取得里面的文件(可能会有嵌套文件夹和其他格式的文件，不过这里没有)
+          // 创建临时目录用于解压
+          Directory tempDir = await getTemporaryDirectory();
+          String unzipPath = p.join(tempDir.path, ZIP_TEMP_DIR_AT_UNZIP);
+
+          // 使用extractFileToDisk替代手动解压，简化代码
+          await extractFileToDisk(file.path, unzipPath);
+
+          // 获取解压后的JSON文件
           List<File> jsonFiles =
-              Directory(await _unzipFile(file.path))
+              Directory(unzipPath)
                   .listSync()
                   .where(
                     (entity) => entity is File && entity.path.endsWith('.json'),
@@ -314,9 +323,6 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
           debugPrint("解压得到的jsonFiles：$jsonFiles");
 
           /// 删除前可以先备份一下到临时文件，避免出错后完成无法使用(最多确认恢复成功之后再删除就好了)
-
-          // 获取应用文档目录路径
-          Directory tempDir = await getTemporaryDirectory();
           // 临时存放zip文件的路径
           var tempZipDir =
               await Directory(
@@ -375,49 +381,8 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
     }
   }
 
-  // 解压zip文件
-  Future<String> _unzipFile(String zipFilePath) async {
-    try {
-      // 获取临时目录路径
-      Directory tempDir = await getTemporaryDirectory();
-
-      // 创建或检索压缩包临时存放的文件夹
-      String tempPath =
-          (await Directory(
-                p.join(tempDir.path, ZIP_TEMP_DIR_AT_UNZIP),
-              ).create())
-              .path;
-
-      // 读取zip文件
-      File file = File(zipFilePath);
-      List<int> bytes = file.readAsBytesSync();
-
-      // 解压缩
-      Archive archive = ZipDecoder().decodeBytes(bytes);
-      for (ArchiveFile file in archive) {
-        String filename = '$tempPath/${file.name}';
-        if (file.isFile) {
-          File outFile = File(filename);
-          outFile = await outFile.create(recursive: true);
-          await outFile.writeAsBytes(file.content);
-
-          debugPrint("解压时的outFile：$outFile");
-        } else {
-          Directory dir = Directory(filename);
-          await dir.create(recursive: true);
-        }
-      }
-      debugPrint('解压完成');
-
-      return tempPath;
-    } catch (e) {
-      debugPrint('解压失败: $e');
-      throw Exception(e);
-    }
-  }
-
   // 将恢复的json数据存入db中
-  _saveJsonFileDataToDb(List<File> jsonFiles) async {
+  Future<void> _saveJsonFileDataToDb(List<File> jsonFiles) async {
     // 解压之后获取到所有的json文件，逐个添加到数据库，会先清空数据库的数据
     for (File file in jsonFiles) {
       // 获取文件名
