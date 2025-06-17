@@ -24,6 +24,41 @@ enum CarouselType {
 }
 
 ///
+/// 构建图片轮播组件，仅仅轮播+单张点击预览，没有其他内容
+///
+Widget buildImageViewCarouselSlider(
+  List<String> imageList, {
+  double? aspectRatio,
+}) {
+  return CarouselSlider(
+    options: CarouselOptions(
+      autoPlay: true, // 自动播放
+      enlargeCenterPage: true, // 居中图片放大
+      aspectRatio: aspectRatio ?? 16 / 9, // 图片宽高比
+      viewportFraction: 1, // 图片占屏幕宽度的比例
+      // 只有一张图片时不滚动
+      enableInfiniteScroll: imageList.length > 1,
+    ),
+    items:
+        imageList.map((imageUrl) {
+          return Builder(
+            builder:
+                (context) => GestureDetector(
+                  onTap:
+                      () => _handleImageTap(
+                        context,
+                        imageUrl,
+                        imageList,
+                        CarouselType.dialog,
+                      ),
+                  child: buildNetworkOrFileImage(imageUrl, fit: BoxFit.cover),
+                ),
+          );
+        }).toList(),
+  );
+}
+
+///
 /// 构建图片轮播组件
 ///
 Widget buildImageCarouselSlider(

@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../core/utils/screen_helper.dart';
 import '../features/training_assistant/presentation/viewmodels/training_viewmodel.dart';
+import '../features/diet_diary/presentation/viewmodels/diet_diary_viewmodel.dart';
 import '../shared/widgets/min_size_layout.dart';
 import 'routes.dart';
 
@@ -89,7 +90,10 @@ class SuChatApp extends StatelessWidget {
     );
 
     return MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => TrainingViewModel())],
+      providers: [
+        ChangeNotifierProvider(create: (_) => TrainingViewModel()),
+        ChangeNotifierProvider(create: (_) => DietDiaryViewModel()),
+      ],
       child: providerChild,
     );
   }

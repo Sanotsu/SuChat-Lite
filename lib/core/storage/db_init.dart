@@ -9,22 +9,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../utils/get_dir.dart';
+import 'db_config.dart';
 import 'db_ddl.dart';
-
-///
-/// 数据库导出备份、db操作等相关关键字
-/// db_helper、备份恢复页面能用到
-///
-
-/// 数据库中一下基本内容
-class DBInitConfig {
-  // db名称
-  static const String databaseName = "embedded_suchat.db";
-  // 表名前缀
-  static const String tablePerfix = "suchat_";
-  // 导出表文件临时存放的文件夹
-  static const String exportDir = "db_export";
-}
+import 'diet_diary_ddl.dart';
 
 class DBInit {
   ///
@@ -96,7 +83,7 @@ class DBInit {
     // 在给定路径上打开/创建数据库
     var db = await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDb,
       onUpgrade: _upgradeDb,
     );
@@ -119,6 +106,12 @@ class DBInit {
       txn.execute(DBDdl.ddlForTrainingPlanDetail);
       txn.execute(DBDdl.ddlForTrainingRecord);
       txn.execute(DBDdl.ddlForTrainingRecordDetail);
+
+      // 添加饮食日记相关表
+      await _createDietDiaryTable(txn);
+
+      // 创建一些索引来提高查询性能
+      await _createDietDiaryIndex(txn);
     });
   }
 
@@ -133,7 +126,78 @@ class DBInit {
       await db.execute(DBDdl.ddlForTrainingPlanDetail);
       await db.execute(DBDdl.ddlForTrainingRecord);
       await db.execute(DBDdl.ddlForTrainingRecordDetail);
+
+      await db.transaction((txn) async {
+        // 添加饮食日记相关表
+        _createDietDiaryTable(txn);
+
+        // 创建一些索引来提高查询性能
+        _createDietDiaryIndex(txn);
+      });
     }
+  }
+
+  // 数据库升级和默认都要创建的表
+  _createDietDiaryTable(Transaction txn) async {
+    await txn.execute(DietDiaryDdl.ddlForFoodItem);
+    await txn.execute(DietDiaryDdl.ddlForMealRecord);
+    await txn.execute(DietDiaryDdl.ddlForMealFoodRecord);
+    await txn.execute(DietDiaryDdl.ddlForUserProfile);
+    await txn.execute(DietDiaryDdl.ddlForWeightRecord);
+    await txn.execute(DietDiaryDdl.ddlForDietAnalysis);
+    await txn.execute(DietDiaryDdl.ddlForDietRecipe);
+  }
+
+  _createDietDiaryIndex(Transaction txn) async {
+    // 创建一些索引来提高查询性能
+    List<String> indexList = [
+      'CREATE INDEX idx_meal_record_date ON ${DietDiaryDdl.tableMealRecord} (date)',
+      'CREATE INDEX idx_meal_food_records_meal_id ON ${DietDiaryDdl.tableMealFoodRecord} (mealRecordId)',
+      'CREATE INDEX idx_meal_food_records_food_id ON ${DietDiaryDdl.tableMealFoodRecord}  (foodItemId)',
+      'CREATE INDEX idx_food_items_name ON ${DietDiaryDdl.tableFoodItem}  (name)',
+      'CREATE INDEX idx_food_items_foodcode ON ${DietDiaryDdl.tableFoodItem}  (foodCode)',
+      'CREATE INDEX idx_weight_records_date ON ${DietDiaryDdl.tableWeightRecord}  (date)',
+      'CREATE INDEX idx_weight_records_user_id ON ${DietDiaryDdl.tableWeightRecord}  (userId)',
+      'CREATE INDEX idx_diet_analysis_date ON ${DietDiaryDdl.tableDietAnalysis} (date)',
+      'CREATE INDEX idx_diet_recipe_date ON ${DietDiaryDdl.tableDietRecipe} (date)',
+      'CREATE INDEX idx_diet_recipe_analysis_id ON ${DietDiaryDdl.tableDietRecipe} (analysisId)',
+    ];
+
+    for (var index in indexList) {
+      await txn.execute(index);
+    }
+
+    // // 创建一些索引来提高查询性能
+    // await txn.execute(
+    //   'CREATE INDEX idx_meal_record_date ON ${DietDiaryDdl.tableMealRecord} (date)',
+    // );
+    // await txn.execute(
+    //   'CREATE INDEX idx_meal_food_records_meal_id ON ${DietDiaryDdl.tableMealFoodRecord} (mealRecordId)',
+    // );
+    // await txn.execute(
+    //   'CREATE INDEX idx_meal_food_records_food_id ON ${DietDiaryDdl.tableMealFoodRecord}  (foodItemId)',
+    // );
+    // await txn.execute(
+    //   'CREATE INDEX idx_food_items_name ON ${DietDiaryDdl.tableFoodItem}  (name)',
+    // );
+    // await txn.execute(
+    //   'CREATE INDEX idx_food_items_foodcode ON ${DietDiaryDdl.tableFoodItem}  (foodCode)',
+    // );
+    // await txn.execute(
+    //   'CREATE INDEX idx_weight_records_date ON ${DietDiaryDdl.tableWeightRecord}  (date)',
+    // );
+    // await txn.execute(
+    //   'CREATE INDEX idx_weight_records_user_id ON ${DietDiaryDdl.tableWeightRecord}  (userId)',
+    // );
+    // await txn.execute(
+    //   'CREATE INDEX idx_diet_analysis_date ON ${DietDiaryDdl.tableDietAnalysis} (date)',
+    // );
+    // await txn.execute(
+    //   'CREATE INDEX idx_diet_recipe_date ON ${DietDiaryDdl.tableDietRecipe} (date)',
+    // );
+    // await txn.execute(
+    //   'CREATE INDEX idx_diet_recipe_analysis_id ON ${DietDiaryDdl.tableDietRecipe} (analysisId)',
+    // );
   }
 
   // 关闭数据库

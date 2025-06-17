@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../shared/widgets/feature_grid_card.dart';
 import '../../../../core/utils/screen_helper.dart';
 import '../../../../shared/widgets/modern_feature_card.dart';
+import '../../../diet_diary/presentation/index.dart';
 import '../../../media_generation/image/presentation/index.dart';
 import '../../../media_generation/video/presentation/index.dart';
 import '../../../media_generation/voice/presentation/index.dart';
@@ -282,6 +283,14 @@ class _AIToolsState extends State<AITools> {
                       title: "训练助手",
                       subtitle: "使用大模型生成健身训练计划，可灵活跟练，强身健体",
                       icon: Icons.fitness_center,
+                      accentColor: Colors.blue,
+                    ),
+                    SizedBox(height: 16),
+                    ModernFeatureCard(
+                      targetPage: const DietDiaryPage(),
+                      title: "饮食日记",
+                      subtitle: "记录每日饮食，定制食谱\n分析营养成分，食品管理",
+                      icon: Icons.restaurant,
                       accentColor: Colors.blue,
                     ),
                     // SizedBox(height: 12),

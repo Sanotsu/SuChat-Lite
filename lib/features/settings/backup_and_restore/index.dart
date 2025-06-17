@@ -9,6 +9,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../../core/storage/db_config.dart';
+import '../../../core/storage/diet_diary_ddl.dart';
 import '../../../core/utils/datetime_formatter.dart';
 import '../../../shared/widgets/toast_utils.dart';
 import '../../../shared/widgets/simple_tool_widget.dart';
@@ -22,6 +24,8 @@ import '../../../core/utils/simple_tools.dart';
 import '../../branch_chat/data/models/branch_chat_export_data.dart';
 import '../../branch_chat/presentation/viewmodels/branch_store.dart';
 import '../../branch_chat/presentation/viewmodels/character_store.dart';
+import '../../diet_diary/data/index.dart';
+import '../../diet_diary/domain/entities/index.dart';
 import '../../media_generation/common/entities/media_generation_history.dart';
 import '../../training_assistant/domain/entities/index.dart';
 import '../../voice_recognition/domain/entities/voice_recognition_task_info.dart';
@@ -473,6 +477,34 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
         await _dbHelper.saveTrainingRecordDetails(
           jsonMapList.map((e) => TrainingRecordDetail.fromMap(e)).toList(),
         );
+      } else if (filename == "${DietDiaryDdl.tableDietAnalysis}.json") {
+        await DietAnalysisDao().batchInsert(
+          jsonMapList.map((e) => DietAnalysis.fromMap(e)).toList(),
+        );
+      } else if (filename == "${DietDiaryDdl.tableDietRecipe}.json") {
+        await DietRecipeDao().batchInsert(
+          jsonMapList.map((e) => DietRecipe.fromMap(e)).toList(),
+        );
+      } else if (filename == "${DietDiaryDdl.tableFoodItem}.json") {
+        await FoodItemDao().batchInsert(
+          jsonMapList.map((e) => FoodItem.fromMap(e)).toList(),
+        );
+      } else if (filename == "${DietDiaryDdl.tableMealFoodRecord}.json") {
+        await MealFoodRecordDao().batchInsert(
+          jsonMapList.map((e) => MealFoodRecord.fromMap(e)).toList(),
+        );
+      } else if (filename == "${DietDiaryDdl.tableMealRecord}.json") {
+        await MealRecordDao().batchInsert(
+          jsonMapList.map((e) => MealRecord.fromMap(e)).toList(),
+        );
+      } else if (filename == "${DietDiaryDdl.tableUserProfile}.json") {
+        await UserProfileDao().batchInsert(
+          jsonMapList.map((e) => UserProfile.fromMap(e)).toList(),
+        );
+      } else if (filename == "${DietDiaryDdl.tableWeightRecord}.json") {
+        await WeightRecordDao().batchInsert(
+          jsonMapList.map((e) => WeightRecord.fromMap(e)).toList(),
+        );
       }
     }
   }
@@ -692,6 +724,7 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

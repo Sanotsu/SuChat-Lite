@@ -1,4 +1,4 @@
-import 'db_init.dart';
+import 'db_config.dart';
 
 class DBDdl {
   // 2025-02-14 新的简洁版生成式任务记录

@@ -48,6 +48,23 @@ android {
         jniLibs {
             useLegacyPackaging = true
         }
+
+        // 2025-06-12 处理类似报错 https://github.com/auth0/Auth0.Android/issues/598
+        // 都是类似的2 files found with path 'META-INF/DEPENDENCIES' from inputs……
+        // 将issues中解决方法改为.kts版本即可
+        resources.excludes += setOf(
+            "META-INF/DEPENDENCIES",
+            "META-INF/LICENSE",
+            "META-INF/LICENSE.txt",
+            "META-INF/license.txt",
+            "META-INF/NOTICE",
+            "META-INF/NOTICE.txt",
+            "META-INF/notice.txt",
+            "META-INF/ASL2.0",
+            "META-INF/*.md"
+        )
+        // 通配符直接排除所有 META-INF 文件的写法
+        // resources.excludes += "META-INF/*"
     }
 
     defaultConfig {
