@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../shared/constants/constant_llm_enum.dart';
 
-class ModelFilter extends StatelessWidget {
+/// 模型过滤器
+/// 分支的对话主页面顶部切换模型类型的组件
+/// 在类型切换后，会立马触发模型选择器model_selector去选择分类后的实际模型
+class ModelTypeFilter extends StatelessWidget {
   final List<CusLLMSpec> models;
   final LLModelType selectedType;
   final Function(LLModelType)? onTypeChanged;
@@ -14,7 +17,7 @@ class ModelFilter extends StatelessWidget {
   // 简洁版不使用，高级版使用
   final bool isCusChip;
 
-  const ModelFilter({
+  const ModelTypeFilter({
     super.key,
     required this.models,
     required this.selectedType,

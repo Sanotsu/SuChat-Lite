@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_print, constant_identifier_names
+// ignore_for_file: avoid_print
 
 import 'dart:async';
 import 'dart:convert';
@@ -11,7 +11,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../utils/get_dir.dart';
 import 'db_config.dart';
 import 'db_ddl.dart';
-import 'diet_diary_ddl.dart';
+import 'ddl_diet_diary.dart';
+import 'ddl_training.dart';
 
 class DBInit {
   ///
@@ -42,36 +43,39 @@ class DBInit {
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi; // 设置全局 databaseFactory
 
-      // 针对Linux平台的特殊处理，这个不启用也应该正常
-      if (Platform.isLinux) {
-        try {
-          // 尝试使用自定义库路径
-          var options = OpenDatabaseOptions(readOnly: true);
-          // 可以尝试不同路径的SQLite库文件
-          final List<String> possiblePaths = [
-            'libsqlite3.so',
-            '/usr/lib/x86_64-linux-gnu/libsqlite3.so',
-            '/usr/lib/libsqlite3.so',
-          ];
+      // 首先确保linux环境有安装，不然这个initializeDB应该会报错
+      // sudo apt-get -y install libsqlite3-0 libsqlite3-dev
 
-          // 尝试所有可能的库路径
-          for (var path in possiblePaths) {
-            try {
-              print("尝试加载SQLite库: $path");
-              await databaseFactoryFfi.openDatabase(
-                ":memory:",
-                options: options,
-              );
-              break; // 如果成功，跳出循环
-            } catch (e) {
-              print("无法加载 $path: $e");
-              // 继续尝试下一个路径
-            }
-          }
-        } catch (e) {
-          print("初始化SQLite FFI时出错: $e");
-        }
-      }
+      // 针对Linux平台的特殊处理，这个不启用也应该正常
+      // if (Platform.isLinux) {
+      //   try {
+      //     // 尝试使用自定义库路径
+      //     var options = OpenDatabaseOptions(readOnly: true);
+      //     // 可以尝试不同路径的SQLite库文件
+      //     final List<String> possiblePaths = [
+      //       'libsqlite3.so',
+      //       '/usr/lib/x86_64-linux-gnu/libsqlite3.so',
+      //       '/usr/lib/libsqlite3.so',
+      //     ];
+
+      //     // 尝试所有可能的库路径
+      //     for (var path in possiblePaths) {
+      //       try {
+      //         print("尝试加载SQLite库: $path");
+      //         await databaseFactoryFfi.openDatabase(
+      //           ":memory:",
+      //           options: options,
+      //         );
+      //         break; // 如果成功，跳出循环
+      //       } catch (e) {
+      //         print("无法加载 $path: $e");
+      //         // 继续尝试下一个路径
+      //       }
+      //     }
+      //   } catch (e) {
+      //     print("初始化SQLite FFI时出错: $e");
+      //   }
+      // }
     }
 
     // 自定义的sqlite数据库文件保存的目录
@@ -83,7 +87,7 @@ class DBInit {
     // 在给定路径上打开/创建数据库
     var db = await openDatabase(
       path,
-      version: 3,
+      version: 2, // 更新数据库版本号
       onCreate: _createDb,
       onUpgrade: _upgradeDb,
     );
@@ -92,7 +96,7 @@ class DBInit {
     return db;
   }
 
-  // 创建训练数据库相关表
+  // 创建数据库相关表
   void _createDb(Database db, int newVersion) async {
     print("开始创建表 _createDb……");
 
@@ -100,16 +104,17 @@ class DBInit {
       txn.execute(DBDdl.ddlForMediaGenerationHistory);
       txn.execute(DBDdl.ddlForCusLlmSpec);
       txn.execute(DBDdl.ddlForVoiceRecognitionTask);
+
+      // 创建统一用户表
+      txn.execute(DBDdl.ddlForUserInfo);
+      // 创建用户表索引
+      await _createUserInfoIndex(txn);
+
       // 添加训练助手相关表
-      txn.execute(DBDdl.ddlForTrainingUserInfo);
-      txn.execute(DBDdl.ddlForTrainingPlan);
-      txn.execute(DBDdl.ddlForTrainingPlanDetail);
-      txn.execute(DBDdl.ddlForTrainingRecord);
-      txn.execute(DBDdl.ddlForTrainingRecordDetail);
+      await _createTrainingTable(txn);
 
       // 添加饮食日记相关表
       await _createDietDiaryTable(txn);
-
       // 创建一些索引来提高查询性能
       await _createDietDiaryIndex(txn);
     });
@@ -120,21 +125,30 @@ class DBInit {
     print("数据库升级 _upgradeDb 从 $oldVersion 到 $newVersion");
 
     if (oldVersion < 2) {
-      // 添加训练助手相关表
-      await db.execute(DBDdl.ddlForTrainingUserInfo);
-      await db.execute(DBDdl.ddlForTrainingPlan);
-      await db.execute(DBDdl.ddlForTrainingPlanDetail);
-      await db.execute(DBDdl.ddlForTrainingRecord);
-      await db.execute(DBDdl.ddlForTrainingRecordDetail);
-
       await db.transaction((txn) async {
+        // 创建新的统一用户表
+        txn.execute(DBDdl.ddlForUserInfo);
+        // 创建用户表索引
+        await _createUserInfoIndex(txn);
+
+        // 添加训练助手相关表
+        await _createTrainingTable(txn);
+
         // 添加饮食日记相关表
-        _createDietDiaryTable(txn);
+        await _createDietDiaryTable(txn);
 
         // 创建一些索引来提高查询性能
-        _createDietDiaryIndex(txn);
+        await _createDietDiaryIndex(txn);
       });
     }
+  }
+
+  // 数据库升级和默认都要创建的表
+  Future<void> _createTrainingTable(Transaction txn) async {
+    await txn.execute(TrainingDdl.ddlForTrainingPlan);
+    await txn.execute(TrainingDdl.ddlForTrainingPlanDetail);
+    await txn.execute(TrainingDdl.ddlForTrainingRecord);
+    await txn.execute(TrainingDdl.ddlForTrainingRecordDetail);
   }
 
   // 数据库升级和默认都要创建的表
@@ -142,7 +156,6 @@ class DBInit {
     await txn.execute(DietDiaryDdl.ddlForFoodItem);
     await txn.execute(DietDiaryDdl.ddlForMealRecord);
     await txn.execute(DietDiaryDdl.ddlForMealFoodRecord);
-    await txn.execute(DietDiaryDdl.ddlForUserProfile);
     await txn.execute(DietDiaryDdl.ddlForWeightRecord);
     await txn.execute(DietDiaryDdl.ddlForDietAnalysis);
     await txn.execute(DietDiaryDdl.ddlForDietRecipe);
@@ -166,38 +179,13 @@ class DBInit {
     for (var index in indexList) {
       await txn.execute(index);
     }
+  }
 
-    // // 创建一些索引来提高查询性能
-    // await txn.execute(
-    //   'CREATE INDEX idx_meal_record_date ON ${DietDiaryDdl.tableMealRecord} (date)',
-    // );
-    // await txn.execute(
-    //   'CREATE INDEX idx_meal_food_records_meal_id ON ${DietDiaryDdl.tableMealFoodRecord} (mealRecordId)',
-    // );
-    // await txn.execute(
-    //   'CREATE INDEX idx_meal_food_records_food_id ON ${DietDiaryDdl.tableMealFoodRecord}  (foodItemId)',
-    // );
-    // await txn.execute(
-    //   'CREATE INDEX idx_food_items_name ON ${DietDiaryDdl.tableFoodItem}  (name)',
-    // );
-    // await txn.execute(
-    //   'CREATE INDEX idx_food_items_foodcode ON ${DietDiaryDdl.tableFoodItem}  (foodCode)',
-    // );
-    // await txn.execute(
-    //   'CREATE INDEX idx_weight_records_date ON ${DietDiaryDdl.tableWeightRecord}  (date)',
-    // );
-    // await txn.execute(
-    //   'CREATE INDEX idx_weight_records_user_id ON ${DietDiaryDdl.tableWeightRecord}  (userId)',
-    // );
-    // await txn.execute(
-    //   'CREATE INDEX idx_diet_analysis_date ON ${DietDiaryDdl.tableDietAnalysis} (date)',
-    // );
-    // await txn.execute(
-    //   'CREATE INDEX idx_diet_recipe_date ON ${DietDiaryDdl.tableDietRecipe} (date)',
-    // );
-    // await txn.execute(
-    //   'CREATE INDEX idx_diet_recipe_analysis_id ON ${DietDiaryDdl.tableDietRecipe} (analysisId)',
-    // );
+  // 创建用户表索引
+  Future<void> _createUserInfoIndex(Transaction txn) async {
+    await txn.execute(
+      'CREATE INDEX idx_user_info_name ON ${DBDdl.tableUserInfo} (name)',
+    );
   }
 
   // 关闭数据库

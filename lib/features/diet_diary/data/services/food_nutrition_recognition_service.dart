@@ -203,11 +203,11 @@ class FoodNutritionRecognitionService {
 
       final Map<String, dynamic> nutritionData = json.decode(jsonStr);
 
-      // 提取配料表，并存入extraAttributes
-      final extraAttributes = <String, dynamic>{};
+      // 提取配料表，并存入otherParams
+      final otherParams = <String, dynamic>{};
       if (nutritionData.containsKey('ingredients') &&
           nutritionData['ingredients'] != null) {
-        extraAttributes['ingredients'] = nutritionData['ingredients'];
+        otherParams['ingredients'] = nutritionData['ingredients'];
       }
 
       if (nutritionData['energyKCal'] == null &&

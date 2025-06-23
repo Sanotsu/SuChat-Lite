@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/storage/db_helper.dart';
 import '../../../../core/utils/screen_helper.dart';
 import '../../../../shared/constants/constants.dart';
+import '../../data/training_dao.dart';
 import '../../domain/entities/training_record.dart';
 
 class TrainingStatistics extends StatelessWidget {
@@ -226,7 +226,7 @@ class TrainingStatistics extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   FutureBuilder(
-                    future: DBHelper().getTrainingPlan(record.planId),
+                    future: TrainingDao().getTrainingPlan(record.planId),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());

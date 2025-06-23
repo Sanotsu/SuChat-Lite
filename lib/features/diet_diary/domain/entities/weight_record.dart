@@ -1,11 +1,11 @@
 class WeightRecord {
   final int? id;
-  final int userId;
+  final String userId;
   final double weight;
   final DateTime date;
   final String? note;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime gmtCreate;
+  final DateTime gmtModified;
 
   WeightRecord({
     this.id,
@@ -13,10 +13,10 @@ class WeightRecord {
     required this.weight,
     required this.date,
     this.note,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) : createdAt = createdAt ?? DateTime.now(),
-       updatedAt = updatedAt ?? DateTime.now();
+    DateTime? gmtCreate,
+    DateTime? gmtModified,
+  }) : gmtCreate = gmtCreate ?? DateTime.now(),
+       gmtModified = gmtModified ?? DateTime.now();
 
   Map<String, dynamic> toMap() {
     return {
@@ -25,31 +25,35 @@ class WeightRecord {
       'weight': weight,
       'date': date.toIso8601String(),
       'note': note,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
+      'gmtCreate': gmtCreate.toIso8601String(),
+      'gmtModified': gmtModified.toIso8601String(),
     };
   }
 
   factory WeightRecord.fromMap(Map<String, dynamic> map) {
     return WeightRecord(
       id: map['id'] as int?,
-      userId: map['userId'] as int,
+      userId: map['userId'] as String,
       weight: map['weight'] as double,
       date: DateTime.parse(map['date'] as String),
       note: map['note'] as String?,
-      createdAt: DateTime.parse(map['createdAt'] as String),
-      updatedAt: DateTime.parse(map['updatedAt'] as String),
+      gmtCreate:
+          map['gmtCreate'] != null ? DateTime.parse(map['gmtCreate']) : null,
+      gmtModified:
+          map['gmtModified'] != null
+              ? DateTime.parse(map['gmtModified'])
+              : null,
     );
   }
 
   WeightRecord copyWith({
     int? id,
-    int? userId,
+    String? userId,
     double? weight,
     DateTime? date,
     String? note,
-    DateTime? createdAt,
-    DateTime? updatedAt,
+    DateTime? gmtCreate,
+    DateTime? gmtModified,
   }) {
     return WeightRecord(
       id: id ?? this.id,
@@ -57,8 +61,8 @@ class WeightRecord {
       weight: weight ?? this.weight,
       date: date ?? this.date,
       note: note ?? this.note,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
+      gmtCreate: gmtCreate ?? this.gmtCreate,
+      gmtModified: gmtModified ?? this.gmtModified,
     );
   }
 
@@ -72,8 +76,8 @@ class WeightRecord {
         other.weight == weight &&
         other.date == date &&
         other.note == note &&
-        other.createdAt == createdAt &&
-        other.updatedAt == updatedAt;
+        other.gmtCreate == gmtCreate &&
+        other.gmtModified == gmtModified;
   }
 
   @override
@@ -83,7 +87,7 @@ class WeightRecord {
         weight.hashCode ^
         date.hashCode ^
         note.hashCode ^
-        createdAt.hashCode ^
-        updatedAt.hashCode;
+        gmtCreate.hashCode ^
+        gmtModified.hashCode;
   }
 }

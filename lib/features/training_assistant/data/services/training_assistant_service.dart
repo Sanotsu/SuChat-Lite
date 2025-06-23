@@ -235,7 +235,7 @@ class TrainingAssistantService {
 3. 每个训练动作包含:
    - name: 动作名称(中英文)
    - muscleGroup: 目标肌群
-   - sets: 组数(3-5)
+   - sets: 组数
    - reps: 次数(根据目标调整)
    - countdown: 预计完成时间(秒)
    - restTime: 组间休息(秒)
@@ -252,14 +252,14 @@ class TrainingAssistantService {
     {
       "day": 1,
       "focus": "胸部+三头肌",
-      "totalDuration": 45,
+      "totalDuration": 30,
       "exercises": [
         {
           "name": "平板卧推(Bench Press)",
           "muscleGroup": "胸大肌",
           "sets": 4,
           "reps": "8-10",
-          "countdown": 45,
+          "countdown": 40,
           "restTime": 60,
           "instructions": [
             "仰卧平板凳，双脚踩实，握杠略宽于肩。",

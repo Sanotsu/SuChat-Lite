@@ -1,23 +1,18 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../../../core/storage/db_init.dart';
-import '../../../core/storage/diet_diary_ddl.dart';
+import '../../../core/storage/ddl_diet_diary.dart';
 import '../domain/entities/weight_record.dart';
 
 class WeightRecordDao {
-  // 单例模式
-  static final WeightRecordDao _dbHelper = WeightRecordDao._createInstance();
-  // 构造函数，返回单例
-  factory WeightRecordDao() => _dbHelper;
-
-  // 命名的构造函数用于创建DatabaseHelper的实例
+  static final WeightRecordDao _dao = WeightRecordDao._createInstance();
+  factory WeightRecordDao() => _dao;
   WeightRecordDao._createInstance();
 
-  // 获取数据库实例(每次操作都从 DBInit 获取，不缓存)
-  Future<Database> get database async => DBInit().database;
+  final dbInit = DBInit();
 
   Future<int> insert(WeightRecord weightRecord) async {
-    final db = await database;
+    final db = await dbInit.database;
     return await db.insert(
       DietDiaryDdl.tableWeightRecord,
       weightRecord.toMap(),
@@ -25,7 +20,7 @@ class WeightRecordDao {
   }
 
   Future<List<int>> batchInsert(List<WeightRecord> items) async {
-    final db = await database;
+    final db = await dbInit.database;
     final batch = db.batch();
 
     for (var item in items) {
@@ -41,7 +36,7 @@ class WeightRecordDao {
   }
 
   Future<int> update(WeightRecord weightRecord) async {
-    final db = await database;
+    final db = await dbInit.database;
     return await db.update(
       DietDiaryDdl.tableWeightRecord,
       weightRecord.toMap(),
@@ -51,7 +46,7 @@ class WeightRecordDao {
   }
 
   Future<int> delete(int id) async {
-    final db = await database;
+    final db = await dbInit.database;
     return await db.delete(
       DietDiaryDdl.tableWeightRecord,
       where: 'id = ?',
@@ -60,7 +55,7 @@ class WeightRecordDao {
   }
 
   Future<WeightRecord?> getById(int id) async {
-    final db = await database;
+    final db = await dbInit.database;
     final maps = await db.query(
       DietDiaryDdl.tableWeightRecord,
       where: 'id = ?',
@@ -73,8 +68,8 @@ class WeightRecordDao {
     return null;
   }
 
-  Future<List<WeightRecord>> getByUserId(int userId) async {
-    final db = await database;
+  Future<List<WeightRecord>> getByUserId(String userId) async {
+    final db = await dbInit.database;
     final maps = await db.query(
       DietDiaryDdl.tableWeightRecord,
       where: 'userId = ?',
@@ -90,7 +85,7 @@ class WeightRecordDao {
     DateTime startDate,
     DateTime endDate,
   ) async {
-    final db = await database;
+    final db = await dbInit.database;
     final maps = await db.query(
       DietDiaryDdl.tableWeightRecord,
       where: 'userId = ? AND date BETWEEN ? AND ?',
@@ -106,7 +101,7 @@ class WeightRecordDao {
   }
 
   Future<WeightRecord?> getLatest(int userId) async {
-    final db = await database;
+    final db = await dbInit.database;
     final maps = await db.query(
       DietDiaryDdl.tableWeightRecord,
       where: 'userId = ?',

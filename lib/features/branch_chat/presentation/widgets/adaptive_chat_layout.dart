@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../core/utils/screen_helper.dart';
 
@@ -68,7 +67,7 @@ class AdaptiveChatLayout extends StatelessWidget {
     if (isDesktop) {
       return _buildDesktopLayout(context);
     }
-    // 移动平台使用抽屉布局
+    // 移动平台使用历史记录跳转到新页面
     else {
       return _buildMobileLayout(context);
     }
@@ -126,10 +125,6 @@ class AdaptiveChatLayout extends StatelessWidget {
           // 主体内容
           Scaffold(
             appBar: appBar,
-            drawer: Drawer(width: 0.8.sw, child: historyContent),
-            onDrawerChanged: (isOpen) {
-              onHistorySidebarToggled(isOpen);
-            },
             body: body,
             backgroundColor: Colors.transparent,
           ),

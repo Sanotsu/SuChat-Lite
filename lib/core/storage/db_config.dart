@@ -7,7 +7,6 @@
 class DBInitConfig {
   // db名称
   static const String databaseName = "embedded_suchat.db";
-  static const String dietDiaryDatabaseName = "embedded_suchat_diet_diary.db";
   // 表名前缀
   static const String tablePerfix = "suchat_";
   // 导出表文件临时存放的文件夹

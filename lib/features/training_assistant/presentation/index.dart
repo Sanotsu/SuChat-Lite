@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/utils/screen_helper.dart';
+import '../../../core/viewmodels/user_info_viewmodel.dart';
 import '../../../shared/widgets/cus_loading_indicator.dart';
 import '../../../shared/widgets/simple_tool_widget.dart';
 import '../../../shared/widgets/toast_utils.dart';
+import '../../settings/pages/user_info_page.dart';
 import 'viewmodels/training_viewmodel.dart';
-import 'widgets/user_info_form.dart';
 import 'widgets/plan_generator_form.dart';
 import 'widgets/plan_list.dart';
 import 'widgets/plan_detail.dart';
@@ -28,34 +29,36 @@ class _TrainingAssistantPageState extends State<TrainingAssistantPage> {
   bool _isUserInfoCompleted = false;
 
   // 视图模型
-  late TrainingViewModel _viewModel;
+  late TrainingViewModel _trainingViewModel;
+  late UserInfoViewModel _userInfoViewModel;
 
   @override
   void initState() {
     super.initState();
-    _viewModel = Provider.of<TrainingViewModel>(context, listen: false);
-    _loadLastUser();
+    _trainingViewModel = Provider.of<TrainingViewModel>(context, listen: false);
+    _userInfoViewModel = Provider.of<UserInfoViewModel>(context, listen: false);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadLastUser();
+    });
   }
 
   // 加载上次用户信息
   Future<void> _loadLastUser() async {
     try {
-      final users = await _viewModel.getAllUsers();
-      if (users.isNotEmpty) {
-        await _viewModel.loadUserInfo(users.first.userId);
-        if (_viewModel.currentUser != null) {
-          // 加载用户的训练计划
-          await _viewModel.loadUserTrainingPlans(
-            _viewModel.currentUser!.userId,
-          );
-          if (!mounted) return;
-          setState(() {
-            _isUserInfoCompleted = true;
+      await _userInfoViewModel.initialize();
+      if (_userInfoViewModel.currentUser != null) {
+        // 加载用户的训练计划
+        await _trainingViewModel.loadUserTrainingPlans(
+          _userInfoViewModel.currentUser!.userId,
+        );
+        if (!mounted) return;
+        setState(() {
+          _isUserInfoCompleted = true;
 
-            // 如果有用户信息，初始化显示"训练计划"页面
-            _currentStep = 1;
-          });
-        }
+          // 如果有用户信息，初始化显示"训练计划"页面
+          _currentStep = 1;
+        });
       }
     } catch (e) {
       // 加载失败，不处理
@@ -66,19 +69,29 @@ class _TrainingAssistantPageState extends State<TrainingAssistantPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('训练助手')),
-      body: Consumer<TrainingViewModel>(
-        builder: (context, viewModel, child) {
+      body: Consumer2<TrainingViewModel, UserInfoViewModel>(
+        builder: (context, trainingViewModel, userInfoViewModel, child) {
           // 显示错误信息
-          if (viewModel.error != null) {
+          if (trainingViewModel.error != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              commonExceptionDialog(context, "异常信息", viewModel.error!);
+              commonExceptionDialog(context, "异常信息", trainingViewModel.error!);
+              trainingViewModel.clearError();
+            });
+          }
 
-              viewModel.clearError();
+          if (userInfoViewModel.error != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              commonExceptionDialog(
+                context,
+                "用户信息异常",
+                userInfoViewModel.error!,
+              );
+              userInfoViewModel.clearError();
             });
           }
 
           // 显示加载状态
-          if (viewModel.isLoading) {
+          if (trainingViewModel.isLoading || userInfoViewModel.isLoading) {
             return const Center(
               child: CusLoadingTimeIndicator(
                 text: '正在为你量身打造训练计划，请稍候\n注意：如果使用推理模型耗时会较久',
@@ -86,12 +99,75 @@ class _TrainingAssistantPageState extends State<TrainingAssistantPage> {
             );
           }
 
+          // 检查是否有用户信息
+          if (!_isUserInfoCompleted || userInfoViewModel.currentUser == null) {
+            return _buildNoUserInfoView();
+          }
+
           return ScreenHelper.isDesktop()
-              ? _buildDesktopLayout(viewModel)
-              : _buildMobileLayout(viewModel);
+              ? _buildDesktopLayout(trainingViewModel)
+              : _buildMobileLayout(trainingViewModel);
         },
       ),
     );
+  }
+
+  // 没有用户信息时显示的提示视图
+  Widget _buildNoUserInfoView() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.person_off_outlined, size: 64, color: Colors.grey),
+          const SizedBox(height: 16),
+          const Text(
+            '需要完善用户信息才能使用训练助手',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text('请先创建或完善您的个人信息，以便生成适合您的训练计划', textAlign: TextAlign.center),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _navigateToUserInfoPage,
+            icon: const Icon(Icons.person_add),
+            label: const Text('完善个人信息'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 导航到用户信息页面
+  Future<void> _navigateToUserInfoPage() async {
+    if (!mounted) return;
+
+    // 导航到UserInfoPage，使用已有的UserInfoViewModel
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => ChangeNotifierProvider.value(
+              value: _userInfoViewModel,
+              child: const UserInfoPage(),
+            ),
+      ),
+    );
+
+    // 如果返回结果不为null，表示用户信息已更新
+    if (result != null && _userInfoViewModel.currentUser != null) {
+      // 加载用户的训练计划
+      await _trainingViewModel.loadUserTrainingPlans(
+        _userInfoViewModel.currentUser!.userId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _isUserInfoCompleted = true;
+        _currentStep = 1; // 跳转到训练计划页面
+      });
+    }
   }
 
   // 桌面布局
@@ -111,40 +187,38 @@ class _TrainingAssistantPageState extends State<TrainingAssistantPage> {
                   leading: const Icon(Icons.person),
                   title: const Text('个人信息'),
                   selected: _currentStep == 0,
-                  onTap: () => setState(() => _currentStep = 0),
+                  onTap: () => _navigateToUserInfoPage(),
                 ),
-                if (_isUserInfoCompleted) ...[
+                ListTile(
+                  leading: const Icon(Icons.fitness_center),
+                  title: const Text('训练计划'),
+                  selected: _currentStep == 1,
+                  onTap: () async {
+                    // 确保在切换到训练计划标签时加载训练计划
+                    if (_userInfoViewModel.currentUser != null &&
+                        viewModel.userPlans.isEmpty) {
+                      await viewModel.loadUserTrainingPlans(
+                        _userInfoViewModel.currentUser!.userId,
+                      );
+                    }
+                    if (!mounted) return;
+                    setState(() => _currentStep = 1);
+                  },
+                ),
+                if (viewModel.selectedPlan != null) ...[
                   ListTile(
-                    leading: const Icon(Icons.fitness_center),
-                    title: const Text('训练计划'),
-                    selected: _currentStep == 1,
-                    onTap: () async {
-                      // 确保在切换到训练计划标签时加载训练计划
-                      if (viewModel.currentUser != null &&
-                          viewModel.userPlans.isEmpty) {
-                        await viewModel.loadUserTrainingPlans(
-                          viewModel.currentUser!.userId,
-                        );
-                      }
-                      if (!mounted) return;
-                      setState(() => _currentStep = 1);
-                    },
-                  ),
-                  if (viewModel.selectedPlan != null) ...[
-                    ListTile(
-                      leading: const Icon(Icons.assignment),
-                      title: const Text('训练详情'),
-                      selected: _currentStep == 2,
-                      onTap: () => setState(() => _currentStep = 2),
-                    ),
-                  ],
-                  ListTile(
-                    leading: const Icon(Icons.bar_chart),
-                    title: const Text('训练统计'),
-                    selected: _currentStep == 3,
-                    onTap: () => setState(() => _currentStep = 3),
+                    leading: const Icon(Icons.assignment),
+                    title: const Text('训练详情'),
+                    selected: _currentStep == 2,
+                    onTap: () => setState(() => _currentStep = 2),
                   ),
                 ],
+                ListTile(
+                  leading: const Icon(Icons.bar_chart),
+                  title: const Text('训练统计'),
+                  selected: _currentStep == 3,
+                  onTap: () => setState(() => _currentStep = 3),
+                ),
               ],
             ),
           ),
@@ -172,29 +246,32 @@ class _TrainingAssistantPageState extends State<TrainingAssistantPage> {
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.all(8),
             children: [
-              _buildNavButton(0, '个人信息', Icons.person),
-              if (_isUserInfoCompleted) ...[
-                _buildNavButton(
-                  1,
-                  '训练计划',
-                  Icons.fitness_center,
-                  onTap: () async {
-                    // 确保在切换到训练计划标签时加载训练计划
-                    if (viewModel.currentUser != null &&
-                        viewModel.userPlans.isEmpty) {
-                      await viewModel.loadUserTrainingPlans(
-                        viewModel.currentUser!.userId,
-                      );
-                    }
-                    if (!mounted) return;
-                    setState(() => _currentStep = 1);
-                  },
-                ),
-                if (viewModel.selectedPlan != null) ...[
-                  _buildNavButton(2, '训练详情', Icons.assignment),
-                ],
-                _buildNavButton(3, '训练统计', Icons.bar_chart),
+              _buildNavButton(
+                0,
+                '个人信息',
+                Icons.person,
+                onTap: _navigateToUserInfoPage,
+              ),
+              _buildNavButton(
+                1,
+                '训练计划',
+                Icons.fitness_center,
+                onTap: () async {
+                  // 确保在切换到训练计划标签时加载训练计划
+                  if (_userInfoViewModel.currentUser != null &&
+                      viewModel.userPlans.isEmpty) {
+                    await viewModel.loadUserTrainingPlans(
+                      _userInfoViewModel.currentUser!.userId,
+                    );
+                  }
+                  if (!mounted) return;
+                  setState(() => _currentStep = 1);
+                },
+              ),
+              if (viewModel.selectedPlan != null) ...[
+                _buildNavButton(2, '训练详情', Icons.assignment),
               ],
+              _buildNavButton(3, '训练统计', Icons.bar_chart),
             ],
           ),
         ),
@@ -247,7 +324,37 @@ class _TrainingAssistantPageState extends State<TrainingAssistantPage> {
   Widget _buildCurrentStepContent(TrainingViewModel viewModel) {
     switch (_currentStep) {
       case 0:
-        return _buildUserInfoForm(viewModel);
+        // 不再直接显示用户信息表单，而是导航到UserInfoPage
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.person_outline, size: 64, color: Colors.blue),
+              const SizedBox(height: 16),
+              const Text(
+                '查看或编辑个人信息',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '您可以查看或修改个人信息，以便生成更适合您的训练计划',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: _navigateToUserInfoPage,
+                icon: const Icon(Icons.edit),
+                label: const Text('编辑个人信息'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
       case 1:
         return _buildTrainingPlanSection(viewModel);
       case 2:
@@ -257,42 +364,6 @@ class _TrainingAssistantPageState extends State<TrainingAssistantPage> {
       default:
         return const Center(child: Text('未知步骤'));
     }
-  }
-
-  // 用户信息表单
-  Widget _buildUserInfoForm(TrainingViewModel viewModel) {
-    return UserInfoForm(
-      userInfo: viewModel.currentUser,
-      onSaved: (
-        gender,
-        height,
-        weight,
-        age,
-        fitnessLevel,
-        healthConditions,
-      ) async {
-        await viewModel.saveUserInfo(
-          userId: viewModel.currentUser?.userId,
-          gender: gender,
-          height: height,
-          weight: weight,
-          age: age,
-          fitnessLevel: fitnessLevel,
-          healthConditions: healthConditions,
-        );
-
-        // 保存用户信息后，加载该用户的训练计划
-        if (viewModel.currentUser != null) {
-          await viewModel.loadUserTrainingPlans(viewModel.currentUser!.userId);
-        }
-
-        if (!mounted) return;
-        setState(() {
-          _isUserInfoCompleted = true;
-          _currentStep = 1; // 保存后跳转到训练计划页面
-        });
-      },
-    );
   }
 
   // 训练计划部分
@@ -367,9 +438,9 @@ class _TrainingAssistantPageState extends State<TrainingAssistantPage> {
                                 }
 
                                 // 重新加载用户的训练计划列表
-                                if (viewModel.currentUser != null) {
+                                if (_userInfoViewModel.currentUser != null) {
                                   await viewModel.loadUserTrainingPlans(
-                                    viewModel.currentUser!.userId,
+                                    _userInfoViewModel.currentUser!.userId,
                                   );
                                 }
                               }
@@ -380,7 +451,7 @@ class _TrainingAssistantPageState extends State<TrainingAssistantPage> {
 
                       // 新建计划表单
                       PlanGeneratorForm(
-                        userInfo: viewModel.currentUser,
+                        userInfo: _userInfoViewModel.currentUser,
                         onGenerate: (
                           targetGoal,
                           muscleGroups,
@@ -390,10 +461,16 @@ class _TrainingAssistantPageState extends State<TrainingAssistantPage> {
                           model, {
                           String? customPrompt,
                         }) async {
+                          if (_userInfoViewModel.currentUser == null) {
+                            ToastUtils.showError('用户信息不存在，请先创建用户信息');
+                            return;
+                          }
+
                           if (customPrompt != null) {
                             // 使用自定义提示词生成
                             await viewModel
                                 .generateTrainingPlanWithCustomPrompt(
+                                  userInfo: _userInfoViewModel.currentUser!,
                                   targetGoal: targetGoal,
                                   targetMuscleGroups: muscleGroups.split('、'),
                                   duration: duration,
@@ -405,6 +482,7 @@ class _TrainingAssistantPageState extends State<TrainingAssistantPage> {
                           } else {
                             // 使用标准提示词生成
                             await viewModel.generateTrainingPlan(
+                              userInfo: _userInfoViewModel.currentUser!,
                               targetGoal: targetGoal,
                               // 注意和PlanGeneratorForm的_generatePlan()分隔符一致
                               targetMuscleGroups: muscleGroups.split('、'),
@@ -415,16 +493,18 @@ class _TrainingAssistantPageState extends State<TrainingAssistantPage> {
                             );
                           }
 
-                          if (viewModel.selectedPlan != null) {
+                          if (viewModel.selectedPlan != null &&
+                              _userInfoViewModel.currentUser != null) {
                             // 保存生成的训练计划到数据库
-                            await viewModel.saveTrainingPlan();
+                            await viewModel.saveTrainingPlan(
+                              _userInfoViewModel.currentUser!.userId,
+                            );
 
                             // 重新加载用户的训练计划列表
-                            if (viewModel.currentUser != null) {
-                              await viewModel.loadUserTrainingPlans(
-                                viewModel.currentUser!.userId,
-                              );
-                            }
+                            await viewModel.loadUserTrainingPlans(
+                              _userInfoViewModel.currentUser!.userId,
+                            );
+
                             if (!mounted) return;
                             setState(() {
                               _currentStep = 2; // 生成计划后跳转到计划详情页面

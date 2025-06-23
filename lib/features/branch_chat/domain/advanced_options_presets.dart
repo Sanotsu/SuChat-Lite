@@ -113,12 +113,16 @@ class AdvancedOptionsManager {
     switch (platform) {
       case ApiPlatform.zhipu:
         // 智谱的温度是[0,1],和其他的[0,2]不一样？？？该怎么处理
-        params['temperature'] = params['temperature'] / 2;
+        if (params['temperature'] != null) {
+          params['temperature'] = params['temperature'] / 2;
+        }
         break;
       case ApiPlatform.aliyun:
         // 阿里云的温度是[0,2), 2会报错
-        if (params['temperature'] == 2) {
-          params['temperature'] = 1.99;
+        if (params['temperature'] != null) {
+          if (params['temperature'] == 2) {
+            params['temperature'] = 1.99;
+          }
         }
         break;
       default:

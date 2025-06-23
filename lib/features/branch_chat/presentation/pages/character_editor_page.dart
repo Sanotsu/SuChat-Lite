@@ -98,7 +98,7 @@ class _CharacterEditorPageState extends State<CharacterEditorPage> {
     if (!mounted) return;
 
     // 使用自适应模型选择器
-    final result = await AdaptiveModelSelector.show(
+    final result = await ModelSelector.show(
       context: context,
       models: availableModels,
       selectedModel: _preferredModel,

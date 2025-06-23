@@ -21,10 +21,10 @@ class DietDiaryDdl {
       vitaminAPer100g     REAL,
       vitaminCPer100g     REAL,
       vitaminEPer100g     REAL,
-      extraAttributes     TEXT,
+      otherParams         TEXT,
       isFavorite          INTEGER NOT NULL,
-      createdAt           TEXT NOT NULL,
-      updatedAt           TEXT NOT NULL
+      gmtCreate           TEXT NOT NULL,
+      gmtModified         TEXT NOT NULL
     );
     """;
 
@@ -37,8 +37,8 @@ class DietDiaryDdl {
       mealType            INTEGER NOT NULL,
       imageUrls           TEXT,
       description         TEXT,
-      createdAt           TEXT NOT NULL,
-      updatedAt           TEXT NOT NULL
+      gmtCreate           TEXT NOT NULL,
+      gmtModified         TEXT NOT NULL
     );
     """;
 
@@ -52,31 +52,10 @@ class DietDiaryDdl {
       foodItemId          INTEGER NOT NULL,
       quantity            REAL NOT NULL,
       unit                TEXT,
-      createdAt           TEXT NOT NULL,
-      updatedAt           TEXT NOT NULL,
+      gmtCreate           TEXT NOT NULL,
+      gmtModified         TEXT NOT NULL,
       FOREIGN KEY (mealRecordId) REFERENCES meal_records (id) ON DELETE CASCADE,
       FOREIGN KEY (foodItemId) REFERENCES food_items (id) ON DELETE RESTRICT
-    );
-    """;
-
-  // 创建用户信息表
-  static const tableUserProfile = '${DBInitConfig.tablePerfix}user_profile';
-  static const ddlForUserProfile = """
-    CREATE TABLE $tableUserProfile (
-      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-      name                TEXT NOT NULL,
-      age                 INTEGER NOT NULL,
-      gender              INTEGER NOT NULL,
-      height              REAL NOT NULL,
-      weight              REAL NOT NULL,
-      goal                INTEGER NOT NULL,
-      activityLevel       REAL NOT NULL,
-      targetCalories      REAL NOT NULL,
-      targetCarbs         REAL NOT NULL,
-      targetProtein       REAL NOT NULL,
-      targetFat           REAL NOT NULL,
-      createdAt           TEXT NOT NULL,
-      updatedAt           TEXT NOT NULL
     );
     """;
 
@@ -85,12 +64,12 @@ class DietDiaryDdl {
   static const ddlForWeightRecord = """
     CREATE TABLE $tableWeightRecord (
       id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-      userId              INTEGER NOT NULL,
+      userId              TEXT NOT NULL,
       weight              REAL NOT NULL,
       date                TEXT NOT NULL,
       note                TEXT,
-      createdAt           TEXT NOT NULL,
-      updatedAt           TEXT NOT NULL,
+      gmtCreate         TEXT NOT NULL,
+      gmtModified         TEXT NOT NULL,
       FOREIGN KEY (userId) REFERENCES user_profiles (id) ON DELETE CASCADE
     );
     """;
@@ -103,8 +82,8 @@ class DietDiaryDdl {
       date                TEXT NOT NULL,
       content             TEXT NOT NULL,
       modelName           TEXT NOT NULL,
-      createdAt           TEXT NOT NULL,
-      updatedAt           TEXT NOT NULL
+      gmtCreate           TEXT NOT NULL,
+      gmtModified         TEXT NOT NULL
     );
     """;
 
@@ -120,8 +99,8 @@ class DietDiaryDdl {
       mealsPerDay         INTEGER NOT NULL,
       dietaryPreference   TEXT,
       analysisId          INTEGER,
-      createdAt           TEXT NOT NULL,
-      updatedAt           TEXT NOT NULL
+      gmtCreate           TEXT NOT NULL,
+      gmtModified         TEXT NOT NULL
     );
     """;
 }

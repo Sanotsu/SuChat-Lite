@@ -2,13 +2,9 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../features/media_generation/common/entities/media_generation_history.dart';
 import '../../features/voice_recognition/domain/entities/voice_recognition_task_info.dart';
-import '../../features/training_assistant/domain/entities/training_user_info.dart';
-import '../../features/training_assistant/domain/entities/training_plan.dart';
-import '../../features/training_assistant/domain/entities/training_plan_detail.dart';
-import '../../features/training_assistant/domain/entities/training_record.dart';
-import '../../features/training_assistant/domain/entities/training_record_detail.dart';
 import '../../shared/constants/constant_llm_enum.dart';
 import '../entities/cus_llm_model.dart';
+import '../entities/user_info.dart';
 import 'db_init.dart';
 import 'db_ddl.dart';
 
@@ -117,6 +113,118 @@ class DBHelper {
       batch.insert(DBDdl.tableCusLlmSpec, item.toMap());
     }
     return await batch.commit();
+  }
+
+  ///***********************************************/
+  /// 统一用户信息表操作
+  /// 合并了训练助手和饮食日记的用户信息
+  ///
+
+  // 获取用户信息，如果不存在则创建默认用户
+  Future<UserInfo> getUserInfo({String? userId}) async {
+    Database db = await database;
+
+    // 如果没有指定userId，获取第一个用户
+    if (userId == null) {
+      final users = await db.query(DBDdl.tableUserInfo);
+      if (users.isNotEmpty) {
+        return UserInfo.fromMap(users.first);
+      } else {
+        // 创建默认用户
+        final defaultUser = UserInfo.createDefault();
+        await saveUserInfo(defaultUser);
+        return defaultUser;
+      }
+    }
+
+    // 查询指定userId的用户
+    final users = await db.query(
+      DBDdl.tableUserInfo,
+      where: 'userId = ?',
+      whereArgs: [userId],
+    );
+
+    if (users.isNotEmpty) {
+      return UserInfo.fromMap(users.first);
+    } else {
+      // 创建指定ID的默认用户
+      final defaultUser = UserInfo.createDefault(userId: userId);
+      await saveUserInfo(defaultUser);
+      return defaultUser;
+    }
+  }
+
+  // 获取所有用户
+  Future<List<UserInfo>> getAllUsers() async {
+    Database db = await database;
+    final users = await db.query(DBDdl.tableUserInfo, orderBy: 'name ASC');
+    return users.map((user) => UserInfo.fromMap(user)).toList();
+  }
+
+  // 保存用户信息（新增或更新）
+  Future<void> saveUserInfo(UserInfo userInfo) async {
+    Database db = await database;
+
+    // 检查用户是否已存在
+    final existingUsers = await db.query(
+      DBDdl.tableUserInfo,
+      where: 'userId = ?',
+      whereArgs: [userInfo.userId],
+    );
+
+    if (existingUsers.isEmpty) {
+      // 新增用户
+      await db.insert(DBDdl.tableUserInfo, userInfo.toMap());
+    } else {
+      // 更新用户
+      await db.update(
+        DBDdl.tableUserInfo,
+        userInfo.toMap(),
+        where: 'userId = ?',
+        whereArgs: [userInfo.userId],
+      );
+    }
+  }
+
+  Future<List<int>> batchInsert(List<UserInfo> items) async {
+    Database db = await database;
+    final batch = db.batch();
+
+    for (var item in items) {
+      batch.insert(
+        DBDdl.tableUserInfo,
+        item.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+
+    final results = await batch.commit();
+    return results.cast<int>();
+  }
+
+  // 删除用户
+  Future<void> deleteUserInfo(String userId) async {
+    Database db = await database;
+    await db.delete(
+      DBDdl.tableUserInfo,
+      where: 'userId = ?',
+      whereArgs: [userId],
+    );
+  }
+
+  Future<UserInfo?> getById(String userId) async {
+    Database db = await database;
+    final maps = await db.query(
+      DBDdl.tableUserInfo,
+      where: 'userId = ?',
+      whereArgs: [userId],
+    );
+
+    if (maps.isEmpty) {
+      return null;
+    }
+
+    return UserInfo.fromMap(maps.first);
   }
 
   ///***********************************************/
@@ -318,384 +426,5 @@ class DBHelper {
     );
 
     return rows.map((row) => VoiceRecognitionTaskInfo.fromMap(row)).toList();
-  }
-
-  ///***********************************************/
-  /// 训练助手 - 用户信息相关操作
-  ///
-
-  /// 保存用户信息(可多个)
-  Future<void> saveTrainingUsers(List<TrainingUserInfo> users) async {
-    Database db = await database;
-    await db.transaction((txn) async {
-      for (var user in users) {
-        await txn.insert(
-          DBDdl.tableTrainingUserInfo,
-          user.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-    });
-  }
-
-  /// 更新用户信息
-  Future<void> updateTrainingUserInfo(TrainingUserInfo userInfo) async {
-    Database db = await database;
-    await db.update(
-      DBDdl.tableTrainingUserInfo,
-      userInfo.toMap(),
-      where: 'userId = ?',
-      whereArgs: [userInfo.userId],
-    );
-  }
-
-  /// 获取用户信息
-  Future<TrainingUserInfo?> getTrainingUserInfo(String userId) async {
-    Database db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      DBDdl.tableTrainingUserInfo,
-      where: 'userId = ?',
-      whereArgs: [userId],
-    );
-
-    if (maps.isEmpty) {
-      return null;
-    }
-
-    return TrainingUserInfo.fromMap(maps.first);
-  }
-
-  /// 获取所有用户信息
-  Future<List<TrainingUserInfo>> getAllTrainingUserInfo() async {
-    Database db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      DBDdl.tableTrainingUserInfo,
-      orderBy: 'gmtCreate DESC',
-    );
-
-    return List.generate(maps.length, (i) {
-      return TrainingUserInfo.fromMap(maps[i]);
-    });
-  }
-
-  /// 删除用户信息
-  Future<void> deleteTrainingUserInfo(String userId) async {
-    Database db = await database;
-    await db.delete(
-      DBDdl.tableTrainingUserInfo,
-      where: 'userId = ?',
-      whereArgs: [userId],
-    );
-  }
-
-  ///***********************************************/
-  /// 训练助手 - 训练计划相关操作
-  ///
-
-  /// 保存训练计划
-  Future<void> saveTrainingPlans(List<TrainingPlan> plans) async {
-    Database db = await database;
-    await db.transaction((txn) async {
-      for (var plan in plans) {
-        await txn.insert(
-          DBDdl.tableTrainingPlan,
-          plan.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-    });
-  }
-
-  /// 更新训练计划
-  Future<void> updateTrainingPlan(TrainingPlan plan) async {
-    Database db = await database;
-    await db.update(
-      DBDdl.tableTrainingPlan,
-      plan.toMap(),
-      where: 'planId = ?',
-      whereArgs: [plan.planId],
-    );
-  }
-
-  /// 获取特定训练计划
-  Future<TrainingPlan?> getTrainingPlan(String planId) async {
-    Database db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      DBDdl.tableTrainingPlan,
-      where: 'planId = ?',
-      whereArgs: [planId],
-    );
-
-    if (maps.isEmpty) {
-      return null;
-    }
-
-    return TrainingPlan.fromMap(maps.first);
-  }
-
-  /// 获取用户的所有训练计划
-  Future<List<TrainingPlan>> getUserTrainingPlans(String userId) async {
-    Database db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      DBDdl.tableTrainingPlan,
-      where: 'userId = ?',
-      whereArgs: [userId],
-      orderBy: 'gmtCreate DESC',
-    );
-
-    return List.generate(maps.length, (i) {
-      return TrainingPlan.fromMap(maps[i]);
-    });
-  }
-
-  /// 获取用户的活跃训练计划
-  Future<List<TrainingPlan>> getUserActiveTrainingPlans(String userId) async {
-    Database db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      DBDdl.tableTrainingPlan,
-      where: 'userId = ? AND isActive = ?',
-      whereArgs: [userId, 1],
-      orderBy: 'gmtCreate DESC',
-    );
-
-    return List.generate(maps.length, (i) {
-      return TrainingPlan.fromMap(maps[i]);
-    });
-  }
-
-  /// 删除训练计划
-  Future<void> deleteTrainingPlan(String planId) async {
-    Database db = await database;
-    await db.transaction((txn) async {
-      // 删除计划详情
-      await txn.delete(
-        DBDdl.tableTrainingPlanDetail,
-        where: 'planId = ?',
-        whereArgs: [planId],
-      );
-
-      // 删除训练记录
-      await txn.delete(
-        DBDdl.tableTrainingRecord,
-        where: 'planId = ?',
-        whereArgs: [planId],
-      );
-
-      // 删除计划本身
-      await txn.delete(
-        DBDdl.tableTrainingPlan,
-        where: 'planId = ?',
-        whereArgs: [planId],
-      );
-    });
-  }
-
-  ///***********************************************/
-  /// 训练助手 - 训练计划详情相关操作
-  ///
-
-  /// 批量保存训练计划详情
-  Future<void> saveTrainingPlanDetails(List<TrainingPlanDetail> details) async {
-    Database db = await database;
-    await db.transaction((txn) async {
-      for (var detail in details) {
-        await txn.insert(
-          DBDdl.tableTrainingPlanDetail,
-          detail.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-    });
-  }
-
-  /// 获取训练计划的所有详情
-  Future<List<TrainingPlanDetail>> getTrainingPlanDetails(String planId) async {
-    Database db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      DBDdl.tableTrainingPlanDetail,
-      where: 'planId = ?',
-      whereArgs: [planId],
-      orderBy: 'day ASC',
-    );
-
-    return List.generate(maps.length, (i) {
-      return TrainingPlanDetail.fromMap(maps[i]);
-    });
-  }
-
-  /// 获取训练计划特定天的详情
-  Future<List<TrainingPlanDetail>> getTrainingPlanDetailsForDay(
-    String planId,
-    int day,
-  ) async {
-    Database db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      DBDdl.tableTrainingPlanDetail,
-      where: 'planId = ? AND day = ?',
-      whereArgs: [planId, day],
-    );
-
-    return List.generate(maps.length, (i) {
-      return TrainingPlanDetail.fromMap(maps[i]);
-    });
-  }
-
-  /// 删除训练计划详情
-  Future<void> deleteTrainingPlanDetail(String detailId) async {
-    Database db = await database;
-    await db.delete(
-      DBDdl.tableTrainingPlanDetail,
-      where: 'detailId = ?',
-      whereArgs: [detailId],
-    );
-  }
-
-  /// 删除训练计划的所有详情
-  Future<void> deleteAllTrainingPlanDetails(String planId) async {
-    Database db = await database;
-    await db.delete(
-      DBDdl.tableTrainingPlanDetail,
-      where: 'planId = ?',
-      whereArgs: [planId],
-    );
-  }
-
-  ///***********************************************/
-  /// 训练助手 - 训练记录相关操作
-  ///
-
-  /// 保存训练记录
-  Future<void> saveTrainingRecords(List<TrainingRecord> records) async {
-    Database db = await database;
-    await db.transaction((txn) async {
-      for (var record in records) {
-        await txn.insert(
-          DBDdl.tableTrainingRecord,
-          record.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-    });
-  }
-
-  /// 获取特定训练记录
-  Future<TrainingRecord?> getTrainingRecord(String recordId) async {
-    Database db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      DBDdl.tableTrainingRecord,
-      where: 'recordId = ?',
-      whereArgs: [recordId],
-    );
-
-    if (maps.isEmpty) {
-      return null;
-    }
-
-    return TrainingRecord.fromMap(maps.first);
-  }
-
-  /// 获取训练计划的所有记录
-  Future<List<TrainingRecord>> getTrainingRecordsForPlan(String planId) async {
-    Database db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      DBDdl.tableTrainingRecord,
-      where: 'planId = ?',
-      whereArgs: [planId],
-      orderBy: 'date DESC',
-    );
-
-    return List.generate(maps.length, (i) {
-      return TrainingRecord.fromMap(maps[i]);
-    });
-  }
-
-  /// 获取用户的所有训练记录
-  Future<List<TrainingRecord>> getUserTrainingRecords(String userId) async {
-    Database db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      DBDdl.tableTrainingRecord,
-      where: 'userId = ?',
-      whereArgs: [userId],
-      orderBy: 'date DESC',
-    );
-
-    return List.generate(maps.length, (i) {
-      return TrainingRecord.fromMap(maps[i]);
-    });
-  }
-
-  /// 获取用户在特定日期范围内的训练记录
-  Future<List<TrainingRecord>> getUserTrainingRecordsInDateRange(
-    String userId,
-    DateTime startDate,
-    DateTime endDate,
-  ) async {
-    Database db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      DBDdl.tableTrainingRecord,
-      where: 'userId = ? AND date >= ? AND date <= ?',
-      whereArgs: [
-        userId,
-        startDate.toIso8601String(),
-        endDate.toIso8601String(),
-      ],
-      orderBy: 'date DESC',
-    );
-
-    return List.generate(maps.length, (i) {
-      return TrainingRecord.fromMap(maps[i]);
-    });
-  }
-
-  /// 删除训练记录
-  Future<void> deleteTrainingRecord(String recordId) async {
-    Database db = await database;
-    await db.delete(
-      DBDdl.tableTrainingRecord,
-      where: 'recordId = ?',
-      whereArgs: [recordId],
-    );
-  }
-
-  /// 删除训练计划的所有记录
-  Future<void> deleteAllTrainingRecordsForPlan(String planId) async {
-    Database db = await database;
-    await db.delete(
-      DBDdl.tableTrainingRecord,
-      where: 'planId = ?',
-      whereArgs: [planId],
-    );
-  }
-
-  /// 保存训练记录详情
-  Future<void> saveTrainingRecordDetails(
-    List<TrainingRecordDetail> details,
-  ) async {
-    Database db = await database;
-    await db.transaction((txn) async {
-      for (var detail in details) {
-        await txn.insert(
-          DBDdl.tableTrainingRecordDetail,
-          detail.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-    });
-  }
-
-  /// 获取训练记录详情
-  Future<List<TrainingRecordDetail>> getTrainingRecordDetails(
-    String recordId,
-  ) async {
-    Database db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      DBDdl.tableTrainingRecordDetail,
-      where: 'recordId = ?',
-      whereArgs: [recordId],
-    );
-
-    return List.generate(maps.length, (i) {
-      return TrainingRecordDetail.fromMap(maps[i]);
-    });
   }
 }

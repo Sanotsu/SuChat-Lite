@@ -4,134 +4,11 @@ import '../../../../core/utils/screen_helper.dart';
 import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../shared/constants/constant_llm_enum.dart';
 
-/// 平台图标组件
-/// 按优先级尝试加载：
-/// 1. 本地资源图片
-/// 2. 网络图片
-/// 3. 占位图标
-class PlatformLogo extends StatelessWidget {
-  final ApiPlatform? platform;
-  final LLModelType? modelType;
-  final Size size;
-
-  const PlatformLogo({
-    super.key,
-    required this.platform,
-    this.modelType,
-    this.size = const Size(120.0, 40.0),
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(6),
-      child: Container(
-        decoration: BoxDecoration(
-          color: _getBackgroundColor(),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        width: size.width,
-        height: size.height,
-        child: Image.asset(
-          _getPlatformIcon(isSmall: size.width == size.height),
-          width: size.width,
-          height: size.height,
-          fit: BoxFit.fitWidth,
-          errorBuilder: (context, error, stackTrace) {
-            // 网络图片加载失败，显示占位图标
-            return Center(
-              child: Icon(
-                _getFallbackIcon(),
-                size: size.width * 0.7,
-                color: _getModelTypeColor(),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  // 根据平台获取本地图标
-  String _getPlatformIcon({bool isSmall = false}) {
-    var commonIcon =
-        isSmall ? 'assets/platform_icons/small/' : 'assets/platform_icons/';
-    switch (platform) {
-      case ApiPlatform.lingyiwanwu:
-        return '${commonIcon}lingyiwanwu.png';
-      case ApiPlatform.deepseek:
-        return '${commonIcon}deepseek.png';
-      case ApiPlatform.zhipu:
-        return '${commonIcon}zhipu.png';
-      case ApiPlatform.baidu:
-        return '${commonIcon}baidu.png';
-      case ApiPlatform.volcengine:
-      case ApiPlatform.volcesBot:
-        return '${commonIcon}volcengine.png';
-      case ApiPlatform.tencent:
-        return '${commonIcon}tencent.png';
-      case ApiPlatform.aliyun:
-        return '${commonIcon}aliyun.png';
-      case ApiPlatform.siliconCloud:
-        return '${commonIcon}siliconcloud.png';
-      case ApiPlatform.infini:
-        return '${commonIcon}infini.png';
-      default:
-        return 'assets/images/no_image.png';
-    }
-  }
-
-  // 获取备用图标
-  IconData _getFallbackIcon() {
-    switch (platform) {
-      case ApiPlatform.lingyiwanwu:
-        return Icons.chat_bubble_outline;
-      case ApiPlatform.deepseek:
-        return Icons.bolt;
-      case ApiPlatform.zhipu:
-        return Icons.psychology;
-      case ApiPlatform.baidu:
-        return Icons.cloud_outlined;
-      case ApiPlatform.volcengine:
-      case ApiPlatform.volcesBot:
-        return Icons.rocket_launch;
-      case ApiPlatform.tencent:
-        return Icons.diamond_outlined;
-      case ApiPlatform.aliyun:
-        return Icons.auto_awesome;
-      case ApiPlatform.siliconCloud:
-      case ApiPlatform.infini:
-        return Icons.smart_toy_outlined;
-      default:
-        return Icons.smart_toy;
-    }
-  }
-
-  // 获取模型类型对应的颜色
-  Color _getModelTypeColor() {
-    switch (modelType) {
-      case LLModelType.cc:
-        return Colors.blue;
-      case LLModelType.reasoner:
-        return Colors.purple;
-      case LLModelType.vision:
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  // 获取背景颜色
-  Color _getBackgroundColor() {
-    return Colors.grey.withValues(alpha: 0.1);
-  }
-}
-
 /// 平台自适应的模型选择器
 /// 根据平台特性自动选择最合适的显示方式：
 /// - 移动端：底部弹出式
 /// - 桌面端：对话框式
-class AdaptiveModelSelector {
+class ModelSelector {
   /// 显示模型选择器
   ///
   /// [context] 上下文
@@ -578,5 +455,128 @@ class _DesktopModelSelectorState extends State<DesktopModelSelector> {
         ),
       ),
     );
+  }
+}
+
+/// 平台图标组件
+/// 按优先级尝试加载：
+/// 1. 本地资源图片
+/// 2. 网络图片
+/// 3. 占位图标
+class PlatformLogo extends StatelessWidget {
+  final ApiPlatform? platform;
+  final LLModelType? modelType;
+  final Size size;
+
+  const PlatformLogo({
+    super.key,
+    required this.platform,
+    this.modelType,
+    this.size = const Size(120.0, 40.0),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        decoration: BoxDecoration(
+          color: _getBackgroundColor(),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        width: size.width,
+        height: size.height,
+        child: Image.asset(
+          _getPlatformIcon(isSmall: size.width == size.height),
+          width: size.width,
+          height: size.height,
+          fit: BoxFit.fitWidth,
+          errorBuilder: (context, error, stackTrace) {
+            // 网络图片加载失败，显示占位图标
+            return Center(
+              child: Icon(
+                _getFallbackIcon(),
+                size: size.width * 0.7,
+                color: _getModelTypeColor(),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  // 根据平台获取本地图标
+  String _getPlatformIcon({bool isSmall = false}) {
+    var commonIcon =
+        isSmall ? 'assets/platform_icons/small/' : 'assets/platform_icons/';
+    switch (platform) {
+      case ApiPlatform.lingyiwanwu:
+        return '${commonIcon}lingyiwanwu.png';
+      case ApiPlatform.deepseek:
+        return '${commonIcon}deepseek.png';
+      case ApiPlatform.zhipu:
+        return '${commonIcon}zhipu.png';
+      case ApiPlatform.baidu:
+        return '${commonIcon}baidu.png';
+      case ApiPlatform.volcengine:
+      case ApiPlatform.volcesBot:
+        return '${commonIcon}volcengine.png';
+      case ApiPlatform.tencent:
+        return '${commonIcon}tencent.png';
+      case ApiPlatform.aliyun:
+        return '${commonIcon}aliyun.png';
+      case ApiPlatform.siliconCloud:
+        return '${commonIcon}siliconcloud.png';
+      case ApiPlatform.infini:
+        return '${commonIcon}infini.png';
+      default:
+        return 'assets/images/no_image.png';
+    }
+  }
+
+  // 获取备用图标
+  IconData _getFallbackIcon() {
+    switch (platform) {
+      case ApiPlatform.lingyiwanwu:
+        return Icons.chat_bubble_outline;
+      case ApiPlatform.deepseek:
+        return Icons.bolt;
+      case ApiPlatform.zhipu:
+        return Icons.psychology;
+      case ApiPlatform.baidu:
+        return Icons.cloud_outlined;
+      case ApiPlatform.volcengine:
+      case ApiPlatform.volcesBot:
+        return Icons.rocket_launch;
+      case ApiPlatform.tencent:
+        return Icons.diamond_outlined;
+      case ApiPlatform.aliyun:
+        return Icons.auto_awesome;
+      case ApiPlatform.siliconCloud:
+      case ApiPlatform.infini:
+        return Icons.smart_toy_outlined;
+      default:
+        return Icons.smart_toy;
+    }
+  }
+
+  // 获取模型类型对应的颜色
+  Color _getModelTypeColor() {
+    switch (modelType) {
+      case LLModelType.cc:
+        return Colors.blue;
+      case LLModelType.reasoner:
+        return Colors.purple;
+      case LLModelType.vision:
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  // 获取背景颜色
+  Color _getBackgroundColor() {
+    return Colors.grey.withValues(alpha: 0.1);
   }
 }

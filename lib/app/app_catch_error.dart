@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:video_player_media_kit/video_player_media_kit.dart';
 
 import '../core/storage/cus_get_storage.dart';
 import '../core/utils/simple_tools.dart';
@@ -71,20 +70,20 @@ class AppCatchError {
     NetworkStatusService().initialize();
 
     // 单行初始化后，您可以正常在多个平台使用 video_player
-    VideoPlayerMediaKit.ensureInitialized(
-      // default: false    -    dependency: media_kit_libs_android_video
-      android: true,
-      // default: false    -    dependency: media_kit_libs_ios_video
-      iOS: true,
-      // default: false    -    dependency: media_kit_libs_macos_video
-      macOS: true,
-      // default: false    -    dependency: media_kit_libs_windows_video
-      windows: true,
-      // default: false    -    dependency: media_kit_libs_linux
-      // 需要在开发机安装依赖，比如Ubuntu下:sudo apt install libmpv-dev
-      // 没安装在报错信息下会有提示
-      linux: true,
-    );
+    // VideoPlayerMediaKit.ensureInitialized(
+    //   // default: false    -    dependency: media_kit_libs_android_video
+    //   android: true,
+    //   // default: false    -    dependency: media_kit_libs_ios_video
+    //   iOS: true,
+    //   // default: false    -    dependency: media_kit_libs_macos_video
+    //   macOS: true,
+    //   // default: false    -    dependency: media_kit_libs_windows_video
+    //   windows: true,
+    //   // default: false    -    dependency: media_kit_libs_linux
+    //   // 需要在开发机安装依赖，比如Ubuntu下:sudo apt install libmpv-dev
+    //   // 没安装在报错信息下会有提示
+    //   linux: true,
+    // );
 
     // 上面的初始化完成后，再启动应用
     runApp(const SuChatApp());

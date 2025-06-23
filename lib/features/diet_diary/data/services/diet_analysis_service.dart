@@ -2,30 +2,31 @@ import 'dart:async';
 import 'dart:ui';
 
 import '../../../../core/entities/cus_llm_model.dart';
+import '../../../../core/entities/user_info.dart';
 import '../../../../shared/constants/constant_llm_enum.dart';
 import '../../../branch_chat/data/datasources/openai_compatible_apis.dart';
 import '../../../branch_chat/data/repositories/chat_service.dart';
 import '../../domain/entities/meal_food_detail.dart';
 import '../../domain/entities/meal_type.dart';
-import '../../domain/entities/user_profile.dart';
 
 class DietAnalysisService {
   /// 分析用户一日饮食数据
   ///
   /// 参数:
   /// - model: 使用的大模型
-  /// - userProfile: 用户信息
+  /// - userInfo: 用户信息
   /// - mealFoodDetails: 一日四餐的食品详情
   /// - dailyNutrition: 一日营养摄入总量
   /// - dailyRecommended: 推荐的每日营养摄入量
   Future<(Stream<String>, VoidCallback)> analyzeDailyDiet({
     required CusLLMSpec model,
-    required UserProfile userProfile,
+    required UserInfo userInfo,
     required Map<int, List<MealFoodDetail>> mealFoodDetails,
     required Map<String, double> dailyNutrition,
     required Map<String, double> dailyRecommended,
     required List<int> mealRecordIds,
     required Map<int, MealType> mealTypes,
+    String? customPrompt,
   }) async {
     // 如果是自定义平台模型，url、apikey等直接在模型规格中
     Map<String, String> headers;
@@ -42,19 +43,30 @@ class DietAnalysisService {
     }
 
     // 构建提示词
-    final messages = _buildPromptMessages(
-      userProfile: userProfile,
-      mealFoodDetails: mealFoodDetails,
-      dailyNutrition: dailyNutrition,
-      dailyRecommended: dailyRecommended,
-      mealRecordIds: mealRecordIds,
-      mealTypes: mealTypes,
-    );
+    String prompt;
+    // 如果用户有自定义提示词，则使用自定义提示词
+    if (customPrompt != null && customPrompt.trim().isNotEmpty) {
+      prompt = customPrompt;
+    } else {
+      prompt = buildDietAnalysisPrompt(
+        userInfo: userInfo,
+        mealFoodDetails: mealFoodDetails,
+        dailyNutrition: dailyNutrition,
+        dailyRecommended: dailyRecommended,
+        mealRecordIds: mealRecordIds,
+        mealTypes: mealTypes,
+      );
+    }
 
-    final requestBody = {
-      "model": model.model,
-      "messages": messages,
+    // 基础请求体
+    final Map<String, dynamic> requestBody = {
+      'model': model.model,
+      'messages': [
+        {'role': 'system', 'content': '你是一位专业的营养师和健康顾问，负责分析用户的一日饮食情况并提供专业的建议。'},
+        {'role': 'user', 'content': prompt},
+      ],
       "stream": true,
+      // 'temperature': 0.7,
     };
 
     // 调用大模型API
@@ -68,8 +80,8 @@ class DietAnalysisService {
   }
 
   /// 构建提示词消息
-  List<Map<String, dynamic>> _buildPromptMessages({
-    required UserProfile userProfile,
+  String buildDietAnalysisPrompt({
+    required UserInfo userInfo,
     required Map<int, List<MealFoodDetail>> mealFoodDetails,
     required Map<String, double> dailyNutrition,
     required Map<String, double> dailyRecommended,
@@ -82,7 +94,7 @@ class DietAnalysisService {
 请根据用户提供的个人信息、饮食记录和营养摄入数据，进行全面的分析并给出改进建议。
 
 在分析中，请考虑以下几个方面：
-1. 总热量摄入是否符合用户的目标（减脂/维持/增肌）
+1. 总热量摄入是否符合用户的目标（减脂/维持体重/增肌/保持健康）
 2. 三大营养素（碳水化合物、蛋白质、脂肪）的比例是否合理
 3. 餐次安排是否合理，食物多样性如何
 4. 针对用户的具体目标，提供个性化的改进建议
@@ -93,17 +105,17 @@ class DietAnalysisService {
 """;
 
     // 用户信息部分
-    final userInfo = """
+    final userBaseInfo = """
 ## 用户信息
-- 性别: ${userProfile.gender == Gender.male ? '男' : '女'}
-- 年龄: ${userProfile.age}岁
-- 身高: ${userProfile.height}厘米
-- 体重: ${userProfile.weight}公斤
-- BMI: ${userProfile.bmi.toStringAsFixed(1)}
-- 基础代谢率(BMR): ${userProfile.bmr.toInt()}千卡
-- 活动水平: ${getActivityLevelText(userProfile.activityLevel)}
-- 每日总能量消耗(TDEE): ${userProfile.tdee.toInt()}千卡
-- 健康目标: ${getGoalText(userProfile.goal)}
+- 性别: ${userInfo.gender == Gender.male ? '男' : '女'}
+- 年龄: ${userInfo.age}岁
+- 身高: ${userInfo.height}厘米
+- 体重: ${userInfo.weight}公斤
+- BMI: ${userInfo.bmi.toStringAsFixed(1)}
+- 基础代谢率(BMR): ${userInfo.bmr.toInt()}千卡
+- 活动水平: ${getActivityLevelText(userInfo.activityLevel ?? 1.2)}
+- 每日总能量消耗(TDEE): ${userInfo.tdee.toInt()}千卡
+- 健康目标: ${getGoalText(userInfo.goal ?? Goal.maintainWeight)}
 """;
 
     // 营养摄入总结
@@ -163,19 +175,12 @@ class DietAnalysisService {
 1. 总体评价：我的饮食结构是否合理，热量摄入是否符合我的目标
 2. 三大营养素分析：碳水化合物、蛋白质、脂肪的摄入比例是否合理
 3. 餐次安排分析：我的一日四餐安排是否合理，有无需要调整的地方
-4. 针对我的健康目标（${getGoalText(userProfile.goal)}），有哪些具体的改进建议
+4. 针对我的健康目标（${getGoalText(userInfo.goal ?? Goal.maintainWeight)}），有哪些具体的改进建议
 5. 如果有明显的营养不足或过量，请指出并提供调整建议
 
 请给出详细、专业且易于理解的分析和建议，谢谢！
 """;
 
-    return [
-      {"role": "system", "content": systemPrompt},
-      {
-        "role": "user",
-        "content":
-            "$userInfo\n\n$nutritionSummary\n\n$mealsDetail\n\n$userRequest",
-      },
-    ];
+    return "$systemPrompt\n\n$userBaseInfo\n\n$nutritionSummary\n\n$mealsDetail\n\n$userRequest";
   }
 }

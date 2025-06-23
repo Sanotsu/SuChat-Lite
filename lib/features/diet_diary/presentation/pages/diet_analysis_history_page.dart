@@ -83,7 +83,7 @@ class _DietAnalysisHistoryPageState extends State<DietAnalysisHistoryPage> {
                         children: [
                           const SizedBox(height: 4),
                           Text(
-                            '分析时间: ${_formatDateTime(analysis.createdAt)}',
+                            '分析时间: ${_formatDateTime(analysis.gmtCreate)}',
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                           Text(
@@ -110,6 +110,35 @@ class _DietAnalysisHistoryPageState extends State<DietAnalysisHistoryPage> {
                             '日期不匹配无法查看\n当前分析日期是: ${_formatDate(viewModel.selectedDate)}\n您点击的日期是: ${_formatDate(analysis.date)}',
                             duration: const Duration(seconds: 5),
                           );
+                        }
+                      },
+                      onLongPress: () async {
+                        var result = await showDialog(
+                          context: context,
+                          builder:
+                              (context) => AlertDialog(
+                                title: const Text('删除分析'),
+                                content: const Text('确定要删除该分析吗？'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context, false);
+                                    },
+                                    child: const Text('取消'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context, true);
+                                    },
+                                    child: const Text('确定'),
+                                  ),
+                                ],
+                              ),
+                        );
+
+                        if (result == true) {
+                          await viewModel.deleteDietAnalysis(analysis.id!);
+                          await _loadAnalyses();
                         }
                       },
                       contentPadding: const EdgeInsets.symmetric(

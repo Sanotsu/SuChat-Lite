@@ -12,8 +12,8 @@ import '../../../../core/utils/screen_helper.dart';
 import '../../domain/entities/message_font_color.dart';
 import '../../domain/entities/character_card.dart';
 
-class ChatBackgroundPickerPage extends StatefulWidget {
-  const ChatBackgroundPickerPage({
+class BranchChatBackgroundPickerPage extends StatefulWidget {
+  const BranchChatBackgroundPickerPage({
     super.key,
     required this.title,
     this.currentCharacter,
@@ -24,11 +24,12 @@ class ChatBackgroundPickerPage extends StatefulWidget {
   final CharacterCard? currentCharacter;
 
   @override
-  State<ChatBackgroundPickerPage> createState() =>
-      _ChatBackgroundPickerPageState();
+  State<BranchChatBackgroundPickerPage> createState() =>
+      _BranchChatBackgroundPickerPageState();
 }
 
-class _ChatBackgroundPickerPageState extends State<ChatBackgroundPickerPage>
+class _BranchChatBackgroundPickerPageState
+    extends State<BranchChatBackgroundPickerPage>
     with SingleTickerProviderStateMixin {
   final CusGetStorage _storage = CusGetStorage();
   String? _selectedBackground;

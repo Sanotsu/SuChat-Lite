@@ -232,8 +232,8 @@ class _FoodSearchPageState extends State<FoodSearchPage> {
       carbsPer100g: food.carbsPer100g,
       proteinPer100g: food.proteinPer100g,
       fatPer100g: food.fatPer100g,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
+      gmtCreate: DateTime.now(),
+      gmtModified: DateTime.now(),
     );
 
     final dialogTitle = isExistingFood ? '更新食品数量' : '添加食品';

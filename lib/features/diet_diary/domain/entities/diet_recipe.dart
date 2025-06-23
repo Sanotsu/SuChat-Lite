@@ -7,8 +7,8 @@ class DietRecipe {
   final int mealsPerDay;
   final String? dietaryPreference;
   final int? analysisId;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime gmtCreate;
+  final DateTime gmtModified;
 
   DietRecipe({
     this.id,
@@ -19,10 +19,10 @@ class DietRecipe {
     required this.mealsPerDay,
     this.dietaryPreference,
     this.analysisId,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) : createdAt = createdAt ?? DateTime.now(),
-       updatedAt = updatedAt ?? DateTime.now();
+    DateTime? gmtCreate,
+    DateTime? gmtModified,
+  }) : gmtCreate = gmtCreate ?? DateTime.now(),
+       gmtModified = gmtModified ?? DateTime.now();
 
   Map<String, dynamic> toMap() {
     return {
@@ -34,8 +34,8 @@ class DietRecipe {
       'mealsPerDay': mealsPerDay,
       'dietaryPreference': dietaryPreference,
       'analysisId': analysisId,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
+      'gmtCreate': gmtCreate.toIso8601String(),
+      'gmtModified': gmtModified.toIso8601String(),
     };
   }
 
@@ -49,8 +49,14 @@ class DietRecipe {
       mealsPerDay: map['mealsPerDay'],
       dietaryPreference: map['dietaryPreference'],
       analysisId: map['analysisId'],
-      createdAt: DateTime.parse(map['createdAt']),
-      updatedAt: DateTime.parse(map['updatedAt']),
+      gmtCreate:
+          map['gmtCreate'] != null
+              ? DateTime.parse(map['gmtCreate'])
+              : DateTime.now(),
+      gmtModified:
+          map['gmtModified'] != null
+              ? DateTime.parse(map['gmtModified'])
+              : DateTime.now(),
     );
   }
 
@@ -63,8 +69,8 @@ class DietRecipe {
     int? mealsPerDay,
     String? dietaryPreference,
     int? analysisId,
-    DateTime? createdAt,
-    DateTime? updatedAt,
+    DateTime? gmtCreate,
+    DateTime? gmtModified,
   }) {
     return DietRecipe(
       id: id ?? this.id,
@@ -75,8 +81,8 @@ class DietRecipe {
       mealsPerDay: mealsPerDay ?? this.mealsPerDay,
       dietaryPreference: dietaryPreference ?? this.dietaryPreference,
       analysisId: analysisId ?? this.analysisId,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? DateTime.now(),
+      gmtCreate: gmtCreate ?? this.gmtCreate,
+      gmtModified: gmtModified ?? DateTime.now(),
     );
   }
 

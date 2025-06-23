@@ -64,7 +64,7 @@ class FoodListView extends StatelessWidget {
     }
 
     return ListView.builder(
-      padding: padding ?? const EdgeInsets.symmetric(horizontal: 16),
+      padding: padding ?? const EdgeInsets.symmetric(horizontal: 8),
       itemCount: filteredItems.length,
       itemBuilder: (context, index) {
         final food = filteredItems[index];

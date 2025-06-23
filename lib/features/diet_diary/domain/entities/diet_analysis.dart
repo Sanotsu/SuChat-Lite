@@ -3,18 +3,18 @@ class DietAnalysis {
   final DateTime date;
   final String content;
   final String modelName;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime gmtCreate;
+  final DateTime gmtModified;
 
   DietAnalysis({
     this.id,
     required this.date,
     required this.content,
     required this.modelName,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) : createdAt = createdAt ?? DateTime.now(),
-       updatedAt = updatedAt ?? DateTime.now();
+    DateTime? gmtCreate,
+    DateTime? gmtModified,
+  }) : gmtCreate = gmtCreate ?? DateTime.now(),
+       gmtModified = gmtModified ?? DateTime.now();
 
   Map<String, dynamic> toMap() {
     return {
@@ -22,8 +22,8 @@ class DietAnalysis {
       'date': date.toIso8601String().split('T')[0], // 只保留日期部分
       'content': content,
       'modelName': modelName,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
+      'gmtCreate': gmtCreate.toIso8601String(),
+      'gmtModified': gmtModified.toIso8601String(),
     };
   }
 
@@ -33,8 +33,14 @@ class DietAnalysis {
       date: DateTime.parse(map['date']),
       content: map['content'],
       modelName: map['modelName'],
-      createdAt: DateTime.parse(map['createdAt']),
-      updatedAt: DateTime.parse(map['updatedAt']),
+      gmtCreate:
+          map['gmtCreate'] != null
+              ? DateTime.parse(map['gmtCreate'])
+              : DateTime.now(),
+      gmtModified:
+          map['gmtModified'] != null
+              ? DateTime.parse(map['gmtModified'])
+              : DateTime.now(),
     );
   }
 
@@ -43,15 +49,15 @@ class DietAnalysis {
     DateTime? date,
     String? content,
     String? modelName,
-    DateTime? updatedAt,
+    DateTime? gmtModified,
   }) {
     return DietAnalysis(
       id: id ?? this.id,
       date: date ?? this.date,
       content: content ?? this.content,
       modelName: modelName ?? this.modelName,
-      createdAt: createdAt,
-      updatedAt: updatedAt ?? DateTime.now(),
+      gmtCreate: gmtCreate,
+      gmtModified: gmtModified ?? DateTime.now(),
     );
   }
 }

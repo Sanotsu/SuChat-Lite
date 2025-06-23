@@ -1,20 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../../../core/entities/cus_llm_model.dart';
-import '../../data/repositories/training_repository.dart';
-import '../../domain/entities/training_user_info.dart';
+import '../../../../core/entities/user_info.dart';
+import '../../data/services/training_assistant_service.dart';
+import '../../data/training_dao.dart';
 import '../../domain/entities/training_plan.dart';
 import '../../domain/entities/training_plan_detail.dart';
 import '../../domain/entities/training_record.dart';
 import '../../domain/entities/training_record_detail.dart';
 
 class TrainingViewModel extends ChangeNotifier {
-  final TrainingRepository _repository = TrainingRepository();
-
-  // 当前用户
-  TrainingUserInfo? _currentUser;
-  TrainingUserInfo? get currentUser => _currentUser;
+  final TrainingDao _trainingDao = TrainingDao();
+  final TrainingAssistantService _trainingService = TrainingAssistantService();
 
   // 当前选中的训练计划
   TrainingPlan? _selectedPlan;
@@ -43,79 +40,9 @@ class TrainingViewModel extends ChangeNotifier {
   String? _error;
   String? get error => _error;
 
-  // 创建或更新用户信息
-  Future<void> saveUserInfo({
-    String? userId,
-    required String gender,
-    required double height,
-    required double weight,
-    int? age,
-    String? fitnessLevel,
-    String? healthConditions,
-  }) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      final userInfo = TrainingUserInfo(
-        userId: userId ?? const Uuid().v4(),
-        gender: gender,
-        height: height,
-        weight: weight,
-        age: age,
-        fitnessLevel: fitnessLevel,
-        healthConditions: healthConditions,
-      );
-
-      if (userId != null) {
-        await _repository.updateUserInfo(userInfo);
-      } else {
-        await _repository.saveUserInfo(userInfo);
-      }
-
-      _currentUser = userInfo;
-
-      _isLoading = false;
-      notifyListeners();
-    } catch (e) {
-      _isLoading = false;
-      _error = '保存用户信息失败: $e';
-      notifyListeners();
-    }
-  }
-
-  // 加载用户信息
-  Future<void> loadUserInfo(String userId) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      _currentUser = await _repository.getUserInfo(userId);
-
-      _isLoading = false;
-      notifyListeners();
-    } catch (e) {
-      _isLoading = false;
-      _error = '加载用户信息失败: $e';
-      notifyListeners();
-    }
-  }
-
-  // 获取所有用户
-  Future<List<TrainingUserInfo>> getAllUsers() async {
-    try {
-      return await _repository.getAllUsers();
-    } catch (e) {
-      _error = '获取用户列表失败: $e';
-      notifyListeners();
-      return [];
-    }
-  }
-
   // 生成训练计划
   Future<void> generateTrainingPlan({
+    required UserInfo userInfo,
     required String targetGoal,
     required List<String> targetMuscleGroups,
     required int duration,
@@ -124,24 +51,18 @@ class TrainingViewModel extends ChangeNotifier {
     required CusLLMSpec model,
   }) async {
     try {
-      if (_currentUser == null) {
-        _error = '请先创建用户信息';
-        notifyListeners();
-        return;
-      }
-
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      final result = await _repository.generateTrainingPlan(
-        userId: _currentUser!.userId,
-        gender: _currentUser!.gender,
-        height: _currentUser!.height,
-        weight: _currentUser!.weight,
-        age: _currentUser!.age,
-        fitnessLevel: _currentUser!.fitnessLevel ?? '初级',
-        healthConditions: _currentUser!.healthConditions,
+      final result = await _trainingService.generateTrainingPlan(
+        userId: userInfo.userId,
+        gender: userInfo.gender.name,
+        height: userInfo.height,
+        weight: userInfo.weight,
+        age: userInfo.age ?? 30,
+        fitnessLevel: userInfo.fitnessLevel ?? '初级',
+        healthConditions: userInfo.healthConditions,
         targetGoal: targetGoal,
         targetMuscleGroups: targetMuscleGroups,
         duration: duration,
@@ -164,6 +85,7 @@ class TrainingViewModel extends ChangeNotifier {
 
   // 使用自定义提示词生成训练计划
   Future<void> generateTrainingPlanWithCustomPrompt({
+    required UserInfo userInfo,
     required String targetGoal,
     required List<String> targetMuscleGroups,
     required int duration,
@@ -173,26 +95,21 @@ class TrainingViewModel extends ChangeNotifier {
     required CusLLMSpec model,
   }) async {
     try {
-      if (_currentUser == null) {
-        _error = '请先创建用户信息';
-        notifyListeners();
-        return;
-      }
-
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      final result = await _repository.generateTrainingPlanWithCustomPrompt(
-        userId: _currentUser!.userId,
-        targetGoal: targetGoal,
-        targetMuscleGroups: targetMuscleGroups.join(', '),
-        duration: duration,
-        frequency: frequency,
-        equipment: equipment,
-        customPrompt: customPrompt,
-        model: model,
-      );
+      final result = await _trainingService
+          .generateTrainingPlanWithCustomPrompt(
+            userId: userInfo.userId,
+            targetGoal: targetGoal,
+            targetMuscleGroups: targetMuscleGroups.join(', '),
+            duration: duration,
+            frequency: frequency,
+            equipment: equipment,
+            customPrompt: customPrompt,
+            model: model,
+          );
 
       _selectedPlan = result['plan'] as TrainingPlan;
       _planDetails = result['details'] as List<TrainingPlanDetail>;
@@ -207,7 +124,7 @@ class TrainingViewModel extends ChangeNotifier {
   }
 
   // 保存训练计划
-  Future<void> saveTrainingPlan() async {
+  Future<void> saveTrainingPlan(String userId) async {
     try {
       if (_selectedPlan == null || _planDetails.isEmpty) {
         _error = '没有可保存的训练计划';
@@ -219,10 +136,11 @@ class TrainingViewModel extends ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      await _repository.saveTrainingPlan(_selectedPlan!, _planDetails);
+      await _trainingDao.insertTrainingPlans([_selectedPlan!]);
+      await _trainingDao.insertTrainingPlanDetails(_planDetails);
 
       // 重新加载用户的训练计划
-      await loadUserTrainingPlans(_currentUser!.userId);
+      await loadUserTrainingPlans(userId);
 
       _isLoading = false;
       notifyListeners();
@@ -240,8 +158,8 @@ class TrainingViewModel extends ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      _userPlans = await _repository.getUserTrainingPlans(userId);
-      _activePlans = await _repository.getUserActiveTrainingPlans(userId);
+      _userPlans = await _trainingDao.getUserTrainingPlans(userId);
+      _activePlans = await _trainingDao.getUserActiveTrainingPlans(userId);
 
       _isLoading = false;
       notifyListeners();
@@ -259,10 +177,10 @@ class TrainingViewModel extends ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      _selectedPlan = await _repository.getTrainingPlan(planId);
+      _selectedPlan = await _trainingDao.getTrainingPlan(planId);
       if (_selectedPlan != null) {
-        _planDetails = await _repository.getTrainingPlanDetails(planId);
-        _planRecords = await _repository.getTrainingRecordsForPlan(planId);
+        _planDetails = await _trainingDao.getTrainingPlanDetails(planId);
+        _planRecords = await _trainingDao.getTrainingRecordsForPlan(planId);
       }
 
       _isLoading = false;
@@ -299,11 +217,11 @@ class TrainingViewModel extends ChangeNotifier {
         isActive: isActive,
       );
 
-      await _repository.updateTrainingPlan(updatedPlan);
+      await _trainingDao.updateTrainingPlan(updatedPlan);
       _selectedPlan = updatedPlan;
 
       // 重新加载用户的训练计划
-      await loadUserTrainingPlans(_currentUser!.userId);
+      await loadUserTrainingPlans(_selectedPlan!.userId);
 
       _isLoading = false;
       notifyListeners();
@@ -322,7 +240,7 @@ class TrainingViewModel extends ChangeNotifier {
       notifyListeners();
 
       // 检查是否有关联的训练记录
-      final records = await _repository.getTrainingRecordsForPlan(planId);
+      final records = await _trainingDao.getTrainingRecordsForPlan(planId);
       if (records.isNotEmpty) {
         _isLoading = false;
         _error = '该训练计划已有关联的训练记录，无法删除';
@@ -330,7 +248,7 @@ class TrainingViewModel extends ChangeNotifier {
         return false;
       }
 
-      await _repository.deleteTrainingPlan(planId);
+      await _trainingDao.deleteTrainingPlan(planId);
 
       // 如果删除的是当前选中的计划，清空选中状态
       if (_selectedPlan?.planId == planId) {
@@ -340,7 +258,7 @@ class TrainingViewModel extends ChangeNotifier {
       }
 
       // 重新加载用户的训练计划
-      await loadUserTrainingPlans(_currentUser!.userId);
+      await loadUserTrainingPlans(_selectedPlan!.userId);
 
       _isLoading = false;
       notifyListeners();
@@ -362,8 +280,8 @@ class TrainingViewModel extends ChangeNotifier {
     required List<TrainingRecordDetail> recordDetails,
   }) async {
     try {
-      if (_selectedPlan == null || _currentUser == null) {
-        _error = '没有选中的训练计划或用户';
+      if (_selectedPlan == null) {
+        _error = '没有选中的训练计划';
         notifyListeners();
         return;
       }
@@ -374,7 +292,7 @@ class TrainingViewModel extends ChangeNotifier {
 
       final record = TrainingRecord(
         planId: _selectedPlan!.planId,
-        userId: _currentUser!.userId,
+        userId: _selectedPlan!.userId,
         date: DateTime.now(),
         duration: duration,
         completionRate: completionRate,
@@ -382,7 +300,7 @@ class TrainingViewModel extends ChangeNotifier {
         feedback: feedback,
       );
 
-      await _repository.saveTrainingRecord(record);
+      await _trainingDao.insertTrainingRecords([record]);
 
       // 保存训练记录详情
       final detailsWithRecordId =
@@ -398,10 +316,10 @@ class TrainingViewModel extends ChangeNotifier {
             );
           }).toList();
 
-      await _repository.saveTrainingRecordDetails(detailsWithRecordId);
+      await _trainingDao.insertTrainingRecordDetails(detailsWithRecordId);
 
       // 重新加载训练记录
-      _planRecords = await _repository.getTrainingRecordsForPlan(
+      _planRecords = await _trainingDao.getTrainingRecordsForPlan(
         _selectedPlan!.planId,
       );
 
@@ -420,14 +338,14 @@ class TrainingViewModel extends ChangeNotifier {
     DateTime endDate,
   ) async {
     try {
-      if (_currentUser == null) {
-        _error = '没有选中的用户';
+      if (_selectedPlan == null) {
+        _error = '没有选中的训练计划';
         notifyListeners();
         return [];
       }
 
-      return await _repository.getUserTrainingRecordsInDateRange(
-        _currentUser!.userId,
+      return await _trainingDao.getUserTrainingRecordsInDateRange(
+        _selectedPlan!.userId,
         startDate,
         endDate,
       );
@@ -445,7 +363,7 @@ class TrainingViewModel extends ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      final records = await _repository.getTrainingRecordsForPlan(planId);
+      final records = await _trainingDao.getTrainingRecordsForPlan(planId);
 
       _isLoading = false;
       notifyListeners();
@@ -466,7 +384,7 @@ class TrainingViewModel extends ChangeNotifier {
       notifyListeners();
 
       // 获取训练记录
-      final record = await _repository.getTrainingRecord(recordId);
+      final record = await _trainingDao.getTrainingRecord(recordId);
       if (record == null) {
         _isLoading = false;
         _error = '找不到训练记录';
@@ -475,7 +393,7 @@ class TrainingViewModel extends ChangeNotifier {
       }
 
       // 获取训练计划
-      final plan = await _repository.getTrainingPlan(record.planId);
+      final plan = await _trainingDao.getTrainingPlan(record.planId);
       if (plan == null) {
         _isLoading = false;
         _error = '找不到训练计划';
@@ -484,12 +402,12 @@ class TrainingViewModel extends ChangeNotifier {
       }
 
       // 获取训练计划详情
-      final planDetails = await _repository.getTrainingPlanDetails(
+      final planDetails = await _trainingDao.getTrainingPlanDetails(
         record.planId,
       );
 
       // 获取训练记录详情
-      final recordDetails = await _repository.getTrainingRecordDetails(
+      final recordDetails = await _trainingDao.getTrainingRecordDetails(
         recordId,
       );
 
@@ -543,10 +461,10 @@ class TrainingViewModel extends ChangeNotifier {
       notifyListeners();
 
       // 删除原有的训练计划详情
-      await _repository.deleteTrainingPlanDetails(planId);
+      await _trainingDao.deleteAllTrainingPlanDetails(planId);
 
       // 保存新的训练计划详情
-      await _repository.saveTrainingPlanDetails(details);
+      await _trainingDao.insertTrainingPlanDetails(details);
 
       // 更新本地缓存
       if (_selectedPlan?.planId == planId) {

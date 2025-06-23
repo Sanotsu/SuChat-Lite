@@ -9,8 +9,10 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../../core/entities/user_info.dart';
 import '../../../core/storage/db_config.dart';
-import '../../../core/storage/diet_diary_ddl.dart';
+import '../../../core/storage/ddl_diet_diary.dart';
+import '../../../core/storage/ddl_training.dart';
 import '../../../core/utils/datetime_formatter.dart';
 import '../../../shared/widgets/toast_utils.dart';
 import '../../../shared/widgets/simple_tool_widget.dart';
@@ -27,6 +29,7 @@ import '../../branch_chat/presentation/viewmodels/character_store.dart';
 import '../../diet_diary/data/index.dart';
 import '../../diet_diary/domain/entities/index.dart';
 import '../../media_generation/common/entities/media_generation_history.dart';
+import '../../training_assistant/data/training_dao.dart';
 import '../../training_assistant/domain/entities/index.dart';
 import '../../voice_recognition/domain/entities/voice_recognition_task_info.dart';
 
@@ -46,7 +49,10 @@ const CHARACTER_CARD_LIST_FILE_NAME = 'suchat_character_card_list.json';
 const BRANCH_CHAT_HISTORY_FILE_NAME = 'suchat_branch_chat_history.json';
 
 class BackupAndRestorePage extends StatefulWidget {
-  const BackupAndRestorePage({super.key});
+  // 主页面有获取，直接传入，不要再次获取
+  final String packageVersion;
+
+  const BackupAndRestorePage({super.key, required this.packageVersion});
 
   @override
   State<BackupAndRestorePage> createState() => _BackupAndRestorePageState();
@@ -60,9 +66,6 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
 
   // 是否获得了存储权限(没获得就无法备份恢复)
   bool isPermissionGranted = false;
-
-  // 2024-06-05 测试用，z50u没法调试，build之后在页面显示权限结果
-  String tempPermMsg = "";
 
   String note = """**全量备份** 是把应用本地数据库中的所有数据导出保存在本地，包括用智能助手的对话历史、账单列表、菜品列表。
 \n\n**覆写恢复** 是把 '全量备份' 导出的压缩包，重新导入到应用中，覆盖应用本地数据库中的所有数据。""";
@@ -307,6 +310,9 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
           Directory tempDir = await getTemporaryDirectory();
           String unzipPath = p.join(tempDir.path, ZIP_TEMP_DIR_AT_UNZIP);
 
+          // 先清空临时目录避免旧解压文件残留
+          await _deleteFilesInDirectory(unzipPath);
+
           // 使用extractFileToDisk替代手动解压，简化代码
           await extractFileToDisk(file.path, unzipPath);
 
@@ -347,12 +353,16 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
             sourceFile.deleteSync();
           }
 
+          // 还要删除解压的临时文件
+          await _deleteFilesInDirectory(unzipPath);
+
           setState(() {
             isLoading = false;
           });
 
           ToastUtils.showSuccess("原有数据已删除，备份数据已恢复。");
         } catch (e) {
+          // rethrow;
           // 弹出报错提示框
           if (!mounted) return;
 
@@ -422,24 +432,24 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
         await _dbHelper.saveVoiceRecognitionTasks(
           jsonMapList.map((e) => VoiceRecognitionTaskInfo.fromMap(e)).toList(),
         );
-      } else if (filename == "${DBDdl.tableTrainingUserInfo}.json") {
-        await _dbHelper.saveTrainingUsers(
-          jsonMapList.map((e) => TrainingUserInfo.fromMap(e)).toList(),
+      } else if (filename == "${DBDdl.tableUserInfo}.json") {
+        await _dbHelper.batchInsert(
+          jsonMapList.map((e) => UserInfo.fromMap(e)).toList(),
         );
-      } else if (filename == "${DBDdl.tableTrainingPlan}.json") {
-        await _dbHelper.saveTrainingPlans(
+      } else if (filename == "${TrainingDdl.tableTrainingPlan}.json") {
+        await TrainingDao().insertTrainingPlans(
           jsonMapList.map((e) => TrainingPlan.fromMap(e)).toList(),
         );
-      } else if (filename == "${DBDdl.tableTrainingPlanDetail}.json") {
-        await _dbHelper.saveTrainingPlanDetails(
+      } else if (filename == "${TrainingDdl.tableTrainingPlanDetail}.json") {
+        await TrainingDao().insertTrainingPlanDetails(
           jsonMapList.map((e) => TrainingPlanDetail.fromMap(e)).toList(),
         );
-      } else if (filename == "${DBDdl.tableTrainingRecord}.json") {
-        await _dbHelper.saveTrainingRecords(
+      } else if (filename == "${TrainingDdl.tableTrainingRecord}.json") {
+        await TrainingDao().insertTrainingRecords(
           jsonMapList.map((e) => TrainingRecord.fromMap(e)).toList(),
         );
-      } else if (filename == "${DBDdl.tableTrainingRecordDetail}.json") {
-        await _dbHelper.saveTrainingRecordDetails(
+      } else if (filename == "${TrainingDdl.tableTrainingRecordDetail}.json") {
+        await TrainingDao().insertTrainingRecordDetails(
           jsonMapList.map((e) => TrainingRecordDetail.fromMap(e)).toList(),
         );
       } else if (filename == "${DietDiaryDdl.tableDietAnalysis}.json") {
@@ -461,10 +471,6 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
       } else if (filename == "${DietDiaryDdl.tableMealRecord}.json") {
         await MealRecordDao().batchInsert(
           jsonMapList.map((e) => MealRecord.fromMap(e)).toList(),
-        );
-      } else if (filename == "${DietDiaryDdl.tableUserProfile}.json") {
-        await UserProfileDao().batchInsert(
-          jsonMapList.map((e) => UserProfile.fromMap(e)).toList(),
         );
       } else if (filename == "${DietDiaryDdl.tableWeightRecord}.json") {
         await WeightRecordDao().batchInsert(
@@ -707,77 +713,4 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
       if (value != null && value) exportAllData();
     });
   }
-
-  // @override
-  // Widget build(BuildContext context) {
-  //   return Scaffold(
-  //     appBar: AppBar(
-  //       title: const Text("备份恢复"),
-  //       actions: [
-  //         IconButton(
-  //           onPressed: () {
-  //             commonMDHintModalBottomSheet(
-  //               context,
-  //               "备份恢复说明",
-  //               note,
-  //               msgFontSize: 15,
-  //             );
-  //           },
-  //           icon: const Icon(Icons.info_outline),
-  //         ),
-  //       ],
-  //     ),
-  //     body: isLoading ? buildLoader(isLoading) : buildBackupButton(),
-  //   );
-  // }
-
-  // buildBackupButton() {
-  //   return Center(
-  //     child: Column(
-  //       mainAxisAlignment: MainAxisAlignment.center,
-  //       children: [
-  //         // Text(tempPermMsg),
-  //         TextButton.icon(
-  //           onPressed: () {
-  //             showDialog(
-  //               context: context,
-  //               builder: (context) {
-  //                 return AlertDialog(
-  //                   title: const Text("全量备份"),
-  //                   content: const Text("确认导出所有数据?"),
-  //                   actions: [
-  //                     TextButton(
-  //                       onPressed: () {
-  //                         if (!mounted) return;
-  //                         Navigator.pop(context, false);
-  //                       },
-  //                       child: const Text("取消"),
-  //                     ),
-  //                     TextButton(
-  //                       onPressed: () {
-  //                         if (!mounted) return;
-  //                         Navigator.pop(context, true);
-  //                       },
-  //                       child: const Text("确定"),
-  //                     ),
-  //                   ],
-  //                 );
-  //               },
-  //             ).then((value) {
-  //               if (value != null && value) exportAllData();
-  //             });
-  //           },
-  //           icon: const Icon(Icons.backup),
-  //           label: Text("全量备份", style: TextStyle(fontSize: 20)),
-  //         ),
-  //         SizedBox(height: 10),
-  //         TextButton.icon(
-  //           onPressed: restoreDataFromBackup,
-  //           icon: const Icon(Icons.restore),
-  //           label: Text("覆写恢复", style: TextStyle(fontSize: 20)),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
 }

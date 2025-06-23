@@ -12,14 +12,16 @@ import '../../../../core/utils/screen_helper.dart';
 import '../../data/models/branch_chat_export_data.dart';
 import '../viewmodels/branch_store.dart';
 
-class ChatExportImportPage extends StatefulWidget {
-  const ChatExportImportPage({super.key});
+class BranchChatExportImportPage extends StatefulWidget {
+  const BranchChatExportImportPage({super.key});
 
   @override
-  State<ChatExportImportPage> createState() => _ChatExportImportPageState();
+  State<BranchChatExportImportPage> createState() =>
+      _BranchChatExportImportPageState();
 }
 
-class _ChatExportImportPageState extends State<ChatExportImportPage> {
+class _BranchChatExportImportPageState
+    extends State<BranchChatExportImportPage> {
   bool isExporting = false;
   bool isImporting = false;
 

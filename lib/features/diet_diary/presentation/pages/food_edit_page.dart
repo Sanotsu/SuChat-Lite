@@ -116,7 +116,7 @@ class _FoodEditPageState extends State<FoodEditPage> {
             vitaminEPer100g: vitaminE,
             foodCode: foodCode,
             isFavorite: _isFavorite,
-            extraAttributes:
+            otherParams:
                 ingredients != null ? {'ingredients': ingredients} : null,
           )) ??
           FoodItem(
@@ -136,7 +136,7 @@ class _FoodEditPageState extends State<FoodEditPage> {
             vitaminEPer100g: vitaminE,
             foodCode: foodCode,
             isFavorite: _isFavorite,
-            extraAttributes:
+            otherParams:
                 ingredients != null ? {'ingredients': ingredients} : null,
           );
 
@@ -168,7 +168,7 @@ class _FoodEditPageState extends State<FoodEditPage> {
       'vitaminC': widget.foodItem?.vitaminCPer100g?.toString() ?? '',
       'vitaminE': widget.foodItem?.vitaminEPer100g?.toString() ?? '',
       'foodCode': widget.foodItem?.foodCode ?? '',
-      'ingredients': widget.foodItem?.extraAttributes['ingredients'] ?? '',
+      'ingredients': widget.foodItem?.otherParams['ingredients'] ?? '',
     };
 
     return Scaffold(

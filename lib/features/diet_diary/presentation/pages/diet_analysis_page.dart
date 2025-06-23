@@ -4,11 +4,13 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/entities/cus_llm_model.dart';
+import '../../../../core/viewmodels/user_info_viewmodel.dart';
 import '../../../../shared/constants/constant_llm_enum.dart';
 import '../../../../shared/constants/constants.dart';
 import '../../../../shared/services/model_manager_service.dart';
 import '../../../../shared/widgets/cus_dropdown_button.dart';
 import '../../../../shared/widgets/markdown_render/cus_markdown_renderer.dart';
+import '../../../../shared/widgets/show_tool_prompt_dialog.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/services/diet_analysis_service.dart';
 import '../../domain/entities/diet_analysis.dart';
@@ -34,6 +36,9 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
   StreamSubscription? _analysisSubscription;
   VoidCallback? _cancelAnalysis;
   String _analysisResult = '';
+
+  // 自定义生成训练计划的提示词
+  String? _customPrompt;
 
   // 当前显示的分析记录
   DietAnalysis? _displayedAnalysis;
@@ -77,6 +82,16 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
 
   Future<void> _loadExistingAnalysis() async {
     final viewModel = Provider.of<DietDiaryViewModel>(context, listen: false);
+    final userViewModel = Provider.of<UserInfoViewModel>(
+      context,
+      listen: false,
+    );
+
+    // 加载当前日期的数据（因为从历史记录返回时可能有删除历史分析记录）
+    await viewModel.loadDailyData(
+      viewModel.selectedDate,
+      userInfo: userViewModel.currentUser!,
+    );
 
     // 获取当前日期的所有分析记录
     _analysisHistory = viewModel.currentDateAnalyses;
@@ -84,7 +99,7 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
     // 获取最新的分析记录
     final latestAnalysis = viewModel.currentDietAnalysis;
 
-    if (latestAnalysis != null) {
+    if (latestAnalysis != null && mounted) {
       setState(() {
         _displayedAnalysis = latestAnalysis;
         _analysisResult = latestAnalysis.content;
@@ -101,14 +116,21 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
   }
 
   Future<void> _analyzeDiet() async {
+    // 如果正在分析，则不重复分析
+    if (_isAnalyzing) return;
+
     if (_selectedModel == null) {
       ToastUtils.showError('请先选择用于分析的大模型');
       return;
     }
 
     final viewModel = Provider.of<DietDiaryViewModel>(context, listen: false);
+    final userViewModel = Provider.of<UserInfoViewModel>(
+      context,
+      listen: false,
+    );
 
-    if (viewModel.userProfile == null) {
+    if (userViewModel.currentUser == null) {
       ToastUtils.showError('未找到用户信息，请先完善个人资料');
       return;
     }
@@ -140,12 +162,13 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
       // 调用分析服务
       final (stream, cancel) = await _analysisService.analyzeDailyDiet(
         model: _selectedModel!,
-        userProfile: viewModel.userProfile!,
+        userInfo: userViewModel.currentUser!,
         mealFoodDetails: viewModel.mealFoodDetails,
         dailyNutrition: viewModel.dailyNutrition ?? {},
-        dailyRecommended: viewModel.dailyRecommendedIntake ?? {},
+        dailyRecommended: userViewModel.dailyRecommendedIntake ?? {},
         mealRecordIds: mealRecordIds,
         mealTypes: mealTypes,
+        customPrompt: _customPrompt,
       );
 
       _cancelAnalysis = cancel;
@@ -246,7 +269,10 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
                 MaterialPageRoute(
                   builder: (context) => DietAnalysisHistoryPage(),
                 ),
-              ).then((result) {
+              ).then((result) async {
+                // 历史记录可能被删除，重新加载
+                await _loadExistingAnalysis();
+
                 // 处理从历史页面返回的分析数据
                 if (result != null && result is DietAnalysis) {
                   _showAnalysis(result);
@@ -284,12 +310,23 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
                 const SizedBox(height: 16),
 
                 /// 分析按钮 - 修改为始终显示，允许重复分析
-                analysisButton(),
+                Row(
+                  children: [
+                    Expanded(child: showPromptButton()),
+                    const SizedBox(width: 16),
+                    Expanded(child: analysisButton()),
+                  ],
+                ),
                 const SizedBox(height: 16),
 
-                /// 历史分析记录和当前显示的分析结果
+                /// 历史分析记录
                 if (_analysisHistory.isNotEmpty) ...[
                   analysisHistoryCard(),
+                  const SizedBox(height: 16),
+                ],
+
+                // 当前显示的分析结果(首次生成时没有历史记录但也要追加显示)
+                if (_analysisResult.isNotEmpty) ...[
                   analysisResultCard(viewModel),
                   const SizedBox(height: 16),
                 ],
@@ -395,7 +432,7 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
                             Text(
                               DateFormat(
                                 constTimeFormat,
-                              ).format(analysis.createdAt),
+                              ).format(analysis.gmtCreate),
                               style: TextStyle(
                                 color: isSelected ? Colors.white : null,
                                 fontWeight: FontWeight.bold,
@@ -456,8 +493,12 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
   }
 
   Widget _buildNutritionSummary(DietDiaryViewModel viewModel) {
+    final userViewModel = Provider.of<UserInfoViewModel>(
+      context,
+      listen: false,
+    );
     final dailyNutrition = viewModel.dailyNutrition ?? {};
-    final dailyRecommended = viewModel.dailyRecommendedIntake ?? {};
+    final dailyRecommended = userViewModel.dailyRecommendedIntake ?? {};
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -593,28 +634,101 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
     );
   }
 
+  // 生成并显示提示词对话框
+  void _showPromptDialog() async {
+    final viewModel = Provider.of<DietDiaryViewModel>(context, listen: false);
+    final userViewModel = Provider.of<UserInfoViewModel>(
+      context,
+      listen: false,
+    );
+
+    if (userViewModel.currentUser == null) {
+      ToastUtils.showError('未找到用户信息，请先完善个人资料');
+      return;
+    }
+
+    if (viewModel.mealRecords.isEmpty) {
+      ToastUtils.showError('未找到餐次记录');
+      return;
+    }
+
+    // 准备餐次ID和类型的映射
+    final mealRecordIds =
+        viewModel.mealRecords
+            .where((meal) => meal.id != null)
+            .map((meal) => meal.id!)
+            .toList();
+
+    final mealTypes = {
+      for (var meal in viewModel.mealRecords)
+        if (meal.id != null) meal.id!: meal.mealType,
+    };
+
+    final prompt = DietAnalysisService().buildDietAnalysisPrompt(
+      userInfo: userViewModel.currentUser!,
+      mealFoodDetails: viewModel.mealFoodDetails,
+      dailyNutrition: viewModel.dailyNutrition ?? {},
+      dailyRecommended: userViewModel.dailyRecommendedIntake ?? {},
+      mealRecordIds: mealRecordIds,
+      mealTypes: mealTypes,
+    );
+
+    // 使用通用的提示词对话框组件
+    final result = await showToolPromptDialog(
+      context: context,
+      initialPrompt: prompt,
+      previewTitle: '预览提示词',
+      editTitle: '编辑提示词',
+      confirmButtonText: '用此提示词分析',
+      previewHint: '以下是默认的饮食分析提示词，点击右上角编辑按钮可以修改。',
+      editHint: '您可以根据需要修改提示词，修改后将使用您的自定义提示词生成饮食分析。',
+    );
+
+    // 如果用户确认使用自定义提示词
+    if (result != null) {
+      if (result.useCustomPrompt) {
+        setState(() {
+          _customPrompt = result.customPrompt;
+        });
+      }
+
+      _analyzeDiet();
+    }
+  }
+
+  Widget showPromptButton() {
+    return ElevatedButton.icon(
+      icon: const Icon(Icons.edit_note),
+      label: const Text('查看/编辑提示词'),
+      onPressed: _showPromptDialog,
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+        foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
+      ),
+    );
+  }
+
   Widget analysisButton() {
-    return SizedBox(
-      height: 50,
-      child: ElevatedButton.icon(
-        onPressed: _isAnalyzing ? _cancelAnalysisProcess : _analyzeDiet,
-        icon:
-            _isAnalyzing
-                ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-                : const Icon(Icons.analytics),
-        label: Text(_isAnalyzing ? '取消分析' : '分析饮食'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor:
-              _isAnalyzing ? Colors.red : Theme.of(context).colorScheme.primary,
-          foregroundColor: Colors.white,
-        ),
+    return ElevatedButton.icon(
+      onPressed: _isAnalyzing ? _cancelAnalysisProcess : _analyzeDiet,
+      icon:
+          _isAnalyzing
+              ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+              : const Icon(Icons.analytics),
+      label: Text(_isAnalyzing ? '取消分析' : '分析饮食'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor:
+            _isAnalyzing ? Colors.red : Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 8),
       ),
     );
   }
@@ -652,7 +766,7 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
             if (_displayedAnalysis != null) ...[
               // const SizedBox(height: 8),
               Text(
-                '分析时间: ${viewModel.getFormattedDateTime(_displayedAnalysis!.createdAt)}',
+                '分析时间: ${viewModel.getFormattedDateTime(_displayedAnalysis!.gmtCreate)}',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],

@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/utils/simple_tools.dart';
-import 'backup_and_restore/index.dart';
+import '../../core/viewmodels/user_info_viewmodel.dart';
+import '../../shared/widgets/toast_utils.dart';
+import 'pages/backup_and_restore_page.dart';
+import 'pages/user_info_page.dart';
 
 class UserAndSettings extends StatefulWidget {
   const UserAndSettings({super.key});
@@ -52,7 +57,7 @@ class _UserAndSettingsState extends State<UserAndSettings> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // buildUserProfileSection(theme),
+              buildUserInfoSection(theme),
               const SizedBox(height: 24),
               _buildSectionTitle('数据', theme),
               CusSettingCard(
@@ -63,7 +68,10 @@ class _UserAndSettingsState extends State<UserAndSettings> {
                     () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const BackupAndRestorePage(),
+                        builder:
+                            (context) => BackupAndRestorePage(
+                              packageVersion: _packageInfo.version,
+                            ),
                       ),
                     ),
                 accentColor: Colors.blue,
@@ -137,12 +145,30 @@ class _UserAndSettingsState extends State<UserAndSettings> {
                 _buildLinkButton(
                   icon: Icons.code,
                   label: "GitHub 项目",
-                  url: "https://github.com/Sanotsu/SuChat-Lit",
+                  url: "https://github.com/Sanotsu/SuChat-Lite",
                 ),
-                _buildLinkButton(
-                  icon: Icons.contact_support,
-                  label: "联系开发者",
-                  url: "callmedavidsu@gmail.com",
+
+                // _buildLinkButton(
+                //   icon: Icons.contact_support,
+                //   label: "联系开发者",
+                //   url: "callmedavidsu@gmail.com",
+                // ),
+                TextButton.icon(
+                  icon: Icon(Icons.contact_support, size: 18),
+                  label: Text('联系开发者'),
+                  onPressed: () {
+                    Clipboard.setData(
+                      ClipboardData(text: 'callmedavidsu@gmail.com'),
+                    );
+                    ToastUtils.showSuccess(
+                      '已复制开发者邮箱地址',
+                      align: Alignment.center,
+                    );
+                  },
+                  style: TextButton.styleFrom(
+                    alignment: Alignment.centerLeft,
+                    minimumSize: const Size(double.infinity, 36),
+                  ),
                 ),
               ],
             ),
@@ -156,59 +182,90 @@ class _UserAndSettingsState extends State<UserAndSettings> {
     );
   }
 
-  // 暂时没用到这个
-  Widget buildUserProfileSection(ThemeData theme) {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1)),
-      ),
-      margin: const EdgeInsets.symmetric(vertical: 16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () {}, // 添加用户资料点击事件
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: theme.primaryColor.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.person, size: 30, color: theme.primaryColor),
+  Widget buildUserInfoSection(ThemeData theme) {
+    return ChangeNotifierProvider(
+      create: (context) => UserInfoViewModel(),
+      child: Consumer<UserInfoViewModel>(
+        builder: (context, viewModel, _) {
+          // 初始化加载用户数据
+          if (viewModel.currentUser == null && !viewModel.isLoading) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              viewModel.initialize();
+            });
+          }
+
+          return Card(
+            elevation: 1,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: theme.dividerColor.withValues(alpha: 0.1),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+            margin: const EdgeInsets.symmetric(vertical: 16),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {
+                // 跳转到用户信息页面
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (context) => ChangeNotifierProvider.value(
+                          value: viewModel,
+                          child: const UserInfoPage(),
+                        ),
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
                   children: [
-                    Text(
-                      "当前用户",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: theme.primaryColor,
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: theme.primaryColor.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.person,
+                        size: 32,
+                        color: Colors.blue,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      "点击登录/注册",
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: theme.textTheme.bodySmall?.color,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            viewModel.isLoading
+                                ? '加载中...'
+                                : viewModel.currentUser?.name ?? '未设置用户',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '点击编辑个人信息',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.textTheme.bodySmall?.color
+                                  ?.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+                    const Icon(Icons.chevron_right),
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right, color: theme.disabledColor),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }

@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../../core/entities/cus_llm_model.dart';
+import '../../../../core/entities/user_info.dart';
 import '../../../../core/utils/screen_helper.dart';
 import '../../../../shared/constants/constant_llm_enum.dart';
 import '../../../../shared/services/model_manager_service.dart';
 import '../../../../shared/widgets/cus_dropdown_button.dart';
-import '../../../../shared/widgets/markdown_render/cus_markdown_renderer.dart';
 import '../../../../shared/widgets/toast_utils.dart';
-import '../../domain/entities/training_user_info.dart';
+import '../../../../shared/widgets/show_tool_prompt_dialog.dart';
 import '../../data/services/training_assistant_service.dart';
 
 class PlanGeneratorForm extends StatefulWidget {
@@ -24,7 +23,7 @@ class PlanGeneratorForm extends StatefulWidget {
   onGenerate;
 
   /// 用户信息，用于生成更准确的训练计划提示词
-  final TrainingUserInfo? userInfo;
+  final UserInfo? userInfo;
 
   const PlanGeneratorForm({super.key, required this.onGenerate, this.userInfo});
 
@@ -34,8 +33,9 @@ class PlanGeneratorForm extends StatefulWidget {
 
 class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
   final _formKey = GlobalKey<FormState>();
-  final _promptController = TextEditingController();
-  bool _isCustomPromptMode = false;
+
+  // 自定义生成训练计划的提示词
+  String _customPrompt = '';
 
   // 当前步骤
   int _currentStep = 0;
@@ -102,12 +102,6 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
     initModels();
   }
 
-  @override
-  void dispose() {
-    _promptController.dispose();
-    super.dispose();
-  }
-
   Future<void> initModels() async {
     // 获取可用模型列表
     final availableModels = await ModelManagerService.getAvailableModelByTypes([
@@ -161,7 +155,7 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
     final userInfo = widget.userInfo;
     final prompt = TrainingAssistantService().buildTrainingPlanPrompt(
       // 如果有用户信息，则使用真实信息，否则使用默认值
-      gender: userInfo?.gender ?? '未指定',
+      gender: userInfo?.gender.name ?? '未指定',
       height: userInfo?.height ?? 170.0,
       weight: userInfo?.weight ?? 65.0,
       fitnessLevel: userInfo?.fitnessLevel ?? '中级',
@@ -175,234 +169,27 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
       age: userInfo?.age,
     );
 
-    // 设置提示词到控制器
-    _promptController.text = prompt;
-
-    // 显示编辑对话框
-    final result = await _showPromptPreviewDialog(context, prompt);
+    // 使用通用的提示词对话框组件
+    final result = await showToolPromptDialog(
+      context: context,
+      initialPrompt: prompt,
+      previewTitle: '预览提示词',
+      editTitle: '编辑提示词',
+      confirmButtonText: '用此提示词生成',
+      previewHint: '以下是根据您的选择生成的训练计划提示词，点击右上角编辑按钮可以修改。',
+      editHint: '您可以根据需要修改提示词，修改后将使用您的自定义提示词生成训练计划。',
+    );
 
     // 如果用户确认使用自定义提示词
-    if (result == true) {
+    if (result != null) {
+      if (result.useCustomPrompt) {
       setState(() {
-        _isCustomPromptMode = true;
-      });
+          _customPrompt = result.customPrompt;
+        });
+      }
+
       _generatePlan();
     }
-  }
-
-  // 显示提示词预览/编辑对话框
-  Future<bool?> _showPromptPreviewDialog(
-    BuildContext context,
-    String prompt,
-  ) async {
-    bool isEditMode = false;
-
-    return showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return ScreenHelper.isMobile()
-                ? _buildMobilePromptDialog(context, prompt, isEditMode, (mode) {
-                  setState(() {
-                    isEditMode = mode;
-                  });
-                })
-                : _buildDesktopPromptDialog(context, prompt, isEditMode, (
-                  mode,
-                ) {
-                  setState(() {
-                    isEditMode = mode;
-                  });
-                });
-          },
-        );
-      },
-    );
-  }
-
-  // 移动端的全屏提示词对话框
-  Widget _buildMobilePromptDialog(
-    BuildContext context,
-    String prompt,
-    bool isEditMode,
-    Function(bool) onModeChanged,
-  ) {
-    return Dialog.fullscreen(
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(isEditMode ? '编辑提示词' : '预览提示词'),
-          leading: IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => Navigator.of(context).pop(false),
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.copy),
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: _promptController.text));
-                ToastUtils.showToast('提示词已复制到剪贴板');
-              },
-            ),
-            IconButton(
-              icon: Icon(isEditMode ? Icons.visibility : Icons.edit),
-              tooltip: isEditMode ? '预览' : '编辑',
-              onPressed: () => onModeChanged(!isEditMode),
-            ),
-          ],
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              Expanded(
-                child:
-                    isEditMode
-                        ? TextField(
-                          controller: _promptController,
-                          maxLines: null,
-                          expands: true,
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
-                            hintText: '请输入自定义提示词...',
-                          ),
-                        )
-                        : RepaintBoundary(
-                          child: SingleChildScrollView(
-                            child: CusMarkdownRenderer.instance.render(
-                              _promptController.text,
-                              textStyle: TextStyle(fontSize: 14),
-                            ),
-                          ),
-                        ),
-
-                // Markdown(
-                //   data: _promptController.text,
-                //   selectable: true,
-                // ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text('取消'),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.of(context).pop(true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor:
-                            Theme.of(context).colorScheme.onPrimary,
-                      ),
-                      child: const Text('用此提示词生成'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // 桌面端的提示词对话框
-  Widget _buildDesktopPromptDialog(
-    BuildContext context,
-    String prompt,
-    bool isEditMode,
-    Function(bool) onModeChanged,
-  ) {
-    return AlertDialog(
-      title: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(isEditMode ? '编辑提示词' : '预览提示词'),
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.copy),
-                onPressed: () {
-                  Clipboard.setData(
-                    ClipboardData(text: _promptController.text),
-                  );
-                  ToastUtils.showToast('提示词已复制到剪贴板');
-                },
-              ),
-              IconButton(
-                icon: Icon(isEditMode ? Icons.visibility : Icons.edit),
-                tooltip: isEditMode ? '预览' : '编辑',
-                onPressed: () => onModeChanged(!isEditMode),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.of(context).pop(false),
-              ),
-            ],
-          ),
-        ],
-      ),
-      content: SizedBox(
-        width: MediaQuery.of(context).size.width * 0.8,
-        height: MediaQuery.of(context).size.height * 0.6,
-        child: Column(
-          children: [
-            Text(
-              isEditMode
-                  ? '您可以根据需要修改提示词，修改后将使用您的自定义提示词生成训练计划。'
-                  : '以下是根据您的选择生成的提示词，点击右上角编辑按钮可以修改。',
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child:
-                  isEditMode
-                      ? TextField(
-                        controller: _promptController,
-                        maxLines: null,
-                        expands: true,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          hintText: '请输入自定义提示词...',
-                        ),
-                      )
-                      : RepaintBoundary(
-                        child: SingleChildScrollView(
-                          child: CusMarkdownRenderer.instance.render(
-                            _promptController.text,
-                            textStyle: TextStyle(fontSize: 14),
-                          ),
-                        ),
-                      ),
-              // Markdown(
-              //   data: _promptController.text,
-              //   selectable: true,
-              // ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('取消'),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            foregroundColor: Theme.of(context).colorScheme.onPrimary,
-          ),
-          child: const Text('用此提示词生成'),
-        ),
-      ],
-    );
   }
 
   void _nextStep() {
@@ -902,7 +689,7 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
         else
           ElevatedButton.icon(
             icon: const Icon(Icons.fitness_center),
-            label: Text(_isCustomPromptMode ? '使用自定义提示词生成' : '生成训练计划'),
+            label: Text(_customPrompt.isNotEmpty ? '使用自定义提示词生成' : '生成训练计划'),
             onPressed: _generatePlan,
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -1014,7 +801,7 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
     final frequency = selectedDays.join('、');
 
     // 调用生成方法
-    if (_isCustomPromptMode && _promptController.text.trim().isNotEmpty) {
+    if (_customPrompt.trim().isNotEmpty) {
       // 使用自定义提示词
       widget.onGenerate(
         _selectedGoal,
@@ -1023,7 +810,7 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
         frequency,
         _equipment,
         selectedModel!,
-        customPrompt: _promptController.text.trim(),
+        customPrompt: _customPrompt.trim(),
       );
     } else {
       // 如果用户没有自定义提示词，则使用标准提示词生成训练计划

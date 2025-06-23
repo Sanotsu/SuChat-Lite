@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/utils/screen_helper.dart';
+
 class ModernFeatureCard extends StatelessWidget {
   final Widget targetPage;
   final String title;
@@ -20,6 +22,8 @@ class ModernFeatureCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = ScreenHelper.isDesktop();
+
     final theme = Theme.of(context);
     final textColor = theme.textTheme.titleLarge?.color ?? Colors.black;
     final color = accentColor ?? theme.primaryColor;
@@ -38,7 +42,7 @@ class ModernFeatureCard extends StatelessWidget {
           ).push(MaterialPageRoute(builder: (context) => targetPage));
         },
         child: Padding(
-          padding: EdgeInsets.all(20),
+          padding: EdgeInsets.all(16),
           child: Row(
             children: [
               // 左侧图标
@@ -46,11 +50,12 @@ class ModernFeatureCard extends StatelessWidget {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  color: color.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(icon, color: color, size: 28),
               ),
+
               SizedBox(width: 16),
 
               // 中间文本
@@ -61,7 +66,7 @@ class ModernFeatureCard extends StatelessWidget {
                     Text(
                       title,
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: isDesktop ? 16 : 15,
                         fontWeight: FontWeight.bold,
                         color: textColor,
                       ),
@@ -70,7 +75,7 @@ class ModernFeatureCard extends StatelessWidget {
                     Text(
                       subtitle,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: isDesktop ? 14 : 12,
                         color: Colors.grey.shade600,
                       ),
                       maxLines: 2,
@@ -81,12 +86,14 @@ class ModernFeatureCard extends StatelessWidget {
               ),
 
               // 右侧箭头
-              if (showArrow)
+              if (showArrow) ...[
+                SizedBox(width: 8),
                 Icon(
                   Icons.arrow_forward_ios,
                   size: 16,
                   color: Colors.grey.shade400,
                 ),
+              ],
             ],
           ),
         ),

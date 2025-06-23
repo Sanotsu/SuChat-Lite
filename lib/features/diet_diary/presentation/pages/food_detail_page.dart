@@ -396,8 +396,7 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
                   //     ),
                   //   ),
                   // ),
-
-                  if (widget.foodItem.extraAttributes['ingredients'] != null)
+                  if (widget.foodItem.otherParams['ingredients'] != null)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8.0),
                       child: Column(
@@ -410,9 +409,7 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          Text(
-                            '${widget.foodItem.extraAttributes['ingredients']}',
-                          ),
+                          Text('${widget.foodItem.otherParams['ingredients']}'),
                         ],
                       ),
                     ),

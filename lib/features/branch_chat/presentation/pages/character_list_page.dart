@@ -7,7 +7,7 @@ import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../core/utils/file_picker_utils.dart';
 import '../../../../core/utils/screen_helper.dart';
 import '../../../../core/utils/simple_tools.dart';
-import '../index.dart';
+import '../../../../app/home_page.dart';
 import '../../domain/entities/character_card.dart';
 import '../viewmodels/character_store.dart';
 import '../widgets/index.dart';

@@ -17,10 +17,10 @@ class FoodItem {
   final double? vitaminAPer100g; // 维生素A
   final double? vitaminCPer100g; // 维生素C
   final double? vitaminEPer100g; // 维生素E
-  final Map<String, dynamic> extraAttributes; // 额外属性
+  final Map<String, dynamic> otherParams; // 额外属性
   final bool isFavorite;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime gmtCreate;
+  final DateTime gmtModified;
 
   FoodItem({
     this.id,
@@ -39,13 +39,13 @@ class FoodItem {
     this.vitaminAPer100g,
     this.vitaminCPer100g,
     this.vitaminEPer100g,
-    Map<String, dynamic>? extraAttributes,
+    Map<String, dynamic>? otherParams,
     this.isFavorite = false,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) : extraAttributes = extraAttributes ?? {},
-       createdAt = createdAt ?? DateTime.now(),
-       updatedAt = updatedAt ?? DateTime.now();
+    DateTime? gmtCreate,
+    DateTime? gmtModified,
+  }) : otherParams = otherParams ?? {},
+       gmtCreate = gmtCreate ?? DateTime.now(),
+       gmtModified = gmtModified ?? DateTime.now();
 
   Map<String, dynamic> toMap() {
     return {
@@ -65,25 +65,25 @@ class FoodItem {
       'vitaminAPer100g': vitaminAPer100g,
       'vitaminCPer100g': vitaminCPer100g,
       'vitaminEPer100g': vitaminEPer100g,
-      'extraAttributes':
-          extraAttributes.isNotEmpty ? _encodeExtraAttributes() : null,
+      'otherParams':
+          otherParams.isNotEmpty ? _encodeOtherParams() : null,
       'isFavorite': isFavorite ? 1 : 0,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
+      'gmtCreate': gmtCreate.toIso8601String(),
+      'gmtModified': gmtModified.toIso8601String(),
     };
   }
 
   // 将额外属性编码为JSON字符串
-  String _encodeExtraAttributes() {
-    return extraAttributes.isNotEmpty
-        ? extraAttributes
+  String _encodeOtherParams() {
+    return otherParams.isNotEmpty
+        ? otherParams
             .map((key, value) => MapEntry(key, value.toString()))
             .toString()
         : '{}';
   }
 
   // 从JSON字符串解码额外属性
-  static Map<String, dynamic> _decodeExtraAttributes(String? json) {
+  static Map<String, dynamic> _decodeOtherParams(String? json) {
     if (json == null || json.isEmpty || json == '{}') {
       return {};
     }
@@ -128,18 +128,18 @@ class FoodItem {
       vitaminAPer100g: map['vitaminAPer100g'],
       vitaminCPer100g: map['vitaminCPer100g'],
       vitaminEPer100g: map['vitaminEPer100g'],
-      extraAttributes:
-          map['extraAttributes'] != null
-              ? _decodeExtraAttributes(map['extraAttributes'])
+      otherParams:
+          map['otherParams'] != null
+              ? _decodeOtherParams(map['otherParams'])
               : {},
       isFavorite: map['isFavorite'] == 1,
-      createdAt:
-          map['createdAt'] != null
-              ? DateTime.parse(map['createdAt'])
+      gmtCreate:
+          map['gmtCreate'] != null
+              ? DateTime.parse(map['gmtCreate'])
               : DateTime.now(),
-      updatedAt:
-          map['updatedAt'] != null
-              ? DateTime.parse(map['updatedAt'])
+      gmtModified:
+          map['gmtModified'] != null
+              ? DateTime.parse(map['gmtModified'])
               : DateTime.now(),
     );
   }
@@ -150,7 +150,7 @@ class FoodItem {
   ///
   factory FoodItem.fromCFCDJsonData(Map<String, dynamic> json) {
     // 处理可能的不同字段名
-    final extraAttributes = <String, dynamic>{};
+    final otherParams = <String, dynamic>{};
     json.forEach((key, value) {
       if (![
         'foodCode',
@@ -169,7 +169,7 @@ class FoodItem {
         'vitaminC',
         'vitaminETotal',
       ].contains(key)) {
-        extraAttributes[key] = value;
+        otherParams[key] = value;
       }
     });
 
@@ -189,7 +189,7 @@ class FoodItem {
       vitaminAPer100g: _parseDouble(json['vitaminA']),
       vitaminCPer100g: _parseDouble(json['vitaminC']),
       vitaminEPer100g: _parseDouble(json['vitaminETotal']),
-      extraAttributes: extraAttributes,
+      otherParams: otherParams,
     );
   }
 
@@ -199,12 +199,31 @@ class FoodItem {
     if (value is num) return value.toDouble();
     if (value is String) {
       if (value == 'Tr' || value.isEmpty) return 0.0;
-      try {
-        return double.parse(value);
-      } catch (e) {
-        pl.e('无法解析为数字: $value');
-        return null;
+
+      // 尝试从字符串中提取数字部分
+      final numericString = _extractNumericPart(value);
+      if (numericString != null) {
+        try {
+          return double.parse(numericString);
+        } catch (e) {
+          pl.e('无法解析为数字: $value (提取部分: $numericString)');
+          return null;
+        }
       }
+      return null;
+    }
+    return null;
+  }
+
+  /// 从字符串中提取可能的数字部分
+  static String? _extractNumericPart(String input) {
+    // 可选的 +/- 号,后面跟着：
+    //    一位或多位数字 + 可选的小数点和更多数字
+    //    或者小数点 + 一位或多位数字
+    final regex = RegExp(r'[-+]?(\d+\.?\d*|\.\d+)');
+    final match = regex.firstMatch(input);
+    if (match != null) {
+      return match.group(0);
     }
     return null;
   }
@@ -226,9 +245,9 @@ class FoodItem {
     double? vitaminAPer100g,
     double? vitaminCPer100g,
     double? vitaminEPer100g,
-    Map<String, dynamic>? extraAttributes,
+    Map<String, dynamic>? otherParams,
     bool? isFavorite,
-    DateTime? updatedAt,
+    DateTime? gmtModified,
   }) {
     return FoodItem(
       id: id ?? this.id,
@@ -247,10 +266,10 @@ class FoodItem {
       vitaminAPer100g: vitaminAPer100g ?? this.vitaminAPer100g,
       vitaminCPer100g: vitaminCPer100g ?? this.vitaminCPer100g,
       vitaminEPer100g: vitaminEPer100g ?? this.vitaminEPer100g,
-      extraAttributes: extraAttributes ?? this.extraAttributes,
+      otherParams: otherParams ?? this.otherParams,
       isFavorite: isFavorite ?? this.isFavorite,
-      createdAt: createdAt,
-      updatedAt: updatedAt ?? DateTime.now(),
+      gmtCreate: gmtCreate,
+      gmtModified: gmtModified ?? DateTime.now(),
     );
   }
 }

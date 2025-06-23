@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/entities/user_info.dart';
+import '../../../core/viewmodels/user_info_viewmodel.dart';
 import '../../../shared/constants/constants.dart';
+import '../../../shared/widgets/goal_setting_dialog.dart';
 import '../../../shared/widgets/simple_tool_widget.dart';
 import '../../../shared/widgets/toast_utils.dart';
+import '../../settings/pages/user_info_page.dart';
 import '../domain/entities/meal_food_detail.dart';
 import '../domain/entities/meal_type.dart';
 import '../domain/entities/meal_record.dart';
-import '../domain/entities/user_profile.dart';
 import 'viewmodels/diet_diary_viewmodel.dart';
 import 'widgets/nutrition_gauge.dart';
 import 'widgets/meal_summary_card.dart';
 import 'widgets/food_quantity_editor.dart';
-import 'widgets/goal_setting_dialog.dart';
-import 'pages/user_profile_page.dart';
 import 'pages/meal_detail_page.dart';
 import 'pages/food_search_page.dart';
 import 'pages/statistics_page.dart';
@@ -28,14 +29,16 @@ class DietDiaryPage extends StatefulWidget {
 }
 
 class _DietDiaryPageState extends State<DietDiaryPage> {
-  late DietDiaryViewModel _viewModel;
+  late DietDiaryViewModel _dietViewModel;
+  late UserInfoViewModel _userViewModel;
   DateTime _selectedDate = DateTime.now();
   bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _viewModel = Provider.of<DietDiaryViewModel>(context, listen: false);
+    _dietViewModel = Provider.of<DietDiaryViewModel>(context, listen: false);
+    _userViewModel = Provider.of<UserInfoViewModel>(context, listen: false);
     // 使用postFrameCallback确保在构建完成后再初始化
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeData();
@@ -44,8 +47,17 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
 
   Future<void> _initializeData() async {
     if (!_isInitialized) {
-      await _viewModel.initialize();
-      _isInitialized = true;
+      await _userViewModel.initialize();
+      if (_userViewModel.currentUser != null) {
+        await _dietViewModel.initialize(userInfo: _userViewModel.currentUser!);
+        _isInitialized = true;
+      } else {
+        // 如果没有用户信息，提示用户创建
+        if (mounted) {
+          ToastUtils.showInfo('请先创建用户信息');
+          _navigateToUserInfo(context);
+        }
+      }
     }
   }
 
@@ -57,11 +69,17 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
       lastDate: kLastDay,
       locale: const Locale('zh', 'CN'),
     );
-    if (picked != null && picked != _selectedDate) {
+    if (picked != null &&
+        picked != _selectedDate &&
+        _userViewModel.currentUser != null) {
       setState(() {
         _selectedDate = picked;
       });
-      await _viewModel.loadDailyData(picked);
+      await _dietViewModel.loadDailyData(
+        picked,
+        userInfo: _userViewModel.currentUser!,
+        dailyRecommendedIntake: _userViewModel.dailyRecommendedIntake,
+      );
     }
   }
 
@@ -74,7 +92,7 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
           IconButton(
             icon: const Icon(Icons.person),
             tooltip: '个人信息',
-            onPressed: () => _navigateToUserProfile(context),
+            onPressed: () => _navigateToUserInfo(context),
           ),
           IconButton(
             icon: const Icon(Icons.bar_chart),
@@ -88,34 +106,85 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
           ),
         ],
       ),
-      body: Consumer<DietDiaryViewModel>(
-        builder: (context, viewModel, child) {
-          if (viewModel.isLoading) {
+      body: Consumer2<DietDiaryViewModel, UserInfoViewModel>(
+        builder: (context, dietViewModel, userViewModel, child) {
+          if (dietViewModel.isLoading || userViewModel.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (viewModel.error != null &&
-              viewModel.errorContext == 'diet_diary_home') {
+          if (dietViewModel.error != null &&
+              dietViewModel.errorContext == 'diet_diary_home') {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               commonExceptionDialog(
                 context,
                 "餐次数据错误",
-                viewModel.error.toString(),
+                dietViewModel.error.toString(),
               );
-              viewModel.clearError();
+              dietViewModel.clearError();
             });
           }
 
-          return _buildBody(viewModel);
+          if (userViewModel.error != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              commonExceptionDialog(
+                context,
+                "用户信息错误",
+                userViewModel.error.toString(),
+              );
+              userViewModel.clearError();
+            });
+          }
+
+          if (userViewModel.currentUser == null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.person_off_outlined,
+                    size: 64,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    '需要完善用户信息才能使用饮食日记',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '请先创建或完善您的个人信息，以便记录和分析您的饮食情况',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () => _navigateToUserInfo(context),
+                    icon: const Icon(Icons.person_add),
+                    label: const Text('完善个人信息'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return _buildBody(dietViewModel, userViewModel);
         },
       ),
     );
   }
 
-  Widget _buildBody(DietDiaryViewModel viewModel) {
-    final dailyNutrition = viewModel.dailyNutrition;
-    final dailyRecommended = viewModel.dailyRecommendedIntake;
-    final userProfile = viewModel.userProfile;
+  Widget _buildBody(
+    DietDiaryViewModel dietViewModel,
+    UserInfoViewModel userViewModel,
+  ) {
+    final dailyNutrition = dietViewModel.dailyNutrition;
+    final dailyRecommended = userViewModel.dailyRecommendedIntake;
+    final userInfo = userViewModel.currentUser;
 
     return SingleChildScrollView(
       child: Column(
@@ -136,13 +205,20 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
                     setState(() {
                       _selectedDate = previousDay;
                     });
-                    await viewModel.loadDailyData(previousDay);
+                    if (userViewModel.currentUser != null) {
+                      await dietViewModel.loadDailyData(
+                        previousDay,
+                        userInfo: userViewModel.currentUser!,
+                        dailyRecommendedIntake:
+                            userViewModel.dailyRecommendedIntake,
+                      );
+                    }
                   },
                 ),
                 TextButton(
                   onPressed: () => _selectDate(context),
                   child: Text(
-                    viewModel.getFormattedDate(_selectedDate),
+                    dietViewModel.getFormattedDate(_selectedDate),
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -160,7 +236,14 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
                     setState(() {
                       _selectedDate = nextDay;
                     });
-                    await viewModel.loadDailyData(nextDay);
+                    if (userViewModel.currentUser != null) {
+                      await dietViewModel.loadDailyData(
+                        nextDay,
+                        userInfo: userViewModel.currentUser!,
+                        dailyRecommendedIntake:
+                            userViewModel.dailyRecommendedIntake,
+                      );
+                    }
                   },
                 ),
               ],
@@ -222,7 +305,7 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     /// 当前用户目标
-                    if (userProfile != null) ...[
+                    if (userInfo != null) ...[
                       Row(
                         children: [
                           const Icon(
@@ -238,7 +321,9 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
                             ),
                           ),
 
-                          Text(getGoalText(userProfile.goal)),
+                          Text(
+                            getGoalText(userInfo.goal ?? Goal.maintainWeight),
+                          ),
                           Tooltip(
                             message: '减脂推荐大约 500 千卡缺口\n增肌推荐额外 300 千卡摄入',
                             showDuration: const Duration(seconds: 5),
@@ -258,16 +343,16 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
                                 context: context,
                                 builder:
                                     (context) => GoalSettingDialog(
-                                      userProfile: userProfile,
+                                      userInfo: userInfo,
                                       isDialog: true, // 以内嵌形式显示
                                       onSave: (goal, activityLevel) async {
                                         // 更新用户目标和活动水平
-                                        final updatedProfile = userProfile
+                                        final updatedProfile = userInfo
                                             .copyWith(
                                               goal: goal,
                                               activityLevel: activityLevel,
                                             );
-                                        await viewModel.updateUserProfile(
+                                        await userViewModel.saveUserInfo(
                                           updatedProfile,
                                         );
 
@@ -313,10 +398,10 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
                             ),
                             // 添加BMR提示图标
                             // 显示基础代谢率+活动水平
-                            if (userProfile != null)
+                            if (userInfo != null)
                               Tooltip(
                                 message:
-                                    '基础代谢率${userProfile.bmr.toInt()} * 活动水平${userProfile.activityLevel} + ${getGoalText(userProfile.goal)}',
+                                    '基础代谢率${userInfo.bmr.toInt()} * 活动水平${userInfo.activityLevel} + ${getGoalText(userInfo.goal ?? Goal.maintainWeight)}',
                                 showDuration: const Duration(seconds: 5),
                                 child: Icon(
                                   Icons.info_outline,
@@ -400,7 +485,7 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
 
                 // 餐次图标区域
                 const SizedBox(height: 16),
-                _buildMealIconsSection(viewModel),
+                _buildMealIconsSection(dietViewModel),
               ],
             ),
           ),
@@ -408,8 +493,8 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
           const SizedBox(height: 16),
 
           // 餐次详情
-          if (viewModel.mealRecords.isNotEmpty) ...[
-            _buildMealSections(viewModel),
+          if (dietViewModel.mealRecords.isNotEmpty) ...[
+            _buildMealSections(dietViewModel),
           ] else
             Center(
               child: Padding(
@@ -713,9 +798,9 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
             foodDetail: food,
             onQuantityChanged: (newQuantity) async {
               // 删除原记录
-              await _viewModel.removeFoodFromMeal(food.id, mealId);
+              await _dietViewModel.removeFoodFromMeal(food.id, mealId);
               // 添加新记录
-              await _viewModel.addFoodToMeal(
+              await _dietViewModel.addFoodToMeal(
                 mealId,
                 food.foodItemId,
                 newQuantity,
@@ -747,14 +832,27 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
     Navigator.pushNamed(context, '/food-management');
   }
 
-  void _navigateToUserProfile(BuildContext context) {
-    Navigator.push(
+  Future<void> _navigateToUserInfo(BuildContext context) async {
+    final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const UserProfilePage()),
-    ).then((_) {
-      // 用户资料页面返回后，重新加载数据
-      _viewModel.loadDailyData(_selectedDate);
-    });
+      MaterialPageRoute(
+        builder:
+            (context) => ChangeNotifierProvider.value(
+              value: _userViewModel,
+              child: const UserInfoPage(),
+            ),
+      ),
+    );
+
+    // 如果返回结果不为null，表示用户信息已更新
+    if (result != null && _userViewModel.currentUser != null) {
+      // 重新加载当天的数据
+      await _dietViewModel.loadDailyData(
+        _selectedDate,
+        userInfo: _userViewModel.currentUser!,
+        dailyRecommendedIntake: _userViewModel.dailyRecommendedIntake,
+      );
+    }
   }
 
   void _navigateToStatistics(BuildContext context) {

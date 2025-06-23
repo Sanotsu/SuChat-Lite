@@ -6,8 +6,8 @@ class MealRecord {
   final MealType mealType;
   final List<String>? imageUrls; // 餐次多张图片URL列表
   final String? description; // 餐次说明
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime gmtCreate;
+  final DateTime gmtModified;
 
   MealRecord({
     this.id,
@@ -15,10 +15,10 @@ class MealRecord {
     required this.mealType,
     this.imageUrls,
     this.description,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) : createdAt = createdAt ?? DateTime.now(),
-       updatedAt = updatedAt ?? DateTime.now();
+    DateTime? gmtCreate,
+    DateTime? gmtModified,
+  }) : gmtCreate = gmtCreate ?? DateTime.now(),
+       gmtModified = gmtModified ?? DateTime.now();
 
   Map<String, dynamic> toMap() {
     return {
@@ -27,8 +27,8 @@ class MealRecord {
       'mealType': mealType.index,
       'imageUrls': imageUrls?.join(','),
       'description': description,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
+      'gmtCreate': gmtCreate.toIso8601String(),
+      'gmtModified': gmtModified.toIso8601String(),
     };
   }
 
@@ -39,8 +39,12 @@ class MealRecord {
       mealType: MealType.values[map['mealType']],
       imageUrls: map['imageUrls']?.split(','),
       description: map['description'],
-      createdAt: DateTime.parse(map['createdAt']),
-      updatedAt: DateTime.parse(map['updatedAt']),
+      gmtCreate:
+          map['gmtCreate'] != null ? DateTime.tryParse(map['gmtCreate']) : null,
+      gmtModified:
+          map['gmtModified'] != null
+              ? DateTime.tryParse(map['gmtModified'])
+              : null,
     );
   }
 
@@ -50,7 +54,7 @@ class MealRecord {
     MealType? mealType,
     List<String>? imageUrls,
     String? description,
-    DateTime? updatedAt,
+    DateTime? gmtModified,
   }) {
     return MealRecord(
       id: id ?? this.id,
@@ -58,8 +62,8 @@ class MealRecord {
       mealType: mealType ?? this.mealType,
       imageUrls: imageUrls ?? this.imageUrls,
       description: description ?? this.description,
-      createdAt: createdAt,
-      updatedAt: updatedAt ?? DateTime.now(),
+      gmtCreate: gmtCreate,
+      gmtModified: gmtModified ?? DateTime.now(),
     );
   }
 }

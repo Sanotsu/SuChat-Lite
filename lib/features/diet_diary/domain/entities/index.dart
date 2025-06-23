@@ -5,5 +5,4 @@ export 'meal_food_detail.dart';
 export 'meal_food_record.dart';
 export 'meal_record.dart';
 export 'meal_type.dart';
-export 'user_profile.dart';
 export 'weight_record.dart';

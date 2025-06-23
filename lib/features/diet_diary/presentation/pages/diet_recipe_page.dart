@@ -5,11 +5,14 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/entities/cus_llm_model.dart';
+import '../../../../core/entities/user_info.dart';
+import '../../../../core/viewmodels/user_info_viewmodel.dart';
 import '../../../../shared/constants/constant_llm_enum.dart';
 import '../../../../shared/constants/constants.dart';
 import '../../../../shared/services/model_manager_service.dart';
 import '../../../../shared/widgets/cus_dropdown_button.dart';
 import '../../../../shared/widgets/markdown_render/cus_markdown_renderer.dart';
+import '../../../../shared/widgets/show_tool_prompt_dialog.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/services/diet_recipe_service.dart';
 import '../../domain/entities/index.dart';
@@ -39,6 +42,9 @@ class _DietRecipePageState extends State<DietRecipePage> {
   StreamSubscription? _recipeSubscription;
   VoidCallback? _cancelGeneration;
   String _recipeResult = '';
+
+  // 自定义生成食谱的提示词
+  String? _customPrompt;
 
   // 用户偏好
   final TextEditingController _preferencesController = TextEditingController();
@@ -89,6 +95,16 @@ class _DietRecipePageState extends State<DietRecipePage> {
 
   Future<void> _loadExistingRecipes() async {
     final viewModel = Provider.of<DietDiaryViewModel>(context, listen: false);
+    final userViewModel = Provider.of<UserInfoViewModel>(
+      context,
+      listen: false,
+    );
+
+    // 加载当前日期的数据（因为从历史记录返回时可能有删除历史食谱记录）
+    await viewModel.loadDailyData(
+      viewModel.selectedDate,
+      userInfo: userViewModel.currentUser!,
+    );
 
     // 如果提供了分析ID，加载与该分析相关的食谱(目前仅从饮食分析页面跳转时会带上分析ID)
     if (widget.analysisId != null) {
@@ -123,14 +139,21 @@ class _DietRecipePageState extends State<DietRecipePage> {
   }
 
   Future<void> _generateRecipe() async {
+    // 如果正在生成，则不重复生成
+    if (_isGenerating) return;
+
     if (_selectedModel == null) {
       ToastUtils.showError('请先选择用于生成食谱的大模型');
       return;
     }
 
     final viewModel = Provider.of<DietDiaryViewModel>(context, listen: false);
+    final userViewModel = Provider.of<UserInfoViewModel>(
+      context,
+      listen: false,
+    );
 
-    if (viewModel.userProfile == null) {
+    if (userViewModel.currentUser == null) {
       ToastUtils.showError('未找到用户信息，请先完善个人资料');
       return;
     }
@@ -145,12 +168,13 @@ class _DietRecipePageState extends State<DietRecipePage> {
       // 调用食谱生成服务
       final (stream, cancel) = await _recipeService.generatePersonalizedRecipe(
         model: _selectedModel!,
-        userProfile: viewModel.userProfile!,
+        userInfo: userViewModel.currentUser!,
         dailyNutrition: viewModel.dailyNutrition ?? {},
-        dailyRecommended: viewModel.dailyRecommendedIntake ?? {},
+        dailyRecommended: userViewModel.dailyRecommendedIntake ?? {},
         preferences: _preferencesController.text,
         mealCount: _selectedMealCount,
         days: _selectedDays,
+        customPrompt: _customPrompt,
       );
 
       _cancelGeneration = cancel;
@@ -241,7 +265,10 @@ class _DietRecipePageState extends State<DietRecipePage> {
                 MaterialPageRoute(
                   builder: (context) => const DietRecipeHistoryPage(),
                 ),
-              ).then((result) {
+              ).then((result) async {
+                // 历史记录可能被删除，重新加载
+                await _loadExistingRecipes();
+
                 // 处理从历史页面返回的食谱数据
                 if (result != null && result is DietRecipe) {
                   _showRecipe(result);
@@ -251,8 +278,8 @@ class _DietRecipePageState extends State<DietRecipePage> {
           ),
         ],
       ),
-      body: Consumer<DietDiaryViewModel>(
-        builder: (context, viewModel, child) {
+      body: Consumer2<DietDiaryViewModel, UserInfoViewModel>(
+        builder: (context, viewModel, userViewModel, child) {
           if (viewModel.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -263,8 +290,8 @@ class _DietRecipePageState extends State<DietRecipePage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // 用户信息卡片
-                if (viewModel.userProfile != null) ...[
-                  userInfoCard(viewModel.userProfile!),
+                if (userViewModel.currentUser != null) ...[
+                  userInfoCard(userViewModel.currentUser!),
                   const SizedBox(height: 16),
                 ],
 
@@ -282,12 +309,23 @@ class _DietRecipePageState extends State<DietRecipePage> {
                 const SizedBox(height: 16),
 
                 // 生成按钮
-                generateButton(),
+                Row(
+                  children: [
+                    Expanded(child: showPromptButton()),
+                    const SizedBox(width: 16),
+                    Expanded(child: generateButton()),
+                  ],
+                ),
                 const SizedBox(height: 16),
 
                 /// 历史食谱记录
                 if (_recipeHistory.isNotEmpty) ...[
                   recipeHistoryCard(),
+                  const SizedBox(height: 16),
+                ],
+
+                // 当前显示的食谱记录
+                if (_recipeResult.isNotEmpty) ...[
                   recipeResultCard(viewModel),
                   const SizedBox(height: 16),
                 ],
@@ -299,7 +337,7 @@ class _DietRecipePageState extends State<DietRecipePage> {
     );
   }
 
-  Widget userInfoCard(UserProfile userProfile) {
+  Widget userInfoCard(UserInfo userInfo) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -325,43 +363,39 @@ class _DietRecipePageState extends State<DietRecipePage> {
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(child: _buildInfoItem('姓名', userProfile.name)),
+                Expanded(child: _buildInfoItem('姓名', userInfo.name)),
                 Expanded(
                   child: _buildInfoItem(
                     '性别',
-                    userProfile.gender == Gender.male ? '男' : '女',
+                    userInfo.gender == Gender.male ? '男' : '女',
                   ),
                 ),
-                Expanded(child: _buildInfoItem('年龄', '${userProfile.age}岁')),
+                Expanded(child: _buildInfoItem('年龄', '${userInfo.age}岁')),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               children: [
+                Expanded(child: _buildInfoItem('身高', '${userInfo.height}厘米')),
+                Expanded(child: _buildInfoItem('体重', '${userInfo.weight}公斤')),
                 Expanded(
-                  child: _buildInfoItem('身高', '${userProfile.height}厘米'),
+                  child: _buildInfoItem('BMI', userInfo.bmi.toStringAsFixed(1)),
                 ),
-                Expanded(
-                  child: _buildInfoItem('体重', '${userProfile.weight}公斤'),
-                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
                 Expanded(
                   child: _buildInfoItem(
-                    'BMI',
-                    userProfile.bmi.toStringAsFixed(1),
+                    '目标',
+                    getGoalText(userInfo.goal ?? Goal.maintainWeight),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildInfoItem('目标', getGoalText(userProfile.goal)),
                 ),
                 Expanded(
                   child: _buildInfoItem(
                     '活动水平',
-                    getActivityLevelText(userProfile.activityLevel),
+                    getActivityLevelText(userInfo.activityLevel ?? 1.2),
                   ),
                 ),
               ],
@@ -384,8 +418,12 @@ class _DietRecipePageState extends State<DietRecipePage> {
   }
 
   Widget nutritionCard(DietDiaryViewModel viewModel) {
+    final userViewModel = Provider.of<UserInfoViewModel>(
+      context,
+      listen: false,
+    );
     final dailyNutrition = viewModel.dailyNutrition ?? {};
-    final dailyRecommended = viewModel.dailyRecommendedIntake ?? {};
+    final dailyRecommended = userViewModel.dailyRecommendedIntake ?? {};
 
     return Card(
       child: Padding(
@@ -526,7 +564,7 @@ class _DietRecipePageState extends State<DietRecipePage> {
             ),
             const SizedBox(height: 16),
             SizedBox(
-              height: 60,
+              height: 80,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 itemCount: _recipeHistory.length,
@@ -566,7 +604,15 @@ class _DietRecipePageState extends State<DietRecipePage> {
                             Text(
                               DateFormat(
                                 constTimeFormat,
-                              ).format(recipe.createdAt),
+                              ).format(recipe.gmtCreate),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color:
+                                    isSelected ? Colors.white70 : Colors.grey,
+                              ),
+                            ),
+                            Text(
+                              recipe.modelName,
                               style: TextStyle(
                                 fontSize: 12,
                                 color:
@@ -714,30 +760,84 @@ class _DietRecipePageState extends State<DietRecipePage> {
     );
   }
 
+  // 生成并显示提示词对话框
+  void _showPromptDialog() async {
+    final viewModel = Provider.of<DietDiaryViewModel>(context, listen: false);
+    final userViewModel = Provider.of<UserInfoViewModel>(
+      context,
+      listen: false,
+    );
+
+    if (userViewModel.currentUser == null) {
+      ToastUtils.showError('未找到用户信息，请先完善个人资料');
+      return;
+    }
+
+    final prompt = DietRecipeService().buildGenerateRecipePrompt(
+      userInfo: userViewModel.currentUser!,
+      dailyNutrition: viewModel.dailyNutrition ?? {},
+      dailyRecommended: userViewModel.dailyRecommendedIntake ?? {},
+      preferences: _preferencesController.text,
+      mealCount: _selectedMealCount,
+      days: _selectedDays,
+    );
+
+    // 使用通用的提示词对话框组件
+    final result = await showToolPromptDialog(
+      context: context,
+      initialPrompt: prompt,
+      previewTitle: '预览提示词',
+      editTitle: '编辑提示词',
+      confirmButtonText: '用此提示词定制',
+      previewHint: '以下是默认的定制食谱提示词，点击右上角编辑按钮可以修改。',
+      editHint: '您可以根据需要修改提示词，修改后将使用您的自定义提示词定制食谱。',
+    );
+
+    // 如果用户确认使用自定义提示词
+    if (result != null) {
+      if (result.useCustomPrompt) {
+        setState(() {
+          _customPrompt = result.customPrompt;
+        });
+      }
+
+      _generateRecipe();
+    }
+  }
+
+  Widget showPromptButton() {
+    return ElevatedButton.icon(
+      icon: const Icon(Icons.edit_note),
+      label: const Text('查看/编辑提示词'),
+      onPressed: _showPromptDialog,
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+        foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
+      ),
+    );
+  }
+
   Widget generateButton() {
-    return SizedBox(
-      height: 50,
-      child: ElevatedButton.icon(
-        onPressed: _isGenerating ? _cancelGenerationProcess : _generateRecipe,
-        icon:
-            _isGenerating
-                ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-                : const Icon(Icons.restaurant_menu),
-        label: Text(_isGenerating ? '取消生成' : '生成定制食谱'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor:
-              _isGenerating
-                  ? Colors.red
-                  : Theme.of(context).colorScheme.primary,
-          foregroundColor: Colors.white,
-        ),
+    return ElevatedButton.icon(
+      onPressed: _isGenerating ? _cancelGenerationProcess : _generateRecipe,
+      icon:
+          _isGenerating
+              ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+              : const Icon(Icons.restaurant_menu),
+      label: Text(_isGenerating ? '取消生成' : '生成定制食谱'),
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        backgroundColor:
+            _isGenerating ? Colors.red : Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
       ),
     );
   }
@@ -785,7 +885,7 @@ class _DietRecipePageState extends State<DietRecipePage> {
                   ),
                   const Spacer(),
                   Text(
-                    '生成时间: ${viewModel.getFormattedDateTime(_displayedRecipe!.createdAt)}',
+                    '生成时间: ${viewModel.getFormattedDateTime(_displayedRecipe!.gmtCreate)}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],

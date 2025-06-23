@@ -1,10 +1,19 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../../../core/storage/db_init.dart';
-import '../../../core/storage/diet_diary_ddl.dart';
+import '../../../core/storage/ddl_diet_diary.dart';
 import '../domain/entities/diet_analysis.dart';
 
 class DietAnalysisDao {
+  // 单例模式
+  static final DietAnalysisDao _dao = DietAnalysisDao._createInstance();
+  // 构造函数，返回单例
+  factory DietAnalysisDao() => _dao;
+
+  // 命名的构造函数用于创建DatabaseHelper的实例
+  DietAnalysisDao._createInstance();
+
+  // 获取数据库实例(每次操作都从 DBInit 获取，不缓存)
   final dbInit = DBInit();
 
   // 插入饮食分析记录
@@ -63,7 +72,7 @@ class DietAnalysisDao {
       DietDiaryDdl.tableDietAnalysis,
       where: 'date = ?',
       whereArgs: [dateString],
-      orderBy: 'createdAt DESC',
+      orderBy: 'gmtCreate DESC',
       limit: 1,
     );
 
@@ -82,7 +91,7 @@ class DietAnalysisDao {
       DietDiaryDdl.tableDietAnalysis,
       where: 'date = ?',
       whereArgs: [dateString],
-      orderBy: 'createdAt DESC',
+      orderBy: 'gmtCreate DESC',
     );
 
     return List.generate(maps.length, (i) {
@@ -95,7 +104,7 @@ class DietAnalysisDao {
     final db = await dbInit.database;
     final maps = await db.query(
       DietDiaryDdl.tableDietAnalysis,
-      orderBy: 'date DESC, createdAt DESC',
+      orderBy: 'date DESC, gmtCreate DESC',
     );
 
     return List.generate(maps.length, (i) {

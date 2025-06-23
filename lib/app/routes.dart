@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../features/branch_chat/presentation/index.dart';
+import 'home_page.dart';
+import '../features/ai_tool_page.dart';
 import '../features/training_assistant/presentation/index.dart';
 import '../features/diet_diary/presentation/index.dart';
 import '../features/diet_diary/presentation/pages/food_management_page.dart';
@@ -12,6 +13,7 @@ import '../features/diet_diary/domain/entities/meal_record.dart';
 
 class AppRoutes {
   static const String home = '/';
+  static const String aiTool = '/ai-tool';
   static const String trainingAssistant = '/training-assistant';
   static const String dietDiary = '/diet-diary';
   static const String foodManagement = '/food-management';
@@ -23,6 +25,8 @@ class AppRoutes {
     switch (settings.name) {
       case home:
         return MaterialPageRoute(builder: (_) => const HomePage());
+      case aiTool:
+        return MaterialPageRoute(builder: (_) => const AIToolPage());
       case trainingAssistant:
         return MaterialPageRoute(builder: (_) => const TrainingAssistantPage());
       case dietDiary:

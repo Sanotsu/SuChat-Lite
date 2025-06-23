@@ -61,10 +61,10 @@ class HttpRequest {
       PrettyDioLogger(
         requestHeader: true,
         responseHeader: true,
-        requestBody: true,
-        responseBody: true,
-        // requestBody: false,
-        // responseBody: false, // 响应太多了，不显示
+        // requestBody: true,
+        // responseBody: true,
+        requestBody: false,
+        responseBody: false, // 响应太多了，不显示
         maxWidth: 150,
       ),
     ]);

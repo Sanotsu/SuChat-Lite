@@ -558,7 +558,7 @@ Widget buildIconWithTextButton({
             Text(
               label,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 12,
                 color: onTap == null ? Colors.grey : textColor,
               ),
             ),

@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
-import '../../../../core/utils/screen_helper.dart';
-import '../../domain/entities/user_profile.dart';
+
+import '../../core/entities/user_info.dart';
+import '../../core/utils/screen_helper.dart';
 
 class GoalSettingDialog extends StatefulWidget {
-  final UserProfile userProfile;
-  final Function(Goal goal, double activityLevel) onSave;
+  final UserInfo userInfo;
+
+  // 当目标或活动水平发生变化时，调用此回调
+  final Function(Goal goal, double activityLevel)? onChanged;
+  // 可能出现切换后立马就更新，此时可以不传onsave
+  final Function(Goal goal, double activityLevel)? onSave;
   final bool isDialog; // 是否以对话框形式显示
 
   const GoalSettingDialog({
     super.key,
-    required this.userProfile,
-    required this.onSave,
+    required this.userInfo,
+    this.onChanged,
+    this.onSave,
     this.isDialog = true, // 默认为对话框形式
   });
 
@@ -31,9 +37,9 @@ class _GoalSettingDialogState extends State<GoalSettingDialog> {
   @override
   void initState() {
     super.initState();
-    _selectedGoal = widget.userProfile.goal;
+    _selectedGoal = widget.userInfo.goal ?? Goal.maintainWeight; // 默认维持体重
     _selectedActivityLevel = _findClosestActivityLevel(
-      widget.userProfile.activityLevel,
+      widget.userInfo.activityLevel ?? 1.2,
     );
     _calculateNutritionValues();
   }
@@ -47,18 +53,18 @@ class _GoalSettingDialogState extends State<GoalSettingDialog> {
 
   void _calculateNutritionValues() {
     // 计算BMR (基础代谢率) - 使用修订版的Harris-Benedict公式
-    if (widget.userProfile.gender == Gender.male) {
+    if (widget.userInfo.gender == Gender.male) {
       _bmr =
           88.362 +
-          (13.397 * widget.userProfile.weight) +
-          (4.799 * widget.userProfile.height) -
-          (5.677 * widget.userProfile.age);
+          (13.397 * widget.userInfo.weight) +
+          (4.799 * widget.userInfo.height) -
+          (5.677 * (widget.userInfo.age ?? 30));
     } else {
       _bmr =
           447.593 +
-          (9.247 * widget.userProfile.weight) +
-          (3.098 * widget.userProfile.height) -
-          (4.330 * widget.userProfile.age);
+          (9.247 * widget.userInfo.weight) +
+          (3.098 * widget.userInfo.height) -
+          (4.330 * (widget.userInfo.age ?? 30));
     }
 
     // 计算TDEE (总能量消耗)
@@ -66,16 +72,16 @@ class _GoalSettingDialogState extends State<GoalSettingDialog> {
 
     // 根据目标计算卡路里目标
     switch (_selectedGoal) {
-      case Goal.loseWeight:
+      case Goal.loseWeight: // 减重
         _calorieTarget = _tdee - 500; // 减重: 每天减少500卡路里
         break;
-      case Goal.maintainWeight:
+      case Goal.maintainWeight: // 维持体重
         _calorieTarget = _tdee; // 维持体重: 保持当前消耗
         break;
-      case Goal.gainMuscle:
+      case Goal.gainMuscle: // 增肌
         _calorieTarget = _tdee + 500; // 增肌: 每天增加500卡路里
         break;
-      case Goal.stayHealthy:
+      case Goal.stayHealthy: // 保持健康
         _calorieTarget = _tdee; // 保持健康: 保持当前消耗
         break;
     }
@@ -97,7 +103,7 @@ class _GoalSettingDialogState extends State<GoalSettingDialog> {
                 onPressed: () => Navigator.pop(context),
               ),
               title: const Text('目标设置'),
-              actions: actions,
+              actions: widget.onSave != null ? actions : null,
             ),
             body: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -120,7 +126,7 @@ class _GoalSettingDialogState extends State<GoalSettingDialog> {
             ),
             child: SingleChildScrollView(child: content),
           ),
-          actions: actions,
+          actions: widget.onSave != null ? actions : null,
         );
       }
     } else {
@@ -129,8 +135,11 @@ class _GoalSettingDialogState extends State<GoalSettingDialog> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           content,
-          const SizedBox(height: 16),
-          Row(mainAxisAlignment: MainAxisAlignment.end, children: actions),
+
+          if (widget.onSave != null) ...[
+            const SizedBox(height: 16),
+            Row(mainAxisAlignment: MainAxisAlignment.end, children: actions),
+          ],
         ],
       );
     }
@@ -149,6 +158,13 @@ class _GoalSettingDialogState extends State<GoalSettingDialog> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const Text(
+                  '身体质量指数 (BMI)',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                _buildBmiInfo(widget.userInfo.height, widget.userInfo.weight),
+                const SizedBox(height: 12),
                 const Text(
                   '基础代谢率 (BMR)',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -191,6 +207,7 @@ class _GoalSettingDialogState extends State<GoalSettingDialog> {
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         const SizedBox(height: 8),
+        // 使用SegmentedButton构建目标选择器
         SegmentedButton<Goal>(
           style: ButtonStyle(
             shape: WidgetStateProperty.all<RoundedRectangleBorder>(
@@ -227,6 +244,7 @@ class _GoalSettingDialogState extends State<GoalSettingDialog> {
               _selectedGoal = newSelection.first;
               _calculateNutritionValues();
             });
+            widget.onChanged?.call(_selectedGoal, _selectedActivityLevel);
           },
         ),
         const SizedBox(height: 24),
@@ -258,6 +276,7 @@ class _GoalSettingDialogState extends State<GoalSettingDialog> {
                 _selectedActivityLevel = value;
                 _calculateNutritionValues();
               });
+              widget.onChanged?.call(_selectedGoal, _selectedActivityLevel);
             }
           },
         ),
@@ -287,7 +306,7 @@ class _GoalSettingDialogState extends State<GoalSettingDialog> {
       ),
       ElevatedButton(
         onPressed: () {
-          widget.onSave(_selectedGoal, _selectedActivityLevel);
+          widget.onSave?.call(_selectedGoal, _selectedActivityLevel);
           if (widget.isDialog) {
             Navigator.pop(context);
           }
@@ -295,5 +314,64 @@ class _GoalSettingDialogState extends State<GoalSettingDialog> {
         child: const Text('保存'),
       ),
     ];
+  }
+
+  Widget _buildBmiInfo(double height, double weight) {
+    try {
+      final heightInMeters = height / 100; // 转换为米
+      final bmi = weight / (heightInMeters * heightInMeters);
+
+      String bmiCategory = '';
+      Color bmiColor = Colors.black;
+
+      if (bmi < 18.5) {
+        bmiCategory = '偏瘦';
+        bmiColor = Colors.blue;
+      } else if (bmi < 24) {
+        bmiCategory = '正常';
+        bmiColor = Colors.green;
+      } else if (bmi < 28) {
+        bmiCategory = '超重';
+        bmiColor = Colors.orange;
+      } else {
+        bmiCategory = '肥胖';
+        bmiColor = Colors.red;
+      }
+
+      return Column(
+        children: [
+          Row(
+            children: [
+              const Text('身高:'),
+              const SizedBox(width: 8),
+              Text(
+                '${height.toStringAsFixed(1)} cm',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(width: 16),
+              const Text('体重:'),
+              const SizedBox(width: 8),
+              Text(
+                '${weight.toStringAsFixed(1)} kg',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+
+          Row(
+            children: [
+              const Text('身体质量指数 (BMI):'),
+              const SizedBox(width: 8),
+              Text(
+                '${bmi.toStringAsFixed(1)} ($bmiCategory)',
+                style: TextStyle(fontWeight: FontWeight.bold, color: bmiColor),
+              ),
+            ],
+          ),
+        ],
+      );
+    } catch (e) {
+      return const SizedBox.shrink();
+    }
   }
 }

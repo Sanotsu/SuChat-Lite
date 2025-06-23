@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/entities/user_info.dart';
 import '../../../../core/utils/simple_tools.dart';
 import '../../domain/entities/food_item.dart';
 import '../../domain/entities/meal_record.dart';
 import '../../domain/entities/meal_food_record.dart';
 import '../../domain/entities/meal_type.dart';
-import '../../domain/entities/user_profile.dart';
 import '../../domain/entities/weight_record.dart';
 import '../../domain/entities/meal_food_detail.dart';
 import '../../domain/entities/diet_analysis.dart';
 import '../../data/food_item_dao.dart';
 import '../../data/meal_record_dao.dart';
 import '../../data/meal_food_record_dao.dart';
-import '../../data/user_profile_dao.dart';
 import '../../data/weight_record_dao.dart';
 import '../../data/diet_analysis_dao.dart';
 import '../../data/diet_recipe_dao.dart';
@@ -23,7 +22,6 @@ class DietDiaryViewModel extends ChangeNotifier {
   final FoodItemDao _foodItemDao = FoodItemDao();
   final MealRecordDao _mealRecordDao = MealRecordDao();
   final MealFoodRecordDao _mealFoodRecordDao = MealFoodRecordDao();
-  final UserProfileDao _userProfileDao = UserProfileDao();
   final WeightRecordDao _weightRecordDao = WeightRecordDao();
   final DietAnalysisDao _dietAnalysisDao = DietAnalysisDao();
   final DietRecipeDao _dietRecipeDao = DietRecipeDao();
@@ -31,14 +29,6 @@ class DietDiaryViewModel extends ChangeNotifier {
   // 当前选中的日期
   DateTime _selectedDate = DateTime.now();
   DateTime get selectedDate => _selectedDate;
-
-  // 用户信息
-  UserProfile? _userProfile;
-  UserProfile? get userProfile => _userProfile;
-
-  // 每日推荐摄入量
-  Map<String, double>? _dailyRecommendedIntake;
-  Map<String, double>? get dailyRecommendedIntake => _dailyRecommendedIntake;
 
   // 当天的营养摄入量
   Map<String, double>? _dailyNutrition;
@@ -93,12 +83,11 @@ class DietDiaryViewModel extends ChangeNotifier {
   List<DietRecipe> get currentDateRecipes => _currentDateRecipes;
 
   // 初始化
-  Future<void> initialize() async {
+  Future<void> initialize({required UserInfo userInfo}) async {
     try {
       _setLoading(true, skipNotify: true);
-      await _loadUserProfile();
       await _loadFoodItems();
-      await loadDailyData(_selectedDate, skipNotify: true);
+      await loadDailyData(_selectedDate, userInfo: userInfo, skipNotify: true);
       // 所有数据加载完成后统一通知
       notifyListeners();
     } catch (e) {
@@ -109,23 +98,12 @@ class DietDiaryViewModel extends ChangeNotifier {
     }
   }
 
-  // 加载用户信息
-  Future<void> _loadUserProfile() async {
-    try {
-      _userProfile = await _userProfileDao.getOrCreateDefault();
-      if (_userProfile != null && _userProfile!.id != null) {
-        _dailyRecommendedIntake = await _userProfileDao
-            .calculateDailyRecommendedIntake(_userProfile!.id!);
-      }
-    } catch (e) {
-      _setError('加载用户信息失败: $e', context: 'user_profile');
-    }
-  }
-
   // 加载食品列表
   Future<void> _loadFoodItems() async {
     try {
-      _foodItems = await _foodItemDao.getAll();
+      // 设置一个较大的limit，确保能加载所有食品
+      // 太多了也不好，滚动反看不方便，最好让用户先关键字过滤
+      _foodItems = await _foodItemDao.getAll(limit: 200);
     } catch (e) {
       _setError('加载食品列表失败: $e', context: 'food_management');
     }
@@ -145,7 +123,12 @@ class DietDiaryViewModel extends ChangeNotifier {
   }
 
   // 加载指定日期的数据
-  Future<void> loadDailyData(DateTime date, {bool skipNotify = false}) async {
+  Future<void> loadDailyData(
+    DateTime date, {
+    required UserInfo userInfo,
+    Map<String, double>? dailyRecommendedIntake,
+    bool skipNotify = false,
+  }) async {
     try {
       _setLoading(true, skipNotify: true);
       _selectedDate = date;
@@ -423,38 +406,40 @@ class DietDiaryViewModel extends ChangeNotifier {
     }
   }
 
-  // 更新用户信息
-  Future<void> updateUserProfile(UserProfile profile) async {
+  // 清空食品列表
+  Future<bool> clearAllFood() async {
     try {
-      await _userProfileDao.update(profile);
-      _userProfile = profile;
+      _setLoading(true);
 
-      if (profile.id != null) {
-        _dailyRecommendedIntake = await _userProfileDao
-            .calculateDailyRecommendedIntake(profile.id!);
-      }
+      // 先删除所有未关联餐次的食品
+      await _foodItemDao.clear();
+
+      // 重新加载食品列表
+      await _loadFoodItems();
 
       notifyListeners();
+      return true;
     } catch (e) {
-      _setError('更新用户信息失败: $e', context: 'user_profile');
+      _setError('清空食品列表失败: $e', context: 'food_management');
+      return false;
+    } finally {
+      _setLoading(false);
     }
   }
 
-  // 更新用户目标
-  Future<void> updateUserGoal(Goal goal) async {
+  // 获取指定日期范围的营养摄入数据
+  Future<List<Map<String, dynamic>>> getNutritionDataByDateRange(
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
     try {
-      if (_userProfile != null && _userProfile!.id != null) {
-        final updatedProfile = await _userProfileDao.updateUserGoal(
-          _userProfile!.id!,
-          goal,
-        );
-        _userProfile = updatedProfile;
-        _dailyRecommendedIntake = await _userProfileDao
-            .calculateDailyRecommendedIntake(_userProfile!.id!);
-        notifyListeners();
-      }
+      return await _mealFoodRecordDao.getDailyNutritionByDateRange(
+        startDate,
+        endDate,
+      );
     } catch (e) {
-      _setError('更新用户目标失败: $e', context: 'user_profile');
+      _setError('获取营养数据失败: $e', context: 'diet_diary_home');
+      return [];
     }
   }
 
@@ -476,24 +461,8 @@ class DietDiaryViewModel extends ChangeNotifier {
     }
   }
 
-  // 获取指定日期范围的营养摄入数据
-  Future<List<Map<String, dynamic>>> getNutritionDataByDateRange(
-    DateTime startDate,
-    DateTime endDate,
-  ) async {
-    try {
-      return await _mealFoodRecordDao.getDailyNutritionByDateRange(
-        startDate,
-        endDate,
-      );
-    } catch (e) {
-      _setError('获取营养数据失败: $e', context: 'diet_diary_home');
-      return [];
-    }
-  }
-
   // 获取用户体重记录
-  Future<List<WeightRecord>> getWeightRecords(int userId) async {
+  Future<List<WeightRecord>> getWeightRecords(String userId) async {
     try {
       return await _weightRecordDao.getByUserId(userId);
     } catch (e) {
@@ -677,6 +646,16 @@ class DietDiaryViewModel extends ChangeNotifier {
     }
   }
 
+  // 删除饮食分析
+  Future<void> deleteDietAnalysis(int id) async {
+    try {
+      await _dietAnalysisDao.delete(id);
+      notifyListeners();
+    } catch (e) {
+      _setError('删除饮食分析失败: $e', context: 'diet_analysis');
+    }
+  }
+
   // 保存食谱
   Future<DietRecipe> saveDietRecipe({
     required String content,
@@ -750,6 +729,16 @@ class DietDiaryViewModel extends ChangeNotifier {
     } catch (e) {
       _setError('获取所有食谱失败: $e', context: 'diet_recipe');
       return [];
+    }
+  }
+
+  // 删除食谱
+  Future<void> deleteDietRecipe(int id) async {
+    try {
+      await _dietRecipeDao.delete(id);
+      notifyListeners();
+    } catch (e) {
+      _setError('删除食谱失败: $e', context: 'diet_recipe');
     }
   }
 }

@@ -1,10 +1,14 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../../../core/storage/db_init.dart';
-import '../../../core/storage/diet_diary_ddl.dart';
+import '../../../core/storage/ddl_diet_diary.dart';
 import '../domain/entities/diet_recipe.dart';
 
 class DietRecipeDao {
+  static final DietRecipeDao _dao = DietRecipeDao._createInstance();
+  factory DietRecipeDao() => _dao;
+  DietRecipeDao._createInstance();
+
   final dbInit = DBInit();
 
   // 插入食谱
@@ -78,7 +82,7 @@ class DietRecipeDao {
       DietDiaryDdl.tableDietRecipe,
       where: 'date = ?',
       whereArgs: [dateString],
-      orderBy: 'createdAt DESC',
+      orderBy: 'gmtCreate DESC',
       limit: 1,
     );
 
@@ -97,7 +101,7 @@ class DietRecipeDao {
       DietDiaryDdl.tableDietRecipe,
       where: 'date = ?',
       whereArgs: [dateString],
-      orderBy: 'createdAt DESC',
+      orderBy: 'gmtCreate DESC',
     );
 
     return List.generate(maps.length, (i) {
@@ -112,7 +116,7 @@ class DietRecipeDao {
       DietDiaryDdl.tableDietRecipe,
       where: 'analysisId = ?',
       whereArgs: [analysisId],
-      orderBy: 'createdAt DESC',
+      orderBy: 'gmtCreate DESC',
     );
 
     return List.generate(maps.length, (i) {
@@ -125,7 +129,7 @@ class DietRecipeDao {
     final db = await dbInit.database;
     final List<Map<String, dynamic>> maps = await db.query(
       DietDiaryDdl.tableDietRecipe,
-      orderBy: 'date DESC, createdAt DESC',
+      orderBy: 'date DESC, gmtCreate DESC',
     );
 
     return List.generate(maps.length, (i) {

@@ -3,11 +3,12 @@ import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/entities/user_info.dart';
+import '../../../../core/viewmodels/user_info_viewmodel.dart';
 import '../../../../shared/constants/constants.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../domain/entities/weight_record.dart';
-import '../../domain/entities/user_profile.dart';
 import '../viewmodels/diet_diary_viewmodel.dart';
 import '../widgets/scrollable_chart.dart';
 import '../widgets/bmi_indicator.dart';
@@ -48,11 +49,18 @@ class _WeightTrendPageState extends State<WeightTrendPage> {
     });
 
     try {
-      final viewModel = Provider.of<DietDiaryViewModel>(context, listen: false);
-      final userProfile = viewModel.userProfile;
+      final dietViewModel = Provider.of<DietDiaryViewModel>(
+        context,
+        listen: false,
+      );
+      final userViewModel = Provider.of<UserInfoViewModel>(
+        context,
+        listen: false,
+      );
+      final userInfo = userViewModel.currentUser;
 
-      if (userProfile != null && userProfile.id != null) {
-        final records = await viewModel.getWeightRecords(userProfile.id!);
+      if (userInfo != null) {
+        final records = await dietViewModel.getWeightRecords(userInfo.userId);
         setState(() {
           _weightRecords = records;
           _isLoading = false;
@@ -61,11 +69,8 @@ class _WeightTrendPageState extends State<WeightTrendPage> {
         // 如果有体重记录，并且最新记录与用户资料中的体重不同，则更新用户资料
         if (records.isNotEmpty) {
           final latestRecord = records.first; // 已按日期降序排序
-          if (latestRecord.weight != userProfile.weight) {
-            final updatedProfile = userProfile.copyWith(
-              weight: latestRecord.weight,
-            );
-            await viewModel.updateUserProfile(updatedProfile);
+          if (latestRecord.weight != userInfo.weight) {
+            await userViewModel.updateUserInfo(weight: latestRecord.weight);
           }
         }
       } else {
@@ -83,8 +88,11 @@ class _WeightTrendPageState extends State<WeightTrendPage> {
   }
 
   void _showAddWeightDialog() {
-    final viewModel = Provider.of<DietDiaryViewModel>(context, listen: false);
-    final userProfile = viewModel.userProfile;
+    final userViewModel = Provider.of<UserInfoViewModel>(
+      context,
+      listen: false,
+    );
+    final userInfo = userViewModel.currentUser;
 
     // 重置控制器
     _weightController.text = '';
@@ -93,8 +101,8 @@ class _WeightTrendPageState extends State<WeightTrendPage> {
     // 如果有最近的体重记录，预填充当前体重
     if (_weightRecords.isNotEmpty) {
       _weightController.text = _weightRecords.first.weight.toString();
-    } else if (userProfile != null) {
-      _weightController.text = userProfile.weight.toString();
+    } else if (userInfo != null) {
+      _weightController.text = userInfo.weight.toString();
     }
 
     showDialog(
@@ -145,22 +153,28 @@ class _WeightTrendPageState extends State<WeightTrendPage> {
     try {
       final weight = double.parse(_weightController.text);
       final notes = _notesController.text;
-      final viewModel = Provider.of<DietDiaryViewModel>(context, listen: false);
-      final userProfile = viewModel.userProfile;
+      final dietViewModel = Provider.of<DietDiaryViewModel>(
+        context,
+        listen: false,
+      );
+      final userViewModel = Provider.of<UserInfoViewModel>(
+        context,
+        listen: false,
+      );
+      final userInfo = userViewModel.currentUser;
 
-      if (userProfile != null && userProfile.id != null) {
+      if (userInfo != null) {
         final weightRecord = WeightRecord(
-          userId: userProfile.id!,
+          userId: userInfo.userId,
           date: DateTime.now(),
           weight: weight,
           note: notes.isNotEmpty ? notes : null,
         );
 
-        await viewModel.addWeightRecord(weightRecord);
+        await dietViewModel.addWeightRecord(weightRecord);
 
         // 更新用户资料中的体重
-        final updatedProfile = userProfile.copyWith(weight: weight);
-        await viewModel.updateUserProfile(updatedProfile);
+        await userViewModel.updateUserInfo(weight: weight);
 
         await _loadData(); // 重新加载数据
 
@@ -196,7 +210,14 @@ class _WeightTrendPageState extends State<WeightTrendPage> {
 
     try {
       if (!mounted) return;
-      final viewModel = Provider.of<DietDiaryViewModel>(context, listen: false);
+      final dietViewModel = Provider.of<DietDiaryViewModel>(
+        context,
+        listen: false,
+      );
+      final userViewModel = Provider.of<UserInfoViewModel>(
+        context,
+        listen: false,
+      );
 
       // 如果只剩一条记录，不允许删除
       if (_weightRecords.length <= 1) {
@@ -205,18 +226,15 @@ class _WeightTrendPageState extends State<WeightTrendPage> {
       }
 
       // 找到要删除的记录
-      await viewModel.deleteWeightRecord(id);
+      await dietViewModel.deleteWeightRecord(id);
 
       // 如果删除的是最新记录，需要更新用户资料为次新记录的体重
       if (_weightRecords.isNotEmpty && _weightRecords.first.id == id) {
         // 找到次新记录
         final nextLatestRecord = _weightRecords.where((r) => r.id != id).first;
-        final userProfile = viewModel.userProfile;
-        if (userProfile != null) {
-          final updatedProfile = userProfile.copyWith(
-            weight: nextLatestRecord.weight,
-          );
-          await viewModel.updateUserProfile(updatedProfile);
+        final userInfo = userViewModel.currentUser;
+        if (userInfo != null) {
+          await userViewModel.updateUserInfo(weight: nextLatestRecord.weight);
         }
       }
 
@@ -232,8 +250,8 @@ class _WeightTrendPageState extends State<WeightTrendPage> {
 
   @override
   Widget build(BuildContext context) {
-    final viewModel = Provider.of<DietDiaryViewModel>(context);
-    final userProfile = viewModel.userProfile;
+    final userViewModel = Provider.of<UserInfoViewModel>(context);
+    final userInfo = userViewModel.currentUser;
 
     return Scaffold(
       appBar: AppBar(title: const Text('体重趋势')),
@@ -246,10 +264,10 @@ class _WeightTrendPageState extends State<WeightTrendPage> {
                 child: Column(
                   children: [
                     // BMI 卡片
-                    if (userProfile != null)
+                    if (userInfo != null)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
-                        child: _buildBmiCard(userProfile),
+                        child: _buildBmiCard(userInfo),
                       ),
 
                     // 体重趋势图
@@ -274,14 +292,14 @@ class _WeightTrendPageState extends State<WeightTrendPage> {
     );
   }
 
-  Widget _buildBmiCard(UserProfile userProfile) {
+  Widget _buildBmiCard(UserInfo userInfo) {
     // 使用最新体重记录的体重计算BMI，如果没有记录则使用用户资料中的体重
     final weight =
         _weightRecords.isNotEmpty
             ? _weightRecords.first.weight
-            : userProfile.weight;
+            : userInfo.weight;
 
-    final height = userProfile.height / 100; // 转换为米
+    final height = userInfo.height / 100; // 转换为米
     final bmi = weight / (height * height);
 
     String bmiCategory;
@@ -335,7 +353,7 @@ class _WeightTrendPageState extends State<WeightTrendPage> {
                       ),
                     ),
                     Text(
-                      '身高: ${userProfile.height} cm',
+                      '身高: ${userInfo.height} cm',
                       style: const TextStyle(fontSize: 14),
                     ),
                     Text(

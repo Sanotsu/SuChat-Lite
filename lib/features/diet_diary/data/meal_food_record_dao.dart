@@ -1,29 +1,23 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../../../core/storage/db_init.dart';
-import '../../../core/storage/diet_diary_ddl.dart';
+import '../../../core/storage/ddl_diet_diary.dart';
 import '../domain/entities/meal_food_record.dart';
 import '../domain/entities/meal_food_detail.dart';
 
 class MealFoodRecordDao {
-  // 单例模式
-  static final MealFoodRecordDao _dbHelper =
-      MealFoodRecordDao._createInstance();
-  // 构造函数，返回单例
-  factory MealFoodRecordDao() => _dbHelper;
-
-  // 命名的构造函数用于创建DatabaseHelper的实例
+  static final MealFoodRecordDao _dao = MealFoodRecordDao._createInstance();
+  factory MealFoodRecordDao() => _dao;
   MealFoodRecordDao._createInstance();
 
-  // 获取数据库实例(每次操作都从 DBInit 获取，不缓存)
-  Future<Database> get database async => DBInit().database;
+  final dbInit = DBInit();
 
   ///***********************************************/
   /// 餐次食品记录相关方法
   ///
   ///
   Future<int> insert(MealFoodRecord record) async {
-    final db = await database;
+    final db = await dbInit.database;
     return await db.insert(
       DietDiaryDdl.tableMealFoodRecord,
       record.toMap(),
@@ -32,7 +26,7 @@ class MealFoodRecordDao {
   }
 
   Future<List<int>> batchInsert(List<MealFoodRecord> items) async {
-    final db = await database;
+    final db = await dbInit.database;
     final batch = db.batch();
 
     for (var item in items) {
@@ -48,7 +42,7 @@ class MealFoodRecordDao {
   }
 
   Future<int> update(MealFoodRecord record) async {
-    final db = await database;
+    final db = await dbInit.database;
     return await db.update(
       DietDiaryDdl.tableMealFoodRecord,
       record.toMap(),
@@ -58,7 +52,7 @@ class MealFoodRecordDao {
   }
 
   Future<int> delete(int id) async {
-    final db = await database;
+    final db = await dbInit.database;
     return await db.delete(
       DietDiaryDdl.tableMealFoodRecord,
       where: 'id = ?',
@@ -67,7 +61,7 @@ class MealFoodRecordDao {
   }
 
   Future<MealFoodRecord?> getById(int id) async {
-    final db = await database;
+    final db = await dbInit.database;
     final maps = await db.query(
       DietDiaryDdl.tableMealFoodRecord,
       where: 'id = ?',
@@ -82,7 +76,7 @@ class MealFoodRecordDao {
   }
 
   Future<List<MealFoodRecord>> getByMealRecordId(int mealRecordId) async {
-    final db = await database;
+    final db = await dbInit.database;
     final result = await db.query(
       DietDiaryDdl.tableMealFoodRecord,
       where: 'mealRecordId = ?',
@@ -94,7 +88,7 @@ class MealFoodRecordDao {
 
   // 获取餐次中的食品详情（包含食品信息）
   Future<List<MealFoodDetail>> getMealFoodDetails(int mealRecordId) async {
-    final db = await database;
+    final db = await dbInit.database;
 
     const query = '''
     SELECT 
@@ -103,8 +97,8 @@ class MealFoodRecordDao {
       mfr.foodItemId, 
       mfr.quantity, 
       mfr.unit,
-      mfr.createdAt,
-      mfr.updatedAt,
+      mfr.gmtCreate,
+      mfr.gmtModified,
       f.name, 
       f.foodCode,
       f.imageUrl, 
@@ -162,7 +156,7 @@ class MealFoodRecordDao {
 
   // 计算一天的营养总量
   Future<Map<String, double>> calculateDailyNutrition(DateTime date) async {
-    final db = await database;
+    final db = await dbInit.database;
     final dateString = date.toIso8601String().split('T')[0];
 
     const query = '''
@@ -200,7 +194,7 @@ class MealFoodRecordDao {
     DateTime startDate,
     DateTime endDate,
   ) async {
-    final db = await database;
+    final db = await dbInit.database;
     final startDateString = startDate.toIso8601String().split('T')[0];
     final endDateString = endDate.toIso8601String().split('T')[0];
 
@@ -234,7 +228,7 @@ class MealFoodRecordDao {
     int mealRecordId,
     int foodItemId,
   ) async {
-    final db = await database;
+    final db = await dbInit.database;
     final result = await db.query(
       DietDiaryDdl.tableMealFoodRecord,
       where: 'mealRecordId = ? AND foodItemId = ?',
@@ -254,13 +248,13 @@ class MealFoodRecordDao {
     double newQuantity,
     String? unit,
   ) async {
-    final db = await database;
+    final db = await dbInit.database;
     return await db.update(
       DietDiaryDdl.tableMealFoodRecord,
       {
         'quantity': newQuantity,
         if (unit != null) 'unit': unit,
-        'updatedAt': DateTime.now().toIso8601String(),
+        'gmtModified': DateTime.now().toIso8601String(),
       },
       where: 'id = ?',
       whereArgs: [recordId],

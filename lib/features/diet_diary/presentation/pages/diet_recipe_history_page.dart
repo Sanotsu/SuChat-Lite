@@ -57,6 +57,12 @@ class _DietRecipeHistoryPageState extends State<DietRecipeHistoryPage> {
                 itemCount: _recipes.length,
                 itemBuilder: (context, index) {
                   final recipe = _recipes[index];
+
+                  final viewModel = Provider.of<DietDiaryViewModel>(
+                    context,
+                    listen: false,
+                  );
+
                   return Card(
                     margin: const EdgeInsets.symmetric(
                       horizontal: 16.0,
@@ -76,7 +82,11 @@ class _DietRecipeHistoryPageState extends State<DietRecipeHistoryPage> {
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                           Text(
-                            '生成时间: ${_formatDateTime(recipe.createdAt)}',
+                            '使用模型: ${recipe.modelName}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          Text(
+                            '生成时间: ${_formatDateTime(recipe.gmtCreate)}',
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                           if (recipe.dietaryPreference != null &&
@@ -106,6 +116,35 @@ class _DietRecipeHistoryPageState extends State<DietRecipeHistoryPage> {
                       ),
                       onTap: () {
                         Navigator.pop(context, recipe);
+                      },
+                      onLongPress: () async {
+                        var result = await showDialog(
+                          context: context,
+                          builder:
+                              (context) => AlertDialog(
+                                title: const Text('删除分析'),
+                                content: const Text('确定要删除该分析吗？'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context, false);
+                                    },
+                                    child: const Text('取消'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context, true);
+                                    },
+                                    child: const Text('确定'),
+                                  ),
+                                ],
+                              ),
+                        );
+
+                        if (result == true) {
+                          await viewModel.deleteDietRecipe(recipe.id!);
+                          await _loadRecipes();
+                        }
                       },
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16.0,

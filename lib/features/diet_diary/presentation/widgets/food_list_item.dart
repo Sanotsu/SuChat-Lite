@@ -95,17 +95,17 @@ class FoodListItem extends StatelessWidget {
                         ),
                         _buildNutrientTag(
                           '碳水',
-                          '${food.carbsPer100g.toInt()} 克',
+                          '${food.carbsPer100g.toStringAsFixed(1)} 克',
                           Colors.amber,
                         ),
                         _buildNutrientTag(
                           '脂肪',
-                          '${food.fatPer100g.toInt()} 克',
+                          '${food.fatPer100g.toStringAsFixed(1)} 克',
                           Colors.red,
                         ),
                         _buildNutrientTag(
                           '蛋白质',
-                          '${food.proteinPer100g.toInt()} 克',
+                          '${food.proteinPer100g.toStringAsFixed(1)} 克',
                           Colors.blue,
                         ),
                       ],

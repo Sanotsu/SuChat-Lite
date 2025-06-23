@@ -1,21 +1,16 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../../../core/storage/db_init.dart';
-import '../../../core/storage/diet_diary_ddl.dart';
+import '../../../core/storage/ddl_diet_diary.dart';
 import '../domain/entities/meal_record.dart';
 import '../domain/entities/meal_type.dart';
 
 class MealRecordDao {
-  // 单例模式
-  static final MealRecordDao _dbHelper = MealRecordDao._createInstance();
-  // 构造函数，返回单例
-  factory MealRecordDao() => _dbHelper;
-
-  // 命名的构造函数用于创建DatabaseHelper的实例
+  static final MealRecordDao _dao = MealRecordDao._createInstance();
+  factory MealRecordDao() => _dao;
   MealRecordDao._createInstance();
 
-  // 获取数据库实例(每次操作都从 DBInit 获取，不缓存)
-  Future<Database> get database async => DBInit().database;
+  final dbInit = DBInit();
 
   ///***********************************************/
   /// 餐次记录相关方法
@@ -23,7 +18,7 @@ class MealRecordDao {
   ///
 
   Future<int> insert(MealRecord mealRecord) async {
-    final db = await database;
+    final db = await dbInit.database;
     return await db.insert(
       DietDiaryDdl.tableMealRecord,
       mealRecord.toMap(),
@@ -32,7 +27,7 @@ class MealRecordDao {
   }
 
   Future<List<int>> batchInsert(List<MealRecord> items) async {
-    final db = await database;
+    final db = await dbInit.database;
     final batch = db.batch();
 
     for (var item in items) {
@@ -48,7 +43,7 @@ class MealRecordDao {
   }
 
   Future<int> update(MealRecord mealRecord) async {
-    final db = await database;
+    final db = await dbInit.database;
     return await db.update(
       DietDiaryDdl.tableMealRecord,
       mealRecord.toMap(),
@@ -58,7 +53,7 @@ class MealRecordDao {
   }
 
   Future<int> delete(int id) async {
-    final db = await database;
+    final db = await dbInit.database;
 
     // 删除关联的餐次食品记录
     await db.delete(
@@ -76,7 +71,7 @@ class MealRecordDao {
   }
 
   Future<MealRecord?> getById(int id) async {
-    final db = await database;
+    final db = await dbInit.database;
     final maps = await db.query(
       DietDiaryDdl.tableMealRecord,
       where: 'id = ?',
@@ -91,7 +86,7 @@ class MealRecordDao {
   }
 
   Future<List<MealRecord>> getByDate(DateTime date) async {
-    final db = await database;
+    final db = await dbInit.database;
     final dateString = date.toIso8601String().split('T')[0];
 
     final result = await db.query(
@@ -105,7 +100,7 @@ class MealRecordDao {
   }
 
   Future<MealRecord?> getByDateAndType(DateTime date, MealType mealType) async {
-    final db = await database;
+    final db = await dbInit.database;
     final dateString = date.toIso8601String().split('T')[0];
 
     final result = await db.query(
@@ -145,7 +140,7 @@ class MealRecordDao {
     DateTime startDate,
     DateTime endDate,
   ) async {
-    final db = await database;
+    final db = await dbInit.database;
     final startDateString = startDate.toIso8601String().split('T')[0];
     final endDateString = endDate.toIso8601String().split('T')[0];
 

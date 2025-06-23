@@ -24,7 +24,7 @@ import '../pages/file_upload_to_bigmodel_page.dart';
 
 /// 输入栏组件
 /// 2025-04-10 桌面端不支持语音输入和拍照
-class ChatInputBar extends StatefulWidget {
+class BranchChatInputBar extends StatefulWidget {
   final TextEditingController controller;
   final Function(InputMessageData) onSend;
   final VoidCallback? onCancel;
@@ -36,7 +36,7 @@ class ChatInputBar extends StatefulWidget {
   // 输入框高度变化回调
   final ValueChanged<double>? onHeightChanged;
 
-  const ChatInputBar({
+  const BranchChatInputBar({
     super.key,
     required this.controller,
     required this.onSend,
@@ -50,10 +50,10 @@ class ChatInputBar extends StatefulWidget {
   });
 
   @override
-  State<ChatInputBar> createState() => _ChatInputBarState();
+  State<BranchChatInputBar> createState() => _BranchChatInputBarState();
 }
 
-class _ChatInputBarState extends State<ChatInputBar> {
+class _BranchChatInputBarState extends State<BranchChatInputBar> {
   // 选中的图片
   List<File>? _selectedImages;
   // 选中的音频(2025-05-30 用户选择音频暂时只支持单个，但传递时还是去构建一个数组)
@@ -688,8 +688,8 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
           // 发送/停止按钮
           Container(
-            width: 36,
-            height: 36,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
               color: widget.isStreaming ? Colors.red : Colors.blue,
               shape: BoxShape.circle,
@@ -698,9 +698,11 @@ class _ChatInputBarState extends State<ChatInputBar> {
               icon: Icon(
                 widget.isStreaming
                     ? Icons.stop
-                    : (widget.isEditing ? Icons.check : Icons.send),
+                    : (widget.isEditing
+                        ? Icons.check
+                        : Icons.arrow_upward_outlined),
                 color: Colors.white,
-                size: 20,
+                size: 24,
               ),
               onPressed: widget.isStreaming ? widget.onStop : _handleSend,
               tooltip:

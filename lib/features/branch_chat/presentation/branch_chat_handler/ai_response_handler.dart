@@ -320,15 +320,17 @@ class AIResponseHandler {
     try {
       final history = prepareChatHistory(contextMessages);
 
-      // 2025-05-30 如果开启了高级选项，则把千问omni的音色传入
-      if (state.advancedEnabled && state.advancedOptions != null) {
-        state.advancedOptions!['omni_audio_voice'] =
-            state.inputMessageData!.omniAudioVoice;
-      } else {
-        // 如果没有开启高级选项，就把千问omni音色当做高级选项传入
-        state.advancedOptions = {
-          "omni_audio_voice": state.inputMessageData!.omniAudioVoice,
-        };
+      if (state.inputMessageData?.omniAudioVoice != null) {
+        // 2025-05-30 如果开启了高级选项，则把千问omni的音色传入
+        if (state.advancedEnabled && state.advancedOptions != null) {
+          state.advancedOptions!['omni_audio_voice'] =
+              state.inputMessageData?.omniAudioVoice;
+        } else {
+          // 如果没有开启高级选项，就把千问omni音色当做高级选项传入
+          state.advancedOptions = {
+            "omni_audio_voice": state.inputMessageData?.omniAudioVoice,
+          };
+        }
       }
 
       final (stream, cancelFunc) = await ChatService.sendMessage(
@@ -433,7 +435,7 @@ class AIResponseHandler {
           branchIndex: newBranchIndex,
           // 构建用户消息时，这个是用户选择的音频地址；构建AI响应消息时，这个大模型生成的语音保存后的地址
           audiosUrl: voicePath,
-          omniAudioVoice: state.inputMessageData!.omniAudioVoice,
+          omniAudioVoice: state.inputMessageData?.omniAudioVoice,
         );
 
         // 更新当前分支路径(其他重置在 finally 块中)

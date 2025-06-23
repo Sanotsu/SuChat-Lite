@@ -77,104 +77,31 @@ class DBDdl {
     );
     """;
 
-  // 训练助手 - 用户信息表
-  static const tableTrainingUserInfo =
-      '${DBInitConfig.tablePerfix}training_user_info';
+  // 2025-07-10 统一用户信息表
+  // 合并了训练助手和饮食日记中的用户表，包含所有用户相关字段
+  static const tableUserInfo = '${DBInitConfig.tablePerfix}user_info';
 
-  static const ddlForTrainingUserInfo = """
-    CREATE TABLE $tableTrainingUserInfo (
+  // gender 和 goal 使用枚举的index，所以是INTEGER类型
+  static const ddlForUserInfo = """
+    CREATE TABLE $tableUserInfo (
       userId              TEXT    NOT NULL,
-      gender              TEXT    NOT NULL,
+      name                TEXT    NOT NULL,
+      gender              INTEGER NOT NULL,
+      age                 INTEGER NOT NULL,
       height              REAL    NOT NULL,
       weight              REAL    NOT NULL,
-      age                 INTEGER,
       fitnessLevel        TEXT,
       healthConditions    TEXT,
+      goal                INTEGER NOT NULL,
+      activityLevel       REAL,
+      targetCalories      REAL,
+      targetCarbs         REAL,
+      targetProtein       REAL,
+      targetFat           REAL,
+      otherParams         TEXT,
       gmtCreate           TEXT    NOT NULL,
       gmtModified         TEXT,
       PRIMARY KEY(userId)
-    );
-    """;
-
-  // 训练助手 - 训练计划表
-  static const tableTrainingPlan = '${DBInitConfig.tablePerfix}training_plan';
-
-  static const ddlForTrainingPlan = """
-    CREATE TABLE $tableTrainingPlan (
-      planId              TEXT    NOT NULL,
-      userId              TEXT    NOT NULL,
-      planName            TEXT    NOT NULL,
-      targetGoal          TEXT    NOT NULL,
-      targetMuscleGroups  TEXT    NOT NULL,
-      duration            INTEGER NOT NULL,
-      frequency           TEXT    NOT NULL,
-      difficulty          TEXT    NOT NULL,
-      description         TEXT,
-      equipment           TEXT,
-      isActive            INTEGER NOT NULL,
-      gmtCreate           TEXT    NOT NULL,
-      gmtModified         TEXT,
-      PRIMARY KEY(planId)
-    );
-    """;
-
-  // 训练助手 - 训练计划详情表
-  static const tableTrainingPlanDetail =
-      '${DBInitConfig.tablePerfix}training_plan_detail';
-
-  static const ddlForTrainingPlanDetail = """
-    CREATE TABLE $tableTrainingPlanDetail (
-      detailId            TEXT    NOT NULL,
-      planId              TEXT    NOT NULL,
-      day                 INTEGER NOT NULL,
-      exerciseName        TEXT    NOT NULL,
-      muscleGroup         TEXT    NOT NULL,
-      sets                INTEGER NOT NULL,
-      reps                TEXT    NOT NULL,
-      countdown           INTEGER NOT NULL,
-      restTime            INTEGER NOT NULL,
-      instructions        TEXT,
-      imageUrl            TEXT,
-      gmtCreate           TEXT    NOT NULL,
-      PRIMARY KEY(detailId)
-    );
-    """;
-
-  // 训练助手 - 训练记录表
-  static const tableTrainingRecord =
-      '${DBInitConfig.tablePerfix}training_record';
-
-  static const ddlForTrainingRecord = """
-    CREATE TABLE $tableTrainingRecord (
-      recordId            TEXT    NOT NULL,
-      planId              TEXT    NOT NULL,
-      userId              TEXT    NOT NULL,
-      date                TEXT    NOT NULL,
-      duration            INTEGER NOT NULL,
-      caloriesBurned      INTEGER,
-      completionRate      REAL    NOT NULL,
-      feedback            TEXT,
-      gmtCreate           TEXT    NOT NULL,
-      PRIMARY KEY(recordId)
-    );
-    """;
-
-  // 训练助手 - 训练记录详情表
-  static const tableTrainingRecordDetail =
-      '${DBInitConfig.tablePerfix}training_record_detail';
-
-  static const ddlForTrainingRecordDetail = """
-    CREATE TABLE $tableTrainingRecordDetail (
-      detailRecordId      TEXT    NOT NULL,
-      recordId            TEXT    NOT NULL,
-      detailId            TEXT    NOT NULL,
-      exerciseName        TEXT    NOT NULL,
-      completed           INTEGER NOT NULL,
-      actualSets          INTEGER NOT NULL,
-      actualReps          TEXT    NOT NULL,
-      notes               TEXT,
-      gmtCreate           TEXT    NOT NULL,
-      PRIMARY KEY(detailRecordId)
     );
     """;
 }

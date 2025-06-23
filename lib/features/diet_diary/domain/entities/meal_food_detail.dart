@@ -19,8 +19,8 @@ class MealFoodDetail {
   final double? vitaminAPer100g; // 每100克维生素A
   final double? vitaminCPer100g; // 每100克维生素C
   final double? vitaminEPer100g; // 每100克维生素E
-  final DateTime createdAt; // 创建时间
-  final DateTime updatedAt; // 更新时间
+  final DateTime gmtCreate; // 创建时间
+  final DateTime gmtModified; // 更新时间
 
   MealFoodDetail({
     required this.id,
@@ -42,8 +42,8 @@ class MealFoodDetail {
     this.vitaminAPer100g,
     this.vitaminCPer100g,
     this.vitaminEPer100g,
-    required this.createdAt,
-    required this.updatedAt,
+    required this.gmtCreate,
+    required this.gmtModified,
   });
 
   /// 计算实际摄入的热量
@@ -112,8 +112,14 @@ class MealFoodDetail {
       vitaminAPer100g: map['vitaminAPer100g'] as double?,
       vitaminCPer100g: map['vitaminCPer100g'] as double?,
       vitaminEPer100g: map['vitaminEPer100g'] as double?,
-      createdAt: DateTime.parse(map['createdAt'] as String),
-      updatedAt: DateTime.parse(map['updatedAt'] as String),
+      gmtCreate:
+          map['gmtCreate'] != null
+              ? DateTime.parse(map['gmtCreate'])
+              : DateTime.now(),
+      gmtModified:
+          map['gmtModified'] != null
+              ? DateTime.parse(map['gmtModified'])
+              : DateTime.now(),
     );
   }
 

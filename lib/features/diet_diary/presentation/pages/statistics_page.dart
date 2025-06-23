@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/viewmodels/user_info_viewmodel.dart';
 import '../viewmodels/diet_diary_viewmodel.dart';
 import '../widgets/scrollable_chart.dart';
 import 'weight_trend_page.dart';
@@ -15,8 +16,7 @@ class StatisticsPage extends StatefulWidget {
 }
 
 class _StatisticsPageState extends State<StatisticsPage> {
-  late DietDiaryViewModel _viewModel;
-
+  late UserInfoViewModel _userViewModel;
   DateTime _startDate = DateTime.now().subtract(const Duration(days: 6));
   DateTime _endDate = DateTime.now();
 
@@ -27,7 +27,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
   @override
   void initState() {
     super.initState();
-    _viewModel = Provider.of<DietDiaryViewModel>(context, listen: false);
+    _userViewModel = Provider.of<UserInfoViewModel>(context, listen: false);
     _loadData();
   }
 
@@ -200,7 +200,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
   Widget _buildCaloriesChart() {
     // 获取用户目标热量
     final targetCalories =
-        _viewModel.dailyRecommendedIntake?['calories'] ?? 0.0;
+        _userViewModel.dailyRecommendedIntake?['calories'] ?? 0.0;
 
     // 准备图表系列
     List<CartesianSeries> series = [
@@ -259,7 +259,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
   Widget _buildCaloriesDeficitChart() {
     // 获取用户目标热量
     final targetCalories =
-        _viewModel.dailyRecommendedIntake?['calories'] ?? 0.0;
+        _userViewModel.dailyRecommendedIntake?['calories'] ?? 0.0;
     if (targetCalories <= 0) return const SizedBox.shrink();
 
     // 计算每日热量缺口
@@ -446,7 +446,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
     // 计算平均热量缺口
     final targetCalories =
-        _viewModel.dailyRecommendedIntake?['calories'] ?? 0.0;
+        _userViewModel.dailyRecommendedIntake?['calories'] ?? 0.0;
     final avgDeficit = targetCalories - avgCalories;
     final deficitText =
         avgDeficit >= 0
@@ -523,7 +523,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
     final double avgFat = totalFat / _nutritionData.length;
 
     // 获取用户推荐摄入量
-    final recommendedIntake = _viewModel.dailyRecommendedIntake;
+    final recommendedIntake = _userViewModel.dailyRecommendedIntake;
     final targetCarbs = recommendedIntake?['carbs'] ?? 0.0;
     final targetProtein = recommendedIntake?['protein'] ?? 0.0;
     final targetFat = recommendedIntake?['fat'] ?? 0.0;

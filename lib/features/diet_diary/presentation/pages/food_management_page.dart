@@ -25,6 +25,7 @@ class FoodManagementPage extends StatefulWidget {
 class _FoodManagementPageState extends State<FoodManagementPage> {
   late DietDiaryViewModel _viewModel;
   final FoodItemDao _foodItemDao = FoodItemDao();
+  final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _showOnlyFavorites = false;
 
@@ -142,6 +143,7 @@ class _FoodManagementPageState extends State<FoodManagementPage> {
         children: [
           // 搜索框
           FoodSearchBar(
+            controller: _searchController,
             searchQuery: _searchQuery,
             hintText: '搜索食品名称或编码',
             onSearchChanged: (value) {
@@ -153,6 +155,7 @@ class _FoodManagementPageState extends State<FoodManagementPage> {
             onClearSearch: () {
               setState(() {
                 _searchQuery = '';
+                _searchController.clear();
               });
               _viewModel.searchFood('');
             },
@@ -164,10 +167,20 @@ class _FoodManagementPageState extends State<FoodManagementPage> {
             child: Row(
               children: [
                 Text(
-                  '共 $_totalFoodCount 种食品',
+                  '总计 $_totalFoodCount 种食品(只显示前200个)',
                   style: TextStyle(color: Colors.grey[600], fontSize: 14),
                 ),
                 const Spacer(),
+                // if (!_isImporting)
+                //   TextButton(
+                //     onPressed: () {
+                //       _viewModel.clearAllFood().then((_) {
+                //         _loadFoodItems();
+                //         _loadFoodCount();
+                //       });
+                //     },
+                //     child: const Text('清空'),
+                //   ),
                 if (_isImporting)
                   const SizedBox(
                     width: 16,
@@ -247,21 +260,25 @@ class _FoodManagementPageState extends State<FoodManagementPage> {
   // 从文件导入食品数据
   Future<void> _importFoodData() async {
     try {
-      File? result = await FilePickerUtils.pickAndSaveFile(
+      List<File> result = await FilePickerUtils.pickAndSaveMultipleFiles(
         fileType: CusFileType.custom,
         allowedExtensions: ['json'],
         overwrite: true,
       );
 
-      if (result == null) return;
-      final jsonString = await result.readAsString();
+      if (result.isEmpty) return;
 
       if (!mounted) return;
       setState(() {
         _isImporting = true;
       });
 
-      final importedCount = await _foodItemDao.importFromCFCDJson(jsonString);
+      var importedCount = 0;
+
+      for (var file in result) {
+        final jsonString = await file.readAsString();
+        importedCount += await _foodItemDao.importFromCFCDJson(jsonString);
+      }
 
       if (!mounted) return;
       setState(() {
