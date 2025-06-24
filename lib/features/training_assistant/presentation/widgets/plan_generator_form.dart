@@ -1,31 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/entities/user_info.dart';
 import '../../../../core/utils/screen_helper.dart';
+import '../../../../core/viewmodels/user_info_viewmodel.dart';
 import '../../../../shared/constants/constant_llm_enum.dart';
 import '../../../../shared/services/model_manager_service.dart';
 import '../../../../shared/widgets/cus_dropdown_button.dart';
+import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../../../shared/widgets/show_tool_prompt_dialog.dart';
+import '../../../../shared/widgets/loading_overlay.dart';
 import '../../data/services/training_assistant_service.dart';
+import '../viewmodels/training_viewmodel.dart';
 
 class PlanGeneratorForm extends StatefulWidget {
-  final Function(
-    String targetGoal,
-    String muscleGroups,
-    int duration,
-    String frequency,
-    String? equipment,
-    CusLLMSpec model, {
-    String? customPrompt,
-  })
-  onGenerate;
+  // 成功后回调
+  final Function() onSuccess;
 
   /// 用户信息，用于生成更准确的训练计划提示词
   final UserInfo? userInfo;
 
-  const PlanGeneratorForm({super.key, required this.onGenerate, this.userInfo});
+  const PlanGeneratorForm({super.key, required this.onSuccess, this.userInfo});
 
   @override
   State<PlanGeneratorForm> createState() => _PlanGeneratorFormState();
@@ -155,7 +152,7 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
     final userInfo = widget.userInfo;
     final prompt = TrainingAssistantService().buildTrainingPlanPrompt(
       // 如果有用户信息，则使用真实信息，否则使用默认值
-      gender: userInfo?.gender.name ?? '未指定',
+      gender: userInfo?.gender.name == 'male' ? '男' : '女',
       height: userInfo?.height ?? 170.0,
       weight: userInfo?.weight ?? 65.0,
       fitnessLevel: userInfo?.fitnessLevel ?? '中级',
@@ -183,7 +180,7 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
     // 如果用户确认使用自定义提示词
     if (result != null) {
       if (result.useCustomPrompt) {
-      setState(() {
+        setState(() {
           _customPrompt = result.customPrompt;
         });
       }
@@ -213,7 +210,7 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
     return Form(
       key: _formKey,
       child: Card(
-        margin: const EdgeInsets.all(16),
+        margin: const EdgeInsets.all(8),
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: SingleChildScrollView(
@@ -232,16 +229,17 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.fitness_center,
-                            color: Theme.of(context).colorScheme.primary,
-                            size: 28,
-                          ),
-                          const SizedBox(width: 12),
+                          // Icon(
+                          //   Icons.fitness_center,
+                          //   color: Theme.of(context).colorScheme.primary,
+                          //   size: 24,
+                          // ),
+                          // const SizedBox(width: 12),
                           Text(
                             '创建个性化训练计划',
                             style: Theme.of(
@@ -255,7 +253,7 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        '请填写以下信息，我们将为您生成一份科学、高效的训练计划。所有字段都会影响最终生成的计划质量，请尽量详细填写。',
+                        '请根据下方引导，创建您的专属训练计划',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
@@ -765,7 +763,7 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
     );
   }
 
-  void _generatePlan() {
+  void _generatePlan() async {
     // 验证至少选择了一个肌肉群组
     if (!_muscleGroups.values.contains(true)) {
       ToastUtils.showError("请至少选择一个肌肉群组", align: Alignment.center);
@@ -800,28 +798,93 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
     // 将选中的天数转换为字符串，如 "周一、周三、周五"
     final frequency = selectedDays.join('、');
 
-    // 调用生成方法
-    if (_customPrompt.trim().isNotEmpty) {
-      // 使用自定义提示词
-      widget.onGenerate(
-        _selectedGoal,
-        selectedMuscleGroups,
-        _duration,
-        frequency,
-        _equipment,
-        selectedModel!,
-        customPrompt: _customPrompt.trim(),
-      );
-    } else {
-      // 如果用户没有自定义提示词，则使用标准提示词生成训练计划
-      widget.onGenerate(
-        _selectedGoal,
-        selectedMuscleGroups,
-        _duration,
-        frequency,
-        _equipment,
-        selectedModel!,
-      );
+    final trainingViewModel = Provider.of<TrainingViewModel>(
+      context,
+      listen: false,
+    );
+    final userInfoViewModel = Provider.of<UserInfoViewModel>(
+      context,
+      listen: false,
+    );
+
+    if (userInfoViewModel.currentUser == null) {
+      ToastUtils.showError('用户信息不存在，请先创建用户信息');
+      return;
+    }
+
+    // 显示训练计划生成遮罩
+    LoadingOverlay.showTrainingPlanGeneration(
+      context,
+      showTimer: true,
+      onCancel: () {
+        // 用户取消生成，可以在这里添加取消逻辑
+        ToastUtils.showInfo("已取消训练计划生成", align: Alignment.center);
+      },
+    );
+
+    try {
+      // 调用生成方法
+      if (_customPrompt.trim().isNotEmpty) {
+        // 使用自定义提示词生成
+        await trainingViewModel.generateTrainingPlanWithCustomPrompt(
+          userInfo: userInfoViewModel.currentUser!,
+          targetGoal: _selectedGoal,
+          targetMuscleGroups: selectedMuscleGroups.split('、'),
+          duration: _duration,
+          frequency: frequency,
+          equipment: _equipment,
+          customPrompt: _customPrompt.trim(),
+          model: selectedModel!,
+        );
+      } else {
+        // 使用标准提示词生成
+        await trainingViewModel.generateTrainingPlan(
+          userInfo: userInfoViewModel.currentUser!,
+          targetGoal: _selectedGoal,
+          // 注意和PlanGeneratorForm的_generatePlan()分隔符一致
+          targetMuscleGroups: selectedMuscleGroups.split('、'),
+          duration: _duration,
+          frequency: frequency,
+          equipment: _equipment,
+          model: selectedModel!,
+        );
+      }
+
+      // 2025-06-24 训练计划生成失败，不要跳转到其他页面
+      if (trainingViewModel.error != null &&
+          mounted &&
+          trainingViewModel.error!.contains('生成训练计划失败')) {
+        commonExceptionDialog(context, "生成训练计划失败", trainingViewModel.error!);
+        trainingViewModel.clearError();
+        return;
+      }
+
+      if (trainingViewModel.selectedPlan != null &&
+          userInfoViewModel.currentUser != null) {
+        // 保存生成的训练计划到数据库
+        await trainingViewModel.saveTrainingPlan(
+          userInfoViewModel.currentUser!.userId,
+        );
+
+        // 重新加载用户的训练计划列表
+        await trainingViewModel.loadUserTrainingPlans(
+          userInfoViewModel.currentUser!.userId,
+        );
+
+        // 如果组件还在挂载，则调用回调
+        if (!mounted) return;
+        widget.onSuccess();
+      }
+    } catch (e) {
+      // 处理生成过程中的异常
+      if (mounted) {
+        commonExceptionDialog(context, "生成失败", "训练计划生成过程中发生错误: $e");
+      }
+    } finally {
+      // 无论成功还是失败，都要隐藏遮罩
+      if (mounted) {
+        LoadingOverlay.hide();
+      }
     }
   }
 }

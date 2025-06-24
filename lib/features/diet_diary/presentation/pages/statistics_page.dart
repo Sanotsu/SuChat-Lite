@@ -200,7 +200,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
   Widget _buildCaloriesChart() {
     // 获取用户目标热量
     final targetCalories =
-        _userViewModel.dailyRecommendedIntake?['calories'] ?? 0.0;
+        _userViewModel.dailyRecommendedIntake?.calories ?? 0.0;
 
     // 准备图表系列
     List<CartesianSeries> series = [
@@ -259,7 +259,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
   Widget _buildCaloriesDeficitChart() {
     // 获取用户目标热量
     final targetCalories =
-        _userViewModel.dailyRecommendedIntake?['calories'] ?? 0.0;
+        _userViewModel.dailyRecommendedIntake?.calories ?? 0.0;
     if (targetCalories <= 0) return const SizedBox.shrink();
 
     // 计算每日热量缺口
@@ -446,7 +446,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
     // 计算平均热量缺口
     final targetCalories =
-        _userViewModel.dailyRecommendedIntake?['calories'] ?? 0.0;
+        _userViewModel.dailyRecommendedIntake?.calories ?? 0.0;
     final avgDeficit = targetCalories - avgCalories;
     final deficitText =
         avgDeficit >= 0
@@ -524,9 +524,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
     // 获取用户推荐摄入量
     final recommendedIntake = _userViewModel.dailyRecommendedIntake;
-    final targetCarbs = recommendedIntake?['carbs'] ?? 0.0;
-    final targetProtein = recommendedIntake?['protein'] ?? 0.0;
-    final targetFat = recommendedIntake?['fat'] ?? 0.0;
+    final targetCarbs = recommendedIntake?.carbs ?? 0.0;
+    final targetProtein = recommendedIntake?.protein ?? 0.0;
+    final targetFat = recommendedIntake?.fat ?? 0.0;
 
     return Card(
       child: Padding(

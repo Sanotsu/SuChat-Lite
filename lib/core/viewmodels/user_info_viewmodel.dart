@@ -17,13 +17,13 @@ class UserInfoViewModel extends ChangeNotifier {
   String? _error;
 
   // 每日推荐摄入量
-  Map<String, double>? _dailyRecommendedIntake;
+  MacrosIntake? _dailyRecommendedIntake;
 
   // Getters
   UserInfo? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  Map<String, double>? get dailyRecommendedIntake => _dailyRecommendedIntake;
+  MacrosIntake? get dailyRecommendedIntake => _dailyRecommendedIntake;
 
   // 初始化，加载用户信息
   Future<void> initialize() async {

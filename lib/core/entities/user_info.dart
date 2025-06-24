@@ -68,7 +68,7 @@ class UserInfo {
   double weight;
 
   // 训练助手特有字段
-  String? fitnessLevel; // 健身水平 (beginner/intermediate/advanced)
+  String? fitnessLevel; // 健身水平 (初级/中级/高级)
   String? healthConditions; // 健康状况，可以是多个条件的JSON字符串
 
   // 饮食日记特有字段
@@ -233,7 +233,7 @@ class UserInfo {
       age: 30,
       height: 170.0,
       weight: 65.0,
-      fitnessLevel: 'beginner',
+      fitnessLevel: '初级',
       healthConditions: '',
       goal: Goal.maintainWeight, // 保持体重
       activityLevel: 1.5, // 中等活动水平

@@ -370,8 +370,8 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
 
                     /// 热量缺口仪表盘
                     NutritionGauge(
-                      current: dailyNutrition?['calories'] ?? 0,
-                      target: dailyRecommended?['calories'] ?? 2000,
+                      current: dailyNutrition?.calories ?? 0,
+                      target: dailyRecommended?.calories ?? 2000,
                       label: '热量缺口',
                     ),
                     const SizedBox(height: 24),
@@ -382,7 +382,7 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
                       children: [
                         _buildNutritionInfo(
                           '总摄入',
-                          '${dailyNutrition?['calories']?.toInt() ?? 0}',
+                          '${dailyNutrition?.calories.toInt() ?? 0}',
                           '千卡',
                           Icons.local_fire_department,
                           Colors.orange,
@@ -391,7 +391,7 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
                           children: [
                             _buildNutritionInfo(
                               '推荐值',
-                              '${dailyRecommended?['calories']?.toInt() ?? 0}',
+                              '${dailyRecommended?.calories.toInt() ?? 0}',
                               '千卡',
                               Icons.fastfood,
                               Colors.green,
@@ -423,24 +423,24 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
                       children: [
                         _buildNutrientProgress(
                           '碳水化合物',
-                          dailyNutrition?['carbs'] ?? 0,
-                          dailyRecommended?['carbs'] ?? 250,
+                          dailyNutrition?.carbs ?? 0,
+                          dailyRecommended?.carbs ?? 250,
                           '克',
                           '75%',
                           Colors.amber,
                         ),
                         _buildNutrientProgress(
                           '蛋白质',
-                          dailyNutrition?['protein'] ?? 0,
-                          dailyRecommended?['protein'] ?? 100,
+                          dailyNutrition?.protein ?? 0,
+                          dailyRecommended?.protein ?? 100,
                           '克',
                           '14%',
                           Colors.blue,
                         ),
                         _buildNutrientProgress(
                           '脂肪',
-                          dailyNutrition?['fat'] ?? 0,
-                          dailyRecommended?['fat'] ?? 67,
+                          dailyNutrition?.fat ?? 0,
+                          dailyRecommended?.fat ?? 67,
                           '克',
                           '11%',
                           Colors.red,
@@ -471,15 +471,15 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    TextButton.icon(
-                      onPressed: () {
-                        // TODO: 实现拍照识别功能（暂时不弄）
-                        // 不好弄，没有后台服务，拍照识别的菜品无法和数据库中的菜品关联
-                        // 想法是 1 识别菜品(如果不对就手动输入) 2 录入菜品食用数量 3 根据拍照时间存入对应餐次
-                      },
-                      icon: const Icon(Icons.camera_alt),
-                      label: const Text('拍照识别'),
-                    ),
+                    // TextButton.icon(
+                    //   onPressed: () {
+                    //     // TODO: 实现拍照识别功能（暂时不弄）
+                    //     // 不好弄，没有后台服务，拍照识别的菜品无法和数据库中的菜品关联
+                    //     // 想法是 1 识别菜品(如果不对就手动输入) 2 录入菜品食用数量 3 根据拍照时间存入对应餐次
+                    //   },
+                    //   icon: const Icon(Icons.camera_alt),
+                    //   label: const Text('拍照识别'),
+                    // ),
                   ],
                 ),
 

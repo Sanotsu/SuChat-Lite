@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
+import '../../../../core/dao/user_info_dao.dart';
 import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/entities/user_info.dart';
 import '../../../../shared/constants/constant_llm_enum.dart';
@@ -21,8 +22,8 @@ class DietRecipeService {
   Future<(Stream<String>, VoidCallback)> generatePersonalizedRecipe({
     required CusLLMSpec model,
     required UserInfo userInfo,
-    required Map<String, double> dailyNutrition,
-    required Map<String, double> dailyRecommended,
+    MacrosIntake? dailyNutrition,
+    MacrosIntake? dailyRecommended,
     required String preferences,
     required int mealCount,
     required int days,
@@ -84,8 +85,8 @@ class DietRecipeService {
   /// 构建提示词消息
   String buildGenerateRecipePrompt({
     required UserInfo userInfo,
-    required Map<String, double> dailyNutrition,
-    required Map<String, double> dailyRecommended,
+    MacrosIntake? dailyNutrition,
+    MacrosIntake? dailyRecommended,
     required String preferences,
     required int mealCount,
     required int days,

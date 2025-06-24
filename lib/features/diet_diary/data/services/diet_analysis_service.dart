@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
+import '../../../../core/dao/user_info_dao.dart';
 import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/entities/user_info.dart';
 import '../../../../shared/constants/constant_llm_enum.dart';
@@ -22,8 +23,8 @@ class DietAnalysisService {
     required CusLLMSpec model,
     required UserInfo userInfo,
     required Map<int, List<MealFoodDetail>> mealFoodDetails,
-    required Map<String, double> dailyNutrition,
-    required Map<String, double> dailyRecommended,
+    MacrosIntake? dailyNutrition,
+    MacrosIntake? dailyRecommended,
     required List<int> mealRecordIds,
     required Map<int, MealType> mealTypes,
     String? customPrompt,
@@ -83,8 +84,8 @@ class DietAnalysisService {
   String buildDietAnalysisPrompt({
     required UserInfo userInfo,
     required Map<int, List<MealFoodDetail>> mealFoodDetails,
-    required Map<String, double> dailyNutrition,
-    required Map<String, double> dailyRecommended,
+    MacrosIntake? dailyNutrition,
+    MacrosIntake? dailyRecommended,
     required List<int> mealRecordIds,
     required Map<int, MealType> mealTypes,
   }) {
@@ -119,13 +120,16 @@ class DietAnalysisService {
 """;
 
     // 营养摄入总结
-    final nutritionSummary = """
+    final nutritionSummary =
+        dailyNutrition != null && dailyRecommended != null
+            ? """
 ## 营养摄入总结
-- 总热量: ${dailyNutrition['calories']?.toInt() ?? 0}千卡 / ${dailyRecommended['calories']?.toInt() ?? 0}千卡 (推荐)
-- 碳水化合物: ${dailyNutrition['carbs']?.toInt() ?? 0}克 / ${dailyRecommended['carbs']?.toInt() ?? 0}克 (推荐)
-- 蛋白质: ${dailyNutrition['protein']?.toInt() ?? 0}克 / ${dailyRecommended['protein']?.toInt() ?? 0}克 (推荐)
-- 脂肪: ${dailyNutrition['fat']?.toInt() ?? 0}克 / ${dailyRecommended['fat']?.toInt() ?? 0}克 (推荐)
-""";
+- 总热量: ${dailyNutrition.calories.toInt()}千卡 / ${dailyRecommended.calories.toInt()}千卡 (推荐)
+- 碳水化合物: ${dailyNutrition.carbs.toInt()}克 / ${dailyRecommended.carbs.toInt()}克 (推荐)
+- 蛋白质: ${dailyNutrition.protein.toInt()}克 / ${dailyRecommended.protein.toInt()}克 (推荐)
+- 脂肪: ${dailyNutrition.fat.toInt()}克 / ${dailyRecommended.fat.toInt()}克 (推荐)
+"""
+            : '';
 
     // 一日四餐详情
     final mealsDetail = StringBuffer();

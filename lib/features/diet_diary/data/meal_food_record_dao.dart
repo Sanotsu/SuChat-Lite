@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 
+import '../../../core/dao/user_info_dao.dart';
 import '../../../core/storage/db_init.dart';
 import '../../../core/storage/ddl_diet_diary.dart';
 import '../domain/entities/meal_food_record.dart';
@@ -155,7 +156,7 @@ class MealFoodRecordDao {
   }
 
   // 计算一天的营养总量
-  Future<Map<String, double>> calculateDailyNutrition(DateTime date) async {
+  Future<MacrosIntake> calculateDailyNutrition(DateTime date) async {
     final db = await dbInit.database;
     final dateString = date.toIso8601String().split('T')[0];
 
@@ -178,15 +179,15 @@ class MealFoodRecordDao {
     final result = await db.rawQuery(query, [dateString]);
 
     if (result.isEmpty || result.first['totalCalories'] == null) {
-      return {'calories': 0.0, 'carbs': 0.0, 'protein': 0.0, 'fat': 0.0};
+      return MacrosIntake(calories: 0.0, carbs: 0.0, protein: 0.0, fat: 0.0);
     }
 
-    return {
-      'calories': result.first['totalCalories'] as double? ?? 0.0,
-      'carbs': result.first['totalCarbs'] as double? ?? 0.0,
-      'protein': result.first['totalProtein'] as double? ?? 0.0,
-      'fat': result.first['totalFat'] as double? ?? 0.0,
-    };
+    return MacrosIntake(
+      calories: result.first['totalCalories'] as double? ?? 0.0,
+      carbs: result.first['totalCarbs'] as double? ?? 0.0,
+      protein: result.first['totalProtein'] as double? ?? 0.0,
+      fat: result.first['totalFat'] as double? ?? 0.0,
+    );
   }
 
   // 获取一段时间内的每日营养摄入量

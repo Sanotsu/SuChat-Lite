@@ -65,9 +65,7 @@ class UserInfoDao {
   }
 
   // 根据用户配置文件计算每日推荐摄入量
-  Future<Map<String, double>> calculateDailyRecommendedIntake(
-    String userId,
-  ) async {
+  Future<MacrosIntake> calculateDailyRecommendedIntake(String userId) async {
     final user = await getUserInfoById(userId);
 
     if (user == null) {
@@ -132,12 +130,12 @@ class UserInfoDao {
     // 确保宏量营养素不为负
     targetCarbs = targetCarbs.clamp(0, double.infinity);
 
-    return {
-      'calories': targetCalories,
-      'protein': targetProtein,
-      'carbs': targetCarbs,
-      'fat': targetFat,
-    };
+    return MacrosIntake(
+      calories: targetCalories,
+      protein: targetProtein,
+      carbs: targetCarbs,
+      fat: targetFat,
+    );
   }
 
   // 更新用户目标
@@ -152,5 +150,38 @@ class UserInfoDao {
 
     await updateUserInfo(updatedUser);
     return updatedUser;
+  }
+}
+
+// 主要营养素摄入量(推荐的、实际摄入的都可以使用这个类)
+class MacrosIntake {
+  final double calories;
+  final double protein;
+  final double carbs;
+  final double fat;
+
+  MacrosIntake({
+    required this.calories,
+    required this.protein,
+    required this.carbs,
+    required this.fat,
+  });
+
+  factory MacrosIntake.fromMap(Map<String, dynamic> map) {
+    return MacrosIntake(
+      calories: map['calories'] as double,
+      protein: map['protein'] as double,
+      carbs: map['carbs'] as double,
+      fat: map['fat'] as double,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'calories': calories,
+      'protein': protein,
+      'carbs': carbs,
+      'fat': fat,
+    };
   }
 }

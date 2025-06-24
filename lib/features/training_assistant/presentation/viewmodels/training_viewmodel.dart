@@ -57,7 +57,7 @@ class TrainingViewModel extends ChangeNotifier {
 
       final result = await _trainingService.generateTrainingPlan(
         userId: userInfo.userId,
-        gender: userInfo.gender.name,
+        gender: userInfo.gender.name == 'male' ? '男' : '女',
         height: userInfo.height,
         weight: userInfo.weight,
         age: userInfo.age ?? 30,
@@ -78,6 +78,7 @@ class TrainingViewModel extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _isLoading = false;
+      // 2025-06-24 注意这个错误会特殊处理，所以关键字要一致
       _error = '生成训练计划失败: $e';
       notifyListeners();
     }

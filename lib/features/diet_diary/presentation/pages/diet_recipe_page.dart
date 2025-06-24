@@ -169,8 +169,8 @@ class _DietRecipePageState extends State<DietRecipePage> {
       final (stream, cancel) = await _recipeService.generatePersonalizedRecipe(
         model: _selectedModel!,
         userInfo: userViewModel.currentUser!,
-        dailyNutrition: viewModel.dailyNutrition ?? {},
-        dailyRecommended: userViewModel.dailyRecommendedIntake ?? {},
+        dailyNutrition: viewModel.dailyNutrition,
+        dailyRecommended: userViewModel.dailyRecommendedIntake,
         preferences: _preferencesController.text,
         mealCount: _selectedMealCount,
         days: _selectedDays,
@@ -422,8 +422,8 @@ class _DietRecipePageState extends State<DietRecipePage> {
       context,
       listen: false,
     );
-    final dailyNutrition = viewModel.dailyNutrition ?? {};
-    final dailyRecommended = userViewModel.dailyRecommendedIntake ?? {};
+    final dailyNutrition = viewModel.dailyNutrition;
+    final dailyRecommended = userViewModel.dailyRecommendedIntake;
 
     return Card(
       child: Padding(
@@ -461,22 +461,22 @@ class _DietRecipePageState extends State<DietRecipePage> {
                       const SizedBox(height: 8),
                       _buildNutrientItem(
                         '热量',
-                        dailyRecommended['calories']?.toInt() ?? 0,
+                        dailyRecommended?.calories.toInt() ?? 0,
                         '千卡',
                       ),
                       _buildNutrientItem(
                         '碳水',
-                        dailyRecommended['carbs']?.toInt() ?? 0,
+                        dailyRecommended?.carbs.toInt() ?? 0,
                         '克',
                       ),
                       _buildNutrientItem(
                         '蛋白质',
-                        dailyRecommended['protein']?.toInt() ?? 0,
+                        dailyRecommended?.protein.toInt() ?? 0,
                         '克',
                       ),
                       _buildNutrientItem(
                         '脂肪',
-                        dailyRecommended['fat']?.toInt() ?? 0,
+                        dailyRecommended?.fat.toInt() ?? 0,
                         '克',
                       ),
                     ],
@@ -494,22 +494,22 @@ class _DietRecipePageState extends State<DietRecipePage> {
                       const SizedBox(height: 8),
                       _buildNutrientItem(
                         '热量',
-                        dailyNutrition['calories']?.toInt() ?? 0,
+                        dailyNutrition?.calories.toInt() ?? 0,
                         '千卡',
                       ),
                       _buildNutrientItem(
                         '碳水',
-                        dailyNutrition['carbs']?.toInt() ?? 0,
+                        dailyNutrition?.carbs.toInt() ?? 0,
                         '克',
                       ),
                       _buildNutrientItem(
                         '蛋白质',
-                        dailyNutrition['protein']?.toInt() ?? 0,
+                        dailyNutrition?.protein.toInt() ?? 0,
                         '克',
                       ),
                       _buildNutrientItem(
                         '脂肪',
-                        dailyNutrition['fat']?.toInt() ?? 0,
+                        dailyNutrition?.fat.toInt() ?? 0,
                         '克',
                       ),
                     ],
@@ -775,8 +775,8 @@ class _DietRecipePageState extends State<DietRecipePage> {
 
     final prompt = DietRecipeService().buildGenerateRecipePrompt(
       userInfo: userViewModel.currentUser!,
-      dailyNutrition: viewModel.dailyNutrition ?? {},
-      dailyRecommended: userViewModel.dailyRecommendedIntake ?? {},
+      dailyNutrition: viewModel.dailyNutrition,
+      dailyRecommended: userViewModel.dailyRecommendedIntake,
       preferences: _preferencesController.text,
       mealCount: _selectedMealCount,
       days: _selectedDays,

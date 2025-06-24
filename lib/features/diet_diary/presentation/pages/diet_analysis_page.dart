@@ -164,8 +164,8 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
         model: _selectedModel!,
         userInfo: userViewModel.currentUser!,
         mealFoodDetails: viewModel.mealFoodDetails,
-        dailyNutrition: viewModel.dailyNutrition ?? {},
-        dailyRecommended: userViewModel.dailyRecommendedIntake ?? {},
+        dailyNutrition: viewModel.dailyNutrition,
+        dailyRecommended: userViewModel.dailyRecommendedIntake,
         mealRecordIds: mealRecordIds,
         mealTypes: mealTypes,
         customPrompt: _customPrompt,
@@ -497,40 +497,40 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
       context,
       listen: false,
     );
-    final dailyNutrition = viewModel.dailyNutrition ?? {};
-    final dailyRecommended = userViewModel.dailyRecommendedIntake ?? {};
+    final dailyNutrition = viewModel.dailyNutrition;
+    final dailyRecommended = userViewModel.dailyRecommendedIntake;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildNutritionRow(
           '总热量',
-          dailyNutrition['calories']?.toInt() ?? 0,
-          dailyRecommended['calories']?.toInt() ?? 0,
+          dailyNutrition?.calories.toInt() ?? 0,
+          dailyRecommended?.calories.toInt() ?? 0,
           '千卡',
           Colors.orange,
         ),
         const SizedBox(height: 8),
         _buildNutritionRow(
           '碳水',
-          dailyNutrition['carbs']?.toInt() ?? 0,
-          dailyRecommended['carbs']?.toInt() ?? 0,
+          dailyNutrition?.carbs.toInt() ?? 0,
+          dailyRecommended?.carbs.toInt() ?? 0,
           '克',
           Colors.teal,
         ),
         const SizedBox(height: 8),
         _buildNutritionRow(
           '蛋白质',
-          dailyNutrition['protein']?.toInt() ?? 0,
-          dailyRecommended['protein']?.toInt() ?? 0,
+          dailyNutrition?.protein.toInt() ?? 0,
+          dailyRecommended?.protein.toInt() ?? 0,
           '克',
           Colors.purple,
         ),
         const SizedBox(height: 8),
         _buildNutritionRow(
           '脂肪',
-          dailyNutrition['fat']?.toInt() ?? 0,
-          dailyRecommended['fat']?.toInt() ?? 0,
+          dailyNutrition?.fat.toInt() ?? 0,
+          dailyRecommended?.fat.toInt() ?? 0,
           '克',
           Colors.red,
         ),
@@ -667,8 +667,8 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
     final prompt = DietAnalysisService().buildDietAnalysisPrompt(
       userInfo: userViewModel.currentUser!,
       mealFoodDetails: viewModel.mealFoodDetails,
-      dailyNutrition: viewModel.dailyNutrition ?? {},
-      dailyRecommended: userViewModel.dailyRecommendedIntake ?? {},
+      dailyNutrition: viewModel.dailyNutrition,
+      dailyRecommended: userViewModel.dailyRecommendedIntake,
       mealRecordIds: mealRecordIds,
       mealTypes: mealTypes,
     );

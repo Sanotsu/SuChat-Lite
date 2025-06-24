@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/dao/user_info_dao.dart';
 import '../../../../core/entities/user_info.dart';
 import '../../../../core/utils/simple_tools.dart';
 import '../../domain/entities/food_item.dart';
@@ -31,8 +32,8 @@ class DietDiaryViewModel extends ChangeNotifier {
   DateTime get selectedDate => _selectedDate;
 
   // 当天的营养摄入量
-  Map<String, double>? _dailyNutrition;
-  Map<String, double>? get dailyNutrition => _dailyNutrition;
+  MacrosIntake? _dailyNutrition;
+  MacrosIntake? get dailyNutrition => _dailyNutrition;
 
   // 当天的餐次记录
   List<MealRecord> _mealRecords = [];
@@ -126,7 +127,7 @@ class DietDiaryViewModel extends ChangeNotifier {
   Future<void> loadDailyData(
     DateTime date, {
     required UserInfo userInfo,
-    Map<String, double>? dailyRecommendedIntake,
+    MacrosIntake? dailyRecommendedIntake,
     bool skipNotify = false,
   }) async {
     try {

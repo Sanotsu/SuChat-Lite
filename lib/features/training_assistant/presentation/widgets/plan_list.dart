@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
+import '../../../../shared/constants/constants.dart';
 import '../../domain/entities/training_plan.dart';
 
 class PlanList extends StatelessWidget {
@@ -96,7 +99,7 @@ class PlanList extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '创建于 ${_formatDate(plan.gmtCreate)}',
+                        '创建于${DateFormat(constDateFormat).format(plan.gmtCreate)}',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
@@ -108,9 +111,5 @@ class PlanList extends StatelessWidget {
         );
       },
     );
-  }
-
-  String _formatDate(DateTime dateTime) {
-    return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')}';
   }
 }

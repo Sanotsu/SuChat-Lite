@@ -100,7 +100,7 @@ void commonExceptionDialog(BuildContext context, String title, String message) {
       return AlertDialog(
         title: Text(title),
         content: SingleChildScrollView(
-          child: Text(message, style: const TextStyle(fontSize: 13)),
+          child: SelectableText(message, style: const TextStyle(fontSize: 13)),
         ),
         actions: [
           TextButton(

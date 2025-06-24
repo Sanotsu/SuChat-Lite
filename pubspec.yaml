@@ -110,12 +110,12 @@ dependencies:
   get_thumbnail_video: ^0.7.3
   video_player: ^2.10.0
   # 桌面端视频播放支持(video_player只支持移动端，使用这个库可以让其支持桌面端)
-  # video_player_media_kit: ^1.0.6
-  # media_kit_libs_android_video: ^1.3.7
-  # media_kit_libs_ios_video: ^1.1.4
-  # media_kit_libs_macos_video: ^1.1.4
-  # media_kit_libs_windows_video: ^1.0.11
-  # media_kit_libs_linux: ^1.2.1
+  video_player_media_kit: ^1.0.6
+  media_kit_libs_android_video: ^1.3.7
+  media_kit_libs_ios_video: ^1.1.4
+  media_kit_libs_macos_video: ^1.1.4
+  media_kit_libs_windows_video: ^1.0.11
+  media_kit_libs_linux: ^1.2.1
 
   # 可简单移动端录音(替代record包)和播放音频(还带波形)
   audio_waveforms: ^1.3.0

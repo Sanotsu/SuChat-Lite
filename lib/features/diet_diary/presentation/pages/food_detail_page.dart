@@ -82,7 +82,7 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: false,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text(widget.foodItem.name),
         actions: [
@@ -118,354 +118,339 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 食品图片
+                  if (widget.foodItem.imageUrl != null &&
+                      widget.foodItem.imageUrl!.isNotEmpty)
+                    SizedBox(
+                      height: 200,
+                      child: buildImageViewCarouselSlider([
+                        widget.foodItem.imageUrl!,
+                      ]),
+                    )
+                  else
+                    Container(
+                      height: 200,
+                      color: Colors.grey[300],
+                      child: const Center(
+                        child: Icon(
+                          Icons.restaurant,
+                          size: 64,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+
+                  // 基本信息
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: baseInfo(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (widget.mealRecordId != null) inputBar(),
+        ],
+      ),
+    );
+  }
+
+  // 基本信息
+  Column baseInfo() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 食品名称和卡路里
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // 食品图片
-            if (widget.foodItem.imageUrl != null &&
-                widget.foodItem.imageUrl!.isNotEmpty)
-              SizedBox(
-                height: 200,
-                child: buildImageViewCarouselSlider([
-                  widget.foodItem.imageUrl!,
-                ]),
-              )
-            else
-              Container(
-                height: 200,
-                color: Colors.grey[300],
-                child: const Center(
-                  child: Icon(Icons.restaurant, size: 64, color: Colors.white),
+            Expanded(
+              child: Text(
+                widget.foodItem.name,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-
-            // 基本信息
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 食品名称和卡路里
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          widget.foodItem.name,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          '${widget.foodItem.caloriesPer100g.toInt()} 千卡/100克',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.orange[800],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (widget.foodItem.foodCode != null) ...[
-                    Text(
-                      '食品编码: ${widget.foodItem.foodCode}',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                    ),
-                  ],
-
-                  const SizedBox(height: 24),
-
-                  // 营养元素
-                  const Text(
-                    '营养元素',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 三大营养素占比
-                  Row(
-                    children: [
-                      _buildNutrientPercentage(
-                        '碳水化合物',
-                        widget.foodItem.carbsPer100g,
-                        Colors.teal,
-                      ),
-                      _buildNutrientPercentage(
-                        '蛋白质',
-                        widget.foodItem.proteinPer100g,
-                        Colors.purple,
-                      ),
-                      _buildNutrientPercentage(
-                        '脂肪',
-                        widget.foodItem.fatPer100g,
-                        Colors.orange,
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // 详细营养素表格
-                  Card(
-                    elevation: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            '详细营养素 (每100克)',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _buildNutrientRow(
-                            '热量',
-                            '${widget.foodItem.caloriesPer100g.toInt()} 千卡',
-                          ),
-                          _buildNutrientRow(
-                            '碳水化合物',
-                            '${widget.foodItem.carbsPer100g.toStringAsFixed(1)} 克',
-                          ),
-                          _buildNutrientRow(
-                            '蛋白质',
-                            '${widget.foodItem.proteinPer100g.toStringAsFixed(1)} 克',
-                          ),
-                          _buildNutrientRow(
-                            '脂肪',
-                            '${widget.foodItem.fatPer100g.toStringAsFixed(1)} 克',
-                          ),
-                          if (widget.foodItem.fiberPer100g != null)
-                            _buildNutrientRow(
-                              '膳食纤维',
-                              '${widget.foodItem.fiberPer100g!.toStringAsFixed(1)} 克',
-                            ),
-                          if (widget.foodItem.cholesterolPer100g != null)
-                            _buildNutrientRow(
-                              '胆固醇',
-                              '${widget.foodItem.cholesterolPer100g!.toStringAsFixed(1)} 毫克',
-                            ),
-                          if (widget.foodItem.sodiumPer100g != null)
-                            _buildNutrientRow(
-                              '钠',
-                              '${widget.foodItem.sodiumPer100g!.toStringAsFixed(1)} 毫克',
-                            ),
-                          if (widget.foodItem.calciumPer100g != null)
-                            _buildNutrientRow(
-                              '钙',
-                              '${widget.foodItem.calciumPer100g!.toStringAsFixed(1)} 毫克',
-                            ),
-                          if (widget.foodItem.ironPer100g != null)
-                            _buildNutrientRow(
-                              '铁',
-                              '${widget.foodItem.ironPer100g!.toStringAsFixed(1)} 毫克',
-                            ),
-                          if (widget.foodItem.vitaminAPer100g != null)
-                            _buildNutrientRow(
-                              '维生素A',
-                              '${widget.foodItem.vitaminAPer100g!.toStringAsFixed(1)} 微克',
-                            ),
-                          if (widget.foodItem.vitaminCPer100g != null)
-                            _buildNutrientRow(
-                              '维生素C',
-                              '${widget.foodItem.vitaminCPer100g!.toStringAsFixed(1)} 毫克',
-                            ),
-                          if (widget.foodItem.vitaminEPer100g != null)
-                            _buildNutrientRow(
-                              '维生素E',
-                              '${widget.foodItem.vitaminEPer100g!.toStringAsFixed(1)} 毫克',
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // 单位重量
-                  // Card(
-                  //   elevation: 2,
-                  //   child: Padding(
-                  //     padding: const EdgeInsets.all(16.0),
-                  //     child: Column(
-                  //       crossAxisAlignment: CrossAxisAlignment.start,
-                  //       children: [
-                  //         const Text(
-                  //           '单位重量',
-                  //           style: TextStyle(
-                  //             fontSize: 16,
-                  //             fontWeight: FontWeight.bold,
-                  //           ),
-                  //         ),
-                  //         const SizedBox(height: 16),
-                  //         Table(
-                  //           columnWidths: const {
-                  //             0: FlexColumnWidth(1),
-                  //             1: FlexColumnWidth(1),
-                  //             2: FlexColumnWidth(1),
-                  //           },
-                  //           children: [
-                  //             const TableRow(
-                  //               children: [
-                  //                 Text(
-                  //                   '单位',
-                  //                   style: TextStyle(
-                  //                     fontWeight: FontWeight.bold,
-                  //                   ),
-                  //                 ),
-                  //                 Text(
-                  //                   '重量',
-                  //                   style: TextStyle(
-                  //                     fontWeight: FontWeight.bold,
-                  //                   ),
-                  //                 ),
-                  //                 Text(
-                  //                   '热量',
-                  //                   style: TextStyle(
-                  //                     fontWeight: FontWeight.bold,
-                  //                   ),
-                  //                 ),
-                  //               ],
-                  //             ),
-                  //             const TableRow(
-                  //               children: [
-                  //                 SizedBox(height: 8),
-                  //                 SizedBox(height: 8),
-                  //                 SizedBox(height: 8),
-                  //               ],
-                  //             ),
-                  //             TableRow(
-                  //               children: [
-                  //                 const Text('杯'),
-                  //                 const Text('200 克'),
-                  //                 Text(
-                  //                   '${(widget.foodItem.caloriesPer100g * 2).toInt()} 千卡',
-                  //                 ),
-                  //               ],
-                  //             ),
-                  //             const TableRow(
-                  //               children: [
-                  //                 SizedBox(height: 8),
-                  //                 SizedBox(height: 8),
-                  //                 SizedBox(height: 8),
-                  //               ],
-                  //             ),
-                  //             TableRow(
-                  //               children: [
-                  //                 const Text('份'),
-                  //                 const Text('300 克'),
-                  //                 Text(
-                  //                   '${(widget.foodItem.caloriesPer100g * 3).toInt()} 千卡',
-                  //                 ),
-                  //               ],
-                  //             ),
-                  //             const TableRow(
-                  //               children: [
-                  //                 SizedBox(height: 8),
-                  //                 SizedBox(height: 8),
-                  //                 SizedBox(height: 8),
-                  //               ],
-                  //             ),
-                  //             TableRow(
-                  //               children: [
-                  //                 const Text('碗'),
-                  //                 const Text('300 克'),
-                  //                 Text(
-                  //                   '${(widget.foodItem.caloriesPer100g * 3).toInt()} 千卡',
-                  //                 ),
-                  //               ],
-                  //             ),
-                  //           ],
-                  //         ),
-                  //       ],
-                  //     ),
-                  //   ),
-                  // ),
-                  if (widget.foodItem.otherParams['ingredients'] != null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '配料',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text('${widget.foodItem.otherParams['ingredients']}'),
-                        ],
-                      ),
-                    ),
-                ],
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                '${widget.foodItem.caloriesPer100g.toInt()} 千卡/100克',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange[800],
+                ),
               ),
             ),
           ],
         ),
+        if (widget.foodItem.foodCode != null) ...[
+          Text(
+            '食品编码: ${widget.foodItem.foodCode}',
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+          ),
+        ],
+
+        const SizedBox(height: 24),
+
+        // 营养元素
+        const Text(
+          '营养元素',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
+
+        // 三大营养素占比
+        Row(
+          children: [
+            _buildNutrientPercentage(
+              '碳水化合物',
+              widget.foodItem.carbsPer100g,
+              Colors.teal,
+            ),
+            _buildNutrientPercentage(
+              '蛋白质',
+              widget.foodItem.proteinPer100g,
+              Colors.purple,
+            ),
+            _buildNutrientPercentage(
+              '脂肪',
+              widget.foodItem.fatPer100g,
+              Colors.orange,
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 24),
+
+        // 详细营养素表格
+        nutrientElement(),
+        const SizedBox(height: 24),
+
+        // 单位重量
+        // unitWeight(),
+
+        // 配料
+        if (widget.foodItem.otherParams['ingredients'] != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '配料',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                Text('${widget.foodItem.otherParams['ingredients']}'),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  // 营养元素
+  Card nutrientElement() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '详细营养素 (每100克)',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            _buildNutrientRow(
+              '热量',
+              '${widget.foodItem.caloriesPer100g.toInt()} 千卡',
+            ),
+            _buildNutrientRow(
+              '碳水化合物',
+              '${widget.foodItem.carbsPer100g.toStringAsFixed(1)} 克',
+            ),
+            _buildNutrientRow(
+              '蛋白质',
+              '${widget.foodItem.proteinPer100g.toStringAsFixed(1)} 克',
+            ),
+            _buildNutrientRow(
+              '脂肪',
+              '${widget.foodItem.fatPer100g.toStringAsFixed(1)} 克',
+            ),
+            if (widget.foodItem.fiberPer100g != null)
+              _buildNutrientRow(
+                '膳食纤维',
+                '${widget.foodItem.fiberPer100g!.toStringAsFixed(1)} 克',
+              ),
+            if (widget.foodItem.cholesterolPer100g != null)
+              _buildNutrientRow(
+                '胆固醇',
+                '${widget.foodItem.cholesterolPer100g!.toStringAsFixed(1)} 毫克',
+              ),
+            if (widget.foodItem.sodiumPer100g != null)
+              _buildNutrientRow(
+                '钠',
+                '${widget.foodItem.sodiumPer100g!.toStringAsFixed(1)} 毫克',
+              ),
+            if (widget.foodItem.calciumPer100g != null)
+              _buildNutrientRow(
+                '钙',
+                '${widget.foodItem.calciumPer100g!.toStringAsFixed(1)} 毫克',
+              ),
+            if (widget.foodItem.ironPer100g != null)
+              _buildNutrientRow(
+                '铁',
+                '${widget.foodItem.ironPer100g!.toStringAsFixed(1)} 毫克',
+              ),
+            if (widget.foodItem.vitaminAPer100g != null)
+              _buildNutrientRow(
+                '维生素A',
+                '${widget.foodItem.vitaminAPer100g!.toStringAsFixed(1)} 微克',
+              ),
+            if (widget.foodItem.vitaminCPer100g != null)
+              _buildNutrientRow(
+                '维生素C',
+                '${widget.foodItem.vitaminCPer100g!.toStringAsFixed(1)} 毫克',
+              ),
+            if (widget.foodItem.vitaminEPer100g != null)
+              _buildNutrientRow(
+                '维生素E',
+                '${widget.foodItem.vitaminEPer100g!.toStringAsFixed(1)} 毫克',
+              ),
+          ],
+        ),
       ),
-      bottomNavigationBar:
-          widget.mealRecordId != null
-              ? Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withValues(alpha: 0.3),
-                      spreadRadius: 1,
-                      blurRadius: 5,
-                      offset: const Offset(0, -2),
-                    ),
-                  ],
-                ),
-                child: Row(
+    );
+  }
+
+  // 单位重量
+  Card unitWeight() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '单位重量',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            Table(
+              columnWidths: const {
+                0: FlexColumnWidth(1),
+                1: FlexColumnWidth(1),
+                2: FlexColumnWidth(1),
+              },
+              children: [
+                const TableRow(
                   children: [
-                    Expanded(
-                      flex: 2,
-                      child: TextField(
-                        controller: _quantityController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: '数量',
-                          suffixText: '克',
-                          border: OutlineInputBorder(),
-                        ),
-                        onChanged: _updateQuantity,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      flex: 3,
-                      child: ElevatedButton(
-                        onPressed: _addToMeal,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: Text(
-                          '添加 (${(_quantity * widget.foodItem.caloriesPer100g / 100).toInt()} 千卡)',
-                        ),
-                      ),
-                    ),
+                    Text('单位', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text('重量', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text('热量', style: TextStyle(fontWeight: FontWeight.bold)),
                   ],
                 ),
-              )
-              : null,
+                const TableRow(
+                  children: [
+                    SizedBox(height: 8),
+                    SizedBox(height: 8),
+                    SizedBox(height: 8),
+                  ],
+                ),
+                TableRow(
+                  children: [
+                    const Text('杯'),
+                    const Text('200 克'),
+                    Text('${(widget.foodItem.caloriesPer100g * 2).toInt()} 千卡'),
+                  ],
+                ),
+                const TableRow(
+                  children: [
+                    SizedBox(height: 8),
+                    SizedBox(height: 8),
+                    SizedBox(height: 8),
+                  ],
+                ),
+                TableRow(
+                  children: [
+                    const Text('份'),
+                    const Text('300 克'),
+                    Text('${(widget.foodItem.caloriesPer100g * 3).toInt()} 千卡'),
+                  ],
+                ),
+                const TableRow(
+                  children: [
+                    SizedBox(height: 8),
+                    SizedBox(height: 8),
+                    SizedBox(height: 8),
+                  ],
+                ),
+                TableRow(
+                  children: [
+                    const Text('碗'),
+                    const Text('300 克'),
+                    Text('${(widget.foodItem.caloriesPer100g * 3).toInt()} 千卡'),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 添加到餐次页面的输入栏
+  Container inputBar() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: TextField(
+              controller: _quantityController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: '数量',
+                suffixText: '克',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: _updateQuantity,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            flex: 3,
+            child: ElevatedButton(
+              onPressed: _addToMeal,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: Text(
+                '添加 (${(_quantity * widget.foodItem.caloriesPer100g / 100).toInt()} 千卡)',
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

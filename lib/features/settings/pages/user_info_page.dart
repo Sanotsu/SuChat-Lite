@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 
+import '../../../core/dao/user_info_dao.dart';
 import '../../../core/entities/user_info.dart';
+import '../../../core/utils/screen_helper.dart';
 import '../../../core/viewmodels/user_info_viewmodel.dart';
 import '../../../shared/widgets/simple_tool_widget.dart';
 import '../../../shared/widgets/toast_utils.dart';
@@ -12,6 +14,10 @@ import '../../../shared/widgets/goal_setting_dialog.dart';
 
 /// 用户信息页面
 /// 用于显示和编辑用户信息，整合了训练助手和饮食日记的用户信息
+/// 2025-06-24
+/// 在这里修改用户目标卡路里、蛋白质、碳水化合物、脂肪没有用，
+/// 因为在每次修改用户之后，目标值都是在 UserInfoDao 固定重新计算的
+/// 暂时不允许手动修改主要营养素值了
 class UserInfoPage extends StatefulWidget {
   const UserInfoPage({super.key});
 
@@ -32,9 +38,7 @@ class _UserInfoPageState extends State<UserInfoPage> {
   double _currentActivityLevel = 1.2;
 
   // 使用ValueNotifier实时更新营养目标值
-  final ValueNotifier<Map<String, double>?> _intakeNotifier = ValueNotifier(
-    null,
-  );
+  final ValueNotifier<MacrosIntake?> _intakeNotifier = ValueNotifier(null);
 
   @override
   void initState() {
@@ -89,26 +93,26 @@ class _UserInfoPageState extends State<UserInfoPage> {
                   : null,
           goal: formValues['goal'] ?? _currentGoal,
           activityLevel: formValues['activityLevel'] ?? _currentActivityLevel,
-          targetCalories:
-              formValues['targetCalories'] != null &&
-                      formValues['targetCalories'].toString().isNotEmpty
-                  ? double.parse(formValues['targetCalories'].toString())
-                  : null,
-          targetCarbs:
-              formValues['targetCarbs'] != null &&
-                      formValues['targetCarbs'].toString().isNotEmpty
-                  ? double.parse(formValues['targetCarbs'].toString())
-                  : null,
-          targetProtein:
-              formValues['targetProtein'] != null &&
-                      formValues['targetProtein'].toString().isNotEmpty
-                  ? double.parse(formValues['targetProtein'].toString())
-                  : null,
-          targetFat:
-              formValues['targetFat'] != null &&
-                      formValues['targetFat'].toString().isNotEmpty
-                  ? double.parse(formValues['targetFat'].toString())
-                  : null,
+          // targetCalories:
+          //     formValues['targetCalories'] != null &&
+          //             formValues['targetCalories'].toString().isNotEmpty
+          //         ? double.parse(formValues['targetCalories'].toString())
+          //         : null,
+          // targetCarbs:
+          //     formValues['targetCarbs'] != null &&
+          //             formValues['targetCarbs'].toString().isNotEmpty
+          //         ? double.parse(formValues['targetCarbs'].toString())
+          //         : null,
+          // targetProtein:
+          //     formValues['targetProtein'] != null &&
+          //             formValues['targetProtein'].toString().isNotEmpty
+          //         ? double.parse(formValues['targetProtein'].toString())
+          //         : null,
+          // targetFat:
+          //     formValues['targetFat'] != null &&
+          //             formValues['targetFat'].toString().isNotEmpty
+          //         ? double.parse(formValues['targetFat'].toString())
+          //         : null,
         );
 
         ToastUtils.showSuccess('用户信息保存成功', align: Alignment.center);
@@ -131,26 +135,25 @@ class _UserInfoPageState extends State<UserInfoPage> {
     }
   }
 
-  // 更新营养目标字段
-  void _updateNutritionFields() {
-    if (_intakeNotifier.value == null || _formKey.currentState == null) return;
+  // // 更新营养目标字段
+  // void _updateNutritionFields() {
+  //   if (_intakeNotifier.value == null || _formKey.currentState == null) return;
 
-    // 更新表单字段
-    _formKey.currentState!.patchValue({
-      'targetCalories':
-          _intakeNotifier.value!['calories']?.toStringAsFixed(0) ?? '',
-      'targetCarbs': _intakeNotifier.value!['carbs']?.toStringAsFixed(1) ?? '',
-      'targetProtein':
-          _intakeNotifier.value!['protein']?.toStringAsFixed(1) ?? '',
-      'targetFat': _intakeNotifier.value!['fat']?.toStringAsFixed(1) ?? '',
-    });
+  //   // 更新表单字段
+  //   _formKey.currentState!.patchValue({
+  //     'targetCalories':
+  //         _intakeNotifier.value?.calories.toStringAsFixed(0) ?? '',
+  //     'targetCarbs': _intakeNotifier.value?.carbs.toStringAsFixed(1) ?? '',
+  //     'targetProtein': _intakeNotifier.value?.protein.toStringAsFixed(1) ?? '',
+  //     'targetFat': _intakeNotifier.value?.fat.toStringAsFixed(1) ?? '',
+  //   });
 
-    // 在设置值后保存表单，确保值被接受
-    _formKey.currentState!.save();
+  //   // 在设置值后保存表单，确保值被接受
+  //   _formKey.currentState!.save();
 
-    // 强制UI刷新以确保字段显示正确的值
-    setState(() {});
-  }
+  //   // 强制UI刷新以确保字段显示正确的值
+  //   setState(() {});
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -198,26 +201,29 @@ class _UserInfoPageState extends State<UserInfoPage> {
               'fitnessLevel': user.fitnessLevel ?? '初级',
               'healthConditions': user.healthConditions ?? '',
               'goal': user.goal ?? Goal.maintainWeight,
-              'activityLevel': user.activityLevel ?? 1.4,
-              'targetCalories':
-                  user.targetCalories?.toString() ??
-                  _intakeNotifier.value?['calories']?.toString() ??
-                  '',
-              'targetCarbs':
-                  user.targetCarbs?.toString() ??
-                  _intakeNotifier.value?['carbs']?.toString() ??
-                  '',
-              'targetProtein':
-                  user.targetProtein?.toString() ??
-                  _intakeNotifier.value?['protein']?.toString() ??
-                  '',
-              'targetFat':
-                  user.targetFat?.toString() ??
-                  _intakeNotifier.value?['fat']?.toString() ??
-                  '',
+              'activityLevel': user.activityLevel ?? 1.375,
+              // 'targetCalories':
+              //     user.targetCalories?.toString() ??
+              //     _intakeNotifier.value?.calories.toString() ??
+              //     '',
+              // 'targetCarbs':
+              //     user.targetCarbs?.toString() ??
+              //     _intakeNotifier.value?.carbs.toString() ??
+              //     '',
+              // 'targetProtein':
+              //     user.targetProtein?.toString() ??
+              //     _intakeNotifier.value?.protein.toString() ??
+              //     '',
+              // 'targetFat':
+              //     user.targetFat?.toString() ??
+              //     _intakeNotifier.value?.fat.toString() ??
+              //     '',
             },
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.symmetric(
+                horizontal: ScreenHelper.isMobile() ? 16 : 64,
+                vertical: 16,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -396,22 +402,22 @@ class _UserInfoPageState extends State<UserInfoPage> {
                           });
                           _formKey.currentState?.save();
 
-                          // 更新视图模型
-                          await viewModel.updateUserInfo(
-                            goal: goal,
-                            activityLevel: activityLevel,
-                          );
+                          // // 更新视图模型
+                          // await viewModel.updateUserInfo(
+                          //   goal: goal,
+                          //   activityLevel: activityLevel,
+                          // );
 
-                          // 获取并更新推荐摄入量
-                          final newIntake = viewModel.dailyRecommendedIntake;
+                          // // 获取并更新推荐摄入量
+                          // final newIntake = viewModel.dailyRecommendedIntake;
 
-                          // 更新ValueNotifier，这将触发UI更新
-                          _intakeNotifier.value = newIntake;
+                          // // 更新ValueNotifier，这将触发UI更新
+                          // _intakeNotifier.value = newIntake;
 
-                          // 使用WidgetsBinding确保在下一帧更新表单字段
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            _updateNutritionFields();
-                          });
+                          // // 使用WidgetsBinding确保在下一帧更新表单字段
+                          // WidgetsBinding.instance.addPostFrameCallback((_) {
+                          //   _updateNutritionFields();
+                          // });
                         },
                       );
                     },
@@ -429,7 +435,7 @@ class _UserInfoPageState extends State<UserInfoPage> {
                   ),
                   FormBuilderField<double>(
                     name: 'activityLevel',
-                    initialValue: user.activityLevel ?? 1.4,
+                    initialValue: user.activityLevel ?? 1.375,
                     validator: (value) => null, // 不需要验证
                     onChanged: (_) {}, // 添加空的 onChanged 处理器
                     builder: (FormFieldState field) {
@@ -437,134 +443,134 @@ class _UserInfoPageState extends State<UserInfoPage> {
                     },
                   ),
 
-                  const SizedBox(height: 24),
+                  // const SizedBox(height: 24),
 
-                  // 营养目标
-                  const SectionTitle(title: '自定义营养目标'),
+                  // // 营养目标
+                  // const SectionTitle(title: '自定义营养目标'),
 
-                  // 添加重置按钮
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          '您可以自定义每日营养目标，或使用基于您的目标和活动水平计算的推荐值',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      ),
-                      TextButton.icon(
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('重置为推荐值'),
-                        onPressed: () {
-                          if (_intakeNotifier.value != null) {
-                            _updateNutritionFields();
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+                  // // 添加重置按钮
+                  // Row(
+                  //   children: [
+                  //     const Expanded(
+                  //       child: Text(
+                  //         '您可以自定义每日营养目标，或使用基于您的目标和活动水平计算的推荐值',
+                  //         style: TextStyle(fontSize: 12, color: Colors.grey),
+                  //       ),
+                  //     ),
+                  //     TextButton.icon(
+                  //       icon: const Icon(Icons.refresh),
+                  //       label: const Text('重置为推荐值'),
+                  //       onPressed: () {
+                  //         if (_intakeNotifier.value != null) {
+                  //           _updateNutritionFields();
+                  //         }
+                  //       },
+                  //     ),
+                  //   ],
+                  // ),
+                  // const SizedBox(height: 16),
 
-                  // 监听ValueNotifier并实时更新营养目标字段
-                  ValueListenableBuilder<Map<String, double>?>(
-                    valueListenable: _intakeNotifier,
-                    builder: (context, intake, child) {
-                      return Column(
-                        children: [
-                          // 目标热量
-                          FormBuilderTextField(
-                            key: ValueKey('calories-${intake?['calories']}'),
-                            name: 'targetCalories',
-                            initialValue:
-                                intake?['calories']?.toString() ??
-                                user.targetCalories?.toString() ??
-                                '',
-                            decoration: const InputDecoration(
-                              labelText: '目标热量',
-                              hintText: '每日目标卡路里',
-                              suffixText: 'kcal',
-                            ),
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.allow(
-                                RegExp(r'^\d*\.?\d*$'),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
+                  // // 监听ValueNotifier并实时更新营养目标字段
+                  // ValueListenableBuilder<Map<String, double>?>(
+                  //   valueListenable: _intakeNotifier,
+                  //   builder: (context, intake, child) {
+                  //     return Column(
+                  //       children: [
+                  //         // 目标热量
+                  //         FormBuilderTextField(
+                  //           key: ValueKey('calories-${intake?['calories']}'),
+                  //           name: 'targetCalories',
+                  //           initialValue:
+                  //               intake?['calories']?.toString() ??
+                  //               user.targetCalories?.toString() ??
+                  //               '',
+                  //           decoration: const InputDecoration(
+                  //             labelText: '目标热量',
+                  //             hintText: '每日目标卡路里',
+                  //             suffixText: 'kcal',
+                  //           ),
+                  //           keyboardType: TextInputType.number,
+                  //           inputFormatters: [
+                  //             FilteringTextInputFormatter.allow(
+                  //               RegExp(r'^\d*\.?\d*$'),
+                  //             ),
+                  //           ],
+                  //         ),
+                  //         const SizedBox(height: 16),
 
-                          Row(
-                            children: [
-                              Expanded(
-                                child: FormBuilderTextField(
-                                  key: ValueKey('carbs-${intake?['carbs']}'),
-                                  name: 'targetCarbs',
-                                  initialValue:
-                                      intake?['carbs']?.toString() ??
-                                      user.targetCarbs?.toString() ??
-                                      '',
-                                  decoration: const InputDecoration(
-                                    labelText: '碳水化合物',
-                                    suffixText: 'g',
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.allow(
-                                      RegExp(r'^\d*\.?\d*$'),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: FormBuilderTextField(
-                                  key: ValueKey(
-                                    'protein-${intake?['protein']}',
-                                  ),
-                                  name: 'targetProtein',
-                                  initialValue:
-                                      intake?['protein']?.toString() ??
-                                      user.targetProtein?.toString() ??
-                                      '',
-                                  decoration: const InputDecoration(
-                                    labelText: '蛋白质',
-                                    suffixText: 'g',
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.allow(
-                                      RegExp(r'^\d*\.?\d*$'),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: FormBuilderTextField(
-                                  key: ValueKey('fat-${intake?['fat']}'),
-                                  name: 'targetFat',
-                                  initialValue:
-                                      intake?['fat']?.toString() ??
-                                      user.targetFat?.toString() ??
-                                      '',
-                                  decoration: const InputDecoration(
-                                    labelText: '脂肪',
-                                    suffixText: 'g',
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.allow(
-                                      RegExp(r'^\d*\.?\d*$'),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 32),
+                  //         Row(
+                  //           children: [
+                  //             Expanded(
+                  //               child: FormBuilderTextField(
+                  //                 key: ValueKey('carbs-${intake?['carbs']}'),
+                  //                 name: 'targetCarbs',
+                  //                 initialValue:
+                  //                     intake?['carbs']?.toString() ??
+                  //                     user.targetCarbs?.toString() ??
+                  //                     '',
+                  //                 decoration: const InputDecoration(
+                  //                   labelText: '碳水化合物',
+                  //                   suffixText: 'g',
+                  //                 ),
+                  //                 keyboardType: TextInputType.number,
+                  //                 inputFormatters: [
+                  //                   FilteringTextInputFormatter.allow(
+                  //                     RegExp(r'^\d*\.?\d*$'),
+                  //                   ),
+                  //                 ],
+                  //               ),
+                  //             ),
+                  //             const SizedBox(width: 16),
+                  //             Expanded(
+                  //               child: FormBuilderTextField(
+                  //                 key: ValueKey(
+                  //                   'protein-${intake?['protein']}',
+                  //                 ),
+                  //                 name: 'targetProtein',
+                  //                 initialValue:
+                  //                     intake?['protein']?.toString() ??
+                  //                     user.targetProtein?.toString() ??
+                  //                     '',
+                  //                 decoration: const InputDecoration(
+                  //                   labelText: '蛋白质',
+                  //                   suffixText: 'g',
+                  //                 ),
+                  //                 keyboardType: TextInputType.number,
+                  //                 inputFormatters: [
+                  //                   FilteringTextInputFormatter.allow(
+                  //                     RegExp(r'^\d*\.?\d*$'),
+                  //                   ),
+                  //                 ],
+                  //               ),
+                  //             ),
+                  //             const SizedBox(width: 16),
+                  //             Expanded(
+                  //               child: FormBuilderTextField(
+                  //                 key: ValueKey('fat-${intake?['fat']}'),
+                  //                 name: 'targetFat',
+                  //                 initialValue:
+                  //                     intake?['fat']?.toString() ??
+                  //                     user.targetFat?.toString() ??
+                  //                     '',
+                  //                 decoration: const InputDecoration(
+                  //                   labelText: '脂肪',
+                  //                   suffixText: 'g',
+                  //                 ),
+                  //                 keyboardType: TextInputType.number,
+                  //                 inputFormatters: [
+                  //                   FilteringTextInputFormatter.allow(
+                  //                     RegExp(r'^\d*\.?\d*$'),
+                  //                   ),
+                  //                 ],
+                  //               ),
+                  //             ),
+                  //           ],
+                  //         ),
+                  //       ],
+                  //     );
+                  //   },
+                  // ),
+                  // const SizedBox(height: 32),
                 ],
               ),
             ),
