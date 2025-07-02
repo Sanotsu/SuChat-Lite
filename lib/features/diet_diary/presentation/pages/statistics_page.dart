@@ -4,6 +4,7 @@ import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/viewmodels/user_info_viewmodel.dart';
+import '../../../../shared/constants/constants.dart';
 import '../viewmodels/diet_diary_viewmodel.dart';
 import '../widgets/scrollable_chart.dart';
 import 'weight_trend_page.dart';
@@ -155,7 +156,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '${DateFormat('yyyy-MM-dd').format(_startDate)} 至 ${DateFormat('yyyy-MM-dd').format(_endDate)}',
+                    '${DateFormat(formatToYMD).format(_startDate)} 至 ${DateFormat(formatToYMD).format(_endDate)}',
                     style: const TextStyle(fontSize: 16),
                   ),
                 ),
@@ -210,7 +211,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
         dataSource: _nutritionData,
         xValueMapper:
             (Map<String, dynamic> data, _) => DateFormat(
-              'MM-dd',
+              formatToMD,
             ).format(DateTime.parse(data['date'].toString())),
         yValueMapper:
             (Map<String, dynamic> data, _) =>
@@ -230,7 +231,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
           dataSource: _nutritionData,
           xValueMapper:
               (Map<String, dynamic> data, _) => DateFormat(
-                'MM-dd',
+                formatToMD,
               ).format(DateTime.parse(data['date'].toString())),
           yValueMapper: (Map<String, dynamic> data, _) => targetCalories,
           color: Colors.red,
@@ -284,7 +285,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
           dataSource: deficitData,
           xValueMapper:
               (Map<String, dynamic> data, _) => DateFormat(
-                'MM-dd',
+                formatToMD,
               ).format(DateTime.parse(data['date'].toString())),
           yValueMapper: (Map<String, dynamic> data, _) => data['deficit'],
           pointColorMapper:
@@ -487,13 +488,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
               ),
             _buildSummaryItem(
               '最高热量摄入',
-              '${maxCalories.toStringAsFixed(0)} 千卡 (${maxDate != null ? DateFormat('MM-dd').format(maxDate) : "无"})',
+              '${maxCalories.toStringAsFixed(0)} 千卡 (${maxDate != null ? DateFormat(formatToMD).format(maxDate) : "无"})',
               Icons.arrow_upward,
               Colors.red,
             ),
             _buildSummaryItem(
               '最低热量摄入',
-              '${minCalories.toStringAsFixed(0)} 千卡 (${minDate != null ? DateFormat('MM-dd').format(minDate) : "无"})',
+              '${minCalories.toStringAsFixed(0)} 千卡 (${minDate != null ? DateFormat(formatToMD).format(minDate) : "无"})',
               Icons.arrow_downward,
               Colors.green,
             ),

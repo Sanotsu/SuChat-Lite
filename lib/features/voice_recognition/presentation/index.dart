@@ -736,7 +736,7 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
 
                         if (task.gmtCreate != null)
                           Text(
-                            '创建时间: ${DateFormat(constDatetimeFormat).format(task.gmtCreate!)}',
+                            '创建时间: ${DateFormat(formatToYMDHMS).format(task.gmtCreate!)}',
                             style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
                       ],

@@ -12,6 +12,7 @@ import '../utils/get_dir.dart';
 import 'db_config.dart';
 import 'db_ddl.dart';
 import 'ddl_diet_diary.dart';
+import 'ddl_simple_accounting.dart';
 import 'ddl_training.dart';
 
 class DBInit {
@@ -100,6 +101,7 @@ class DBInit {
   void _createDb(Database db, int newVersion) async {
     print("开始创建表 _createDb……");
 
+    /// 创建表
     await db.transaction((txn) async {
       txn.execute(DBDdl.ddlForMediaGenerationHistory);
       txn.execute(DBDdl.ddlForCusLlmSpec);
@@ -117,7 +119,15 @@ class DBInit {
       await _createDietDiaryTable(txn);
       // 创建一些索引来提高查询性能
       await _createDietDiaryIndex(txn);
+
+      // 添加简单记账相关表
+      await _createSimpleAccountingTable(txn);
     });
+
+    /// 初始化默认值
+
+    // 初始化默认账单分类数据
+    await SimpleAccountingDdl.initDefaultCategories(db);
   }
 
   // 数据库升级
@@ -139,11 +149,18 @@ class DBInit {
 
         // 创建一些索引来提高查询性能
         await _createDietDiaryIndex(txn);
+
+        // 添加简单记账相关表
+        await _createSimpleAccountingTable(txn);
       });
+
+      // 初始化默认账单分类数据
+      await SimpleAccountingDdl.initDefaultCategories(db);
     }
   }
 
-  // 数据库升级和默认都要创建的表
+  /// 数据库升级和默认都要创建的表
+  // 训练助手相关表
   Future<void> _createTrainingTable(Transaction txn) async {
     await txn.execute(TrainingDdl.ddlForTrainingPlan);
     await txn.execute(TrainingDdl.ddlForTrainingPlanDetail);
@@ -151,7 +168,7 @@ class DBInit {
     await txn.execute(TrainingDdl.ddlForTrainingRecordDetail);
   }
 
-  // 数据库升级和默认都要创建的表
+  // 饮食日记相关表
   Future<void> _createDietDiaryTable(Transaction txn) async {
     await txn.execute(DietDiaryDdl.ddlForFoodItem);
     await txn.execute(DietDiaryDdl.ddlForMealRecord);
@@ -161,8 +178,14 @@ class DBInit {
     await txn.execute(DietDiaryDdl.ddlForDietRecipe);
   }
 
+  // 简单记账相关表
+  Future<void> _createSimpleAccountingTable(Transaction txn) async {
+    await txn.execute(SimpleAccountingDdl.ddlForBillItem);
+    await txn.execute(SimpleAccountingDdl.ddlForBillCategory);
+  }
+
+  // 饮食日记相关表索引
   Future<void> _createDietDiaryIndex(Transaction txn) async {
-    // 创建一些索引来提高查询性能
     List<String> indexList = [
       'CREATE INDEX idx_meal_record_date ON ${DietDiaryDdl.tableMealRecord} (date)',
       'CREATE INDEX idx_meal_food_records_meal_id ON ${DietDiaryDdl.tableMealFoodRecord} (mealRecordId)',

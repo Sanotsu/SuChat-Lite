@@ -99,7 +99,7 @@ class PlanList extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '创建于${DateFormat(constDateFormat).format(plan.gmtCreate)}',
+                        '创建于${DateFormat(formatToYMD).format(plan.gmtCreate)}',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],

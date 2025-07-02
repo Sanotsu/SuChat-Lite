@@ -5,7 +5,7 @@ import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/network/dio_client/cus_http_client.dart';
 import '../../../../core/network/dio_client/cus_http_request.dart';
 import '../../../../shared/constants/constant_llm_enum.dart';
-import '../../../branch_chat/data/repositories/chat_service.dart';
+import '../../../branch_chat/data/services/chat_service.dart';
 import '../../domain/entities/food_item.dart';
 
 class FoodNutritionRecognitionService {

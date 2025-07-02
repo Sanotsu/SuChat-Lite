@@ -512,7 +512,7 @@ class _BranchChatHistoryCoreState extends State<BranchChatHistoryCore> {
                     ),
                   ),
                   subtitle: Text(
-                    "${DateFormat(constDatetimeFormat).format(session.updateTime)}\n$subtitle",
+                    "${DateFormat(formatToYMDHMS).format(session.updateTime)}\n$subtitle",
                     style: TextStyle(fontSize: 12),
                   ),
                   selected: isSelected,

@@ -284,10 +284,11 @@ class _WeightTrendPageState extends State<WeightTrendPage> {
                   ],
                 ),
               ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddWeightDialog,
+      floatingActionButton: buildFloatingActionButton(
+        _showAddWeightDialog,
+        context,
+        icon: Icons.add,
         tooltip: '记录体重',
-        child: const Icon(Icons.add),
       ),
     );
   }
@@ -423,7 +424,7 @@ class _WeightTrendPageState extends State<WeightTrendPage> {
         ),
       ],
       xAxis: DateTimeAxis(
-        dateFormat: DateFormat('MM-dd'),
+        dateFormat: DateFormat(formatToMD),
         intervalType: DateTimeIntervalType.auto,
       ),
       yAxis: NumericAxis(
@@ -472,7 +473,7 @@ class _WeightTrendPageState extends State<WeightTrendPage> {
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(DateFormat(constDatetimeFormat).format(record.date)),
+                      Text(DateFormat(formatToYMDHMS).format(record.date)),
                       if (record.note != null && record.note!.isNotEmpty)
                         Text(record.note!),
                     ],

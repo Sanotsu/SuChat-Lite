@@ -36,7 +36,7 @@ class _MealFoodListCardState extends State<MealFoodListCard> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '当日餐食详情 ${DateFormat(constDateFormat).format(widget.viewModel.selectedDate)}',
+                  '当日餐食详情 ${DateFormat(formatToYMD).format(widget.viewModel.selectedDate)}',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.primary,

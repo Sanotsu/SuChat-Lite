@@ -7,7 +7,7 @@ import '../../../../core/utils/wav_audio_handler.dart';
 import '../../../../shared/constants/constants.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../shared/widgets/toast_utils.dart';
-import '../../data/repositories/chat_service.dart';
+import '../../data/services/chat_service.dart';
 import '../../domain/entities/branch_chat_message.dart';
 import '../branch_chat_state/branch_chat_state.dart';
 import 'branch_message_handler.dart';

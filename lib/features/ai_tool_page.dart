@@ -7,6 +7,7 @@ import 'diet_diary/presentation/index.dart';
 import 'media_generation/image/presentation/index.dart';
 import 'media_generation/video/presentation/index.dart';
 import 'media_generation/voice/presentation/index.dart';
+import 'simple_accounting/presentation/pages/bill_list_page.dart';
 import 'training_assistant/presentation/index.dart';
 import 'voice_recognition/presentation/index.dart';
 
@@ -171,18 +172,6 @@ class _AIToolPageState extends State<AIToolPage> {
               width: 150,
               height: 150,
               child: FeatureGridCard(
-                isNew: true,
-                targetPage: const VoiceRecognitionPage(),
-                title: "录音识别",
-                icon: Icons.audio_file,
-                accentColor: Colors.orange,
-              ),
-            ),
-            SizedBox(
-              width: 150,
-              height: 150,
-              child: FeatureGridCard(
-                isNew: true,
                 targetPage: const GenVoicePage(),
                 title: "语音合成",
                 icon: Icons.audiotrack,
@@ -207,6 +196,17 @@ class _AIToolPageState extends State<AIToolPage> {
                 title: "视频生成",
                 icon: Icons.videocam,
                 accentColor: Colors.blue,
+              ),
+            ),
+            SizedBox(
+              width: 150,
+              height: 150,
+              child: FeatureGridCard(
+                isNew: true,
+                targetPage: const VoiceRecognitionPage(),
+                title: "录音识别",
+                icon: Icons.audio_file,
+                accentColor: Colors.orange,
               ),
             ),
           ],
@@ -241,14 +241,6 @@ class _AIToolPageState extends State<AIToolPage> {
           //   accentColor: Colors.purple.shade600,
           // ),
           FeatureGridCard(
-            isNew: true,
-            targetPage: const VoiceRecognitionPage(),
-            title: "录音识别",
-            icon: Icons.audio_file,
-            accentColor: Colors.orange,
-          ),
-          FeatureGridCard(
-            isNew: true,
             targetPage: const GenVoicePage(),
             title: "语音合成",
             icon: Icons.audiotrack,
@@ -265,6 +257,13 @@ class _AIToolPageState extends State<AIToolPage> {
             title: "视频生成",
             icon: Icons.videocam,
             accentColor: Colors.blue,
+          ),
+          FeatureGridCard(
+            isNew: true,
+            targetPage: const VoiceRecognitionPage(),
+            title: "录音识别",
+            icon: Icons.audio_file,
+            accentColor: Colors.orange,
           ),
         ]),
       ),
@@ -310,6 +309,14 @@ class _AIToolPageState extends State<AIToolPage> {
               title: "饮食日记",
               subtitle: "记录每日饮食，定制食谱；分析营养成分，食品管理",
               icon: Icons.restaurant,
+              accentColor: Colors.indigo,
+            ),
+            SizedBox(height: ScreenHelper.isDesktop() ? 16 : 4),
+            ModernFeatureCard(
+              targetPage: const BillListPage(),
+              title: "极简记账",
+              subtitle: "简单手动记账，简单分类统计，轻松管理财务",
+              icon: Icons.money,
               accentColor: Colors.indigo,
             ),
             // SizedBox(height: 12),

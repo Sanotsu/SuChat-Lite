@@ -1,10 +1,27 @@
 // 时间格式化字符串
-const constDatetimeFormat = "yyyy-MM-dd HH:mm:ss";
-const constDateHourFormat = "yyyy-MM-dd HH";
-const constDateMinFormat = "yyyy-MM-dd HH:mm";
-const constDateFormat = "yyyy-MM-dd";
-const constMonthFormat = "yyyy-MM";
-const constTimeFormat = "HH:mm:ss";
+const formatToYMDHMS = "yyyy-MM-dd HH:mm:ss";
+const formatToYMDHM = "yyyy-MM-dd HH:mm";
+const formatToYMDH = "yyyy-MM-dd HH";
+const formatToYMD = "yyyy-MM-dd";
+const formatToYM = "yyyy-MM";
+const formatToMD = "MM-dd";
+const formatToY = "yyyy";
+const formatToMDHM = "MM-dd HH:mm";
+const formatToHMS = "HH:mm:ss";
+const formatToHM = "HH:mm";
+
+// 中文的带中文后缀
+const formatToYMDHMSzh = "yyyy年MM月dd日 HH:mm:ss";
+const formatToYMDHMzh = "yyyy年MM月dd日 HH:mm";
+const formatToYMDHSzh = "yyyy年MM月dd日 HH";
+const formatToYMDzh = "yyyy年MM月dd日";
+const formatToYMzh = "yyyy年MM月";
+const formatToMDzh = "MM月dd日";
+const formatToYzh = "yyyy年";
+const formatToMDHMzh = "MM月dd日 HH:mm";
+const formatToHMSzh = "HH:mm:ss";
+const formatToHMzh = "HH:mm";
+
 // 文件名后缀等
 const constDatetimeSuffix = "yyyyMMdd_HHmmss";
 // 未知的时间字符串

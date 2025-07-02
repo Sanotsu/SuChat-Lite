@@ -9,7 +9,7 @@ import '../../../../core/utils/file_picker_utils.dart';
 import '../../../../core/utils/screen_helper.dart';
 import '../../../../core/storage/cus_get_storage.dart';
 import '../../data/models/bigmodel_file_manage.dart';
-import '../../data/repositories/bigmodel_file_service.dart';
+import '../../data/services/bigmodel_file_service.dart';
 import '../widgets/index.dart';
 
 class FileUploadPage extends StatefulWidget {

@@ -202,7 +202,7 @@ class _TrainingRecordDetailPageState extends State<TrainingRecordDetailPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  DateFormat(constDateFormat).format(_record!.date),
+                  DateFormat(formatToYMD).format(_record!.date),
                   style: Theme.of(
                     context,
                   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),

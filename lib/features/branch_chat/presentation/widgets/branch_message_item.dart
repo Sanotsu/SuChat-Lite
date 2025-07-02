@@ -208,7 +208,7 @@ class _BranchMessageItemState extends State<BranchMessageItem>
               if (widget.message.content.trim().isNotEmpty)
                 Text(
                   DateFormat(
-                    constDatetimeFormat,
+                    formatToYMDHMS,
                   ).format(widget.message.createTime),
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),

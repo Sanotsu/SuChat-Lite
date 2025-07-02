@@ -62,7 +62,7 @@ class TrainingStatistics extends StatelessWidget {
           // 标题
           Text('训练统计', style: Theme.of(context).textTheme.headlineSmall),
           Text(
-            '${DateFormat(constDateFormat).format(startDate)} 至 ${DateFormat(constDateFormat).format(endDate)}',
+            '${DateFormat(formatToYMD).format(startDate)} 至 ${DateFormat(formatToYMD).format(endDate)}',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(context).colorScheme.secondary,
             ),
@@ -195,7 +195,7 @@ class TrainingStatistics extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    DateFormat(constDateMinFormat).format(record.date),
+                    DateFormat(formatToYMDHM).format(record.date),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),

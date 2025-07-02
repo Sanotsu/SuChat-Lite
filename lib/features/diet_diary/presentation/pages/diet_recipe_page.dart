@@ -602,9 +602,7 @@ class _DietRecipePageState extends State<DietRecipePage> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              DateFormat(
-                                constTimeFormat,
-                              ).format(recipe.gmtCreate),
+                              DateFormat(formatToHMS).format(recipe.gmtCreate),
                               style: TextStyle(
                                 fontSize: 12,
                                 color:

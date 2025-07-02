@@ -6,7 +6,7 @@ import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/entities/user_info.dart';
 import '../../../../shared/constants/constant_llm_enum.dart';
 import '../../../branch_chat/data/datasources/openai_compatible_apis.dart';
-import '../../../branch_chat/data/repositories/chat_service.dart';
+import '../../../branch_chat/data/services/chat_service.dart';
 import '../../domain/entities/meal_food_detail.dart';
 import '../../domain/entities/meal_type.dart';
 

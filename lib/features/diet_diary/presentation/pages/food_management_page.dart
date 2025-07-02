@@ -214,10 +214,11 @@ class _FoodManagementPageState extends State<FoodManagementPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _navigateToAddFood(),
+      floatingActionButton: buildFloatingActionButton(
+        _navigateToAddFood,
+        context,
+        icon: Icons.add,
         tooltip: '添加食品',
-        child: const Icon(Icons.add),
       ),
     );
   }

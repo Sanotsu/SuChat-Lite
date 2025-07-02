@@ -64,7 +64,7 @@ Future<void> showMediaInfoDialog(AssetEntity entity, BuildContext context) {
                       title: const Text("修改时间"),
                       subtitle: Text(
                         DateFormat(
-                          constDatetimeFormat,
+                          formatToYMDHMS,
                         ).format(entity.modifiedDateTime),
                       ),
                       dense: true,

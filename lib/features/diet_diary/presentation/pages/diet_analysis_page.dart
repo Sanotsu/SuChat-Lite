@@ -431,7 +431,7 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
                           children: [
                             Text(
                               DateFormat(
-                                constTimeFormat,
+                                formatToHMS,
                               ).format(analysis.gmtCreate),
                               style: TextStyle(
                                 color: isSelected ? Colors.white : null,

@@ -12,6 +12,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../../core/entities/user_info.dart';
 import '../../../core/storage/db_config.dart';
 import '../../../core/storage/ddl_diet_diary.dart';
+import '../../../core/storage/ddl_simple_accounting.dart';
 import '../../../core/storage/ddl_training.dart';
 import '../../../core/utils/datetime_formatter.dart';
 import '../../../shared/widgets/toast_utils.dart';
@@ -29,6 +30,9 @@ import '../../branch_chat/presentation/viewmodels/character_store.dart';
 import '../../diet_diary/data/index.dart';
 import '../../diet_diary/domain/entities/index.dart';
 import '../../media_generation/common/entities/media_generation_history.dart';
+import '../../simple_accounting/data/bill_dao.dart';
+import '../../simple_accounting/domain/entities/bill_category.dart';
+import '../../simple_accounting/domain/entities/bill_item.dart';
 import '../../training_assistant/data/training_dao.dart';
 import '../../training_assistant/domain/entities/index.dart';
 import '../../voice_recognition/domain/entities/voice_recognition_task_info.dart';
@@ -475,6 +479,14 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
       } else if (filename == "${DietDiaryDdl.tableWeightRecord}.json") {
         await WeightRecordDao().batchInsert(
           jsonMapList.map((e) => WeightRecord.fromMap(e)).toList(),
+        );
+      } else if (filename == "${SimpleAccountingDdl.tableBillCategory}.json") {
+        await BillDao().batchInsertCategory(
+          jsonMapList.map((e) => BillCategory.fromMap(e)).toList(),
+        );
+      } else if (filename == "${SimpleAccountingDdl.tableBillItem}.json") {
+        await BillDao().batchInsertBillItem(
+          jsonMapList.map((e) => BillItem.fromMap(e)).toList(),
         );
       }
     }

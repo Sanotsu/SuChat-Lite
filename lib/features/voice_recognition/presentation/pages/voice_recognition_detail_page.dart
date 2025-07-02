@@ -159,7 +159,7 @@ class _VoiceRecognitionDetailPageState
                       '创建时间',
                       widget.task.gmtCreate != null
                           ? DateFormat(
-                            constDatetimeFormat,
+                            formatToYMDHMS,
                           ).format(widget.task.gmtCreate!)
                           : '未知',
                     ),

@@ -5,7 +5,23 @@
 
 # SuChat Lite
 
-SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API 驱动的、简洁版 AI 聊天应用，支持简单自定义角色。
+SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API 驱动的、简洁版 AI 聊天应用。此外：
+
+- AI 聊天支持简单自定义角色；
+- 其他 AI 功能，例如支持简单的音频、图片、视频资源生成，录音文件识别；
+- 以及一些有少量使用 AI 特性的扩展功能，如训练助手、饮食日记、极简记账。
+
+桌面主页面预览:
+
+![SuChat Lite 预览](./_doc/snapshots/screenshot-home-desktop.jpg)
+
+移动端截图:
+
+![SuChat Lite 预览](./_doc/snapshots/screenshot-mobile.jpg)
+
+---
+
+**2025-07-02**: 新增极简记账功能
 
 **2025-06-23**: 新增简单的训练助手、饮食日记功能
 
@@ -19,14 +35,6 @@ SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API �
 更多更新内容可查看 [CHANGELOG](CHANGELOG.md) 文件。
 
 ---
-
-桌面主页面预览:
-
-![SuChat Lite 预览](./_doc/snapshots/screenshot-home-desktop.jpg)
-
-移动端截图:
-
-![SuChat Lite 预览](./_doc/snapshots/screenshot-mobile.jpg)
 
 ## 特性
 
@@ -58,8 +66,6 @@ SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API �
   - 支持数据的导入导出(对话数据、角色数据、模型规格数据等)
     - 可以单个类别导入导出备份，也可以整体打包备份
   - 手机 App 端支持语音转文字输入(使用的讯飞语音听写 API)
-- **2025-05-28 新增：简单的录音识别、语音合成、图片生成、视频生成功能**
-- **2025-06-23 新增：简单的训练助手、饮食日记功能**
 
 ---
 

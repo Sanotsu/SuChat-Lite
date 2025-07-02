@@ -389,22 +389,27 @@ class _VoicePageState extends MediaGenerationBaseState<GenVoicePage> {
       builder:
           (context) => AlertDialog(
             title: Text('语音预览'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: SingleChildScrollView(child: Text(task.prompt)),
+            content: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.4,
+                maxWidth: MediaQuery.of(context).size.width * 0.6,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: SingleChildScrollView(child: Text(task.prompt)),
+                    ),
                   ),
-                ),
-                AudioPlayerWidget(
-                  audioUrl: task.audioUrls!.first,
-                  autoPlay: true,
-                ),
-              ],
+                  AudioPlayerWidget(
+                    audioUrl: task.audioUrls!.first,
+                    autoPlay: true,
+                  ),
+                ],
+              ),
             ),
-
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),

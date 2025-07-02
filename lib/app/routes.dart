@@ -10,6 +10,10 @@ import '../features/diet_diary/presentation/pages/food_edit_page.dart';
 import '../features/diet_diary/presentation/pages/meal_detail_page.dart';
 import '../features/diet_diary/domain/entities/food_item.dart';
 import '../features/diet_diary/domain/entities/meal_record.dart';
+import '../features/simple_accounting/presentation/pages/bill_list_page.dart';
+import '../features/simple_accounting/presentation/pages/bill_add_page.dart';
+import '../features/simple_accounting/presentation/pages/bill_detail_page.dart';
+import '../features/simple_accounting/presentation/pages/bill_statistics_page.dart';
 
 class AppRoutes {
   static const String home = '/';
@@ -20,6 +24,12 @@ class AppRoutes {
   static const String foodDetail = '/food-detail';
   static const String foodEdit = '/food-edit';
   static const String mealDetail = '/meal-detail';
+
+  // 简易记账路由
+  static const String billList = '/bill-list';
+  static const String billAdd = '/bill-add';
+  static const String billDetail = '/bill-detail';
+  static const String billStatistics = '/bill-statistics';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -54,6 +64,24 @@ class AppRoutes {
         return MaterialPageRoute(
           builder: (_) => MealDetailPage(mealRecord: mealRecord),
         );
+
+      // 简易记账路由
+      case billList:
+        return MaterialPageRoute(builder: (_) => const BillListPage());
+      case billAdd:
+        final Map<String, dynamic>? args =
+            settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (_) => BillAddPage(editItem: args?['editItem']),
+        );
+      case billDetail:
+        final int billItemId = settings.arguments as int;
+        return MaterialPageRoute(
+          builder: (_) => BillDetailPage(billItemId: billItemId),
+        );
+      case billStatistics:
+        return MaterialPageRoute(builder: (_) => const BillStatisticsPage());
+
       default:
         return MaterialPageRoute(
           builder:

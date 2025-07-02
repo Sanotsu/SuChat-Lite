@@ -568,3 +568,20 @@ Widget buildIconWithTextButton({
     ),
   );
 }
+
+/// 构建浮动按钮
+Widget buildFloatingActionButton(
+  void Function()? onPressed,
+  BuildContext context, {
+  required IconData icon,
+  required String tooltip,
+}) {
+  return FloatingActionButton(
+    onPressed: onPressed,
+    tooltip: tooltip,
+    shape: const CircleBorder(),
+    backgroundColor: Theme.of(context).colorScheme.primary,
+    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+    child: Icon(icon),
+  );
+}

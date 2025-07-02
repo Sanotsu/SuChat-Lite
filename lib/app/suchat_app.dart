@@ -9,6 +9,7 @@ import '../core/utils/screen_helper.dart';
 import '../core/viewmodels/user_info_viewmodel.dart';
 import '../features/training_assistant/presentation/viewmodels/training_viewmodel.dart';
 import '../features/diet_diary/presentation/viewmodels/diet_diary_viewmodel.dart';
+import '../features/simple_accounting/presentation/viewmodels/bill_viewmodel.dart';
 import '../shared/widgets/min_size_layout.dart';
 import 'routes.dart';
 
@@ -95,6 +96,7 @@ class SuChatApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => TrainingViewModel()),
         ChangeNotifierProvider(create: (_) => DietDiaryViewModel()),
         ChangeNotifierProvider(create: (_) => UserInfoViewModel()),
+        ChangeNotifierProvider(create: (_) => BillViewModel()),
       ],
       child: providerChild,
     );

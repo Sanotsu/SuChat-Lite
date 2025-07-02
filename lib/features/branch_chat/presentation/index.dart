@@ -158,6 +158,7 @@ class _BranchChatPageState extends State<BranchChatPage>
                   (context) => BranchChatHistoryPage(
                     currentSessionId: state.currentSessionId,
                     onSessionSelected: (session) async {
+                      if (!mounted) return;
                       await _branchSessionHandler.switchSession(session.id);
                     },
                     onCompleted: onHistoryActionCompleted,

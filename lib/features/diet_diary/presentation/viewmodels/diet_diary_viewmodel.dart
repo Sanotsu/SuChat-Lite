@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/dao/user_info_dao.dart';
 import '../../../../core/entities/user_info.dart';
 import '../../../../core/utils/simple_tools.dart';
+import '../../../../shared/constants/constants.dart';
 import '../../domain/entities/food_item.dart';
 import '../../domain/entities/meal_record.dart';
 import '../../domain/entities/meal_food_record.dart';
@@ -514,23 +515,23 @@ class DietDiaryViewModel extends ChangeNotifier {
     if (date.year == now.year &&
         date.month == now.month &&
         date.day == now.day) {
-      return '今天 (${DateFormat('MM月dd日').format(date)})';
+      return '今天 (${DateFormat(formatToMDzh).format(date)})';
     } else if (date.year == yesterday.year &&
         date.month == yesterday.month &&
         date.day == yesterday.day) {
-      return '昨天 (${DateFormat('MM月dd日').format(date)})';
+      return '昨天 (${DateFormat(formatToMDzh).format(date)})';
     } else if (date.year == tomorrow.year &&
         date.month == tomorrow.month &&
         date.day == tomorrow.day) {
-      return '明天 (${DateFormat('MM月dd日').format(date)})';
+      return '明天 (${DateFormat(formatToMDzh).format(date)})';
     } else {
-      return DateFormat('yyyy年MM月dd日').format(date);
+      return DateFormat(formatToYMDzh).format(date);
     }
   }
 
   // 获取格式化的日期时间
   String getFormattedDateTime(DateTime dateTime) {
-    return DateFormat('yyyy年MM月dd日 HH:mm').format(dateTime);
+    return DateFormat(formatToYMDHMzh).format(dateTime);
   }
 
   // 设置加载状态

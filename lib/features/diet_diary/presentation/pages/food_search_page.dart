@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:suchat_lite/shared/widgets/simple_tool_widget.dart';
 
 import '../../../../core/utils/simple_tools.dart';
 import '../../../../shared/widgets/toast_utils.dart';
@@ -152,10 +153,11 @@ class _FoodSearchPageState extends State<FoodSearchPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _navigateToAddFood(''),
+      floatingActionButton: buildFloatingActionButton(
+        () => _navigateToAddFood(''),
+        context,
+        icon: Icons.add,
         tooltip: '添加新食品',
-        child: const Icon(Icons.add),
       ),
     );
   }

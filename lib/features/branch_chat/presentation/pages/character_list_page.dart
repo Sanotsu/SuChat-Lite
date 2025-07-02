@@ -85,19 +85,16 @@ class _CharacterListPageState extends State<CharacterListPage> {
           ),
         ],
       ),
-      floatingActionButton: _buildFloatingActionButton(),
+      floatingActionButton: buildFloatingActionButton(
+        _navigateToCharacterEditor,
+        context,
+        icon: Icons.add,
+        tooltip: '添加新角色',
+      ),
       floatingActionButtonLocation:
           ScreenHelper.isDesktop()
               ? FloatingActionButtonLocation.endFloat
               : FloatingActionButtonLocation.centerFloat,
-    );
-  }
-
-  Widget _buildFloatingActionButton() {
-    return FloatingActionButton(
-      onPressed: _navigateToCharacterEditor,
-      tooltip: '添加新角色',
-      child: const Icon(Icons.add),
     );
   }
 
