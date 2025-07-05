@@ -79,6 +79,11 @@ Future<Directory> getVoiceRecordingDir() async {
   return getAppHomeDirectory(subfolder: "VOICE_REC/voice_recordings");
 }
 
+/// 笔记语音录音文件保存的目录
+Future<Directory> getNoteVoiceRecordingDir() async {
+  return getAppHomeDirectory(subfolder: "VOICE_REC/note_voice_recordings");
+}
+
 /// 图片生成时，图片文件保存的目录
 Future<Directory> getImageGenDir() async {
   return getAppHomeDirectory(subfolder: "AI_GEN/images");

@@ -12,6 +12,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../../core/entities/user_info.dart';
 import '../../../core/storage/db_config.dart';
 import '../../../core/storage/ddl_diet_diary.dart';
+import '../../../core/storage/ddl_notebook.dart';
 import '../../../core/storage/ddl_simple_accounting.dart';
 import '../../../core/storage/ddl_training.dart';
 import '../../../core/utils/datetime_formatter.dart';
@@ -30,6 +31,8 @@ import '../../branch_chat/presentation/viewmodels/character_store.dart';
 import '../../diet_diary/data/index.dart';
 import '../../diet_diary/domain/entities/index.dart';
 import '../../media_generation/common/entities/media_generation_history.dart';
+import '../../notebook/data/note_dao.dart';
+import '../../notebook/domain/entities/index.dart';
 import '../../simple_accounting/data/bill_dao.dart';
 import '../../simple_accounting/domain/entities/bill_category.dart';
 import '../../simple_accounting/domain/entities/bill_item.dart';
@@ -424,6 +427,8 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
       List jsonMapList = json.decode(jsonData);
 
       // 根据不同文件名，构建不同的数据
+
+      /// 智能助手基本表
       if (filename == "${DBDdl.tableCusLlmSpec}.json") {
         await _dbHelper.saveCusLLMSpecs(
           jsonMapList.map((e) => CusLLMSpec.fromMap(e)).toList(),
@@ -436,11 +441,15 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
         await _dbHelper.saveVoiceRecognitionTasks(
           jsonMapList.map((e) => VoiceRecognitionTaskInfo.fromMap(e)).toList(),
         );
-      } else if (filename == "${DBDdl.tableUserInfo}.json") {
+      }
+      /// 用户信息
+      else if (filename == "${DBDdl.tableUserInfo}.json") {
         await _dbHelper.batchInsert(
           jsonMapList.map((e) => UserInfo.fromMap(e)).toList(),
         );
-      } else if (filename == "${TrainingDdl.tableTrainingPlan}.json") {
+      }
+      /// 训练助手
+      else if (filename == "${TrainingDdl.tableTrainingPlan}.json") {
         await TrainingDao().insertTrainingPlans(
           jsonMapList.map((e) => TrainingPlan.fromMap(e)).toList(),
         );
@@ -456,7 +465,9 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
         await TrainingDao().insertTrainingRecordDetails(
           jsonMapList.map((e) => TrainingRecordDetail.fromMap(e)).toList(),
         );
-      } else if (filename == "${DietDiaryDdl.tableDietAnalysis}.json") {
+      }
+      /// 饮食日记
+      else if (filename == "${DietDiaryDdl.tableDietAnalysis}.json") {
         await DietAnalysisDao().batchInsert(
           jsonMapList.map((e) => DietAnalysis.fromMap(e)).toList(),
         );
@@ -480,7 +491,9 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
         await WeightRecordDao().batchInsert(
           jsonMapList.map((e) => WeightRecord.fromMap(e)).toList(),
         );
-      } else if (filename == "${SimpleAccountingDdl.tableBillCategory}.json") {
+      }
+      /// 极简记账
+      else if (filename == "${SimpleAccountingDdl.tableBillCategory}.json") {
         await BillDao().batchInsertCategory(
           jsonMapList.map((e) => BillCategory.fromMap(e)).toList(),
         );
@@ -488,6 +501,26 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
         await BillDao().batchInsertBillItem(
           jsonMapList.map((e) => BillItem.fromMap(e)).toList(),
         );
+      }
+      /// 记事本
+      else if (filename == "${NotebookDdl.tableNoteCategory}.json") {
+        await NoteDao().batchCreateCategory(
+          jsonMapList.map((e) => NoteCategory.fromMap(e)).toList(),
+        );
+      } else if (filename == "${NotebookDdl.tableNoteTag}.json") {
+        await NoteDao().batchCreateTag(
+          jsonMapList.map((e) => NoteTag.fromMap(e)).toList(),
+        );
+      } else if (filename == "${NotebookDdl.tableNoteMedia}.json") {
+        await NoteDao().batchCreateMedia(
+          jsonMapList.map((e) => NoteMedia.fromMap(e)).toList(),
+        );
+      } else if (filename == "${NotebookDdl.tableNote}.json") {
+        await NoteDao().batchCreateNote(
+          jsonMapList.map((e) => Note.fromMap(e)).toList(),
+        );
+      } else if (filename == "${NotebookDdl.tableNoteTagRelation}.json") {
+        await NoteDao().batchCreateNoteTagRelation(jsonMapList);
       }
     }
   }

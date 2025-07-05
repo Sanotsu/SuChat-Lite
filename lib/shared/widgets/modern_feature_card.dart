@@ -9,6 +9,7 @@ class ModernFeatureCard extends StatelessWidget {
   final IconData icon;
   final Color? accentColor;
   final bool showArrow;
+  final bool showSubtitle;
 
   const ModernFeatureCard({
     super.key,
@@ -18,6 +19,7 @@ class ModernFeatureCard extends StatelessWidget {
     required this.icon,
     this.accentColor,
     this.showArrow = true,
+    this.showSubtitle = true,
   });
 
   @override
@@ -42,13 +44,13 @@ class ModernFeatureCard extends StatelessWidget {
           ).push(MaterialPageRoute(builder: (context) => targetPage));
         },
         child: Padding(
-          padding: EdgeInsets.all(16),
+          padding: EdgeInsets.all(isDesktop ? 16 : 8),
           child: Row(
             children: [
               // 左侧图标
               Container(
-                width: 56,
-                height: 56,
+                width: isDesktop ? 56 : 48,
+                height: isDesktop ? 56 : 48,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(16),
@@ -72,15 +74,16 @@ class ModernFeatureCard extends StatelessWidget {
                       ),
                     ),
                     SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: isDesktop ? 14 : 12,
-                        color: Colors.grey.shade600,
+                    if (showSubtitle)
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: isDesktop ? 14 : 12,
+                          color: Colors.grey.shade600,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
                   ],
                 ),
               ),

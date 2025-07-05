@@ -400,7 +400,11 @@ class _BranchChatHistoryCoreState extends State<BranchChatHistoryCore> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => UserAndSettings()),
-              );
+              ).then((value) {
+                // 避免在设置页面到导入恢复数据，所以需要重新加载会话列表
+                // 注意，这是一刀切的重新加载，应该只有在恢复数据成功时才需要
+                _handleCompleted();
+              });
             },
           ),
         ],

@@ -1,9 +1,11 @@
 import 'package:bot_toast/bot_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:form_builder_validators/localization/l10n.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 
 import '../core/utils/screen_helper.dart';
 import '../core/viewmodels/user_info_viewmodel.dart';
@@ -40,6 +42,8 @@ class SuChatApp extends StatelessWidget {
             GlobalCupertinoLocalizations.delegate,
             // form builder表单验证的多国语言
             FormBuilderLocalizations.delegate,
+            // flutter_quill 的本地化支持
+            FlutterQuillLocalizations.delegate,
           ],
           supportedLocales: const [
             Locale('zh', 'CN'),
@@ -91,14 +95,18 @@ class SuChatApp extends StatelessWidget {
       },
     );
 
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => TrainingViewModel()),
-        ChangeNotifierProvider(create: (_) => DietDiaryViewModel()),
-        ChangeNotifierProvider(create: (_) => UserInfoViewModel()),
-        ChangeNotifierProvider(create: (_) => BillViewModel()),
-      ],
-      child: providerChild,
+    // 将 Provider 和 Riverpod 结合使用
+    // 先用 MultiProvider 包装，再用 ProviderScope 包装
+    return riverpod.ProviderScope(
+      child: MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => TrainingViewModel()),
+          ChangeNotifierProvider(create: (_) => DietDiaryViewModel()),
+          ChangeNotifierProvider(create: (_) => UserInfoViewModel()),
+          ChangeNotifierProvider(create: (_) => BillViewModel()),
+        ],
+        child: providerChild,
+      ),
     );
   }
 }

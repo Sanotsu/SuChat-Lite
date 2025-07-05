@@ -64,6 +64,28 @@ String formatTimeAgo(String timeString) {
   }
 }
 
+// 格式化相对日期
+String formatRelativeDate(DateTime? dateTime) {
+  if (dateTime == null) return '';
+
+  final now = DateTime.now();
+  final difference = now.difference(dateTime);
+
+  if (difference.inDays == 0) {
+    // 今天
+    return '今天 ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+  } else if (difference.inDays == 1) {
+    // 昨天
+    return '昨天';
+  } else if (difference.inDays < 7) {
+    // 本周
+    return '${difference.inDays}天前';
+  } else {
+    // 更早
+    return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')}';
+  }
+}
+
 // 英文显示有单数复数之分
 String formatTimeAgoEn(String timeString) {
   DateTime dateTime = DateTime.parse(timeString);

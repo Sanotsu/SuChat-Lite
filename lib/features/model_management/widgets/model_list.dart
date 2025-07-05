@@ -130,7 +130,7 @@ class _ModelListState extends State<ModelList> {
       await ModelManagerService.clearUserModels();
 
       // 2025-04-15 清除全部用户模型后，重新加载预设模型，避免无可用模型
-      await ModelManagerService.initBuiltinModelsTest();
+      await ModelManagerService.initBuiltinModels();
       if (mounted) {
         _loadModels();
       }

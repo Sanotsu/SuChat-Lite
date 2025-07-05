@@ -12,6 +12,7 @@ import '../utils/get_dir.dart';
 import 'db_config.dart';
 import 'db_ddl.dart';
 import 'ddl_diet_diary.dart';
+import 'ddl_notebook.dart';
 import 'ddl_simple_accounting.dart';
 import 'ddl_training.dart';
 
@@ -122,12 +123,20 @@ class DBInit {
 
       // 添加简单记账相关表
       await _createSimpleAccountingTable(txn);
+
+      // 添加记事本相关表
+      await _createNotebookTable(txn);
+      // 创建记事本相关索引
+      await _createNotebookIndex(txn);
     });
 
     /// 初始化默认值
 
     // 初始化默认账单分类数据
     await SimpleAccountingDdl.initDefaultCategories(db);
+
+    // 初始化默认笔记分类数据
+    await NotebookDdl.initDefaultCategories(db);
   }
 
   // 数据库升级
@@ -146,16 +155,23 @@ class DBInit {
 
         // 添加饮食日记相关表
         await _createDietDiaryTable(txn);
-
         // 创建一些索引来提高查询性能
         await _createDietDiaryIndex(txn);
 
         // 添加简单记账相关表
         await _createSimpleAccountingTable(txn);
+
+        // 添加记事本相关表
+        await _createNotebookTable(txn);
+        // 创建记事本相关索引
+        await _createNotebookIndex(txn);
       });
 
       // 初始化默认账单分类数据
       await SimpleAccountingDdl.initDefaultCategories(db);
+
+      // 初始化默认笔记分类数据
+      await NotebookDdl.initDefaultCategories(db);
     }
   }
 
@@ -184,6 +200,15 @@ class DBInit {
     await txn.execute(SimpleAccountingDdl.ddlForBillCategory);
   }
 
+  // 记事本相关表
+  Future<void> _createNotebookTable(Transaction txn) async {
+    await txn.execute(NotebookDdl.ddlForNoteCategory);
+    await txn.execute(NotebookDdl.ddlForNote);
+    await txn.execute(NotebookDdl.ddlForNoteTag);
+    await txn.execute(NotebookDdl.ddlForNoteTagRelation);
+    await txn.execute(NotebookDdl.ddlForNoteMedia);
+  }
+
   // 饮食日记相关表索引
   Future<void> _createDietDiaryIndex(Transaction txn) async {
     List<String> indexList = [
@@ -204,10 +229,30 @@ class DBInit {
     }
   }
 
-  // 创建用户表索引
+  // 记事本相关表索引
+  Future<void> _createNotebookIndex(Transaction txn) async {
+    List<String> indexList = [
+      'CREATE INDEX idx_note_title ON ${NotebookDdl.tableNote} (title)',
+      'CREATE INDEX idx_note_category_id ON ${NotebookDdl.tableNote} (category_id)',
+      'CREATE INDEX idx_note_created_at ON ${NotebookDdl.tableNote} (created_at)',
+      'CREATE INDEX idx_note_updated_at ON ${NotebookDdl.tableNote} (updated_at)',
+      'CREATE INDEX idx_note_is_todo ON ${NotebookDdl.tableNote} (is_todo)',
+      'CREATE INDEX idx_note_is_completed ON ${NotebookDdl.tableNote} (is_completed)',
+      'CREATE INDEX idx_note_is_pinned ON ${NotebookDdl.tableNote} (is_pinned)',
+      'CREATE INDEX idx_note_is_archived ON ${NotebookDdl.tableNote} (is_archived)',
+      'CREATE INDEX idx_note_media_note_id ON ${NotebookDdl.tableNoteMedia} (note_id)',
+      'CREATE INDEX idx_note_media_type ON ${NotebookDdl.tableNoteMedia} (media_type)',
+    ];
+
+    for (var index in indexList) {
+      await txn.execute(index);
+    }
+  }
+
+  // 用户表索引
   Future<void> _createUserInfoIndex(Transaction txn) async {
     await txn.execute(
-      'CREATE INDEX idx_user_info_name ON ${DBDdl.tableUserInfo} (name)',
+      'CREATE INDEX idx_user_info_user_id ON ${DBDdl.tableUserInfo} (userId)',
     );
   }
 

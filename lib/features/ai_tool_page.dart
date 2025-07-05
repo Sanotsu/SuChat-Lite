@@ -7,6 +7,7 @@ import 'diet_diary/presentation/index.dart';
 import 'media_generation/image/presentation/index.dart';
 import 'media_generation/video/presentation/index.dart';
 import 'media_generation/voice/presentation/index.dart';
+import 'notebook/presentation/pages/notebook_page.dart';
 import 'simple_accounting/presentation/pages/bill_list_page.dart';
 import 'training_assistant/presentation/index.dart';
 import 'voice_recognition/presentation/index.dart';
@@ -296,28 +297,61 @@ class _AIToolPageState extends State<AIToolPage> {
             ),
             SizedBox(height: 16),
 
-            ModernFeatureCard(
-              targetPage: const TrainingAssistantPage(),
-              title: "训练助手",
-              subtitle: "使用大模型生成健身训练计划，可灵活跟练，强身健体",
-              icon: Icons.fitness_center,
-              accentColor: Colors.indigo,
+            Row(
+              children: [
+                Expanded(
+                  child: ModernFeatureCard(
+                    targetPage: const TrainingAssistantPage(),
+                    title: "训练助手",
+                    subtitle: "使用大模型生成健身训练计划，可灵活跟练，强身健体",
+                    icon: Icons.fitness_center,
+                    accentColor: Colors.indigo,
+                    showArrow: ScreenHelper.isDesktop(),
+                    showSubtitle: ScreenHelper.isDesktop(),
+                  ),
+                ),
+                SizedBox(width: ScreenHelper.isDesktop() ? 16 : 4),
+                Expanded(
+                  child: ModernFeatureCard(
+                    targetPage: const DietDiaryPage(),
+                    title: "饮食日记",
+                    subtitle: "记录每日饮食，定制食谱；分析营养成分，食品管理",
+                    icon: Icons.restaurant,
+                    accentColor: Colors.indigo,
+                    showArrow: ScreenHelper.isDesktop(),
+                    showSubtitle: ScreenHelper.isDesktop(),
+                  ),
+                ),
+              ],
             ),
             SizedBox(height: ScreenHelper.isDesktop() ? 16 : 4),
-            ModernFeatureCard(
-              targetPage: const DietDiaryPage(),
-              title: "饮食日记",
-              subtitle: "记录每日饮食，定制食谱；分析营养成分，食品管理",
-              icon: Icons.restaurant,
-              accentColor: Colors.indigo,
-            ),
-            SizedBox(height: ScreenHelper.isDesktop() ? 16 : 4),
-            ModernFeatureCard(
-              targetPage: const BillListPage(),
-              title: "极简记账",
-              subtitle: "简单手动记账，简单分类统计，轻松管理财务",
-              icon: Icons.money,
-              accentColor: Colors.indigo,
+            Row(
+              children: [
+                Expanded(
+                  child: ModernFeatureCard(
+                    targetPage: const BillListPage(),
+                    title: "极简记账",
+                    subtitle: "手动记账，支持简单分类管理，周度、月度、年度统计",
+                    icon: Icons.money,
+                    accentColor: Colors.indigo,
+                    showArrow: ScreenHelper.isDesktop(),
+                    showSubtitle: ScreenHelper.isDesktop(),
+                  ),
+                ),
+
+                SizedBox(width: ScreenHelper.isDesktop() ? 16 : 4),
+                Expanded(
+                  child: ModernFeatureCard(
+                    targetPage: const NotebookPage(),
+                    title: "记事本",
+                    subtitle: "轻量记事本，富文本编辑，随时记录灵感，高效管理",
+                    icon: Icons.note_alt,
+                    accentColor: Colors.indigo,
+                    showArrow: ScreenHelper.isDesktop(),
+                    showSubtitle: ScreenHelper.isDesktop(),
+                  ),
+                ),
+              ],
             ),
             // SizedBox(height: 12),
             // ModernFeatureCard(
