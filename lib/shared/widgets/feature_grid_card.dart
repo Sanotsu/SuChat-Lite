@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/utils/screen_helper.dart';
+
 class FeatureGridCard extends StatelessWidget {
   final Widget targetPage;
   final String title;
@@ -21,15 +23,15 @@ class FeatureGridCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = accentColor ?? theme.primaryColor;
+    final color = accentColor ?? Theme.of(context).primaryColor;
+    final isDesktop = ScreenHelper.isDesktop();
 
     return Card(
-      elevation: 1,
+      elevation: 0,
       shadowColor: color.withValues(alpha: 0.3),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         onTap: () {
           Navigator.of(
             context,
@@ -38,38 +40,48 @@ class FeatureGridCard extends StatelessWidget {
         child: Stack(
           children: [
             Padding(
-              padding: EdgeInsets.all(16),
+              padding: EdgeInsets.all(isDesktop ? 16 : 4),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Container(
-                    width: 64,
-                    height: 64,
+                    width: isDesktop ? 64 : 48,
+                    height: isDesktop ? 64 : 48,
                     decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.1),
+                      color: color.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Icon(icon, color: color, size: 32),
+                    child: Icon(icon, color: color, size: isDesktop ? 32 : 24),
                   ),
-                  SizedBox(height: 16),
-                  Text(
-                    title,
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                    textAlign: TextAlign.center,
+                  SizedBox(height: isDesktop ? 16 : 12),
+
+                  // ??? 为什么这个居中整个卡片的内容都居中了？
+                  Center(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: isDesktop ? 16 : 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ],
               ),
             ),
             if (isNew)
               Positioned(
-                top: 12,
-                right: 12,
+                top: isDesktop ? 8 : 4,
+                right: isDesktop ? 8 : 4,
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isDesktop ? 8 : 4,
+                    vertical: isDesktop ? 4 : 2,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.red,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(isDesktop ? 12 : 8),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.red.withValues(alpha: 0.3),
@@ -82,8 +94,8 @@ class FeatureGridCard extends StatelessWidget {
                     newLabel ?? '新',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                      fontSize: isDesktop ? 12 : 9,
+                      // fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),

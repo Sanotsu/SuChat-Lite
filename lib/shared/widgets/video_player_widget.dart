@@ -151,7 +151,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     );
   }
 
-  buildSliderRow() {
+  Row buildSliderRow() {
     return Row(
       children: [
         // 当前时间
@@ -200,7 +200,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     );
   }
 
-  buildControlRow() {
+  Row buildControlRow() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [

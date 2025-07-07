@@ -57,6 +57,9 @@ mobile:
   - Video Generation
   - Text-to-Speech (TTS)
   - Speech Recognition
+- **2025-05-28 more simple features**
+  - Training Assistant
+  - Diet Diary
 
 ---
 
@@ -232,12 +235,12 @@ Release:        22.04
 Codename:       jammy
 5.15.0-119-generic x86_64
 
-# Toolchain versions (2025-04-21):
+# Toolchain versions (2025-06-23):
 $ flutter --version
-Flutter 3.29.2 • channel stable
-Framework • revision c236373904 (5 weeks ago)
-Engine • revision 18b71d647a
-Tools • Dart 3.7.2 • DevTools 2.42.3
+Flutter 3.32.4 • channel stable • https://github.com/flutter/flutter.git
+Framework • revision 6fba2447e9 (10 天前) • 2025-06-12 19:03:56 -0700
+Engine • revision 8cd19e509d (10 天前) • 2025-06-12 16:30:12 -0700
+Tools • Dart 3.8.1 • DevTools 2.45.1
 ```
 
 ## Contribution

@@ -8,7 +8,7 @@ import '../../../../shared/constants/constants.dart';
 import '../../../../core/utils/datetime_formatter.dart';
 import '../../../../core/utils/simple_tools.dart';
 
-showMediaInfoDialog(AssetEntity entity, BuildContext context) {
+Future<void> showMediaInfoDialog(AssetEntity entity, BuildContext context) {
   return showDialog<void>(
     context: context,
     builder: (BuildContext context) {
@@ -64,7 +64,7 @@ showMediaInfoDialog(AssetEntity entity, BuildContext context) {
                       title: const Text("修改时间"),
                       subtitle: Text(
                         DateFormat(
-                          constDatetimeFormat,
+                          formatToYMDHMS,
                         ).format(entity.modifiedDateTime),
                       ),
                       dense: true,

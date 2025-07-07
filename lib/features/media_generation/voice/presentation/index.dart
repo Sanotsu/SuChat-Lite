@@ -222,7 +222,7 @@ class _VoicePageState extends MediaGenerationBaseState<GenVoicePage> {
       history.isFailed = false;
 
       // 保存到数据库
-      await dbHelper.insertMediaGenerationHistory(history);
+      await dbHelper.saveMediaGenerationHistory(history);
 
       // 清空输入
       if (mounted) {
@@ -241,7 +241,7 @@ class _VoicePageState extends MediaGenerationBaseState<GenVoicePage> {
       history.otherParams = jsonEncode({"errorMsg": e.toString()});
 
       // 保存到数据库
-      await dbHelper.insertMediaGenerationHistory(history);
+      await dbHelper.saveMediaGenerationHistory(history);
     } finally {
       // 隐藏生成遮罩
       LoadingOverlay.hide();
@@ -382,29 +382,34 @@ class _VoicePageState extends MediaGenerationBaseState<GenVoicePage> {
   //   );
   // }
 
-  _desktopPlay(MediaGenerationHistory task) {
+  void _desktopPlay(MediaGenerationHistory task) {
     showDialog(
       barrierDismissible: false,
       context: context,
       builder:
           (context) => AlertDialog(
             title: Text('语音预览'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: SingleChildScrollView(child: Text(task.prompt)),
+            content: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.4,
+                maxWidth: MediaQuery.of(context).size.width * 0.6,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: SingleChildScrollView(child: Text(task.prompt)),
+                    ),
                   ),
-                ),
-                AudioPlayerWidget(
-                  audioUrl: task.audioUrls!.first,
-                  autoPlay: true,
-                ),
-              ],
+                  AudioPlayerWidget(
+                    audioUrl: task.audioUrls!.first,
+                    autoPlay: true,
+                  ),
+                ],
+              ),
             ),
-
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -415,7 +420,7 @@ class _VoicePageState extends MediaGenerationBaseState<GenVoicePage> {
     );
   }
 
-  _mobilePlay(MediaGenerationHistory task) {
+  void _mobilePlay(MediaGenerationHistory task) {
     showModalBottomSheet(
       isDismissible: false,
       context: context,

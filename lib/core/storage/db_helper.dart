@@ -2,9 +2,9 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../features/media_generation/common/entities/media_generation_history.dart';
 import '../../features/voice_recognition/domain/entities/voice_recognition_task_info.dart';
-import '../entities/cus_llm_model.dart';
 import '../../shared/constants/constant_llm_enum.dart';
-
+import '../entities/cus_llm_model.dart';
+import '../entities/user_info.dart';
 import 'db_init.dart';
 import 'db_ddl.dart';
 
@@ -107,9 +107,7 @@ class DBHelper {
   );
 
   // 新增
-  Future<List<Object?>> insertCusLLMSpecList(
-    List<CusLLMSpec> rsts,
-  ) async {
+  Future<List<Object?>> saveCusLLMSpecs(List<CusLLMSpec> rsts) async {
     var batch = (await database).batch();
     for (var item in rsts) {
       batch.insert(DBDdl.tableCusLlmSpec, item.toMap());
@@ -118,12 +116,124 @@ class DBHelper {
   }
 
   ///***********************************************/
+  /// 统一用户信息表操作
+  /// 合并了训练助手和饮食日记的用户信息
+  ///
+
+  // 获取用户信息，如果不存在则创建默认用户
+  Future<UserInfo> getUserInfo({String? userId}) async {
+    Database db = await database;
+
+    // 如果没有指定userId，获取第一个用户
+    if (userId == null) {
+      final users = await db.query(DBDdl.tableUserInfo);
+      if (users.isNotEmpty) {
+        return UserInfo.fromMap(users.first);
+      } else {
+        // 创建默认用户
+        final defaultUser = UserInfo.createDefault();
+        await saveUserInfo(defaultUser);
+        return defaultUser;
+      }
+    }
+
+    // 查询指定userId的用户
+    final users = await db.query(
+      DBDdl.tableUserInfo,
+      where: 'userId = ?',
+      whereArgs: [userId],
+    );
+
+    if (users.isNotEmpty) {
+      return UserInfo.fromMap(users.first);
+    } else {
+      // 创建指定ID的默认用户
+      final defaultUser = UserInfo.createDefault(userId: userId);
+      await saveUserInfo(defaultUser);
+      return defaultUser;
+    }
+  }
+
+  // 获取所有用户
+  Future<List<UserInfo>> getAllUsers() async {
+    Database db = await database;
+    final users = await db.query(DBDdl.tableUserInfo, orderBy: 'name ASC');
+    return users.map((user) => UserInfo.fromMap(user)).toList();
+  }
+
+  // 保存用户信息（新增或更新）
+  Future<void> saveUserInfo(UserInfo userInfo) async {
+    Database db = await database;
+
+    // 检查用户是否已存在
+    final existingUsers = await db.query(
+      DBDdl.tableUserInfo,
+      where: 'userId = ?',
+      whereArgs: [userInfo.userId],
+    );
+
+    if (existingUsers.isEmpty) {
+      // 新增用户
+      await db.insert(DBDdl.tableUserInfo, userInfo.toMap());
+    } else {
+      // 更新用户
+      await db.update(
+        DBDdl.tableUserInfo,
+        userInfo.toMap(),
+        where: 'userId = ?',
+        whereArgs: [userInfo.userId],
+      );
+    }
+  }
+
+  Future<List<int>> batchInsert(List<UserInfo> items) async {
+    Database db = await database;
+    final batch = db.batch();
+
+    for (var item in items) {
+      batch.insert(
+        DBDdl.tableUserInfo,
+        item.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+
+    final results = await batch.commit();
+    return results.cast<int>();
+  }
+
+  // 删除用户
+  Future<void> deleteUserInfo(String userId) async {
+    Database db = await database;
+    await db.delete(
+      DBDdl.tableUserInfo,
+      where: 'userId = ?',
+      whereArgs: [userId],
+    );
+  }
+
+  Future<UserInfo?> getById(String userId) async {
+    Database db = await database;
+    final maps = await db.query(
+      DBDdl.tableUserInfo,
+      where: 'userId = ?',
+      whereArgs: [userId],
+    );
+
+    if (maps.isEmpty) {
+      return null;
+    }
+
+    return UserInfo.fromMap(maps.first);
+  }
+
+  ///***********************************************/
   /// AI 媒体资源生成的相关操作
   /// 文生视频（后续语音合成也可能）也用这个
   ///
 
   // 插入媒体资源生成历史
-  Future<String> insertMediaGenerationHistory(
+  Future<String> saveMediaGenerationHistory(
     MediaGenerationHistory history,
   ) async {
     Database db = await database;
@@ -132,7 +242,7 @@ class DBHelper {
   }
 
   // 批量插入媒体资源生成记录
-  Future<List<Object?>> insertMediaGenerationHistoryList(
+  Future<List<Object?>> saveMediaGenerationHistories(
     List<MediaGenerationHistory> histories,
   ) async {
     var batch = (await database).batch();
@@ -226,7 +336,7 @@ class DBHelper {
   ///
 
   /// 保存录音识别任务到数据库
-  Future<void> insertVoiceRecognitionTask(VoiceRecognitionTaskInfo task) async {
+  Future<void> saveVoiceRecognitionTask(VoiceRecognitionTaskInfo task) async {
     Database db = await database;
     await db.insert(
       DBDdl.tableVoiceRecognitionTask,
@@ -236,7 +346,7 @@ class DBHelper {
   }
 
   /// 批量保存录音识别任务到数据库
-  Future<void> insertVoiceRecognitionTasks(
+  Future<void> saveVoiceRecognitionTasks(
     List<VoiceRecognitionTaskInfo> tasks,
   ) async {
     Database db = await database;

@@ -1,4 +1,4 @@
-import 'db_init.dart';
+import 'db_config.dart';
 
 class DBDdl {
   // 2025-02-14 新的简洁版生成式任务记录
@@ -36,7 +36,8 @@ class DBDdl {
     );
     """;
 
-  static const tableCusLlmSpec = '${DBInitConfig.tablePerfix}brief_cus_llm_spec';
+  static const tableCusLlmSpec =
+      '${DBInitConfig.tablePerfix}brief_cus_llm_spec';
 
   static const ddlForCusLlmSpec = """
     CREATE TABLE $tableCusLlmSpec (
@@ -73,6 +74,34 @@ class DBDdl {
       jobResponse         TEXT,
       recognitionResponse TEXT,
       PRIMARY KEY(taskId)
+    );
+    """;
+
+  // 2025-07-10 统一用户信息表
+  // 合并了训练助手和饮食日记中的用户表，包含所有用户相关字段
+  static const tableUserInfo = '${DBInitConfig.tablePerfix}user_info';
+
+  // gender 和 goal 使用枚举的index，所以是INTEGER类型
+  static const ddlForUserInfo = """
+    CREATE TABLE $tableUserInfo (
+      userId              TEXT    NOT NULL,
+      name                TEXT    NOT NULL,
+      gender              INTEGER NOT NULL,
+      age                 INTEGER NOT NULL,
+      height              REAL    NOT NULL,
+      weight              REAL    NOT NULL,
+      fitnessLevel        TEXT,
+      healthConditions    TEXT,
+      goal                INTEGER NOT NULL,
+      activityLevel       REAL,
+      targetCalories      REAL,
+      targetCarbs         REAL,
+      targetProtein       REAL,
+      targetFat           REAL,
+      otherParams         TEXT,
+      gmtCreate           TEXT    NOT NULL,
+      gmtModified         TEXT,
+      PRIMARY KEY(userId)
     );
     """;
 }

@@ -5,15 +5,11 @@
 
 # SuChat Lite
 
-SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API 驱动的、简洁版 AI 聊天应用，支持简单自定义角色。
+SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API 驱动的、简洁版 AI 聊天应用。此外：
 
-**2025-05-28**：支持更多 AI 功能
-
-- 点击对话记录侧边栏/抽屉上 grid_view 图标按钮，即可进入更多功能页面，可使用简单的录音识别、语音合成、图片生成、视频生成功能。
-
-更多更新内容可查看 [CHANGELOG](CHANGELOG.md) 文件。
-
----
+- AI 聊天支持简单自定义角色；
+- 一些其他 AI 功能，例如支持简单的音频、图片、视频资源生成，录音文件识别；
+- 一些有少量使用 AI 特性的扩展功能，如训练助手、饮食日记、极简记账、记事本；
 
 桌面主页面预览:
 
@@ -23,7 +19,11 @@ SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API �
 
 ![SuChat Lite 预览](./_doc/snapshots/screenshot-mobile.jpg)
 
-## 特性
+---
+
+更多更新内容可查看 [CHANGELOG](CHANGELOG.md) 文件，不再此页面赘述。
+
+## 特性(对话部分)
 
 - **支持多个 LLM 提供商**
   - 支持多个云平台在线模型 HTTP API 的调用
@@ -53,7 +53,6 @@ SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API �
   - 支持数据的导入导出(对话数据、角色数据、模型规格数据等)
     - 可以单个类别导入导出备份，也可以整体打包备份
   - 手机 App 端支持语音转文字输入(使用的讯飞语音听写 API)
-- **2025-05-28新增：简单的录音识别、语音合成、图片生成、视频生成功能**
 
 ---
 
@@ -74,9 +73,9 @@ SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API �
 - 其他兼容 openAI API 结构的云平台和 HTTP API，可使用自定义模式添加
   - 此时需要模型管理中平台选择自定义后，添加其请求地址、模型代号、平台密钥
 
-更多功能(2025-05-28)
+更多功能(2025-06-23)
 
-点击对话记录侧边栏/抽屉上 grid_view 图标按钮，即可进入更多功能页面，即可使用简单的录音识别、语音合成、图片生成、视频生成功能。
+点击对话记录侧边栏页面上下方更多功能按钮，即可进入更多功能页面，即可使用简单的录音识别、语音合成、图片生成、视频生成和其他扩展功能。
 
 具体使用的云平台和大模型 API 如下：
 
@@ -238,6 +237,51 @@ enum LLModelType {
 
 ---
 
+<details>
+
+<summary>导入极简记账 json 文件规格</summary>
+
+```json
+[
+  // {
+  //   "date": "<日期>",
+  //   "category": "<账单分类，可到‘添加账单’页面查看>",
+  //   "item": "<账单内容>",
+  //   "item_type": <收支，0收入，1支出>,
+  //   "value": <具体数值>
+  // },
+  {
+    "date": "2018-03-20",
+    "category": "餐饮",
+    "item": "中午外卖鱼香肉丝",
+    "item_type": 1,
+    "value": 18.0
+  },
+  {
+    "date": "2018-03-20",
+    "category": "工资",
+    "item": "3月份工资",
+    "item_type": 0,
+    "value": 2500.0
+  }
+]
+```
+
+</details>
+
+---
+
+<details>
+
+<summary>导入食品营养素 json 文件规格</summary>
+
+- 饮食日记支持自定义食品 json 文件导入，可参考我之前将《中国食物成分表标准版(第 6 版)》中“能量和食物一般营养成分”部分的表格截图转换为特定格式的测试 json 文件 [Sanotsu/china-food-composition-data](https://github.com/Sanotsu/china-food-composition-data)。
+- 注意，该仓库食品营养素 json 文件可以正常导入，但无法保证该 OCR 结果正确。
+
+</details>
+
+---
+
 ## 开发环境
 
 在一个 Windows 7 中使用 Visual Box 7 安装的 Ubuntu22.04 LTS 虚拟机中进行开发。
@@ -252,12 +296,12 @@ Release:        22.04
 Codename:       jammy
 5.15.0-119-generic x86_64
 
-# 2025-04-21 使用的 flutter 版本：
+# 2025-06-23 使用的 flutter 版本：
 $ flutter --version
-Flutter 3.29.2 • channel stable • https://github.com/flutter/flutter.git
-Framework • revision c236373904 (5 周前) • 2025-03-13 16:17:06 -0400
-Engine • revision 18b71d647a
-Tools • Dart 3.7.2 • DevTools 2.42.3
+Flutter 3.32.4 • channel stable • https://github.com/flutter/flutter.git
+Framework • revision 6fba2447e9 (10 天前) • 2025-06-12 19:03:56 -0700
+Engine • revision 8cd19e509d (10 天前) • 2025-06-12 16:30:12 -0700
+Tools • Dart 3.8.1 • DevTools 2.45.1
 ```
 
 ## 贡献指南

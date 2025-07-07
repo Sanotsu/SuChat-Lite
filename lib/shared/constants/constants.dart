@@ -1,13 +1,37 @@
 // 时间格式化字符串
-const constDatetimeFormat = "yyyy-MM-dd HH:mm:ss";
-const constDateFormat = "yyyy-MM-dd";
-const constMonthFormat = "yyyy-MM";
-const constTimeFormat = "HH:mm:ss";
+const formatToYMDHMS = "yyyy-MM-dd HH:mm:ss";
+const formatToYMDHM = "yyyy-MM-dd HH:mm";
+const formatToYMDH = "yyyy-MM-dd HH";
+const formatToYMD = "yyyy-MM-dd";
+const formatToYM = "yyyy-MM";
+const formatToMD = "MM-dd";
+const formatToY = "yyyy";
+const formatToMDHM = "MM-dd HH:mm";
+const formatToHMS = "HH:mm:ss";
+const formatToHM = "HH:mm";
+
+// 中文的带中文后缀
+const formatToYMDHMSzh = "yyyy年MM月dd日 HH:mm:ss";
+const formatToYMDHMzh = "yyyy年MM月dd日 HH:mm";
+const formatToYMDHSzh = "yyyy年MM月dd日 HH";
+const formatToYMDzh = "yyyy年MM月dd日";
+const formatToYMzh = "yyyy年MM月";
+const formatToMDzh = "MM月dd日";
+const formatToYzh = "yyyy年";
+const formatToMDHMzh = "MM月dd日 HH:mm";
+const formatToHMSzh = "HH:mm:ss";
+const formatToHMzh = "HH:mm";
+
 // 文件名后缀等
 const constDatetimeSuffix = "yyyyMMdd_HHmmss";
 // 未知的时间字符串
 const unknownDateTimeString = '1970-01-01 00:00:00';
 const unknownDateString = '1970-01-01';
+
+/// 默认的日历显示范围
+final kToday = DateTime.now();
+final kFirstDay = DateTime(2025, 6, 1);
+final kLastDay = DateTime(kToday.year, kToday.month + 3, 25);
 
 const String placeholderImageUrl = 'assets/images/no_image.png';
 const String brandImageUrl = 'assets/brand.png';
@@ -47,3 +71,25 @@ enum CusRole { system, user, assistant }
 // 自定义媒体资源分类 custom mime classification
 // ignore: constant_identifier_names
 enum CusMimeCls { IMAGE, VIDEO, AUDIO }
+
+/// 映射表：将数字映射到中文星期几（1-7表示周一到周日）
+final Map<int, String> dayWeekMapping = {
+  1: '周一',
+  2: '周二',
+  3: '周三',
+  4: '周四',
+  5: '周五',
+  6: '周六',
+  7: '周日',
+};
+
+/// 映射表：将中文星期几映射到数字（1-7表示周一到周日）
+final Map<String, int> weekDayMapping = {
+  '周一': 1,
+  '周二': 2,
+  '周三': 3,
+  '周四': 4,
+  '周五': 5,
+  '周六': 6,
+  '周日': 7,
+};

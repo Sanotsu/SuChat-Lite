@@ -24,7 +24,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
       id: const obx_int.IdUid(1, 2148325011734090399),
       name: 'BranchChatMessage',
-      lastPropertyId: const obx_int.IdUid(22, 7414314221072378309),
+      lastPropertyId: const obx_int.IdUid(24, 4470041442112007887),
       flags: 0,
       properties: <obx_int.ModelProperty>[
         obx_int.ModelProperty(
@@ -139,6 +139,16 @@ final _entities = <obx_int.ModelEntity>[
         obx_int.ModelProperty(
             id: const obx_int.IdUid(22, 7414314221072378309),
             name: 'characterJson',
+            type: 9,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(23, 8432758370704519849),
+            name: 'audiosUrl',
+            type: 9,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(24, 4470041442112007887),
+            name: 'omniAudioVoice',
             type: 9,
             flags: 0)
       ],
@@ -394,7 +404,13 @@ obx_int.ModelDefinition getObjectBoxModel() {
           final characterJsonOffset = object.characterJson == null
               ? null
               : fbb.writeString(object.characterJson!);
-          fbb.startTable(23);
+          final audiosUrlOffset = object.audiosUrl == null
+              ? null
+              : fbb.writeString(object.audiosUrl!);
+          final omniAudioVoiceOffset = object.omniAudioVoice == null
+              ? null
+              : fbb.writeString(object.omniAudioVoice!);
+          fbb.startTable(25);
           fbb.addInt64(0, object.id);
           fbb.addOffset(1, messageIdOffset);
           fbb.addOffset(2, roleOffset);
@@ -417,6 +433,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
           fbb.addOffset(19, branchPathOffset);
           fbb.addOffset(20, characterIdOffset);
           fbb.addOffset(21, characterJsonOffset);
+          fbb.addOffset(22, audiosUrlOffset);
+          fbb.addOffset(23, omniAudioVoiceOffset);
           fbb.finish(fbb.endTable());
           return object.id;
         },
@@ -451,6 +469,11 @@ obx_int.ModelDefinition getObjectBoxModel() {
               .vTableGetNullable(buffer, rootOffset, 20);
           final videosUrlParam = const fb.StringReader(asciiOptimization: true)
               .vTableGetNullable(buffer, rootOffset, 22);
+          final audiosUrlParam = const fb.StringReader(asciiOptimization: true)
+              .vTableGetNullable(buffer, rootOffset, 48);
+          final omniAudioVoiceParam =
+              const fb.StringReader(asciiOptimization: true)
+                  .vTableGetNullable(buffer, rootOffset, 50);
           final promptTokensParam =
               const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 26);
           final completionTokensParam =
@@ -479,6 +502,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
               contentVoicePath: contentVoicePathParam,
               imagesUrl: imagesUrlParam,
               videosUrl: videosUrlParam,
+              audiosUrl: audiosUrlParam,
+              omniAudioVoice: omniAudioVoiceParam,
               promptTokens: promptTokensParam,
               completionTokens: completionTokensParam,
               totalTokens: totalTokensParam,
@@ -792,6 +817,14 @@ class BranchChatMessage_ {
   /// See [BranchChatMessage.characterJson].
   static final characterJson =
       obx.QueryStringProperty<BranchChatMessage>(_entities[0].properties[21]);
+
+  /// See [BranchChatMessage.audiosUrl].
+  static final audiosUrl =
+      obx.QueryStringProperty<BranchChatMessage>(_entities[0].properties[22]);
+
+  /// See [BranchChatMessage.omniAudioVoice].
+  static final omniAudioVoice =
+      obx.QueryStringProperty<BranchChatMessage>(_entities[0].properties[23]);
 
   /// see [BranchChatMessage.children]
   static final children =

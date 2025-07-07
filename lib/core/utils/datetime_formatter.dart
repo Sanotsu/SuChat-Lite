@@ -64,6 +64,28 @@ String formatTimeAgo(String timeString) {
   }
 }
 
+// 格式化相对日期
+String formatRelativeDate(DateTime? dateTime) {
+  if (dateTime == null) return '';
+
+  final now = DateTime.now();
+  final difference = now.difference(dateTime);
+
+  if (difference.inDays == 0) {
+    // 今天
+    return '今天 ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+  } else if (difference.inDays == 1) {
+    // 昨天
+    return '昨天';
+  } else if (difference.inDays < 7) {
+    // 本周
+    return '${difference.inDays}天前';
+  } else {
+    // 更早
+    return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')}';
+  }
+}
+
 // 英文显示有单数复数之分
 String formatTimeAgoEn(String timeString) {
   DateTime dateTime = DateTime.parse(timeString);
@@ -87,12 +109,27 @@ String formatTimeAgoEn(String timeString) {
   }
 }
 
+// 字符串只保留月日时分
+String formatTimeLabel(DateTime time) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final messageDate = DateTime(time.year, time.month, time.day);
+
+  if (messageDate == today) {
+    return DateFormat(formatToHM).format(time);
+  } else if (messageDate == today.subtract(const Duration(days: 1))) {
+    return '昨天 ${DateFormat(formatToHM).format(time)}';
+  } else {
+    return DateFormat(formatToMDHM).format(time);
+  }
+}
+
 // 把各种时间字符串格式化指定格式的字符串
 String formatDateTimeString(String timeString, {String? formatType}) {
   if (timeString.isEmpty) return "未知";
 
   return DateFormat(
-    formatType ?? constDatetimeFormat,
+    formatType ?? formatToYMDHMS,
   ).format(DateTime.tryParse(timeString) ?? DateTime.now());
 }
 
@@ -110,10 +147,38 @@ String formatTimestampToString(String? timestamp, {String? format}) {
     return "输入的时间戳不是10位或者13位的整数";
   }
 
-  return DateFormat(format ?? constDatetimeFormat).format(
+  return DateFormat(format ?? formatToYMDHMS).format(
     DateTime.fromMillisecondsSinceEpoch(
       // 如果传入的时间戳字符串转型不对，就使用 1970-01-01 23:59:59 的毫秒数
       int.tryParse(timestamp) ?? 57599000,
     ),
   );
+}
+
+// 格式化秒数为mm:ss格式
+String formatSecondsToMMSS(int seconds) {
+  final minutes = seconds ~/ 60;
+  final remainingSeconds = seconds % 60;
+  return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+}
+
+/// 格式化年份和周数
+String formatToYearWeek(DateTime date) {
+  final year = date.year;
+  final weekNumber = _getISOWeekNumber(date);
+  return '$year年第$weekNumber周';
+}
+
+// 计算 ISO 周数（周一为第一天，1月4日所在的周为第一周）
+int _getISOWeekNumber(DateTime date) {
+  final dayOfYear = date.difference(DateTime(date.year, 1, 1)).inDays + 1;
+  final weekNumber = ((dayOfYear - date.weekday + 10) / 7).floor();
+
+  if (weekNumber < 1) {
+    // 处理跨年周（如12月最后几天可能属于下一年的第一周）
+    return _getISOWeekNumber(DateTime(date.year - 1, 12, 31));
+  } else if (weekNumber > 52 && DateTime(date.year, 12, 31).weekday < 4) {
+    return 1;
+  }
+  return weekNumber;
 }

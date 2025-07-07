@@ -141,10 +141,10 @@ class MediaGenerationHistory {
       'audioUrls': audioUrls?.join(";"),
       'voice': voice,
       'otherParams': otherParams,
-      'gmtCreate': DateFormat(constDatetimeFormat).format(gmtCreate),
+      'gmtCreate': DateFormat(formatToYMDHMS).format(gmtCreate),
       'gmtModified':
           gmtModified != null
-              ? DateFormat(constDatetimeFormat).format(gmtModified!)
+              ? DateFormat(formatToYMDHMS).format(gmtModified!)
               : null,
     };
   }

@@ -9,7 +9,7 @@ import '../../../../core/utils/file_picker_utils.dart';
 import '../../../../core/utils/screen_helper.dart';
 import '../../../../core/storage/cus_get_storage.dart';
 import '../../data/models/bigmodel_file_manage.dart';
-import '../../data/repositories/bigmodel_file_service.dart';
+import '../../data/services/bigmodel_file_service.dart';
 import '../widgets/index.dart';
 
 class FileUploadPage extends StatefulWidget {
@@ -54,7 +54,7 @@ class _FileUploadPageState extends State<FileUploadPage> {
     super.dispose();
   }
 
-  getApiKey() {
+  void getApiKey() {
     setState(() {
       _apiKeyController.text = CusGetStorage().getBigmodelApiKey() ?? '';
     });
@@ -268,7 +268,7 @@ class _FileUploadPageState extends State<FileUploadPage> {
   }
 
   // 显示文件内容的全屏弹窗
-  _showFileContentDialog() async {
+  Future<void> _showFileContentDialog() async {
     showDialog(
       context: context,
       builder:

@@ -21,9 +21,9 @@ abstract class MimeMediaPreviewBase extends StatelessWidget {
   // 分享媒体
   Future<void> _shareMedia(BuildContext context) async {
     try {
-      final result = await Share.shareXFiles([
-        XFile(file.path),
-      ], text: 'SuChat');
+      final result = await SharePlus.instance.share(
+        ShareParams(files: [XFile(file.path)], text: 'SuChat'),
+      );
 
       if (result.status == ShareResultStatus.success) {
         ToastUtils.showSuccess('分享成功!');

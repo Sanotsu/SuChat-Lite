@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 class LoadingOverlay {
   static OverlayEntry? _overlayEntry;
+  static Timer? _timer;
+  static DateTime? _startTime;
+  static Duration _elapsedTime = Duration.zero;
 
   static void show(
     BuildContext context, {
@@ -11,8 +15,23 @@ class LoadingOverlay {
     Color backgroundColor = Colors.black54,
     Color textColor = Colors.white,
     bool showCancelButton = true,
+    bool showTimer = false,
   }) {
     if (_overlayEntry != null) return;
+
+    // 初始化计时器
+    _startTime = DateTime.now();
+    _elapsedTime = Duration.zero;
+
+    if (showTimer) {
+      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (_startTime != null) {
+          _elapsedTime = DateTime.now().difference(_startTime!);
+          // 强制刷新overlay
+          _overlayEntry?.markNeedsBuild();
+        }
+      });
+    }
 
     OverlayState overlayState = Overlay.of(context);
     _overlayEntry = OverlayEntry(
@@ -36,7 +55,7 @@ class LoadingOverlay {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const CircularProgressIndicator(color: Colors.white),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     Text(
                       title,
                       style: TextStyle(
@@ -45,7 +64,7 @@ class LoadingOverlay {
                         color: textColor,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     ...messages.map(
                       (message) => Padding(
                         padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -56,8 +75,19 @@ class LoadingOverlay {
                         ),
                       ),
                     ),
+                    if (showTimer) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        '用时: ${_formatDuration(_elapsedTime)}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: textColor.withValues(alpha: 0.8),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                     if (showCancelButton) ...[
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
                       ElevatedButton(
                         onPressed: () {
                           hide();
@@ -82,8 +112,20 @@ class LoadingOverlay {
   }
 
   static void hide() {
+    _timer?.cancel();
+    _timer = null;
+    _startTime = null;
+    _elapsedTime = Duration.zero;
     _overlayEntry?.remove();
     _overlayEntry = null;
+  }
+
+  // 格式化时间显示
+  static String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return '$minutes:$seconds';
   }
 
   // 预设的媒体生成遮罩
@@ -91,6 +133,7 @@ class LoadingOverlay {
     BuildContext context, {
     VoidCallback? onCancel,
     String mediaType = "媒体",
+    bool showTimer = true,
   }) {
     final String title = "$mediaType生成中";
     final List<String> messages = [
@@ -107,6 +150,7 @@ class LoadingOverlay {
       backgroundColor: Colors.black.withValues(alpha: 0.8),
       textColor: Colors.white,
       showCancelButton: true,
+      showTimer: showTimer,
     );
   }
 
@@ -114,23 +158,59 @@ class LoadingOverlay {
   static void showImageGeneration(
     BuildContext context, {
     VoidCallback? onCancel,
+    bool showTimer = true,
   }) {
-    showMediaGeneration(context, onCancel: onCancel, mediaType: "图片");
+    showMediaGeneration(
+      context,
+      onCancel: onCancel,
+      mediaType: "图片",
+      showTimer: showTimer,
+    );
   }
 
   // 视频生成遮罩
   static void showVideoGeneration(
     BuildContext context, {
     VoidCallback? onCancel,
+    bool showTimer = true,
   }) {
-    showMediaGeneration(context, onCancel: onCancel, mediaType: "视频");
+    showMediaGeneration(
+      context,
+      onCancel: onCancel,
+      mediaType: "视频",
+      showTimer: showTimer,
+    );
   }
 
   // 音频生成遮罩
   static void showVoiceGeneration(
     BuildContext context, {
     VoidCallback? onCancel,
+    bool showTimer = true,
   }) {
-    showMediaGeneration(context, onCancel: onCancel, mediaType: "音频");
+    showMediaGeneration(
+      context,
+      onCancel: onCancel,
+      mediaType: "音频",
+      showTimer: showTimer,
+    );
+  }
+
+  // 训练计划生成遮罩
+  static void showTrainingPlanGeneration(
+    BuildContext context, {
+    VoidCallback? onCancel,
+    bool showTimer = true,
+  }) {
+    show(
+      context,
+      onCancel: onCancel,
+      title: "训练计划生成中",
+      messages: ["正在为您量身定制训练计划，请耐心等待", "生成过程中请勿退出当前页面", "大约需要2分钟，使用推理模型耗时会更久"],
+      backgroundColor: Colors.black.withValues(alpha: 0.8),
+      textColor: Colors.white,
+      showCancelButton: true,
+      showTimer: showTimer,
+    );
   }
 }

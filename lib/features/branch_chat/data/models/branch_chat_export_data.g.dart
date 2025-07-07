@@ -79,6 +79,8 @@ BranchChatMessageExport _$BranchChatMessageExportFromJson(
       contentVoicePath: json['contentVoicePath'] as String?,
       imagesUrl: json['imagesUrl'] as String?,
       videosUrl: json['videosUrl'] as String?,
+      audiosUrl: json['audiosUrl'] as String?,
+      omniAudioVoice: json['omniAudioVoice'] as String?,
       references: (json['references'] as List<dynamic>?)
           ?.map((e) => e as Map<String, dynamic>)
           .toList(),
@@ -105,6 +107,8 @@ Map<String, dynamic> _$BranchChatMessageExportToJson(
       'contentVoicePath': instance.contentVoicePath,
       'imagesUrl': instance.imagesUrl,
       'videosUrl': instance.videosUrl,
+      'audiosUrl': instance.audiosUrl,
+      'omniAudioVoice': instance.omniAudioVoice,
       'references': instance.references,
       'promptTokens': instance.promptTokens,
       'completionTokens': instance.completionTokens,

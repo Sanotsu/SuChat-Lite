@@ -88,7 +88,7 @@ Future<bool> requestStoragePermission() async {
       return storageStatus.isGranted;
     } else {
       var storageStatus = await Permission.manageExternalStorage.request();
-      return (storageStatus.isGranted);
+      return storageStatus.isGranted;
     }
   } else if (Platform.isIOS) {
     Map<Permission, PermissionStatus> statuses =
@@ -408,7 +408,7 @@ Future<String> getBase64FromNetworkImage(String imageUrl) async {
 }
 
 // 保存文生视频的视频到本地
-savevgVideoToLocal(String netVideoUrl, {String? prefix}) async {
+Future<void> savevgVideoToLocal(String netVideoUrl, {String? prefix}) async {
   // 首先获取设备外部存储管理权限
   if (!(await requestStoragePermission())) {
     return ToastUtils.showError("未授权访问设备外部存储，无法保存视频");

@@ -491,7 +491,7 @@ class _VoiceClonePageState extends State<VoiceClonePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '创建时间: ${DateFormat(constDatetimeFormat).format(voice.gmtCreate ?? voice.gmtModified ?? DateTime.now())}\n'
+                        '创建时间: ${DateFormat(formatToYMDHMS).format(voice.gmtCreate ?? voice.gmtModified ?? DateTime.now())}\n'
                         '状态: ${voice.status}',
                         style: const TextStyle(fontSize: 12),
                       ),

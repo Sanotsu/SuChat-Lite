@@ -8,27 +8,15 @@ class ModelManagerService {
   static final DBHelper _dbHelper = DBHelper();
 
   // 初始化内置模型
-  static Future<void> initBuiltinModels() async {
-    final models =
-        defaultModels.map((model) {
-          model.gmtCreate = DateTime.now();
-          model.isBuiltin = true;
-          return model;
-        }).toList();
+  static Future<void> initBuiltinModels({bool? isAppInit = false}) async {
+    final exists = await _dbHelper.queryCusLLMSpecList(isBuiltin: true);
 
-    for (final model in models) {
-      final exists = await _dbHelper.queryCusLLMSpecList(
-        cusLlmSpecId: model.cusLlmSpecId,
-      );
-
-      if (exists.isEmpty) {
-        await _dbHelper.insertCusLLMSpecList([model]);
-      }
+    // 如果是app初始化加载内置模型，则判断db中是否存在，如果存在内置模型，则不删除
+    if (exists.isNotEmpty && isAppInit == true) {
+      return;
     }
-  }
 
-  // 初始化内置模型(测试用,删除全部内置模型重新加入)
-  static Future<void> initBuiltinModelsTest() async {
+    // 如果是业务中手动初始化基础模型，则直接重置
     final models =
         defaultModels.map((model) {
           model.gmtCreate = DateTime.now();
@@ -37,12 +25,11 @@ class ModelManagerService {
         }).toList();
 
     // 删除全部内置模型
-    final exists = await _dbHelper.queryCusLLMSpecList(isBuiltin: true);
     for (final model in exists) {
       await _dbHelper.deleteCusLLMSpecById(model.cusLlmSpecId);
     }
 
-    await _dbHelper.insertCusLLMSpecList(models);
+    await _dbHelper.saveCusLLMSpecs(models);
   }
 
   // 获取可用的模型列表(有对应平台 AK 的模型)

@@ -1,10 +1,8 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:path_provider/path_provider.dart';
-
 import '../../core/utils/screen_helper.dart';
 
 /// 通用音频播放器组件
@@ -14,8 +12,12 @@ class AudioPlayerWidget extends StatefulWidget {
   final String? sourceType; // 'file', 'network', 'asset'
   final Color primaryColor;
   final Color secondaryColor;
+  final Color? backgroundColor; // 背景色(对话页面可设置透明)
   final bool autoPlay;
   final bool showWaveform; // 是否显示波形图，目前还未实现，预留
+  final bool dense; // 是否紧凑型(对话主页面就可以只显示一行一个按钮)
+  final bool onlyIcon; // 如果只显示图标，则返回一个按钮(没有进度条、没有前进后退等额外控制按钮)
+  final double? witdh;
 
   const AudioPlayerWidget({
     super.key,
@@ -23,8 +25,12 @@ class AudioPlayerWidget extends StatefulWidget {
     this.sourceType = 'file',
     this.primaryColor = Colors.blue,
     this.secondaryColor = Colors.lightBlue,
+    this.backgroundColor,
     this.autoPlay = false,
     this.showWaveform = false,
+    this.dense = false,
+    this.onlyIcon = false,
+    this.witdh,
   });
 
   @override
@@ -48,7 +54,6 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   @override
   void dispose() {
     _controller.dispose();
-    // 删除临时资源文件
     _cleanupTempAsset();
     super.dispose();
   }
@@ -58,9 +63,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     if (_tempAssetPath != null) {
       try {
         final file = File(_tempAssetPath!);
-        if (await file.exists()) {
-          await file.delete();
-        }
+        if (await file.exists()) await file.delete();
       } catch (e) {
         debugPrint('清理临时文件失败: $e');
       }
@@ -77,38 +80,40 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   }
 
   void _initializeController() async {
-    if (widget.sourceType == "network") {
-      _controller = VideoPlayerController.networkUrl(
-        Uri.parse(widget.audioUrl),
-      );
-    } else if (widget.sourceType == "asset") {
-      // 将资源文件复制到临时目录
-      _tempAssetPath = await _loadAssetToTemp(widget.audioUrl);
-      _controller = VideoPlayerController.file(File(_tempAssetPath!));
-    } else {
-      _controller = VideoPlayerController.file(File(widget.audioUrl));
-    }
+    try {
+      _controller = switch (widget.sourceType) {
+        "network" => VideoPlayerController.networkUrl(
+          Uri.parse(widget.audioUrl),
+        ),
+        // 将资源文件复制到临时目录后再构建控制器
+        "asset" => VideoPlayerController.file(
+          File(await _loadAssetToTemp(widget.audioUrl)),
+        ),
+        _ => VideoPlayerController.file(File(widget.audioUrl)),
+      };
 
-    _controller.initialize().then((_) {
+      await _controller.initialize();
+
+      if (!mounted) return;
+      setState(() {
+        _isInitialized = true;
+        _duration = _controller.value.duration;
+      });
+
       // 监听音频位置变化
       _controller.addListener(_audioListener);
 
-      if (mounted) {
-        setState(() {
-          _isInitialized = true;
-          _duration = _controller.value.duration;
-        });
-
-        // 是否自动播放
-        if (widget.autoPlay) {
-          _controller.play();
-          _isPlaying = true;
-        } else {
-          _controller.pause();
-          _isPlaying = false;
-        }
+      // 是否自动播放
+      if (widget.autoPlay) {
+        await _controller.play();
+        if (!mounted) return;
+        setState(() => _isPlaying = true);
       }
-    });
+    } catch (e) {
+      debugPrint('初始化音频控制器失败: $e');
+      if (!mounted) return;
+      setState(() => _isInitialized = false);
+    }
   }
 
   void _audioListener() {
@@ -131,15 +136,52 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
         : '$minutes:$seconds';
   }
 
+  // 统一构建按钮
+  Widget _buildIconButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    double sizeFactor = 1.0,
+    Color? color,
+    String? tooltip,
+  }) {
+    // 基础尺寸定义
+    final iconSize = widget.dense ? 12.0 : 16.0;
+    final minSize = widget.dense ? 16.0 : 24.0;
+
+    return IconButton(
+      constraints: BoxConstraints(
+        // 减少最小宽度和高度，使点击区域更紧凑
+        minWidth: ScreenHelper.adaptWidth(minSize * sizeFactor),
+        minHeight: ScreenHelper.adaptHeight(minSize * sizeFactor * 0.6),
+      ),
+      padding: EdgeInsets.zero,
+      icon: Icon(
+        icon,
+        size: ScreenHelper.adaptWidth(iconSize * sizeFactor),
+        color: color ?? widget.primaryColor,
+      ),
+      onPressed: onPressed,
+      tooltip: tooltip,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized) {
+      if (widget.onlyIcon || widget.dense) {
+        return SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        );
+      }
+
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircularProgressIndicator(color: widget.primaryColor),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
               '加载音频中...',
               style: TextStyle(fontSize: ScreenHelper.getFontSize(14)),
@@ -149,16 +191,27 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       );
     }
 
+    // 如果只显示图标，则返回一个按钮(没有进度条、没有前进后退等额外控制按钮)
+    if (widget.onlyIcon) {
+      return _buildIconButton(
+        icon: _isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+        onPressed: _togglePlayPause,
+        color: widget.secondaryColor,
+        sizeFactor: ScreenHelper.isDesktop() ? 1.5 : 2.4,
+      );
+    }
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: widget.backgroundColor ?? Colors.grey[100],
         borderRadius: BorderRadius.circular(10),
       ),
-      padding: ScreenHelper.adaptPadding(
-        EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      ),
+      padding: ScreenHelper.adaptPadding(EdgeInsets.all(widget.dense ? 4 : 8)),
+      width: widget.witdh ?? (widget.dense ? 300 : null),
+      height: widget.dense ? (ScreenHelper.isDesktop() ? 40 : 60) : null,
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // 波形图（预留，暂未实现）
           if (widget.showWaveform)
@@ -168,45 +221,43 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                 color: Colors.grey[200],
                 borderRadius: BorderRadius.circular(5),
               ),
-              margin: EdgeInsets.only(bottom: 8),
+              margin: const EdgeInsets.only(bottom: 8),
               child: Center(
                 child: Text('音频波形图（开发中）', style: TextStyle(color: Colors.grey)),
               ),
             ),
-
           // 进度条和时间显示
           _buildSliderRow(),
-
-          // 控制按钮行
-          _buildControlRow(),
+          // 如果是密集型，则不显示单独行控制按钮
+          if (!widget.dense) _buildControlRow(),
         ],
       ),
     );
   }
 
   Widget _buildSliderRow() {
+    final textStyle = TextStyle(
+      fontSize: ScreenHelper.getFontSize(11),
+      color: widget.secondaryColor,
+    );
+
     return Row(
       children: [
         // 当前时间
-        Text(
-          _formatDuration(_position),
-          style: TextStyle(
-            fontSize: ScreenHelper.getFontSize(11),
-            color: widget.secondaryColor,
-          ),
-        ),
-
+        Text(_formatDuration(_position), style: textStyle),
         // 进度条
         Expanded(
           child: SliderTheme(
             data: SliderThemeData(
               thumbShape: RoundSliderThumbShape(
-                enabledThumbRadius: ScreenHelper.adaptWidth(5),
+                enabledThumbRadius: ScreenHelper.adaptWidth(
+                  widget.dense ? 3 : 5,
+                ),
               ),
               overlayShape: RoundSliderOverlayShape(
-                overlayRadius: ScreenHelper.adaptWidth(12),
+                overlayRadius: ScreenHelper.adaptWidth(widget.dense ? 6 : 12),
               ),
-              trackHeight: ScreenHelper.adaptHeight(2),
+              trackHeight: ScreenHelper.adaptHeight(widget.dense ? 2 : 4),
             ),
             child: Slider(
               value: _position.inMilliseconds.toDouble(),
@@ -220,15 +271,18 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
             ),
           ),
         ),
-
         // 总时长
-        Text(
-          _formatDuration(_duration),
-          style: TextStyle(
-            fontSize: ScreenHelper.getFontSize(11),
-            color: widget.secondaryColor,
+        Text(_formatDuration(_duration), style: textStyle),
+        // 如果是密集型，则只显示播放/暂停按钮，不显示单独按钮行
+        if (widget.dense)
+          _buildIconButton(
+            icon:
+                _isPlaying
+                    ? Icons.pause_circle_filled
+                    : Icons.play_circle_filled,
+            onPressed: _togglePlayPause,
+            sizeFactor: ScreenHelper.isDesktop() ? 1.5 : 2.4,
           ),
-        ),
       ],
     );
   }
@@ -237,113 +291,64 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // 音量控制
-        IconButton(
-          constraints: BoxConstraints(
-            minWidth: ScreenHelper.adaptWidth(32),
-            minHeight: ScreenHelper.adaptHeight(32),
-          ),
-          padding: EdgeInsets.zero,
-          icon: Icon(
-            _controller.value.volume > 0 ? Icons.volume_up : Icons.volume_off,
-            size: ScreenHelper.adaptWidth(20),
-            color: widget.secondaryColor,
-          ),
+        // 静音控制(后续可以修改滚动条控制音频)
+        _buildIconButton(
+          icon:
+              _controller.value.volume > 0 ? Icons.volume_up : Icons.volume_off,
           onPressed: () {
             _controller.setVolume(_controller.value.volume > 0 ? 0 : 1.0);
             setState(() {});
           },
+          color: widget.secondaryColor,
           tooltip: _controller.value.volume > 0 ? '静音' : '取消静音',
         ),
-
-        // 分隔
         SizedBox(width: ScreenHelper.adaptWidth(16)),
-
         // 向后5秒
-        IconButton(
-          constraints: BoxConstraints(
-            minWidth: ScreenHelper.adaptWidth(36),
-            minHeight: ScreenHelper.adaptHeight(36),
-          ),
-          padding: EdgeInsets.zero,
-          icon: Icon(
-            Icons.replay_5,
-            size: ScreenHelper.adaptWidth(24),
-            color: widget.primaryColor,
-          ),
-          onPressed: () {
-            final newPosition = _position - const Duration(seconds: 5);
-            _controller.seekTo(
-              newPosition < Duration.zero ? Duration.zero : newPosition,
-            );
-          },
+        _buildIconButton(
+          icon: Icons.replay_5,
+          onPressed: () => _seekRelative(const Duration(seconds: -5)),
+          sizeFactor: widget.dense ? 1.0 : 1.5,
         ),
-
         // 播放/暂停
-        IconButton(
-          constraints: BoxConstraints(
-            minWidth: ScreenHelper.adaptWidth(48),
-            minHeight: ScreenHelper.adaptHeight(48),
-          ),
-          padding: EdgeInsets.zero,
-          icon: Icon(
-            _isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
-            size: ScreenHelper.adaptWidth(40),
-            color: widget.primaryColor,
-          ),
-          onPressed: () {
-            setState(() {
-              _isPlaying = !_isPlaying;
-              _isPlaying ? _controller.play() : _controller.pause();
-            });
-          },
+        _buildIconButton(
+          icon:
+              _isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+          onPressed: _togglePlayPause,
+          sizeFactor: widget.dense ? 1.5 : 2.0,
         ),
-
         // 向前5秒
-        IconButton(
-          constraints: BoxConstraints(
-            minWidth: ScreenHelper.adaptWidth(36),
-            minHeight: ScreenHelper.adaptHeight(36),
-          ),
-          padding: EdgeInsets.zero,
-          icon: Icon(
-            Icons.forward_5,
-            size: ScreenHelper.adaptWidth(24),
-            color: widget.primaryColor,
-          ),
-          onPressed: () {
-            final newPosition = _position + const Duration(seconds: 5);
-            _controller.seekTo(
-              newPosition > _duration ? _duration : newPosition,
-            );
-          },
+        _buildIconButton(
+          icon: Icons.forward_5,
+          onPressed: () => _seekRelative(const Duration(seconds: 5)),
+          sizeFactor: widget.dense ? 1.0 : 1.5,
         ),
-
-        // 分隔
         SizedBox(width: ScreenHelper.adaptWidth(16)),
-
         // 重新播放
-        IconButton(
-          constraints: BoxConstraints(
-            minWidth: ScreenHelper.adaptWidth(32),
-            minHeight: ScreenHelper.adaptHeight(32),
-          ),
-          padding: EdgeInsets.zero,
-          icon: Icon(
-            Icons.replay,
-            size: ScreenHelper.adaptWidth(20),
-            color: widget.secondaryColor,
-          ),
-          onPressed: () {
-            _controller.seekTo(Duration.zero);
-            _controller.play();
-            setState(() {
-              _isPlaying = true;
-            });
-          },
+        _buildIconButton(
+          icon: Icons.replay,
+          onPressed: _replay,
+          color: widget.secondaryColor,
           tooltip: '重新播放',
         ),
       ],
     );
+  }
+
+  void _togglePlayPause() {
+    setState(() {
+      _isPlaying = !_isPlaying;
+      _isPlaying ? _controller.play() : _controller.pause();
+    });
+  }
+
+  void _seekRelative(Duration duration) {
+    final newPosition = _position + duration;
+    _controller.seekTo(newPosition > _duration ? _duration : newPosition);
+  }
+
+  void _replay() {
+    _controller.seekTo(Duration.zero);
+    _controller.play();
+    setState(() => _isPlaying = true);
   }
 }

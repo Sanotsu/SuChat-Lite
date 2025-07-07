@@ -110,6 +110,7 @@ class InitHandler {
       LLModelType.vision,
       LLModelType.reasoner,
       LLModelType.vision_reasoner,
+      LLModelType.omni,
     ]);
 
     setState(() {

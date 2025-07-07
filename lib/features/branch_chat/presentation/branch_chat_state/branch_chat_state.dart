@@ -6,6 +6,7 @@ import '../../../../../shared/constants/constant_llm_enum.dart';
 import '../../domain/entities/branch_chat_message.dart';
 import '../../domain/entities/branch_chat_session.dart';
 import '../../domain/entities/character_card.dart';
+import '../../domain/entities/input_message_data.dart';
 import '../../domain/entities/message_font_color.dart';
 import '../viewmodels/branch_manager.dart';
 import '../viewmodels/branch_store.dart';
@@ -98,6 +99,9 @@ class BranchChatState {
 
   // 消息字体颜色配置
   late MessageFontColor colorConfig;
+
+  // 2025-05-30 对话输入组件点击发送之后回传带上的参数，设为全局，方便复用
+  InputMessageData? inputMessageData;
 
   void dispose() {
     inputFocusNode.dispose();

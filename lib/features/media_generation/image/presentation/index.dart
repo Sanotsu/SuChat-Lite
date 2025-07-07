@@ -330,7 +330,7 @@ class _ImagePageState extends MediaGenerationBaseState<GenImagePage> {
         modelType: selectedModel!.modelType,
       );
 
-      final requestId = await dbHelper.insertMediaGenerationHistory(history);
+      final requestId = await dbHelper.saveMediaGenerationHistory(history);
 
       try {
         final response = await ImageGenerationService.generateImage(

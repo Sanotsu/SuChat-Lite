@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_print, constant_identifier_names
+// ignore_for_file: avoid_print
 
 import 'dart:async';
 import 'dart:convert';
@@ -9,22 +9,12 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../utils/get_dir.dart';
+import 'db_config.dart';
 import 'db_ddl.dart';
-
-///
-/// 数据库导出备份、db操作等相关关键字
-/// db_helper、备份恢复页面能用到
-///
-
-/// 数据库中一下基本内容
-class DBInitConfig {
-  // db名称
-  static const String databaseName = "embedded_suchat.db";
-  // 表名前缀
-  static const String tablePerfix = "suchat_";
-  // 导出表文件临时存放的文件夹
-  static const String exportDir = "db_export";
-}
+import 'ddl_diet_diary.dart';
+import 'ddl_notebook.dart';
+import 'ddl_simple_accounting.dart';
+import 'ddl_training.dart';
 
 class DBInit {
   ///
@@ -55,36 +45,39 @@ class DBInit {
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi; // 设置全局 databaseFactory
 
-      // 针对Linux平台的特殊处理，这个不启用也应该正常
-      if (Platform.isLinux) {
-        try {
-          // 尝试使用自定义库路径
-          var options = OpenDatabaseOptions(readOnly: true);
-          // 可以尝试不同路径的SQLite库文件
-          final List<String> possiblePaths = [
-            'libsqlite3.so',
-            '/usr/lib/x86_64-linux-gnu/libsqlite3.so',
-            '/usr/lib/libsqlite3.so',
-          ];
+      // 首先确保linux环境有安装，不然这个initializeDB应该会报错
+      // sudo apt-get -y install libsqlite3-0 libsqlite3-dev
 
-          // 尝试所有可能的库路径
-          for (var path in possiblePaths) {
-            try {
-              print("尝试加载SQLite库: $path");
-              await databaseFactoryFfi.openDatabase(
-                ":memory:",
-                options: options,
-              );
-              break; // 如果成功，跳出循环
-            } catch (e) {
-              print("无法加载 $path: $e");
-              // 继续尝试下一个路径
-            }
-          }
-        } catch (e) {
-          print("初始化SQLite FFI时出错: $e");
-        }
-      }
+      // 针对Linux平台的特殊处理，这个不启用也应该正常
+      // if (Platform.isLinux) {
+      //   try {
+      //     // 尝试使用自定义库路径
+      //     var options = OpenDatabaseOptions(readOnly: true);
+      //     // 可以尝试不同路径的SQLite库文件
+      //     final List<String> possiblePaths = [
+      //       'libsqlite3.so',
+      //       '/usr/lib/x86_64-linux-gnu/libsqlite3.so',
+      //       '/usr/lib/libsqlite3.so',
+      //     ];
+
+      //     // 尝试所有可能的库路径
+      //     for (var path in possiblePaths) {
+      //       try {
+      //         print("尝试加载SQLite库: $path");
+      //         await databaseFactoryFfi.openDatabase(
+      //           ":memory:",
+      //           options: options,
+      //         );
+      //         break; // 如果成功，跳出循环
+      //       } catch (e) {
+      //         print("无法加载 $path: $e");
+      //         // 继续尝试下一个路径
+      //       }
+      //     }
+      //   } catch (e) {
+      //     print("初始化SQLite FFI时出错: $e");
+      //   }
+      // }
     }
 
     // 自定义的sqlite数据库文件保存的目录
@@ -94,39 +87,174 @@ class DBInit {
     print("初始化 DB sqlite数据库存放的地址：$path");
 
     // 在给定路径上打开/创建数据库
-    var db = await openDatabase(path, version: 1, onCreate: _createDb);
+    var db = await openDatabase(
+      path,
+      version: 2, // 更新数据库版本号
+      onCreate: _createDb,
+      onUpgrade: _upgradeDb,
+    );
 
-    // 为了确保新录音识别记录表被创建，我们需要修改数据库版本号，以触发_createDb方法
-    // var db = await openDatabase(
-    //   path,
-    //   version: 2,
-    //   onCreate: _createDb,
-    //   onUpgrade: _upgradeDb,
-    // );
     dbFilePath = path;
     return db;
   }
 
-  // 创建训练数据库相关表
+  // 创建数据库相关表
   void _createDb(Database db, int newVersion) async {
     print("开始创建表 _createDb……");
 
+    /// 创建表
     await db.transaction((txn) async {
       txn.execute(DBDdl.ddlForMediaGenerationHistory);
       txn.execute(DBDdl.ddlForCusLlmSpec);
       txn.execute(DBDdl.ddlForVoiceRecognitionTask);
+
+      // 创建统一用户表
+      txn.execute(DBDdl.ddlForUserInfo);
+      // 创建用户表索引
+      await _createUserInfoIndex(txn);
+
+      // 添加训练助手相关表
+      await _createTrainingTable(txn);
+
+      // 添加饮食日记相关表
+      await _createDietDiaryTable(txn);
+      // 创建一些索引来提高查询性能
+      await _createDietDiaryIndex(txn);
+
+      // 添加简单记账相关表
+      await _createSimpleAccountingTable(txn);
+
+      // 添加记事本相关表
+      await _createNotebookTable(txn);
+      // 创建记事本相关索引
+      await _createNotebookIndex(txn);
     });
+
+    /// 初始化默认值
+
+    // 初始化默认账单分类数据
+    await SimpleAccountingDdl.initDefaultCategories(db);
+
+    // 初始化默认笔记分类数据
+    await NotebookDdl.initDefaultCategories(db);
   }
 
-  // // 数据库升级
-  // void _upgradeDb(Database db, int oldVersion, int newVersion) async {
-  //   print("数据库升级 _upgradeDb 从 $oldVersion 到 $newVersion");
+  // 数据库升级
+  void _upgradeDb(Database db, int oldVersion, int newVersion) async {
+    print("数据库升级 _upgradeDb 从 $oldVersion 到 $newVersion");
 
-  //   if (oldVersion < 2) {
-  //     // 只在版本1升级到版本2时执行
-  //     await db.execute(DBDdl.ddlForVoiceRecognitionTask);
-  //   }
-  // }
+    if (oldVersion < 2) {
+      await db.transaction((txn) async {
+        // 创建新的统一用户表
+        txn.execute(DBDdl.ddlForUserInfo);
+        // 创建用户表索引
+        await _createUserInfoIndex(txn);
+
+        // 添加训练助手相关表
+        await _createTrainingTable(txn);
+
+        // 添加饮食日记相关表
+        await _createDietDiaryTable(txn);
+        // 创建一些索引来提高查询性能
+        await _createDietDiaryIndex(txn);
+
+        // 添加简单记账相关表
+        await _createSimpleAccountingTable(txn);
+
+        // 添加记事本相关表
+        await _createNotebookTable(txn);
+        // 创建记事本相关索引
+        await _createNotebookIndex(txn);
+      });
+
+      // 初始化默认账单分类数据
+      await SimpleAccountingDdl.initDefaultCategories(db);
+
+      // 初始化默认笔记分类数据
+      await NotebookDdl.initDefaultCategories(db);
+    }
+  }
+
+  /// 数据库升级和默认都要创建的表
+  // 训练助手相关表
+  Future<void> _createTrainingTable(Transaction txn) async {
+    await txn.execute(TrainingDdl.ddlForTrainingPlan);
+    await txn.execute(TrainingDdl.ddlForTrainingPlanDetail);
+    await txn.execute(TrainingDdl.ddlForTrainingRecord);
+    await txn.execute(TrainingDdl.ddlForTrainingRecordDetail);
+  }
+
+  // 饮食日记相关表
+  Future<void> _createDietDiaryTable(Transaction txn) async {
+    await txn.execute(DietDiaryDdl.ddlForFoodItem);
+    await txn.execute(DietDiaryDdl.ddlForMealRecord);
+    await txn.execute(DietDiaryDdl.ddlForMealFoodRecord);
+    await txn.execute(DietDiaryDdl.ddlForWeightRecord);
+    await txn.execute(DietDiaryDdl.ddlForDietAnalysis);
+    await txn.execute(DietDiaryDdl.ddlForDietRecipe);
+  }
+
+  // 简单记账相关表
+  Future<void> _createSimpleAccountingTable(Transaction txn) async {
+    await txn.execute(SimpleAccountingDdl.ddlForBillItem);
+    await txn.execute(SimpleAccountingDdl.ddlForBillCategory);
+  }
+
+  // 记事本相关表
+  Future<void> _createNotebookTable(Transaction txn) async {
+    await txn.execute(NotebookDdl.ddlForNoteCategory);
+    await txn.execute(NotebookDdl.ddlForNote);
+    await txn.execute(NotebookDdl.ddlForNoteTag);
+    await txn.execute(NotebookDdl.ddlForNoteTagRelation);
+    await txn.execute(NotebookDdl.ddlForNoteMedia);
+  }
+
+  // 饮食日记相关表索引
+  Future<void> _createDietDiaryIndex(Transaction txn) async {
+    List<String> indexList = [
+      'CREATE INDEX idx_meal_record_date ON ${DietDiaryDdl.tableMealRecord} (date)',
+      'CREATE INDEX idx_meal_food_records_meal_id ON ${DietDiaryDdl.tableMealFoodRecord} (mealRecordId)',
+      'CREATE INDEX idx_meal_food_records_food_id ON ${DietDiaryDdl.tableMealFoodRecord}  (foodItemId)',
+      'CREATE INDEX idx_food_items_name ON ${DietDiaryDdl.tableFoodItem}  (name)',
+      'CREATE INDEX idx_food_items_foodcode ON ${DietDiaryDdl.tableFoodItem}  (foodCode)',
+      'CREATE INDEX idx_weight_records_date ON ${DietDiaryDdl.tableWeightRecord}  (date)',
+      'CREATE INDEX idx_weight_records_user_id ON ${DietDiaryDdl.tableWeightRecord}  (userId)',
+      'CREATE INDEX idx_diet_analysis_date ON ${DietDiaryDdl.tableDietAnalysis} (date)',
+      'CREATE INDEX idx_diet_recipe_date ON ${DietDiaryDdl.tableDietRecipe} (date)',
+      'CREATE INDEX idx_diet_recipe_analysis_id ON ${DietDiaryDdl.tableDietRecipe} (analysisId)',
+    ];
+
+    for (var index in indexList) {
+      await txn.execute(index);
+    }
+  }
+
+  // 记事本相关表索引
+  Future<void> _createNotebookIndex(Transaction txn) async {
+    List<String> indexList = [
+      'CREATE INDEX idx_note_title ON ${NotebookDdl.tableNote} (title)',
+      'CREATE INDEX idx_note_category_id ON ${NotebookDdl.tableNote} (category_id)',
+      'CREATE INDEX idx_note_created_at ON ${NotebookDdl.tableNote} (created_at)',
+      'CREATE INDEX idx_note_updated_at ON ${NotebookDdl.tableNote} (updated_at)',
+      'CREATE INDEX idx_note_is_todo ON ${NotebookDdl.tableNote} (is_todo)',
+      'CREATE INDEX idx_note_is_completed ON ${NotebookDdl.tableNote} (is_completed)',
+      'CREATE INDEX idx_note_is_pinned ON ${NotebookDdl.tableNote} (is_pinned)',
+      'CREATE INDEX idx_note_is_archived ON ${NotebookDdl.tableNote} (is_archived)',
+      'CREATE INDEX idx_note_media_note_id ON ${NotebookDdl.tableNoteMedia} (note_id)',
+      'CREATE INDEX idx_note_media_type ON ${NotebookDdl.tableNoteMedia} (media_type)',
+    ];
+
+    for (var index in indexList) {
+      await txn.execute(index);
+    }
+  }
+
+  // 用户表索引
+  Future<void> _createUserInfoIndex(Transaction txn) async {
+    await txn.execute(
+      'CREATE INDEX idx_user_info_user_id ON ${DBDdl.tableUserInfo} (userId)',
+    );
+  }
 
   // 关闭数据库
   Future<bool> closeDB() async {

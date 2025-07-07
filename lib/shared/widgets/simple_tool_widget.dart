@@ -3,10 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:multi_select_flutter/multi_select_flutter.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
-import '../constants/constants.dart';
 import '../../core/utils/screen_helper.dart';
 
 // 绘制转圈圈
@@ -18,7 +16,7 @@ Widget buildLoader(bool isLoading) {
   }
 }
 
-commonHintDialog(
+void commonHintDialog(
   BuildContext context,
   String title,
   String message, {
@@ -43,7 +41,7 @@ commonHintDialog(
   );
 }
 
-commonMarkdwonHintDialog(
+Future<void> commonMarkdwonHintDialog(
   BuildContext context,
   String title,
   String message, {
@@ -95,14 +93,14 @@ commonMarkdwonHintDialog(
 }
 
 // 异常弹窗
-commonExceptionDialog(BuildContext context, String title, String message) {
+void commonExceptionDialog(BuildContext context, String title, String message) {
   showDialog(
     context: context,
     builder: (context) {
       return AlertDialog(
         title: Text(title),
         content: SingleChildScrollView(
-          child: Text(message, style: const TextStyle(fontSize: 13)),
+          child: SelectableText(message, style: const TextStyle(fontSize: 13)),
         ),
         actions: [
           TextButton(
@@ -118,7 +116,7 @@ commonExceptionDialog(BuildContext context, String title, String message) {
 }
 
 /// 通用的底部信息弹窗
-commonMDHintModalBottomSheet(
+void commonMDHintModalBottomSheet(
   BuildContext context,
   String title,
   String message, {
@@ -284,57 +282,6 @@ Widget cusFormBuilerTextField(
   );
 }
 
-/// 构建下拉多选弹窗模块栏位(主要为了样式统一)
-Widget buildModifyMultiSelectDialogField(
-  BuildContext context, {
-  required List<CusLabel> items,
-  GlobalKey<FormFieldState<dynamic>>? key,
-  List<dynamic> initialValue = const [],
-  String? labelText,
-  String? hintText,
-  String? Function(List<dynamic>?)? validator,
-  required void Function(List<dynamic>) onConfirm,
-}) {
-  // 把预设的基础活动选项列表转化为 MultiSelectDialogField 支持的列表
-  final formattedItems =
-      items
-          .map<MultiSelectItem<CusLabel>>(
-            (opt) => MultiSelectItem<CusLabel>(opt, opt.cnLabel),
-          )
-          .toList();
-
-  return Padding(
-    padding: EdgeInsets.symmetric(horizontal: 10),
-    child: MultiSelectDialogField(
-      key: key,
-      items: formattedItems,
-      // ？？？？ 好像是不带validator用了这个初始值就会报错
-      initialValue: initialValue,
-      title: Text(hintText ?? ''),
-      // selectedColor: Colors.blue,
-      decoration: BoxDecoration(
-        // color: Colors.blue.withOpacity(0.1),
-        borderRadius: BorderRadius.all(Radius.circular(5)),
-        border: Border.all(width: 2, color: Theme.of(context).disabledColor),
-      ),
-      // buttonIcon: const Icon(Icons.fitness_center, color: Colors.blue),
-      buttonIcon: const Icon(Icons.restaurant_menu),
-      buttonText: Text(
-        labelText ?? "",
-        style: TextStyle(
-          // color: Colors.blue[800],
-          fontSize: 12,
-        ),
-      ),
-      // searchable: true,
-      validator: validator,
-      onConfirm: onConfirm,
-      cancelText: const Text("取消"),
-      confirmText: const Text("确认"),
-    ),
-  );
-}
-
 // formbuilder 下拉框和文本输入框的样式等内容
 InputDecoration _buildInputDecoration(
   bool? isOutline,
@@ -366,7 +313,7 @@ InputDecoration _buildInputDecoration(
   );
 }
 
-buildSmallChip(String labelText, {Color? bgColor, double? labelTextSize}) {
+Chip buildSmallChip(String labelText, {Color? bgColor, double? labelTextSize}) {
   return Chip(
     label: Text(labelText),
     backgroundColor: bgColor,
@@ -397,7 +344,11 @@ Widget buildSmallButtonTag(
 
 // 一般当做标签用，比上面个还小
 // 传入的字体最好不超过10
-buildTinyButtonTag(String labelText, {Color? bgColor, double? labelTextSize}) {
+SizedBox buildTinyButtonTag(
+  String labelText, {
+  Color? bgColor,
+  double? labelTextSize,
+}) {
   return SizedBox(
     // 传入大于12的字体，修正为12；不传则默认12
     height:
@@ -426,7 +377,7 @@ buildTinyButtonTag(String labelText, {Color? bgColor, double? labelTextSize}) {
 }
 
 // 带有横线滚动条的datatable
-buildDataTableWithHorizontalScrollbar({
+Scrollbar buildDataTableWithHorizontalScrollbar({
   required ScrollController scrollController,
   required List<DataColumn> columns,
   required List<DataRow> rows,
@@ -468,7 +419,7 @@ bool isNetworkImageUrl(String imageUrl) {
 }
 
 /// 强制收起键盘
-unfocusHandle() {
+void unfocusHandle() {
   // 这个不一定有用，比如下面原本键盘弹出来了，跳到历史记录页面，回来之后还是弹出来的
   // FocusScope.of(context).unfocus();
 
@@ -476,7 +427,7 @@ unfocusHandle() {
 }
 
 /// 构建弹出菜单按钮的条目
-buildCusPopupMenuItem(
+PopupMenuItem<String> buildCusPopupMenuItem(
   BuildContext context,
   String value, // 用于判断的值
   String label, // 用于显示的标签文字
@@ -607,7 +558,7 @@ Widget buildIconWithTextButton({
             Text(
               label,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 12,
                 color: onTap == null ? Colors.grey : textColor,
               ),
             ),
@@ -615,5 +566,22 @@ Widget buildIconWithTextButton({
         ),
       ),
     ),
+  );
+}
+
+/// 构建浮动按钮
+Widget buildFloatingActionButton(
+  void Function()? onPressed,
+  BuildContext context, {
+  required IconData icon,
+  required String tooltip,
+}) {
+  return FloatingActionButton(
+    onPressed: onPressed,
+    tooltip: tooltip,
+    shape: const CircleBorder(),
+    backgroundColor: Theme.of(context).colorScheme.primary,
+    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+    child: Icon(icon),
   );
 }

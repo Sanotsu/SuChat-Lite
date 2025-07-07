@@ -40,7 +40,13 @@ Future<(Stream<String>, VoidCallback)> getStreamOnlyStringResponse(
         (data) async {
           // 注意，这个流式接收可能不是一行一块，可能有时候会收到多行数据
           // 换行后过滤空行
-          String text = utf8.decode(data);
+          String text = '';
+          try {
+            text = utf8.decode(data);
+          } catch (e) {
+            debugPrint('getStreamOnlyStringResponse utf8.decode解析响应数据出错: $e');
+          }
+
           final lines = text.split('\n');
 
           for (var line in lines) {

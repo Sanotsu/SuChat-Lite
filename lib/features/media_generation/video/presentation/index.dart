@@ -305,7 +305,7 @@ class _VideoPageState extends MediaGenerationBaseState<GenVideoPage> {
         modelType: LLModelType.video,
       );
 
-      await dbHelper.insertMediaGenerationHistory(history);
+      await dbHelper.saveMediaGenerationHistory(history);
 
       ToastUtils.showSuccess('视频生成任务已提交成功');
 

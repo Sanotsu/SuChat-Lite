@@ -110,6 +110,8 @@ class BranchStore {
     String? contentVoicePath,
     String? imagesUrl,
     String? videosUrl,
+    String? audiosUrl,
+    String? omniAudioVoice,
     List<Map<String, dynamic>>? references,
     CharacterCard? character,
   }) async {
@@ -125,6 +127,8 @@ class BranchStore {
         contentVoicePath: contentVoicePath,
         imagesUrl: imagesUrl,
         videosUrl: videosUrl,
+        audiosUrl: audiosUrl,
+        omniAudioVoice: omniAudioVoice,
         references: references,
         character: character,
       );
@@ -315,6 +319,8 @@ class BranchStore {
             contentVoicePath: msgExport.contentVoicePath,
             imagesUrl: msgExport.imagesUrl,
             videosUrl: msgExport.videosUrl,
+            audiosUrl: msgExport.audiosUrl,
+            omniAudioVoice: msgExport.omniAudioVoice,
             character: messageCharacter ?? character, // 优先使用消息级别的角色卡
           );
 

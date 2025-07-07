@@ -1,14 +1,9 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart';
-import 'package:get_storage/get_storage.dart';
 
 import '../../../../../shared/constants/constant_llm_enum.dart';
 import '../../../../../core/network/dio_client/cus_http_client.dart';
 import '../../../../../core/storage/cus_get_storage.dart';
 import '../../../../../shared/services/github_storage_service.dart';
-
-// 与 cus_get_storage.dart 中保持一致
-final box = GetStorage('SuChatGetStorage');
 
 class ClonedVoice {
   final String? voiceId;
@@ -66,9 +61,6 @@ class VoiceCloneService {
   // 创建音色
   static const String _cosyvoiceCloneBaseUrl =
       'https://dashscope.aliyuncs.com/api/v1/services/audio/tts/customization';
-
-  // 克隆音色存储的key
-  static const String _clonedVoicesKey = 'cloned_voices';
 
   /// 获取API Key
   static Future<String> _getApiKey() async {
@@ -180,15 +172,6 @@ class VoiceCloneService {
       if (voiceId == null || voiceId.isEmpty) {
         throw Exception('声音复刻失败：未能获取音色ID');
       }
-
-      // 保存克隆的音色信息
-      await _saveClonedVoice(
-        ClonedVoice(
-          voiceId: voiceId,
-          targetModel: targetModel,
-          gmtCreate: DateTime.now(),
-        ),
-      );
 
       return voiceId;
     } catch (e) {
@@ -318,8 +301,6 @@ class VoiceCloneService {
         },
       );
 
-      // 从本地存储中删除音色记录
-      await _removeClonedVoice(voiceId);
       return;
     } catch (e) {
       if (e is Exception) {
@@ -367,44 +348,6 @@ class VoiceCloneService {
       return fileUrl;
     } catch (e) {
       throw Exception('上传音频文件失败：$e - 请确保GitHub配置正确');
-    }
-  }
-
-  /// 保存克隆的音色信息到本地存储
-  static Future<void> _saveClonedVoice(ClonedVoice voice) async {
-    final voices = await _getLocalClonedVoices();
-    voices.add(voice);
-    await _saveLocalClonedVoices(voices);
-  }
-
-  /// 从本地存储中删除音色记录
-  static Future<void> _removeClonedVoice(String voiceId) async {
-    final voices = await _getLocalClonedVoices();
-    voices.removeWhere((voice) => voice.voiceId == voiceId);
-    await _saveLocalClonedVoices(voices);
-  }
-
-  /// 从本地存储获取克隆的音色列表
-  static Future<List<ClonedVoice>> _getLocalClonedVoices() async {
-    try {
-      final voicesData = box.read(_clonedVoicesKey);
-      if (voicesData == null) return [];
-
-      final voicesJson = voicesData as List<dynamic>;
-      return voicesJson.map((json) => ClonedVoice.fromJson(json)).toList();
-    } catch (e) {
-      debugPrint('获取本地克隆音色失败：$e');
-      return [];
-    }
-  }
-
-  /// 保存克隆的音色列表到本地存储
-  static Future<void> _saveLocalClonedVoices(List<ClonedVoice> voices) async {
-    try {
-      final voicesJson = voices.map((voice) => voice.toJson()).toList();
-      await box.write(_clonedVoicesKey, voicesJson);
-    } catch (e) {
-      debugPrint('保存克隆音色到本地失败：$e');
     }
   }
 }

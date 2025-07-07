@@ -6,10 +6,15 @@ import '../../features/branch_chat/domain/entities/message_font_color.dart';
 import '../../shared/constants/constant_llm_enum.dart';
 import '../entities/cus_llm_model.dart';
 
-final box = GetStorage();
-
 class CusGetStorage {
   static const String _firstLaunchKey = 'is_first_launch';
+  static const String _permissionGrantedKey = 'permission_granted';
+
+  // 存储名称常量
+  static const String storeName = 'SuChatGetStorage';
+
+  // 获取正确初始化的GetStorage实例
+  GetStorage get box => GetStorage(storeName);
 
   // 检查是否首次启动
   bool isFirstLaunch() {
@@ -19,6 +24,16 @@ class CusGetStorage {
   // 标记已启动
   Future<void> markLaunched() async {
     await box.write(_firstLaunchKey, false);
+  }
+
+  // 检查是否已授权
+  bool isPermissionGranted() {
+    return box.read(_permissionGrantedKey) == true;
+  }
+
+  // 标记已授权
+  Future<void> markPermissionGranted() async {
+    await box.write(_permissionGrantedKey, true);
   }
 
   ///

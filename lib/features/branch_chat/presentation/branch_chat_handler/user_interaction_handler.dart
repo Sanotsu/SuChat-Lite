@@ -14,10 +14,10 @@ import '../../domain/entities/branch_chat_message.dart';
 import '../../domain/entities/input_message_data.dart';
 import '../branch_chat_state/branch_chat_state.dart';
 import '../pages/add_model_page.dart';
-import '../pages/chat_background_picker_page.dart';
-import '../pages/chat_export_import_page.dart';
+import '../pages/branch_chat_background_picker_page.dart';
+import '../pages/branch_chat_export_import_page.dart';
 import '../widgets/_small_tool_widgets.dart';
-import '../widgets/adaptive_model_selector.dart';
+import '../widgets/model_selector.dart';
 import '../widgets/branch_tree_dialog.dart';
 import '../widgets/text_edit_dialog.dart';
 import '../widgets/text_selection_dialog.dart';
@@ -71,7 +71,7 @@ class UserInteractionHandler {
     }
 
     // 使用自适应模型选择器，会根据平台选择最合适的显示方式
-    final model = await AdaptiveModelSelector.show(
+    final model = await ModelSelector.show(
       context: context,
       models: filteredModels,
       selectedModel: state.selectedModel,
@@ -318,11 +318,13 @@ class UserInteractionHandler {
     BranchMessageHandler(state, setState).handleSendMessage(
       InputMessageData(
         text: message.content,
-        audio:
+        sttAudio:
             message.contentVoicePath != null
                 ? File(message.contentVoicePath!)
                 : null,
         images: message.imagesUrl?.split(',').map((img) => File(img)).toList(),
+        audios: message.audiosUrl?.split(',').map((a) => File(a)).toList(),
+        omniAudioVoice: message.omniAudioVoice,
       ),
     );
   }
@@ -615,7 +617,7 @@ class UserInteractionHandler {
       context,
       MaterialPageRoute(
         builder:
-            (context) => ChatBackgroundPickerPage(
+            (context) => BranchChatBackgroundPickerPage(
               title: '切换对话背景',
               currentCharacter: state.currentCharacter,
             ),
@@ -730,7 +732,7 @@ class UserInteractionHandler {
 
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => ChatExportImportPage()),
+      MaterialPageRoute(builder: (context) => BranchChatExportImportPage()),
     ).then((_) {
       // 返回后重新加载会话列表
       InitHandler(state, setState).loadSessions();

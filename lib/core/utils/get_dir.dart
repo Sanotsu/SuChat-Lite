@@ -79,6 +79,11 @@ Future<Directory> getVoiceRecordingDir() async {
   return getAppHomeDirectory(subfolder: "VOICE_REC/voice_recordings");
 }
 
+/// 笔记语音录音文件保存的目录
+Future<Directory> getNoteVoiceRecordingDir() async {
+  return getAppHomeDirectory(subfolder: "VOICE_REC/note_voice_recordings");
+}
+
 /// 图片生成时，图片文件保存的目录
 Future<Directory> getImageGenDir() async {
   return getAppHomeDirectory(subfolder: "AI_GEN/images");
@@ -92,6 +97,11 @@ Future<Directory> getVideoGenDir() async {
 /// 语音生成时，语音文件保存的目录
 Future<Directory> getVoiceGenDir() async {
   return getAppHomeDirectory(subfolder: "AI_GEN/voices");
+}
+
+// 单独的多模态语音合成时文件保存的目录
+Future<Directory> getOmniChatVoiceGenDir() async {
+  return getAppHomeDirectory(subfolder: "AI_GEN/voices/omni_chat");
 }
 
 /// 使用file_picker选择文件时，保存文件的目录
