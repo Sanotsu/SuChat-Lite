@@ -55,6 +55,11 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
   // 移动端的工具栏状态
   bool _showMobileToolbar = false;
 
+  // 为QuillEditor添加FocusNode并管理其焦点状态
+  // 不添加这个会出现在编辑正文时莫名其妙就聚焦到标题输入框了
+  // 但只需要添加这个在quill编辑器不做其他操作自动保存后也正常聚焦了
+  final FocusNode _editorFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
@@ -125,6 +130,7 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
 
     _titleController.dispose();
     _quillController.dispose();
+    _editorFocusNode.dispose();
     super.dispose();
   }
 
@@ -988,13 +994,14 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
   QuillEditor commonQuillEditor() {
     return QuillEditor.basic(
       controller: _quillController,
+      focusNode: _editorFocusNode,
       config: QuillEditorConfig(
         placeholder: '在此输入笔记内容...',
         embedBuilders:
             kIsWeb
                 ? FlutterQuillEmbeds.editorWebBuilders()
                 : FlutterQuillEmbeds.editorBuilders(),
-        autoFocus: false,
+        autoFocus: true,
         showCursor: true,
         expands: ScreenHelper.isDesktop() ? true : false,
         padding: const EdgeInsets.all(8),

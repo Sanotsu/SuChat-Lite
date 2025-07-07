@@ -150,7 +150,7 @@ $preferences
 
     // 用户请求
     final userRequest = """
-请根据以上信息，为我设计一份个性化的$days天食谱计划，每天包含$mealCount餐。
+请根据以上信息，为我设计一份个性化的$days天食谱计划，每天包含$mealCount餐，一次性输出所有的天数和餐次。
 我希望这份食谱能够帮助我达成${getGoalText(userInfo.goal ?? Goal.maintainWeight)}的目标，同时符合我的饮食偏好。
 请确保食谱实用、易于准备，并提供详细的食材用量和简单的制作方法。
 每餐请标注大致的营养成分（热量、碳水、蛋白质、脂肪）。
