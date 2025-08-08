@@ -7,6 +7,7 @@ import 'diet_diary/presentation/index.dart';
 import 'media_generation/image/presentation/index.dart';
 import 'media_generation/video/presentation/index.dart';
 import 'media_generation/voice/presentation/index.dart';
+import 'news/presentation/pages/index.dart';
 import 'notebook/presentation/pages/notebook_page.dart';
 import 'simple_accounting/presentation/pages/bill_list_page.dart';
 import 'training_assistant/presentation/index.dart';
@@ -44,6 +45,9 @@ class _AIToolPageState extends State<AIToolPage> {
 
             // 推荐功能
             extendedFeature(),
+
+            // 娱乐功能
+            entertainmentFeature(),
 
             // 底部间距
             SliverToBoxAdapter(child: SizedBox(height: 24)),
@@ -221,8 +225,8 @@ class _AIToolPageState extends State<AIToolPage> {
       padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
       sliver: SliverGrid(
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          childAspectRatio: 0.9,
+          crossAxisCount: 4,
+          childAspectRatio: 1,
           crossAxisSpacing: 1,
           mainAxisSpacing: 1,
         ),
@@ -353,6 +357,75 @@ class _AIToolPageState extends State<AIToolPage> {
                 ),
               ],
             ),
+            // SizedBox(height: 12),
+            // ModernFeatureCard(
+            //   targetPage: const TrainingAssistantPage(),
+            //   title: "训练助手",
+            //   subtitle: "使用大模型生成健身训练计划，可灵活跟练，强身健体",
+            //   icon: Icons.fitness_center,
+            //   accentColor: Colors.indigo,
+            // ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  SliverToBoxAdapter entertainmentFeature() {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Text(
+                  "生活娱乐",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+
+            Wrap(
+              // spacing: 8,
+              // runSpacing: 8,
+              // alignment: WrapAlignment.center,
+              children: [
+                SizedBox(
+                  width: ScreenHelper.isDesktop() ? 150 : 80,
+                  height: ScreenHelper.isDesktop() ? 150 : 80,
+                  child: FeatureGridCard(
+                    targetPage: const NewsIndex(),
+                    title: "新闻热榜",
+                    icon: Icons.newspaper,
+                    accentColor: Colors.orange,
+                  ),
+                ),
+
+                // SizedBox(
+                //   width: ScreenHelper.isDesktop() ? 150 : 80,
+                //   height: ScreenHelper.isDesktop() ? 150 : 80,
+                //   child: FeatureGridCard(
+                //     targetPage: const FunnyStuffIndex(),
+                //     title: "趣图趣文",
+                //     icon: Icons.image,
+                //     accentColor: Colors.orange,
+                //   ),
+                // ),
+              ],
+            ),
+
             // SizedBox(height: 12),
             // ModernFeatureCard(
             //   targetPage: const TrainingAssistantPage(),

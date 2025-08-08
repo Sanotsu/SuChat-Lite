@@ -7,10 +7,10 @@ part of 'qwen_tts_resp.dart';
 // **************************************************************************
 
 QwenTTSResp _$QwenTTSRespFromJson(Map<String, dynamic> json) => QwenTTSResp(
-      QwenTTSOutput.fromJson(json['output'] as Map<String, dynamic>),
-      QwenTTSUsage.fromJson(json['usage'] as Map<String, dynamic>),
-      json['request_id'] as String,
-    );
+  QwenTTSOutput.fromJson(json['output'] as Map<String, dynamic>),
+  QwenTTSUsage.fromJson(json['usage'] as Map<String, dynamic>),
+  json['request_id'] as String,
+);
 
 Map<String, dynamic> _$QwenTTSRespToJson(QwenTTSResp instance) =>
     <String, dynamic>{
@@ -32,11 +32,11 @@ Map<String, dynamic> _$QwenTTSOutputToJson(QwenTTSOutput instance) =>
     };
 
 QwenTTSAudio _$QwenTTSAudioFromJson(Map<String, dynamic> json) => QwenTTSAudio(
-      (json['expires_at'] as num).toInt(),
-      json['data'] as String,
-      json['id'] as String,
-      json['url'] as String,
-    );
+  (json['expires_at'] as num).toInt(),
+  json['data'] as String,
+  json['id'] as String,
+  json['url'] as String,
+);
 
 Map<String, dynamic> _$QwenTTSAudioToJson(QwenTTSAudio instance) =>
     <String, dynamic>{
@@ -47,14 +47,16 @@ Map<String, dynamic> _$QwenTTSAudioToJson(QwenTTSAudio instance) =>
     };
 
 QwenTTSUsage _$QwenTTSUsageFromJson(Map<String, dynamic> json) => QwenTTSUsage(
-      QwenTTSInputTokensDetails.fromJson(
-          json['input_tokens_details'] as Map<String, dynamic>),
-      (json['total_tokens'] as num).toInt(),
-      (json['output_tokens'] as num).toInt(),
-      (json['input_tokens'] as num).toInt(),
-      QwenTTSOutputTokensDetails.fromJson(
-          json['output_tokens_details'] as Map<String, dynamic>),
-    );
+  QwenTTSInputTokensDetails.fromJson(
+    json['input_tokens_details'] as Map<String, dynamic>,
+  ),
+  (json['total_tokens'] as num).toInt(),
+  (json['output_tokens'] as num).toInt(),
+  (json['input_tokens'] as num).toInt(),
+  QwenTTSOutputTokensDetails.fromJson(
+    json['output_tokens_details'] as Map<String, dynamic>,
+  ),
+);
 
 Map<String, dynamic> _$QwenTTSUsageToJson(QwenTTSUsage instance) =>
     <String, dynamic>{
@@ -66,27 +68,23 @@ Map<String, dynamic> _$QwenTTSUsageToJson(QwenTTSUsage instance) =>
     };
 
 QwenTTSInputTokensDetails _$QwenTTSInputTokensDetailsFromJson(
-        Map<String, dynamic> json) =>
-    QwenTTSInputTokensDetails(
-      (json['text_tokens'] as num).toInt(),
-    );
+  Map<String, dynamic> json,
+) => QwenTTSInputTokensDetails((json['text_tokens'] as num).toInt());
 
 Map<String, dynamic> _$QwenTTSInputTokensDetailsToJson(
-        QwenTTSInputTokensDetails instance) =>
-    <String, dynamic>{
-      'text_tokens': instance.textTokens,
-    };
+  QwenTTSInputTokensDetails instance,
+) => <String, dynamic>{'text_tokens': instance.textTokens};
 
 QwenTTSOutputTokensDetails _$QwenTTSOutputTokensDetailsFromJson(
-        Map<String, dynamic> json) =>
-    QwenTTSOutputTokensDetails(
-      (json['audio_tokens'] as num).toInt(),
-      (json['text_tokens'] as num).toInt(),
-    );
+  Map<String, dynamic> json,
+) => QwenTTSOutputTokensDetails(
+  (json['audio_tokens'] as num).toInt(),
+  (json['text_tokens'] as num).toInt(),
+);
 
 Map<String, dynamic> _$QwenTTSOutputTokensDetailsToJson(
-        QwenTTSOutputTokensDetails instance) =>
-    <String, dynamic>{
-      'audio_tokens': instance.audioTokens,
-      'text_tokens': instance.textTokens,
-    };
+  QwenTTSOutputTokensDetails instance,
+) => <String, dynamic>{
+  'audio_tokens': instance.audioTokens,
+  'text_tokens': instance.textTokens,
+};

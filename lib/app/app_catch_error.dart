@@ -115,11 +115,10 @@ class AppCatchError {
 
     // 判断返回数据中是否包含"token失效"的信息
     // 一些错误处理，比如token失效这里退出到登录页面之类的
-    if (error.toString().contains("token无效") ||
-        error.toString().contains("token已过期") ||
-        error.toString().contains("登录出错") ||
-        error.toString().toLowerCase().contains("invalid")) {
-      debugPrint(error.toString());
+    if (error.toString().contains("登录出错")) {
+      if (kDebugMode) {
+        print(error);
+      }
     }
   }
 }

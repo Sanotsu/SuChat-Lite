@@ -46,22 +46,22 @@ class FeatureGridCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Container(
-                    width: isDesktop ? 64 : 48,
-                    height: isDesktop ? 64 : 48,
+                    width: isDesktop ? 64 : 40,
+                    height: isDesktop ? 64 : 40,
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Icon(icon, color: color, size: isDesktop ? 32 : 24),
                   ),
-                  SizedBox(height: isDesktop ? 16 : 12),
+                  SizedBox(height: isDesktop ? 16 : 4),
 
                   // ??? 为什么这个居中整个卡片的内容都居中了？
                   Center(
                     child: Text(
                       title,
                       style: TextStyle(
-                        fontSize: isDesktop ? 16 : 15,
+                        fontSize: isDesktop ? 16 : 13,
                         fontWeight: FontWeight.bold,
                       ),
                       textAlign: TextAlign.center,
@@ -94,7 +94,7 @@ class FeatureGridCard extends StatelessWidget {
                     newLabel ?? '新',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: isDesktop ? 12 : 9,
+                      fontSize: isDesktop ? 12 : 8,
                       // fontWeight: FontWeight.bold,
                     ),
                   ),

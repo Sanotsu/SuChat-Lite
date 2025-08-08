@@ -7,20 +7,20 @@ part of 'cus_llm_model.dart';
 // **************************************************************************
 
 CusLLMSpec _$CusLLMSpecFromJson(Map<String, dynamic> json) => CusLLMSpec(
-      $enumDecode(_$ApiPlatformEnumMap, json['platform']),
-      json['model'] as String,
-      $enumDecode(_$LLModelTypeEnumMap, json['modelType']),
-      name: json['name'] as String?,
-      isFree: json['isFree'] as bool?,
-      cusLlmSpecId: json['cusLlmSpecId'] as String,
-      gmtCreate: json['gmtCreate'] == null
-          ? null
-          : DateTime.parse(json['gmtCreate'] as String),
-      isBuiltin: json['isBuiltin'] as bool? ?? false,
-      baseUrl: json['baseUrl'] as String?,
-      apiKey: json['apiKey'] as String?,
-      description: json['description'] as String?,
-    );
+  $enumDecode(_$ApiPlatformEnumMap, json['platform']),
+  json['model'] as String,
+  $enumDecode(_$LLModelTypeEnumMap, json['modelType']),
+  name: json['name'] as String?,
+  isFree: json['isFree'] as bool?,
+  cusLlmSpecId: json['cusLlmSpecId'] as String,
+  gmtCreate: json['gmtCreate'] == null
+      ? null
+      : DateTime.parse(json['gmtCreate'] as String),
+  isBuiltin: json['isBuiltin'] as bool? ?? false,
+  baseUrl: json['baseUrl'] as String?,
+  apiKey: json['apiKey'] as String?,
+  description: json['description'] as String?,
+);
 
 Map<String, dynamic> _$CusLLMSpecToJson(CusLLMSpec instance) =>
     <String, dynamic>{

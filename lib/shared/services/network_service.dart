@@ -38,10 +38,16 @@ class NetworkStatusService {
     return result.contains(ConnectivityResult.mobile);
   }
 
+  Future<bool> isEthernet() async {
+    List<ConnectivityResult> result = await Connectivity().checkConnectivity();
+    return result.contains(ConnectivityResult.ethernet);
+  }
+
   Future<bool> isNetwork() async {
     List<ConnectivityResult> result = await Connectivity().checkConnectivity();
     return (result.contains(ConnectivityResult.mobile) ||
-        result.contains(ConnectivityResult.wifi));
+        result.contains(ConnectivityResult.wifi) ||
+        result.contains(ConnectivityResult.ethernet));
   }
 
   // 关闭 StreamController

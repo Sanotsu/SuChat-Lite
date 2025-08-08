@@ -7,33 +7,33 @@ part of 'video_generation_response.dart';
 // **************************************************************************
 
 CusUnifiedVideoGenResp _$CusUnifiedVideoGenRespFromJson(
-        Map<String, dynamic> json) =>
-    CusUnifiedVideoGenResp(
-      requestId: json['request_id'] as String?,
-      taskId: json['task_id'] as String?,
-      status: json['status'] as String?,
-      results: (json['results'] as List<dynamic>?)
-          ?.map((e) => VideoResult.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      code: json['code'] as String?,
-      message: json['message'] as String?,
-    );
+  Map<String, dynamic> json,
+) => CusUnifiedVideoGenResp(
+  requestId: json['request_id'] as String?,
+  taskId: json['task_id'] as String?,
+  status: json['status'] as String?,
+  results: (json['results'] as List<dynamic>?)
+      ?.map((e) => VideoResult.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  code: json['code'] as String?,
+  message: json['message'] as String?,
+);
 
 Map<String, dynamic> _$CusUnifiedVideoGenRespToJson(
-        CusUnifiedVideoGenResp instance) =>
-    <String, dynamic>{
-      'request_id': instance.requestId,
-      'task_id': instance.taskId,
-      'status': instance.status,
-      'results': instance.results?.map((e) => e.toJson()).toList(),
-      'code': instance.code,
-      'message': instance.message,
-    };
+  CusUnifiedVideoGenResp instance,
+) => <String, dynamic>{
+  'request_id': instance.requestId,
+  'task_id': instance.taskId,
+  'status': instance.status,
+  'results': instance.results?.map((e) => e.toJson()).toList(),
+  'code': instance.code,
+  'message': instance.message,
+};
 
 VideoResult _$VideoResultFromJson(Map<String, dynamic> json) => VideoResult(
-      url: json['url'] as String,
-      coverImageUrl: json['cover_image_url'] as String?,
-    );
+  url: json['url'] as String,
+  coverImageUrl: json['cover_image_url'] as String?,
+);
 
 Map<String, dynamic> _$VideoResultToJson(VideoResult instance) =>
     <String, dynamic>{
@@ -42,67 +42,68 @@ Map<String, dynamic> _$VideoResultToJson(VideoResult instance) =>
     };
 
 VideoGenerationSubmitResponse _$VideoGenerationSubmitResponseFromJson(
-        Map<String, dynamic> json) =>
-    VideoGenerationSubmitResponse(
-      requestId: readJsonValue(json, 'requestId') as String?,
-      id: json['id'] as String?,
-      model: json['model'] as String?,
-      taskStatus: json['task_status'] as String?,
-      output: json['output'] == null
-          ? null
-          : AliyunVideoOutput.fromJson(json['output'] as Map<String, dynamic>),
-      code: json['code'] as String?,
-      message: json['message'] as String?,
-    );
+  Map<String, dynamic> json,
+) => VideoGenerationSubmitResponse(
+  requestId: readJsonValue(json, 'requestId') as String?,
+  id: json['id'] as String?,
+  model: json['model'] as String?,
+  taskStatus: json['task_status'] as String?,
+  output: json['output'] == null
+      ? null
+      : AliyunVideoOutput.fromJson(json['output'] as Map<String, dynamic>),
+  code: json['code'] as String?,
+  message: json['message'] as String?,
+);
 
 Map<String, dynamic> _$VideoGenerationSubmitResponseToJson(
-        VideoGenerationSubmitResponse instance) =>
-    <String, dynamic>{
-      'requestId': instance.requestId,
-      'id': instance.id,
-      'model': instance.model,
-      'task_status': instance.taskStatus,
-      'output': instance.output?.toJson(),
-      'code': instance.code,
-      'message': instance.message,
-    };
+  VideoGenerationSubmitResponse instance,
+) => <String, dynamic>{
+  'requestId': instance.requestId,
+  'id': instance.id,
+  'model': instance.model,
+  'task_status': instance.taskStatus,
+  'output': instance.output?.toJson(),
+  'code': instance.code,
+  'message': instance.message,
+};
 
 VideoGenerationTaskResponse _$VideoGenerationTaskResponseFromJson(
-        Map<String, dynamic> json) =>
-    VideoGenerationTaskResponse(
-      status: json['status'] as String?,
-      reason: json['reason'] as String?,
-      results: json['results'] == null
-          ? null
-          : SiliconflowVideoStatusResult.fromJson(
-              json['results'] as Map<String, dynamic>),
-      requestId: json['request_id'] as String?,
-      model: json['model'] as String?,
-      taskStatus: json['task_status'] as String?,
-      videoResult: (json['video_result'] as List<dynamic>?)
-          ?.map((e) => VideoResult.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      output: json['output'] == null
-          ? null
-          : AliyunVideoOutput.fromJson(json['output'] as Map<String, dynamic>),
-      usage: json['usage'] == null
-          ? null
-          : AliyunVideoUsage.fromJson(json['usage'] as Map<String, dynamic>),
-    );
+  Map<String, dynamic> json,
+) => VideoGenerationTaskResponse(
+  status: json['status'] as String?,
+  reason: json['reason'] as String?,
+  results: json['results'] == null
+      ? null
+      : SiliconflowVideoStatusResult.fromJson(
+          json['results'] as Map<String, dynamic>,
+        ),
+  requestId: json['request_id'] as String?,
+  model: json['model'] as String?,
+  taskStatus: json['task_status'] as String?,
+  videoResult: (json['video_result'] as List<dynamic>?)
+      ?.map((e) => VideoResult.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  output: json['output'] == null
+      ? null
+      : AliyunVideoOutput.fromJson(json['output'] as Map<String, dynamic>),
+  usage: json['usage'] == null
+      ? null
+      : AliyunVideoUsage.fromJson(json['usage'] as Map<String, dynamic>),
+);
 
 Map<String, dynamic> _$VideoGenerationTaskResponseToJson(
-        VideoGenerationTaskResponse instance) =>
-    <String, dynamic>{
-      'status': instance.status,
-      'reason': instance.reason,
-      'results': instance.results?.toJson(),
-      'model': instance.model,
-      'video_result': instance.videoResult?.map((e) => e.toJson()).toList(),
-      'task_status': instance.taskStatus,
-      'request_id': instance.requestId,
-      'output': instance.output?.toJson(),
-      'usage': instance.usage?.toJson(),
-    };
+  VideoGenerationTaskResponse instance,
+) => <String, dynamic>{
+  'status': instance.status,
+  'reason': instance.reason,
+  'results': instance.results?.toJson(),
+  'model': instance.model,
+  'video_result': instance.videoResult?.map((e) => e.toJson()).toList(),
+  'task_status': instance.taskStatus,
+  'request_id': instance.requestId,
+  'output': instance.output?.toJson(),
+  'usage': instance.usage?.toJson(),
+};
 
 AliyunVideoOutput _$AliyunVideoOutputFromJson(Map<String, dynamic> json) =>
     AliyunVideoOutput(
@@ -147,21 +148,21 @@ Map<String, dynamic> _$AliyunVideoUsageToJson(AliyunVideoUsage instance) =>
     };
 
 SiliconflowVideoStatusResult _$SiliconflowVideoStatusResultFromJson(
-        Map<String, dynamic> json) =>
-    SiliconflowVideoStatusResult(
-      (json['seed'] as num?)?.toInt(),
-      (json['timings'] as Map<String, dynamic>?)?.map(
-        (k, e) => MapEntry(k, (e as num).toInt()),
-      ),
-      (json['videos'] as List<dynamic>?)
-          ?.map((e) => VideoResult.fromJson(e as Map<String, dynamic>))
-          .toList(),
-    );
+  Map<String, dynamic> json,
+) => SiliconflowVideoStatusResult(
+  (json['seed'] as num?)?.toInt(),
+  (json['timings'] as Map<String, dynamic>?)?.map(
+    (k, e) => MapEntry(k, (e as num).toInt()),
+  ),
+  (json['videos'] as List<dynamic>?)
+      ?.map((e) => VideoResult.fromJson(e as Map<String, dynamic>))
+      .toList(),
+);
 
 Map<String, dynamic> _$SiliconflowVideoStatusResultToJson(
-        SiliconflowVideoStatusResult instance) =>
-    <String, dynamic>{
-      'seed': instance.seed,
-      'timings': instance.timings,
-      'videos': instance.videos?.map((e) => e.toJson()).toList(),
-    };
+  SiliconflowVideoStatusResult instance,
+) => <String, dynamic>{
+  'seed': instance.seed,
+  'timings': instance.timings,
+  'videos': instance.videos?.map((e) => e.toJson()).toList(),
+};
