@@ -54,6 +54,23 @@ class CusLabel {
 
   CusLabel({this.enLabel, required this.cnLabel, required this.value});
 
+  // 2025-08-12 不重写这两个方法，Dart 会默认使用 对象的内存地址（引用） 进行比较，而不是内容。
+  // 重写之后，就算内存地址不一样的两个实例，因为数据一样，就当成同一个实例了
+  // 比如 BaseNewsPageState 中：
+  // buildDropdownButton2() 会基于 value 判断两个 CusLabel 是否相等，而不是内存地址。
+  // 即使 getCategories() 每次返回新对象，只要 value buildDropdownButton2() 就能正确匹配。
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is CusLabel &&
+        enLabel == other.enLabel &&
+        cnLabel == other.cnLabel &&
+        value == other.value;
+  }
+
+  @override
+  int get hashCode => enLabel.hashCode ^ cnLabel.hashCode ^ value.hashCode;
+
   @override
   String toString() {
     return '''

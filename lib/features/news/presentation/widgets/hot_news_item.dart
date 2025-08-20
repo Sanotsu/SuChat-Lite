@@ -79,27 +79,19 @@ class HotNewsItem extends StatelessWidget {
   }
 }
 
-/// 就是上面组价的函数形式
+/// 就是上面组件的函数形式
 /// 自定义的比直接使用ListTile更紧凑点，其他没区别
 Widget buildNewsItemContainer(
   BuildContext context,
   int index,
-  String title,
+  String title, {
   String? trailingText,
-  String link,
-) {
+  void Function()? onTap,
+}) {
   return Column(
     children: [
       InkWell(
-        onTap: () {
-          // 2024-10-07 实测中关村在线的地址没有https开头
-          var url = link;
-          if (!url.startsWith("http") || !url.startsWith("https")) {
-            url = "https:$url";
-          }
-
-          launchStringUrl(url);
-        },
+        onTap: onTap,
         child: SizedBox(
           height: 56,
           child: Row(
@@ -145,53 +137,6 @@ Widget buildNewsItemContainer(
             ],
           ),
         ),
-      ),
-      Divider(height: 1),
-    ],
-  );
-}
-
-/// 直接使用ListTile的新闻条目
-Widget buildNewsItem(
-  BuildContext context,
-  int index,
-  String title,
-  String? trailingText,
-  String link,
-) {
-  return Column(
-    children: [
-      ListTile(
-        leading: Text(
-          "$index",
-          style: TextStyle(fontSize: 16, color: Colors.orange),
-        ),
-        title: Text(
-          title,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 14, color: Theme.of(context).primaryColor),
-        ),
-        trailing: (trailingText != null && trailingText.isNotEmpty)
-            ? SizedBox(
-                width: 48,
-                child: Text(
-                  trailingText,
-                  textAlign: TextAlign.end,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              )
-            : null,
-        onTap: () {
-          // 2024-10-07 实测中关村在线的地址没有https开头
-          var url = link;
-          if (!url.startsWith("http") || !url.startsWith("https")) {
-            url = "https:$url";
-          }
-
-          launchStringUrl(url);
-        },
       ),
       Divider(height: 1),
     ],

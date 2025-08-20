@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../../../../core/utils/get_app_key_helper.dart';
 import '../../../../shared/constants/default_models.dart';
+import '../models/baike_history_in_today_resp.dart';
 import '../models/duomoyu_resp.dart';
 import '../models/uo_ithome_resp.dart';
 import '../models/jiqizhixin_resp.dart';
@@ -12,6 +13,7 @@ import '../models/readhub_resp.dart';
 import '../models/sina_roll_news_resp.dart';
 import '../models/sut_bbc_news_resp.dart';
 import '../models/uo_toutiao_news_resp.dart';
+import '../models/uo_zhihu_daily_resp.dart';
 import 'news_api_wrapper.dart';
 
 /// 新闻API管理器
@@ -35,6 +37,12 @@ class NewsApiManager {
   static const String _jiqizhixinBase =
       "https://www.jiqizhixin.com/api/v4/articles.json";
   static const String _newsnowBase = "https://newsnow.busiyi.world/api";
+
+  static const String _uoZhihudailyBase = "https://apis.netstart.cn/zhihudaily";
+
+  // static const String _baikeHistoryInTodayBase = "https://api.asilu.com/today";
+  static const String _baikeHistoryInTodayBase =
+      "https://60s.viki.moe/v2/today_in_history";
 
   // static const String _hitokotoBase = "https://v1.hitokoto.cn";
 
@@ -377,6 +385,59 @@ class NewsApiManager {
     }
 
     return NewsNowResp.fromJson(respData);
+  }
+
+  /// 获取第三方知乎日报数据
+  Future<UoZhihuDailyResp> getUoZhihuDailyList({
+    // date需要是yyyyMMDD格式，不传则默认最新的
+    String? date,
+    bool forceRefresh = false,
+  }) async {
+    final cacheKey = 'uo_zhihu_daily_$date';
+    String path = "";
+    if (date == null || date == "latest") {
+      path = "$_uoZhihudailyBase/stories/latest";
+    } else {
+      // 注意：如果before/20250812，其实是查询20250811的数据
+      path = "$_uoZhihudailyBase/stories/before/$date";
+    }
+
+    var respData = await newsGet(
+      path: path,
+      forceRefresh: forceRefresh,
+      customCacheKey: cacheKey,
+      cacheDuration: const Duration(minutes: 10),
+    );
+
+    if (respData.runtimeType == String) {
+      respData = json.decode(respData);
+    }
+
+    return UoZhihuDailyResp.fromJson(respData);
+  }
+
+  /// 获取百度百科
+  Future<BaikeHistoryInTodayResp> getBaikeHistoryInTodayList({
+    bool forceRefresh = false,
+  }) async {
+    final cacheKey = 'baike_history_in_today';
+
+    var respData = await newsGet(
+      path: _baikeHistoryInTodayBase,
+      forceRefresh: forceRefresh,
+      customCacheKey: cacheKey,
+      cacheDuration: const Duration(minutes: 10),
+    );
+
+    if (respData.runtimeType == String) {
+      respData = json.decode(respData);
+    }
+
+    if (respData["data"] == null) {
+      throw Exception("返回结果不正确: $respData");
+    }
+
+    return BaikeHistoryInTodayResp.fromJson(respData["data"]);
   }
 
   // /// 获取一言

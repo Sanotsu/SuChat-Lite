@@ -290,10 +290,9 @@ InputDecoration _buildInputDecoration(
   String? hintText,
   TextStyle? hintStyle,
 ) {
-  final contentPadding =
-      isOutline != null && isOutline
-          ? EdgeInsets.symmetric(horizontal: 5, vertical: 15)
-          : EdgeInsets.symmetric(horizontal: 5, vertical: 5);
+  final contentPadding = isOutline != null && isOutline
+      ? EdgeInsets.symmetric(horizontal: 5, vertical: 15)
+      : EdgeInsets.symmetric(horizontal: 5, vertical: 5);
 
   return InputDecoration(
     isDense: true,
@@ -301,12 +300,11 @@ InputDecoration _buildInputDecoration(
     hintText: hintText,
     hintStyle: hintStyle,
     contentPadding: contentPadding,
-    border:
-        isOutline != null && isOutline
-            ? OutlineInputBorder(borderRadius: BorderRadius.circular(10.0))
-            : isReadOnly
-            ? InputBorder.none
-            : null,
+    border: isOutline != null && isOutline
+        ? OutlineInputBorder(borderRadius: BorderRadius.circular(10.0))
+        : isReadOnly
+        ? InputBorder.none
+        : null,
     // 设置透明底色
     filled: true,
     fillColor: Colors.transparent,
@@ -366,10 +364,9 @@ SizedBox buildTinyButtonTag(
         labelText,
         style: TextStyle(
           // 传入大于10的字体，修正为10；不传则默认10
-          fontSize:
-              (labelTextSize != null && labelTextSize > 10)
-                  ? 10
-                  : labelTextSize ?? 10,
+          fontSize: (labelTextSize != null && labelTextSize > 10)
+              ? 10
+              : labelTextSize ?? 10,
         ),
       ),
     ),
@@ -583,5 +580,15 @@ Widget buildFloatingActionButton(
     backgroundColor: Theme.of(context).colorScheme.primary,
     foregroundColor: Theme.of(context).colorScheme.onPrimary,
     child: Icon(icon),
+  );
+}
+
+/// 构建页面上action位置的使用说明按钮
+Widget buildInfoButtonOnAction(BuildContext context, String note) {
+  return IconButton(
+    onPressed: () {
+      commonMDHintModalBottomSheet(context, "说明", note, msgFontSize: 15);
+    },
+    icon: const Icon(Icons.info_outline),
   );
 }

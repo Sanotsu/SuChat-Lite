@@ -10,6 +10,9 @@ SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API �
 - AI 聊天支持简单自定义角色；
 - 一些其他 AI 功能，例如支持简单的音频、图片、视频资源生成，录音文件识别；
 - 一些有少量使用 AI 特性的扩展功能，如训练助手、饮食日记、极简记账、记事本；
+- 集成了很多 [Sanotsu/swmate](https://github.com/Sanotsu/swmate) 中生活娱乐功能并新增更多：
+  - 各种新闻热榜，杂文趣图；
+  - Bangumi、MyALimeList、TMDB、豆果美食、USDA食品数据中心等部分数据；
 
 桌面主页面预览:
 
@@ -102,10 +105,6 @@ SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API �
 - Windows 11 (机械革命 耀世 16 Pro)
 
 ---
-
-如果对 [硅基流动平台](https://siliconflow.cn/zh-cn/models) 感兴趣，还能用下我的邀请码注册，那就更好了，谢谢：
-
-[https://cloud.siliconflow.cn/i/tRIcST68](https://cloud.siliconflow.cn/i/tRIcST68)
 
 ## 使用指南
 

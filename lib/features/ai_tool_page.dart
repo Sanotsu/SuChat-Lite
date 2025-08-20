@@ -3,7 +3,12 @@ import 'package:flutter/material.dart';
 import '../core/utils/screen_helper.dart';
 import '../shared/widgets/feature_grid_card.dart';
 import '../shared/widgets/modern_feature_card.dart';
+import 'visual_media/data/datasources/igdb/igdb_apis.dart';
+import 'visual_media/presentation/pages/index.dart';
 import 'diet_diary/presentation/index.dart';
+import 'food/presentation/pages/douguo/recipe_home_page.dart';
+import 'food/presentation/pages/usda_food_data/index.dart';
+import 'funny_stuff/persentation/pages/index.dart';
 import 'media_generation/image/presentation/index.dart';
 import 'media_generation/video/presentation/index.dart';
 import 'media_generation/voice/presentation/index.dart';
@@ -11,6 +16,7 @@ import 'news/presentation/pages/index.dart';
 import 'notebook/presentation/pages/notebook_page.dart';
 import 'simple_accounting/presentation/pages/bill_list_page.dart';
 import 'training_assistant/presentation/index.dart';
+import 'visual_media/presentation/pages/tmdb/tmdb_home_page.dart';
 import 'voice_recognition/presentation/index.dart';
 
 class AIToolPage extends StatefulWidget {
@@ -413,16 +419,88 @@ class _AIToolPageState extends State<AIToolPage> {
                   ),
                 ),
 
-                // SizedBox(
-                //   width: ScreenHelper.isDesktop() ? 150 : 80,
-                //   height: ScreenHelper.isDesktop() ? 150 : 80,
-                //   child: FeatureGridCard(
-                //     targetPage: const FunnyStuffIndex(),
-                //     title: "趣图趣文",
-                //     icon: Icons.image,
-                //     accentColor: Colors.orange,
-                //   ),
-                // ),
+                //  _rowWidget([
+                //     LifeToolEntranceCard(
+                //       title: "热量计算器",
+                //       subtitle: "食物热量和运动消耗",
+                //       icon: Icons.calculate,
+                //       onTap: () => showNoNetworkOrGoTargetPage(
+                //         context,
+                //         NixSimpleCalculator(),
+                //       ),
+                //     ),
+                //     const SizedBox(),
+                //   ]),
+                SizedBox(
+                  width: ScreenHelper.isDesktop() ? 150 : 80,
+                  height: ScreenHelper.isDesktop() ? 150 : 80,
+                  child: FeatureGridCard(
+                    targetPage: const FunnyStuffIndex(),
+                    title: "趣图趣文",
+                    icon: Icons.image,
+                    accentColor: Colors.orange,
+                  ),
+                ),
+
+                SizedBox(
+                  width: ScreenHelper.isDesktop() ? 150 : 80,
+                  height: ScreenHelper.isDesktop() ? 150 : 80,
+                  child: FeatureGridCard(
+                    targetPage: const VisualMediaIndex(),
+                    title: "图片动漫",
+                    icon: Icons.collections_bookmark,
+                    accentColor: Colors.orange,
+                  ),
+                ),
+
+                SizedBox(
+                  width: ScreenHelper.isDesktop() ? 150 : 80,
+                  height: ScreenHelper.isDesktop() ? 150 : 80,
+                  child: FeatureGridCard(
+                    targetPage: const TmdbHomePage(),
+                    title: "TMDB",
+                    icon: Icons.movie,
+                    accentColor: Colors.orange,
+                  ),
+                ),
+
+                SizedBox(
+                  width: ScreenHelper.isDesktop() ? 150 : 80,
+                  height: ScreenHelper.isDesktop() ? 150 : 80,
+                  child: FeatureGridCard(
+                    targetPage: const RecipeHomePage(),
+                    title: "豆果美食",
+                    icon: Icons.menu_book,
+                    accentColor: Colors.orange,
+                  ),
+                ),
+
+                SizedBox(
+                  width: ScreenHelper.isDesktop() ? 150 : 80,
+                  height: ScreenHelper.isDesktop() ? 150 : 80,
+                  child: TextButton(
+                    onPressed: getIgdbAccessToken,
+                    child: Text("IGDB\n(TODO)"),
+                  ),
+                ),
+              ],
+            ),
+
+            Wrap(
+              // spacing: 8,
+              // runSpacing: 8,
+              // alignment: WrapAlignment.center,
+              children: [
+                SizedBox(
+                  width: ScreenHelper.isDesktop() ? 150 : 120,
+                  height: ScreenHelper.isDesktop() ? 150 : 80,
+                  child: FeatureGridCard(
+                    targetPage: const USDAFoodDataCentral(),
+                    title: "USDA FDC数据",
+                    icon: Icons.calculate,
+                    accentColor: Colors.orange,
+                  ),
+                ),
               ],
             ),
 

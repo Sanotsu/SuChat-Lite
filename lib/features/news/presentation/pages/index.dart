@@ -5,6 +5,7 @@ import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../data/datasources/hitokoto_apis.dart';
 import '../../data/models/hitokoto.dart';
 import '../widgets/entrance_card.dart';
+import 'news_pages/baike_history_in_today_page.dart';
 import 'news_pages/duomoyu_page.dart';
 import 'news_pages/jiqizhixin_page.dart';
 import 'news_pages/momoyu_page.dart';
@@ -17,6 +18,7 @@ import 'news_pages/unofficial_ithome_page.dart';
 import 'news_pages/sut_bbc_news_page.dart';
 import 'news_pages/unofficial_toutiao_news_page.dart';
 import 'base_news_page/paper_news_image_page.dart';
+import 'news_pages/uo_zhihu_daily_page.dart';
 
 class NewsIndex extends StatefulWidget {
   const NewsIndex({super.key});
@@ -318,6 +320,23 @@ List<Widget> _unofficialSite(BuildContext context) {
         icon: Icons.newspaper,
         onTap: () =>
             showNoNetworkOrGoTargetPage(context, UnofficialToutiaoNewsPage()),
+      ),
+    ]),
+    _rowWidget([
+      EntranceCard(
+        title: '知乎日报',
+        subtitle: "不完整的知乎日报",
+        icon: Icons.newspaper,
+        onTap: () =>
+            showNoNetworkOrGoTargetPage(context, UnofficialZhihuDailyPage()),
+      ),
+
+      EntranceCard(
+        title: '历史上的今天',
+        subtitle: "来源于百度百科",
+        icon: Icons.newspaper,
+        onTap: () =>
+            showNoNetworkOrGoTargetPage(context, BaikeHistoryInTodayPage()),
       ),
     ]),
   ];

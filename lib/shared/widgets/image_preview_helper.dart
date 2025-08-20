@@ -39,22 +39,19 @@ Widget buildImageViewCarouselSlider(
       // 只有一张图片时不滚动
       enableInfiniteScroll: imageList.length > 1,
     ),
-    items:
-        imageList.map((imageUrl) {
-          return Builder(
-            builder:
-                (context) => GestureDetector(
-                  onTap:
-                      () => _handleImageTap(
-                        context,
-                        imageUrl,
-                        imageList,
-                        CarouselType.dialog,
-                      ),
-                  child: buildNetworkOrFileImage(imageUrl, fit: BoxFit.cover),
-                ),
-          );
-        }).toList(),
+    items: imageList.map((imageUrl) {
+      return Builder(
+        builder: (context) => GestureDetector(
+          onTap: () => _handleImageTap(
+            context,
+            imageUrl,
+            imageList,
+            CarouselType.dialog,
+          ),
+          child: buildNetworkOrFileImage(imageUrl, fit: BoxFit.cover),
+        ),
+      );
+    }).toList(),
   );
 }
 
@@ -102,14 +99,13 @@ List<Widget>? _buildCarouselItems(
 
   return effectiveImages.map((imageUrl) {
     return Builder(
-      builder:
-          (context) => _buildCarouselItem(
-            context,
-            imageUrl,
-            imageList,
-            type: type,
-            downloadDir: downloadDir,
-          ),
+      builder: (context) => _buildCarouselItem(
+        context,
+        imageUrl,
+        imageList,
+        type: type,
+        downloadDir: downloadDir,
+      ),
     );
   }).toList();
 }
@@ -189,15 +185,14 @@ Widget _buildPhotoGalleryDialog(List<String> imageList) {
     backgroundColor: Colors.transparent,
     child: PhotoViewGallery.builder(
       itemCount: imageList.length,
-      builder:
-          (context, index) => PhotoViewGalleryPageOptions(
-            imageProvider: getImageProvider(imageList[index]),
-            errorBuilder: (_, _, _) => const Icon(Icons.error),
-          ),
+      builder: (context, index) => PhotoViewGalleryPageOptions(
+        imageProvider: getImageProvider(imageList[index]),
+        errorBuilder: (_, _, _) => const Icon(Icons.error),
+      ),
       scrollPhysics: const BouncingScrollPhysics(),
       backgroundDecoration: const BoxDecoration(color: Colors.transparent),
-      loadingBuilder:
-          (_, _) => const Center(child: CircularProgressIndicator()),
+      loadingBuilder: (_, _) =>
+          const Center(child: CircularProgressIndicator()),
     ),
   );
 }
@@ -262,11 +257,10 @@ Widget buildImageView(
 
   return GridTile(
     child: GestureDetector(
-      onTap:
-          () => showDialog(
-            context: context,
-            builder: (_) => _buildPhotoDialog(imageProvider),
-          ),
+      onTap: () => showDialog(
+        context: context,
+        builder: (_) => _buildPhotoDialog(imageProvider),
+      ),
       child: RepaintBoundary(
         child: Center(
           child: Image(
@@ -316,22 +310,21 @@ Widget buildNetworkOrFileImage(String imageUrl, {BoxFit? fit}) {
       // ),
 
       /// placeholder 和 progressIndicatorBuilder 只能2选1
-      placeholder:
-          (_, _) => const Center(
-            child: SizedBox(
-              width: 36,
-              height: 36,
-              child: CircularProgressIndicator(color: Colors.blue),
-            ),
-          ),
+      placeholder: (_, _) => const Center(
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: CircularProgressIndicator(color: Colors.blue),
+        ),
+      ),
       errorWidget: (_, _, _) => const Icon(Icons.error, size: 36),
     );
   } else {
     return Image(
       image: getImageProvider(imageUrl),
       fit: fit,
-      errorBuilder:
-          (_, _, _) => Image.asset(placeholderImageUrl, fit: BoxFit.scaleDown),
+      errorBuilder: (_, _, _) =>
+          Image.asset(placeholderImageUrl, fit: BoxFit.cover),
     );
   }
 }
@@ -401,10 +394,9 @@ List<GridTile> buildImageList(
           // 网络图片就保存都指定位置
           await saveImageToLocal(
             urls[index],
-            prefix:
-                prefix == null
-                    ? null
-                    : (prefix.endsWith("_") ? prefix : "${prefix}_"),
+            prefix: prefix == null
+                ? null
+                : (prefix.endsWith("_") ? prefix : "${prefix}_"),
             dlDir: dlDir,
           );
         },
@@ -429,49 +421,45 @@ GridTile buildImageGridTile(
   bool? isClickable = true,
 }) {
   return GridTile(
-    child:
-        isClickable == true
-            ? GestureDetector(
-              // 单击预览
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return Dialog(
-                      backgroundColor: Colors.transparent, // 设置背景透明
-                      child: _buildPhotoView(getImageProvider(url)),
-                    );
-                  },
-                );
-              },
-              // 长按保存到相册
-              onLongPress: () async {
-                if (url.startsWith("/storage/")) {
-                  ToastUtils.showToast("图片已保存到$url");
-                  return;
-                }
+    child: isClickable == true
+        ? GestureDetector(
+            // 单击预览
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return Dialog(
+                    backgroundColor: Colors.transparent, // 设置背景透明
+                    child: _buildPhotoView(getImageProvider(url)),
+                  );
+                },
+              );
+            },
+            // 长按保存到相册
+            onLongPress: () async {
+              if (url.startsWith("/storage/")) {
+                ToastUtils.showToast("图片已保存到$url");
+                return;
+              }
 
-                // 网络图片就保存都指定位置
-                await saveImageToLocal(
-                  url,
-                  prefix:
-                      prefix == null
-                          ? null
-                          : (prefix.endsWith("_") ? prefix : "${prefix}_"),
-                );
-              },
-              // 默认缓存展示
-              child: Center(
-                child: buildNetworkOrFileImage(url, fit: fit ?? BoxFit.cover),
-              ),
-              // child: SizedBox(
-              //   height: 0.2.sw,
-              //   child: buildNetworkOrFileImage(url, fit: fit ?? BoxFit.cover),
-              // ),
-            )
-            : Center(
+              // 网络图片就保存都指定位置
+              await saveImageToLocal(
+                url,
+                prefix: prefix == null
+                    ? null
+                    : (prefix.endsWith("_") ? prefix : "${prefix}_"),
+              );
+            },
+            // 默认缓存展示
+            child: Center(
               child: buildNetworkOrFileImage(url, fit: fit ?? BoxFit.cover),
             ),
+            // child: SizedBox(
+            //   height: 0.2.sw,
+            //   child: buildNetworkOrFileImage(url, fit: fit ?? BoxFit.cover),
+            // ),
+          )
+        : Center(child: buildNetworkOrFileImage(url, fit: fit ?? BoxFit.cover)),
   );
 }
 

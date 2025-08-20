@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../shared/widgets/simple_tool_widget.dart';
+import 'simple_tool_widget.dart';
 
 ///
 /// 固定的关键字输入框行

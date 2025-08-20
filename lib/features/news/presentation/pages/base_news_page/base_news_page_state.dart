@@ -5,8 +5,8 @@ import '../../../../../core/utils/datetime_formatter.dart';
 import '../../../../../shared/constants/constants.dart';
 import '../../../../../shared/widgets/cus_dropdown_button.dart';
 import '../../../../../shared/widgets/simple_tool_widget.dart';
+import '../../../../../shared/widgets/keyword_input.dart';
 import '../../widgets/scrollable_category_list.dart';
-import '../../widgets/keyword_input.dart';
 
 ///
 /// T 是新闻列表页面, U 是新闻条目
@@ -52,6 +52,7 @@ abstract class BaseNewsPageState<T extends StatefulWidget, U> extends State<T> {
   @override
   void initState() {
     super.initState();
+
     selectedNewsCategory = getCategories().isNotEmpty
         ? getCategories()[0]
         // 正常来讲，应该处理成可以不传入分类
