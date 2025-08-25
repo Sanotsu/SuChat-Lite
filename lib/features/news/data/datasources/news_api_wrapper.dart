@@ -47,7 +47,7 @@ class NewsApiWrapper {
   }
 
   /// 安全headers配置
-  static Map<String, String> get _safeHeaders => {
+  static Map<String, String> get safeHeaders => {
     'User-Agent': _getRandomUserAgent(),
     'Accept': 'application/json, text/plain, */*',
     'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
@@ -65,6 +65,7 @@ class NewsApiWrapper {
   static String _getRandomUserAgent() {
     final userAgents = [
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
@@ -146,7 +147,10 @@ class NewsApiWrapper {
   }) async {
     try {
       // 合并安全headers
-      final finalHeaders = Map<String, dynamic>.from(_safeHeaders);
+      // 加了 safeHeaders 很多都报错： FormatException: Unexpected character (at offset 0) ，不知道什么问题
+      // 不加 safeHeaders 少数被当成ddos，直接拒绝请求
+      // final finalHeaders = Map<String, dynamic>.from(safeHeaders);
+      final Map<String, dynamic> finalHeaders = {};
       if (headers != null) {
         finalHeaders.addAll(headers);
       }
@@ -156,14 +160,14 @@ class NewsApiWrapper {
           return await HttpUtils.get(
             path: path,
             queryParameters: queryParameters,
-            // headers: finalHeaders,
+            headers: finalHeaders,
             showLoading: false,
           );
         case CusHttpMethod.post:
           return await HttpUtils.post(
             path: path,
             data: data,
-            // headers: finalHeaders,
+            headers: finalHeaders,
             showLoading: false,
           );
         default:

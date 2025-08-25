@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../core/utils/screen_helper.dart';
 import '../shared/widgets/feature_grid_card.dart';
 import '../shared/widgets/modern_feature_card.dart';
+import 'model_management/index.dart';
+import 'translator/presentation/pages/mini_translator_page.dart';
 import 'visual_media/data/datasources/igdb/igdb_apis.dart';
 import 'visual_media/presentation/pages/index.dart';
 import 'diet_diary/presentation/index.dart';
@@ -30,7 +32,20 @@ class _AIToolPageState extends State<AIToolPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('更多功能')),
+      appBar: AppBar(
+        title: const Text('更多功能'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ModelConfig()),
+              );
+            },
+            child: Text('模型配置'),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
@@ -41,6 +56,8 @@ class _AIToolPageState extends State<AIToolPage> {
 
             // 免责声明
             disclaimer(),
+
+            if (!ScreenHelper.isMobile()) deviceHint(),
 
             // 所有功能网格
             featureGridTitle(),
@@ -145,6 +162,19 @@ class _AIToolPageState extends State<AIToolPage> {
     );
   }
 
+  SliverToBoxAdapter deviceHint() {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Text(
+          "本页面功能请在移动端设备中获得更佳体验；桌面端未进行适配，显示效果不佳。",
+          style: TextStyle(fontSize: 16, color: Colors.blue),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+
   SliverToBoxAdapter featureGridTitle() {
     return SliverToBoxAdapter(
       child: Padding(
@@ -220,6 +250,17 @@ class _AIToolPageState extends State<AIToolPage> {
                 accentColor: Colors.orange,
               ),
             ),
+            SizedBox(
+              width: 150,
+              height: 150,
+              child: FeatureGridCard(
+                isNew: true,
+                targetPage: const MiniTranslatorPage(),
+                title: "快速翻译",
+                icon: Icons.translate,
+                accentColor: Colors.purple,
+              ),
+            ),
           ],
         ),
       ),
@@ -275,6 +316,13 @@ class _AIToolPageState extends State<AIToolPage> {
             title: "录音识别",
             icon: Icons.audio_file,
             accentColor: Colors.orange,
+          ),
+          FeatureGridCard(
+            isNew: true,
+            targetPage: const MiniTranslatorPage(),
+            title: "快速翻译",
+            icon: Icons.translate,
+            accentColor: Colors.purple,
           ),
         ]),
       ),
@@ -496,7 +544,7 @@ class _AIToolPageState extends State<AIToolPage> {
                   height: ScreenHelper.isDesktop() ? 150 : 80,
                   child: FeatureGridCard(
                     targetPage: const USDAFoodDataCentral(),
-                    title: "USDA FDC数据",
+                    title: "USDA FDC",
                     icon: Icons.calculate,
                     accentColor: Colors.orange,
                   ),

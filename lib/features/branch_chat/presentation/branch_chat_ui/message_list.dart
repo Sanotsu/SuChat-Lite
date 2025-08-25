@@ -34,10 +34,9 @@ class _MessageListState extends State<MessageList> {
     msgItem(BranchChatMessage message) => BranchMessageItem(
       key: ValueKey('${message.messageId}_${state.colorConfig.hashCode}'),
       message: message,
-      onLongPress:
-          state.isStreaming
-              ? null
-              : widget.userInteractionHandler.showMessageOptions,
+      onLongPress: state.isStreaming
+          ? null
+          : widget.userInteractionHandler.showMessageOptions,
       // 有默认对话背景图、或者有角色自定义背景图，就是有使用背景图
       isUseBgImage:
           state.backgroundImage != null && state.backgroundImage!.isNotEmpty,
@@ -56,18 +55,16 @@ class _MessageListState extends State<MessageList> {
       key: ValueKey('actions_${message.messageId}'),
       message: message,
       messages: state.allMessages,
-      onRegenerate:
-          () => widget.aiResponseHandler.handleResponseRegenerate(message),
+      onRegenerate: () =>
+          widget.aiResponseHandler.handleResponseRegenerate(message),
       hasMultipleBranches: hasMultipleBranches,
       isRegenerating: state.isStreaming,
-      currentBranchIndex:
-          isStreamingMessage
-              ? 0
-              : state.branchManager.getBranchIndex(state.allMessages, message),
-      totalBranches:
-          isStreamingMessage
-              ? 1
-              : state.branchManager.getBranchCount(state.allMessages, message),
+      currentBranchIndex: isStreamingMessage
+          ? 0
+          : state.branchManager.getBranchIndex(state.allMessages, message),
+      totalBranches: isStreamingMessage
+          ? 1
+          : state.branchManager.getBranchCount(state.allMessages, message),
       onSwitchBranch: widget.userInteractionHandler.handleSwitchBranch,
     );
 
@@ -76,6 +73,10 @@ class _MessageListState extends State<MessageList> {
         context,
       ).copyWith(textScaler: TextScaler.linear(state.textScaleFactor)),
       child: ListView.builder(
+        // 启用过度滚动，支持下拉超出边界（父组件滚动跳转页面时需要）
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
         // 启用列表缓存
         cacheExtent: 1000.0, // 增加缓存范围
         addAutomaticKeepAlives: true,

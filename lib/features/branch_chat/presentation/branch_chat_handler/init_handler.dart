@@ -40,9 +40,8 @@ class InitHandler {
 
   /// 加载历史对话列表并按更新时间排序
   List<BranchChatSession> loadSessions() {
-    var list =
-        state.store.sessionBox.getAll()
-          ..sort((a, b) => b.updateTime.compareTo(a.updateTime));
+    var list = state.store.sessionBox.getAll()
+      ..sort((a, b) => b.updateTime.compareTo(a.updateTime));
 
     setState(() => state.sessionList = list);
 
@@ -81,7 +80,7 @@ class InitHandler {
       await initModels();
 
       // 初始化会话
-      await _initSession();
+      await initSession();
 
       // // 如果初始化时有角色，默认简洁显示
       // if (state.currentCharacter != null) {
@@ -115,19 +114,19 @@ class InitHandler {
 
     setState(() {
       state.modelList = availableModels;
-      state.selectedModel =
-          availableModels.isNotEmpty ? availableModels.first : null;
+      state.selectedModel = availableModels.isNotEmpty
+          ? availableModels.first
+          : null;
       state.selectedType = state.selectedModel?.modelType ?? LLModelType.cc;
     });
   }
 
   /// 初始化会话
-  Future<void> _initSession() async {
+  Future<void> initSession() async {
     // 根据是否有使用角色获取所有的会话记录
-    var sessions =
-        state.currentCharacter != null
-            ? _filterCharacterSessions()
-            : _getSortedSessions();
+    var sessions = state.currentCharacter != null
+        ? _filterCharacterSessions()
+        : _getSortedSessions();
 
     // 如果没有任何对话记录，则标记创建新对话
     if (sessions.isEmpty) {
@@ -213,10 +212,9 @@ class InitHandler {
         session?.llmSpec.cusLlmSpecId;
 
     // 根据cusLlmSpecId获取模型
-    state.selectedModel =
-        state.modelList
-            .where((m) => m.cusLlmSpecId == cusLlmSpecId)
-            .firstOrNull;
+    state.selectedModel = state.modelList
+        .where((m) => m.cusLlmSpecId == cusLlmSpecId)
+        .firstOrNull;
 
     // 如果模型不存在，则使用默认模型
     if (state.selectedModel == null) {
@@ -225,8 +223,9 @@ class InitHandler {
         duration: const Duration(seconds: 5),
       );
       setState(() {
-        state.selectedModel =
-            state.modelList.isNotEmpty ? state.modelList.first : null;
+        state.selectedModel = state.modelList.isNotEmpty
+            ? state.modelList.first
+            : null;
         state.selectedType = state.selectedModel?.modelType ?? LLModelType.cc;
       });
       await BranchSessionHandler(state, setState).createNewChat();

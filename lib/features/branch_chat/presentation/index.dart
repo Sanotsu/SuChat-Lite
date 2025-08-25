@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -6,6 +7,7 @@ import '../../../core/utils/screen_helper.dart';
 import '../../../shared/constants/constant_llm_enum.dart';
 import '../../../shared/widgets/simple_marquee_or_text.dart';
 import '../../../shared/widgets/simple_tool_widget.dart';
+import '../../ai_tool_page.dart';
 import '../domain/entities/branch_chat_session.dart';
 import '../domain/entities/character_card.dart';
 import '../domain/entities/message_font_color.dart';
@@ -40,6 +42,13 @@ class _BranchChatPageState extends State<BranchChatPage>
   late AIResponseHandler _aiResponseHandler;
   late BranchSessionHandler _branchSessionHandler;
   late UserInteractionHandler _userInteractionHandler;
+
+  // 下拉跳转到更多功能页面的状态
+  bool _isAtTop = false;
+  bool _isOverScrolling = false;
+  Timer? _pullHoldTimer;
+  String _pullHintText = '';
+  bool _showPullHint = false;
 
   @override
   void initState() {
@@ -78,6 +87,7 @@ class _BranchChatPageState extends State<BranchChatPage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _pullHoldTimer?.cancel();
     state.dispose();
     super.dispose();
   }
@@ -95,6 +105,86 @@ class _BranchChatPageState extends State<BranchChatPage>
 
   bool _isDesktop() {
     return ScreenHelper.isDesktop();
+  }
+
+  // 处理滚动通知
+  bool _onScrollNotification(ScrollNotification notification) {
+    if (!ScreenHelper.isMobile()) return false;
+
+    if (notification is ScrollStartNotification) {
+      // 滚动开始
+      _isAtTop = notification.metrics.pixels <= 0;
+    } else if (notification is ScrollUpdateNotification) {
+      // 滚动更新
+      if (_isAtTop && notification.metrics.pixels < 0) {
+        // 在顶部且过度滚动（下拉）
+        if (!_isOverScrolling) {
+          _isOverScrolling = true;
+          _startPullTimer();
+        }
+      } else if (notification.metrics.pixels > 0) {
+        // 只有在向上滚动时才重置状态
+        if (_isOverScrolling) {
+          _resetPullState();
+        }
+      }
+    } else if (notification is ScrollEndNotification) {
+      // 滚动结束
+      if (_showPullHint && _pullHintText == '松开进入更多功能页面') {
+        _navigateToMoreFeatures();
+        _resetPullState();
+      } else {
+        _resetPullState();
+      }
+    }
+
+    return false;
+  }
+
+  // 启动悬停计时器
+  void _startPullTimer() {
+    _pullHoldTimer?.cancel();
+    _pullHoldTimer = Timer(const Duration(milliseconds: 1200), () {
+      if (_isOverScrolling && _isAtTop && mounted) {
+        setState(() {
+          _pullHintText = '松开进入更多功能页面';
+          _showPullHint = true;
+        });
+      }
+    });
+  }
+
+  // 重置下拉状态
+  void _resetPullState() {
+    _pullHoldTimer?.cancel();
+    setState(() {
+      _isOverScrolling = false;
+      _isAtTop = false;
+      _showPullHint = false;
+      _pullHintText = '';
+    });
+  }
+
+  // 跳转到更多功能页面
+  void _navigateToMoreFeatures() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AIToolPage()),
+    ).then((value) async {
+      // 初始化模型
+      await _initHandler.initModels();
+
+      // 初始化会话
+      await _initHandler.initSession();
+
+      // 重新加载会话列表并更新UI（如果之前有的对话删除过模型，现在又导入了，可能就需要更新对话列表）
+      final updatedSessions = _initHandler.loadSessions();
+
+      // 强制更新UI
+      setState(() {
+        state.sessionList = updatedSessions;
+      });
+    });
   }
 
   @override
@@ -135,10 +225,9 @@ class _BranchChatPageState extends State<BranchChatPage>
     final customAppBar = AppBar(
       backgroundColor: Colors.transparent,
       title: SimpleMarqueeOrText(
-        data:
-            state.currentCharacter != null
-                ? "${state.currentCharacter?.name}"
-                : "${CP_NAME_MAP[state.selectedModel?.platform]} > ${state.selectedModel?.model}",
+        data: state.currentCharacter != null
+            ? "${state.currentCharacter?.name}"
+            : "${CP_NAME_MAP[state.selectedModel?.platform]} > ${state.selectedModel?.model}",
         velocity: 30,
         width: 0.6.sw,
         style: TextStyle(
@@ -154,15 +243,14 @@ class _BranchChatPageState extends State<BranchChatPage>
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder:
-                  (context) => BranchChatHistoryPage(
-                    currentSessionId: state.currentSessionId,
-                    onSessionSelected: (session) async {
-                      if (!mounted) return;
-                      await _branchSessionHandler.switchSession(session.id);
-                    },
-                    onCompleted: onHistoryActionCompleted,
-                  ),
+              builder: (context) => BranchChatHistoryPage(
+                currentSessionId: state.currentSessionId,
+                onSessionSelected: (session) async {
+                  if (!mounted) return;
+                  await _branchSessionHandler.switchSession(session.id);
+                },
+                onCompleted: onHistoryActionCompleted,
+              ),
             ),
           );
         },
@@ -171,17 +259,16 @@ class _BranchChatPageState extends State<BranchChatPage>
         if (ScreenHelper.isMobile())
           _userInteractionHandler.buildPopupMenuButton(),
         IconButton(
-          onPressed:
-              !state.isStreaming
-                  ? () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CharacterListPage(),
-                      ),
-                    );
-                  }
-                  : null,
+          onPressed: !state.isStreaming
+              ? () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CharacterListPage(),
+                    ),
+                  );
+                }
+              : null,
           tooltip: '角色管理',
           icon: Icon(Icons.people),
         ),
@@ -197,29 +284,81 @@ class _BranchChatPageState extends State<BranchChatPage>
             ModelTypeFilter(
               models: state.modelList,
               selectedType: state.selectedType,
-              onTypeChanged:
-                  state.isStreaming
-                      ? null
-                      : _userInteractionHandler.handleTypeChanged,
-              onModelSelect:
-                  state.isStreaming
-                      ? null
-                      : _userInteractionHandler.showModelSelector,
+              onTypeChanged: state.isStreaming
+                  ? null
+                  : _userInteractionHandler.handleTypeChanged,
+              onModelSelect: state.isStreaming
+                  ? null
+                  : _userInteractionHandler.showModelSelector,
               isStreaming: state.isStreaming,
               isCusChip: true,
             ),
 
             /// 聊天内容
             Expanded(
-              child:
+              child: Stack(
+                children: [
                   state.displayMessages.isEmpty
-                      ? buildEmptyMessageHint(state.currentCharacter)
+                      ? buildEmptyMessageHint(
+                          state.currentCharacter,
+                          onLongPress: _navigateToMoreFeatures,
+                        )
+                      : ScreenHelper.isMobile()
+                      // 不能使用手势，因为手势的Pan和ListView会冲突，在手势中不会触发
+                      ? NotificationListener<ScrollNotification>(
+                          onNotification: _onScrollNotification,
+                          child: MessageList(
+                            state: state,
+                            setState: setState,
+                            aiResponseHandler: _aiResponseHandler,
+                            userInteractionHandler: _userInteractionHandler,
+                          ),
+                        )
                       : MessageList(
-                        state: state,
-                        setState: setState,
-                        aiResponseHandler: _aiResponseHandler,
-                        userInteractionHandler: _userInteractionHandler,
+                          state: state,
+                          setState: setState,
+                          aiResponseHandler: _aiResponseHandler,
+                          userInteractionHandler: _userInteractionHandler,
+                        ),
+
+                  // 下拉提示文本
+                  if (_showPullHint && ScreenHelper.isMobile())
+                    Positioned(
+                      top: 20,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).primaryColor.withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            _pullHintText,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
                       ),
+                    ),
+                ],
+              ),
             ),
 
             /// 流式响应时显示进度条
@@ -230,10 +369,9 @@ class _BranchChatPageState extends State<BranchChatPage>
               controller: state.inputController,
               focusNode: state.inputFocusNode,
               onSend: _messageHandler.handleSendMessage,
-              onCancel:
-                  state.currentEditingMessage != null
-                      ? _userInteractionHandler.handleCancelEditUserMessage
-                      : null,
+              onCancel: state.currentEditingMessage != null
+                  ? _userInteractionHandler.handleCancelEditUserMessage
+                  : null,
               isEditing: state.currentEditingMessage != null,
               isStreaming: state.isStreaming,
               onStop: _aiResponseHandler.handleStopStreaming,
@@ -279,10 +417,9 @@ class _BranchChatPageState extends State<BranchChatPage>
         },
         onCompleted: onHistoryActionCompleted,
       ),
-      rightSidebar:
-          _isDesktop()
-              ? _userInteractionHandler.buildDesktopRightSidebarPanel()
-              : null,
+      rightSidebar: _isDesktop()
+          ? _userInteractionHandler.buildDesktopRightSidebarPanel()
+          : null,
       appBar: customAppBar,
       title: customAppBar.title,
       actions: customAppBar.actions,
@@ -303,10 +440,9 @@ class _BranchChatPageState extends State<BranchChatPage>
             DraggableCharacterAvatarPreview(
               key: ValueKey(state.currentCharacter!.avatar),
               character: state.currentCharacter!,
-              left:
-                  state.isSidebarVisible
-                      ? (ScreenHelper.isMobile() ? 0.8.sw + 4 : 284)
-                      : 4,
+              left: state.isSidebarVisible
+                  ? (ScreenHelper.isMobile() ? 0.8.sw + 4 : 284)
+                  : 4,
             ),
         ],
       ),

@@ -10,7 +10,6 @@ import 'news_pages/duomoyu_page.dart';
 import 'news_pages/jiqizhixin_page.dart';
 import 'news_pages/momoyu_page.dart';
 import 'news_pages/newsapi_page.dart';
-import 'news_pages/newsnow_page.dart';
 import 'news_pages/readhub_page.dart';
 import 'news_pages/sina_roll_news_page.dart';
 import 'news_pages/daily_60s_page.dart';
@@ -208,16 +207,17 @@ List<Widget> _hotNewsSites(BuildContext context) {
       ),
     ]),
 
-    _rowWidget([
-      EntranceCard(
-        title: 'News Now',
-        subtitle: "优雅地阅读实时热点",
-        icon: Icons.newspaper,
-        onTap: () => showNoNetworkOrGoTargetPage(context, NewsNowPage()),
-      ),
+    // // 2025-08-25 网站有防ddos攻击，所以不再启用访问
+    // _rowWidget([
+    //   EntranceCard(
+    //     title: 'News Now',
+    //     subtitle: "优雅地阅读实时热点",
+    //     icon: Icons.newspaper,
+    //     onTap: () => showNoNetworkOrGoTargetPage(context, NewsNowPage()),
+    //   ),
 
-      SizedBox(width: 10),
-    ]),
+    //   SizedBox(width: 10),
+    // ]),
   ];
 }
 

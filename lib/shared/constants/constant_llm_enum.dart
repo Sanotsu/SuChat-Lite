@@ -88,6 +88,7 @@ final Map<ApiPlatformAKLabel, String> CP_LABLE_NAME_MAP = {
 };
 
 // 大模型的分类，在不同页面可以用作模型的筛选
+// (realtime 后缀的默认是使用 websocket 接口的)
 enum LLModelType {
   cc, // Chat Completions
   vision, // 视觉大模型
@@ -108,7 +109,8 @@ enum LLModelType {
 
   // 语音大模型
   audio, // 语音对话 (支持语音输入的，然后输出的也是文本、如果输入语音输出语音看omni)
-  asr, // 语音识别
+  asr, // 语音识别(http接口的)
+  asr_realtime, // 实时语音识别(用websocket接口的)
   tts, // 语音合成
   // 全模态，比如通义千问-Omni-Turbo
   // 支持文本, 图像，语音，视频输入理解和混合输入理解，具备文本和语音同时流式生成能力
@@ -129,6 +131,7 @@ final Map<LLModelType, String> MT_NAME_MAP = {
   LLModelType.video: '视频生成',
   LLModelType.audio: '语音对话',
   LLModelType.asr: '语音识别',
+  LLModelType.asr_realtime: '实时语音识别',
   LLModelType.tts: '语音合成',
   LLModelType.omni: '全模态',
 };

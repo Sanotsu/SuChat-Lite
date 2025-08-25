@@ -52,7 +52,7 @@ class TmdbApiManager {
     //api with showing all console logs
     final tmdb = TMDB(
       ApiKeys(_ak, _token),
-      logConfig: const ConfigLogger.showAll(),
+      // logConfig: const ConfigLogger.showAll(),
       // logConfig: const ConfigLogger(
       //   //must be true than only all other logs will be shown
       //   showLogs: true,

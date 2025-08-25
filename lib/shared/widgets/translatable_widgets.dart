@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/utils/simple_tools.dart';
-import '../../core/utils/simple_traslate_tool.dart';
+import '../services/translation_service.dart';
 import 'toast_utils.dart';
 
 /// 带有可翻译按钮的标题组件
@@ -21,7 +21,9 @@ class _TranslatableTitleButtonState extends State<TranslatableTitleButton> {
   String? translatedText;
 
   Future<void> _translateText() async {
-    String translation = await getAITranslation(widget.title);
+    String translation = await TranslationService.translateToChinese(
+      widget.title,
+    );
     setState(() {
       translatedText = translation;
     });
@@ -93,17 +95,26 @@ class _TranslatableTextState extends State<TranslatableText> {
   Future<void> _translateText() async {
     try {
       if (widget.stream == true) {
-        final (stream, cancelFunc) = await getStreamAITranslation(widget.text);
+        final (stream, cancelFunc) =
+            await TranslationService.translateStreamToChinese(widget.text);
+
         await for (final chunk in stream) {
-          setState(() {
-            translatedText += chunk.cusText;
-          });
+          if (mounted) {
+            setState(() {
+              translatedText += chunk.cusText;
+            });
+          }
         }
       } else {
-        String translation = await getAITranslation(widget.text);
-        setState(() {
-          translatedText = translation;
-        });
+        String translation = await TranslationService.translateToChinese(
+          widget.text,
+        );
+
+        if (mounted) {
+          setState(() {
+            translatedText = translation;
+          });
+        }
       }
     } catch (e) {
       ToastUtils.showError("翻译出错：${e.toString()}");

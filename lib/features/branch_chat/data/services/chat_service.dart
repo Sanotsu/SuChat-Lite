@@ -117,7 +117,7 @@ class ChatService {
       }
 
       if (apiKey == null || apiKey.isEmpty) {
-        throw Exception('未配置该平台的 API Key');
+        throw Exception('未配置 ${model.platform} 平台的 API Key');
       }
       return apiKey;
     }

@@ -3,8 +3,11 @@ import 'constant_llm_enum.dart';
 import 'default_image_generation_models.dart';
 import 'default_video_generation_models.dart';
 
+///
 /// 内置模型的 API Keys (用户不可见和修改)
-/// 2025-03-03 默认是有免费的模型，才可以慷慨提供内嵌的 API Keys，不免费的用户自行导入
+/// 2025-03-03 默认是有免费的模型，才可以简单提供内嵌的 API Keys
+/// 最好都使用自己的 AK 进行替换，以获取最佳体验。
+///
 // class DefaultApiKeys {
 //   static const baiduApiKey = 'xxx';
 //   static const tencentApiKey = 'xxx';
@@ -20,12 +23,19 @@ import 'default_video_generation_models.dart';
 //   static const nutritionixAppId = 'xxx';
 //   static const nutritionixAppKey = 'xxx';
 
-//   // fat secret api key(没用到)
-//   static const fatSecretClientId = 'xxx';
-//   static const fatSecretClientSecret = 'xxx';
-
 //   // newsapi完整的api key
 //   static const newsApiKey = 'xxx';
+
+//   // twitch 开发者APP的编号和密钥
+//    static const twitchClientId = "xxx";
+//    static const twitchApiKey = "xxx";
+
+//    // https://www.themoviedb.org/settings/api
+//    static const tmdbApiKey = "xxx";
+//    static const tmdbAccessToken = "xxx";
+
+//    // 阿里云的 AK
+//    static const aliyunApiKey = "sk-xxx";
 // }
 
 // 内置模型使用的密钥的命名如上即可，这里只是使用了作者的密钥
@@ -101,6 +111,16 @@ final defaultModels = [
   ),
   CusLLMSpec(
     ApiPlatform.zhipu,
+    "glm-4.5-flash",
+    LLModelType.cc,
+    name: "GLM-4.5-Flash",
+    isFree: true,
+    cusLlmSpecId: 'zhipu_glm_4_5_flash_builtin',
+    gmtCreate: DateTime.now(),
+    isBuiltin: true,
+  ),
+  CusLLMSpec(
+    ApiPlatform.zhipu,
     "glm-4-flash",
     LLModelType.cc,
     name: "CGLM-4-Flash",
@@ -126,6 +146,16 @@ final defaultModels = [
     name: "GLM-4V-Flash",
     isFree: true,
     cusLlmSpecId: 'zhipu_glm_4v_flash_builtin',
+    gmtCreate: DateTime.now(),
+    isBuiltin: true,
+  ),
+  CusLLMSpec(
+    ApiPlatform.zhipu,
+    "glm-4.1v-thinking-flash",
+    LLModelType.vision,
+    name: "GLM-4.1V-Thinking-Flash",
+    isFree: true,
+    cusLlmSpecId: 'zhipu_glm_4_1v_thinking_flash_builtin',
     gmtCreate: DateTime.now(),
     isBuiltin: true,
   ),

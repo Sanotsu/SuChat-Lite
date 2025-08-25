@@ -40,13 +40,10 @@ class HttpRequest {
     dio.httpClientAdapter = IOHttpClientAdapter(
       createHttpClient: () {
         final client = HttpClient();
-        client.badCertificateCallback = (
-          X509Certificate cert,
-          String host,
-          int port,
-        ) {
-          return true;
-        };
+        client.badCertificateCallback =
+            (X509Certificate cert, String host, int port) {
+              return true;
+            };
         return client;
       },
     );
