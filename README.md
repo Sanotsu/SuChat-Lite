@@ -13,6 +13,7 @@ SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API �
 - 集成了很多 [Sanotsu/swmate](https://github.com/Sanotsu/swmate) 中生活娱乐功能并新增更多：
   - 各种新闻热榜，杂文趣图；
   - Bangumi、MyALimeList、TMDB、豆果美食、USDA食品数据中心等部分数据；
+  - “岛读APP的”文章阅读
 
 桌面主页面预览:
 

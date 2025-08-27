@@ -20,6 +20,7 @@ import 'simple_accounting/presentation/pages/bill_list_page.dart';
 import 'training_assistant/presentation/index.dart';
 import 'visual_media/presentation/pages/tmdb/tmdb_home_page.dart';
 import 'voice_recognition/presentation/index.dart';
+import 'reading/presentation/pages/daodu/main_page.dart';
 
 class AIToolPage extends StatefulWidget {
   const AIToolPage({super.key});
@@ -515,20 +516,43 @@ class _AIToolPageState extends State<AIToolPage> {
                 SizedBox(
                   width: ScreenHelper.isDesktop() ? 150 : 80,
                   height: ScreenHelper.isDesktop() ? 150 : 80,
+                  child: TextButton(
+                    onPressed: getIgdbAccessToken,
+                    child: Text("IGDB\n(TODO)"),
+                  ),
+                ),
+              ],
+            ),
+
+            /// 这几个是统一使用 https://apic.netstart.cn/#/ 的API
+            Container(
+              padding: const EdgeInsets.all(8),
+              child: Center(child: Text("以下均使用的 https://apis.netstart.cn/ 接口")),
+            ),
+            Wrap(
+              // spacing: 8,
+              // runSpacing: 8,
+              // alignment: WrapAlignment.center,
+              children: [
+                SizedBox(
+                  width: ScreenHelper.isDesktop() ? 150 : 80,
+                  height: ScreenHelper.isDesktop() ? 150 : 80,
                   child: FeatureGridCard(
                     targetPage: const RecipeHomePage(),
                     title: "豆果美食",
                     icon: Icons.menu_book,
-                    accentColor: Colors.orange,
+                    accentColor: Colors.teal,
                   ),
                 ),
 
                 SizedBox(
                   width: ScreenHelper.isDesktop() ? 150 : 80,
                   height: ScreenHelper.isDesktop() ? 150 : 80,
-                  child: TextButton(
-                    onPressed: getIgdbAccessToken,
-                    child: Text("IGDB\n(TODO)"),
+                  child: FeatureGridCard(
+                    targetPage: const DaoduMainPage(),
+                    title: "岛读",
+                    icon: Icons.article,
+                    accentColor: Colors.teal,
                   ),
                 ),
               ],
@@ -540,7 +564,7 @@ class _AIToolPageState extends State<AIToolPage> {
               // alignment: WrapAlignment.center,
               children: [
                 SizedBox(
-                  width: ScreenHelper.isDesktop() ? 150 : 120,
+                  width: ScreenHelper.isDesktop() ? 150 : 80,
                   height: ScreenHelper.isDesktop() ? 150 : 80,
                   child: FeatureGridCard(
                     targetPage: const USDAFoodDataCentral(),

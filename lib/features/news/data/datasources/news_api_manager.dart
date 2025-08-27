@@ -1,5 +1,4 @@
-import 'dart:convert';
-
+import '../../../../core/api/base_api_manager.dart';
 import '../../../../core/utils/get_app_key_helper.dart';
 import '../../../../shared/constants/default_models.dart';
 import '../models/baike_history_in_today_resp.dart';
@@ -14,14 +13,14 @@ import '../models/sina_roll_news_resp.dart';
 import '../models/sut_bbc_news_resp.dart';
 import '../models/uo_toutiao_news_resp.dart';
 import '../models/uo_zhihu_daily_resp.dart';
-import 'news_api_wrapper.dart';
+import 'news_config.dart';
 
 /// 新闻API管理器
 /// 统一管理所有新闻源的API调用，提供保护措施
-class NewsApiManager {
+class NewsApiManager extends BaseApiManager<NewsApiConfig> {
   static final NewsApiManager _instance = NewsApiManager._internal();
   factory NewsApiManager() => _instance;
-  NewsApiManager._internal();
+  NewsApiManager._internal() : super(NewsApiConfig());
 
   // 新闻源基础URL
   static const String _newsapiBase = "https://newsapi.org/v2";
@@ -122,7 +121,7 @@ class NewsApiManager {
     final cacheKey =
         'newsapi_${type}_${category ?? 'general'}_${page}_$pageSize';
 
-    var respData = await newsGet(
+    var respData = await get(
       path: "$_newsapiBase/$type",
       queryParameters: params,
       forceRefresh: forceRefresh,
@@ -130,9 +129,7 @@ class NewsApiManager {
       cacheDuration: const Duration(minutes: 15),
     );
 
-    if (respData.runtimeType == String) {
-      respData = json.decode(respData);
-    }
+    respData = processResponse(respData);
 
     return NewsApiResp.fromJson(respData);
   }
@@ -145,7 +142,7 @@ class NewsApiManager {
   }) async {
     final cacheKey = 'momoyu_item_$id';
 
-    var respData = await newsGet(
+    var respData = await get(
       path: "$_momoyuBase/hot/item",
       queryParameters: {"id": id},
       forceRefresh: forceRefresh,
@@ -153,9 +150,7 @@ class NewsApiManager {
       cacheDuration: const Duration(minutes: 5),
     );
 
-    if (respData.runtimeType == String) {
-      respData = json.decode(respData);
-    }
+    respData = processResponse(respData);
 
     if (respData["status"] != 100000) {
       throw Exception("查询数据失败，请稍候重试");
@@ -173,16 +168,14 @@ class NewsApiManager {
   }) async {
     final cacheKey = 'momoyu_user_count';
 
-    var respData = await newsGet(
+    var respData = await get(
       path: "$_momoyuBase/user/count",
       forceRefresh: forceRefresh,
       customCacheKey: cacheKey,
       cacheDuration: const Duration(minutes: 1),
     );
 
-    if (respData.runtimeType == String) {
-      respData = json.decode(respData);
-    }
+    respData = processResponse(respData);
 
     return MomoyuResp.fromJson(
       respData,
@@ -204,7 +197,7 @@ class NewsApiManager {
         ? "$_readhubBase/topic/list"
         : "$_readhubBase/news/list";
 
-    var respData = await newsGet(
+    var respData = await get(
       path: path,
       queryParameters: type == 999
           ? {"page": page, "size": size}
@@ -214,9 +207,7 @@ class NewsApiManager {
       cacheDuration: const Duration(minutes: 2),
     );
 
-    if (respData.runtimeType == String) {
-      respData = json.decode(respData);
-    }
+    respData = processResponse(respData);
 
     if (respData["data"] == null) {
       throw Exception("返回结果不正确: $respData");
@@ -234,7 +225,7 @@ class NewsApiManager {
   }) async {
     final cacheKey = 'sina_roll_news_${lid}_${page}_$size';
 
-    var respData = await newsGet(
+    var respData = await get(
       path: _sinaRollNewsBase,
       queryParameters: {"pageid": 153, "lid": lid, "page": page, "num": size},
       forceRefresh: forceRefresh,
@@ -242,9 +233,7 @@ class NewsApiManager {
       cacheDuration: const Duration(minutes: 5),
     );
 
-    if (respData.runtimeType == String) {
-      respData = json.decode(respData);
-    }
+    respData = processResponse(respData);
 
     if (respData["result"] == null) {
       throw Exception("返回结果不正确: $respData");
@@ -263,7 +252,7 @@ class NewsApiManager {
     final cacheKey =
         'uo_toutiao_news_${category ?? "__all__"}_${maxBehotTime ?? 0}';
 
-    var respData = await newsGet(
+    var respData = await get(
       path: _toutiaoBase,
       queryParameters: maxBehotTime != null
           ? {"category": category, "max_behot_time": maxBehotTime}
@@ -273,9 +262,7 @@ class NewsApiManager {
       cacheDuration: const Duration(minutes: 5),
     );
 
-    if (respData.runtimeType == String) {
-      respData = json.decode(respData);
-    }
+    respData = processResponse(respData);
 
     return UoToutiaoNewsResp.fromJson(respData);
   }
@@ -284,16 +271,14 @@ class NewsApiManager {
   Future<UoItHomeResp> getUoItHomeList({bool forceRefresh = false}) async {
     final cacheKey = 'uo_ithome';
 
-    var respData = await newsGet(
+    var respData = await get(
       path: _ithomeNewsBase,
       forceRefresh: forceRefresh,
       customCacheKey: cacheKey,
       cacheDuration: const Duration(minutes: 10),
     );
 
-    if (respData.runtimeType == String) {
-      respData = json.decode(respData);
-    }
+    respData = processResponse(respData);
 
     return UoItHomeResp.fromJson(respData);
   }
@@ -305,7 +290,7 @@ class NewsApiManager {
   }) async {
     final cacheKey = 'sut_bbc_news_$lang';
 
-    var respData = await newsGet(
+    var respData = await get(
       path: _sutBbcNewsBase,
       queryParameters: {"lang": lang},
       forceRefresh: forceRefresh,
@@ -313,9 +298,7 @@ class NewsApiManager {
       cacheDuration: const Duration(minutes: 10),
     );
 
-    if (respData.runtimeType == String) {
-      respData = json.decode(respData);
-    }
+    respData = processResponse(respData);
 
     return SutBbcNewsResp.fromJson(respData);
   }
@@ -327,16 +310,14 @@ class NewsApiManager {
   }) async {
     final cacheKey = 'duomoyu_hot_list_$category';
 
-    var respData = await newsGet(
+    var respData = await get(
       path: "$_duomoyuBase/$category",
       forceRefresh: forceRefresh,
       customCacheKey: cacheKey,
       cacheDuration: const Duration(minutes: 5),
     );
 
-    if (respData.runtimeType == String) {
-      respData = json.decode(respData);
-    }
+    respData = processResponse(respData);
 
     return DuomoyuResp.fromJson(respData);
   }
@@ -349,7 +330,7 @@ class NewsApiManager {
   }) async {
     final cacheKey = 'jiqizhixin_news_${page}_$size';
 
-    var respData = await newsGet(
+    var respData = await get(
       path: _jiqizhixinBase,
       queryParameters: {"sort": "time", "page": page, "per": size},
       forceRefresh: forceRefresh,
@@ -357,9 +338,7 @@ class NewsApiManager {
       cacheDuration: const Duration(minutes: 10),
     );
 
-    if (respData.runtimeType == String) {
-      respData = json.decode(respData);
-    }
+    respData = processResponse(respData);
 
     return JiqizhixinResp.fromJson(respData);
   }
@@ -372,7 +351,7 @@ class NewsApiManager {
   }) async {
     final cacheKey = 'newsnow_item_$id';
 
-    var respData = await newsGet(
+    var respData = await get(
       path: "$_newsnowBase/s",
       queryParameters: {"id": id},
       forceRefresh: forceRefresh,
@@ -380,9 +359,7 @@ class NewsApiManager {
       cacheDuration: const Duration(minutes: 3),
     );
 
-    if (respData.runtimeType == String) {
-      respData = json.decode(respData);
-    }
+    respData = processResponse(respData);
 
     return NewsNowResp.fromJson(respData);
   }
@@ -402,16 +379,14 @@ class NewsApiManager {
       path = "$_uoZhihudailyBase/stories/before/$date";
     }
 
-    var respData = await newsGet(
+    var respData = await get(
       path: path,
       forceRefresh: forceRefresh,
       customCacheKey: cacheKey,
       cacheDuration: const Duration(minutes: 10),
     );
 
-    if (respData.runtimeType == String) {
-      respData = json.decode(respData);
-    }
+    respData = processResponse(respData);
 
     return UoZhihuDailyResp.fromJson(respData);
   }
@@ -422,16 +397,14 @@ class NewsApiManager {
   }) async {
     final cacheKey = 'baike_history_in_today';
 
-    var respData = await newsGet(
+    var respData = await get(
       path: _baikeHistoryInTodayBase,
       forceRefresh: forceRefresh,
       customCacheKey: cacheKey,
       cacheDuration: const Duration(minutes: 10),
     );
 
-    if (respData.runtimeType == String) {
-      respData = json.decode(respData);
-    }
+    respData = processResponse(respData);
 
     if (respData["data"] == null) {
       throw Exception("返回结果不正确: $respData");
@@ -464,16 +437,7 @@ class NewsApiManager {
   //   return Hitokoto.fromJson(respData);
   // }
 
-  /// 清理所有缓存
-  void clearAllCache() {
-    NewsApiWrapper().clearCache();
-    NewsApiWrapper().clearRequestLog();
-  }
-
-  /// 获取缓存统计信息
-  Map<String, dynamic> getCacheStats() {
-    return NewsApiWrapper().getCacheStats();
-  }
+  // 继承自BaseApiManager的clearAllCache()和getCacheStats()方法
 }
 
 /// 便捷的全局访问方法

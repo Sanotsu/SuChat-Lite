@@ -121,7 +121,7 @@ class _UnofficialToutiaoNewsPageState
     // 源地址是头条的相对路径，所以拼接
     var url = "";
     if (item.sourceUrl != null && item.sourceUrl!.isNotEmpty) {
-      url = "https://www.toutiao.com/${item.sourceUrl}";
+      url = "https://www.toutiao.com${item.sourceUrl}";
     }
 
     return CoverNewsCard(

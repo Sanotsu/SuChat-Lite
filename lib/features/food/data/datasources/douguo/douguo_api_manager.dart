@@ -1,17 +1,16 @@
-import 'dart:convert';
-
+import '../../../../../core/api/base_api_manager.dart';
 import '../../models/douguo/douguo_recipe_comment_resp.dart';
 import '../../models/douguo/douguo_recipe_resp.dart';
 import '../../models/douguo/douguo_recommended_resp.dart';
 import '../../models/douguo/douguo_search_resp.dart';
-import 'douguo_api_wrapper.dart';
+import 'douguo_config.dart';
 
 /// 豆果API管理器
 /// 统一管理所有豆果源的API调用，提供保护措施
-class DouguoApiManager {
+class DouguoApiManager extends BaseApiManager<DouguoApiConfig> {
   static final DouguoApiManager _instance = DouguoApiManager._internal();
   factory DouguoApiManager() => _instance;
-  DouguoApiManager._internal();
+  DouguoApiManager._internal() : super(DouguoApiConfig());
 
   // 豆果源基础URL
   static const String _douguoApiBase = "https://apis.netstart.cn/douguo";
@@ -26,16 +25,14 @@ class DouguoApiManager {
   }) async {
     final cacheKey = 'douguo_recommended_${offset}_$limit';
 
-    var respData = await newsGet(
+    var respData = await get(
       path: "$_douguoApiBase/home/recommended/$offset/$limit",
       forceRefresh: forceRefresh,
       customCacheKey: cacheKey,
       cacheDuration: const Duration(minutes: 2),
     );
 
-    if (respData.runtimeType == String) {
-      respData = json.decode(respData);
-    }
+    respData = processResponse(respData);
 
     return DouguoRecommendedResp.fromJson(respData);
   }
@@ -58,7 +55,7 @@ class DouguoApiManager {
     final cacheKey =
         'douguo_search_${keyword}_${order}_${type}_${secondaryKeyword}_${offset}_$limit';
 
-    var respData = await newsGet(
+    var respData = await get(
       path: "$_douguoApiBase/recipe/search",
       queryParameters: {
         "keyword": keyword,
@@ -73,9 +70,7 @@ class DouguoApiManager {
       cacheDuration: const Duration(minutes: 2),
     );
 
-    if (respData.runtimeType == String) {
-      respData = json.decode(respData);
-    }
+    respData = processResponse(respData);
 
     return DouguoSearchResp.fromJson(respData);
   }
@@ -87,16 +82,14 @@ class DouguoApiManager {
   }) async {
     final cacheKey = 'douguo_recipe_detail_$recipeId';
 
-    var respData = await newsGet(
+    var respData = await get(
       path: "$_douguoApiBase/recipe/detail/$recipeId",
       forceRefresh: forceRefresh,
       customCacheKey: cacheKey,
       cacheDuration: const Duration(minutes: 10),
     );
 
-    if (respData.runtimeType == String) {
-      respData = json.decode(respData);
-    }
+    respData = processResponse(respData);
 
     return DouguoRecipeResp.fromJson(respData);
   }
@@ -112,31 +105,20 @@ class DouguoApiManager {
   }) async {
     final cacheKey = 'douguo_recipe_comment_${recipeId}_${offset}_$limit';
 
-    var respData = await newsGet(
+    var respData = await get(
       path: "$_douguoApiBase/recipe/flatcomments/$recipeId/$offset/$limit",
       forceRefresh: forceRefresh,
       customCacheKey: cacheKey,
       cacheDuration: const Duration(minutes: 10),
     );
 
-    if (respData.runtimeType == String) {
-      respData = json.decode(respData);
-    }
+    respData = processResponse(respData);
 
     return DouguoRecipeCommentResp.fromJson(respData);
   }
 
-  /// 清理所有缓存
-  void clearAllCache() {
-    DouguoApiWrapper().clearCache();
-    DouguoApiWrapper().clearRequestLog();
-  }
-
-  /// 获取缓存统计信息
-  Map<String, dynamic> getCacheStats() {
-    return DouguoApiWrapper().getCacheStats();
-  }
+  // 继承自BaseApiManager的clearAllCache()和getCacheStats()方法
 }
 
 /// 便捷的全局访问方法
-DouguoApiManager get newsApiManager => DouguoApiManager();
+DouguoApiManager get douguoApiManager => DouguoApiManager();

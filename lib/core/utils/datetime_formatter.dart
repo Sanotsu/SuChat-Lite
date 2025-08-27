@@ -86,6 +86,22 @@ String formatRelativeDate(DateTime? dateTime) {
   }
 }
 
+// 尽量用上面个
+String formatLatestTime(DateTime dateTime) {
+  final now = DateTime.now();
+  final difference = now.difference(dateTime);
+
+  if (difference.inDays > 0) {
+    return '${difference.inDays}天前';
+  } else if (difference.inHours > 0) {
+    return '${difference.inHours}小时前';
+  } else if (difference.inMinutes > 0) {
+    return '${difference.inMinutes}分钟前';
+  } else {
+    return '刚刚';
+  }
+}
+
 // 英文显示有单数复数之分
 String formatTimeAgoEn(String timeString) {
   DateTime dateTime = DateTime.parse(timeString);
