@@ -6,6 +6,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 import '../../core/utils/screen_helper.dart';
+import '../services/network_service.dart';
 
 // 绘制转圈圈
 Widget buildLoader(bool isLoading) {
@@ -591,4 +592,21 @@ Widget buildInfoButtonOnAction(BuildContext context, String note) {
     },
     icon: const Icon(Icons.info_outline),
   );
+}
+
+/// 没有网的时候，点击就显示弹窗；有网才跳转到功能页面
+void showNoNetworkOrGoTargetPage(
+  BuildContext context,
+  Widget targetPage, {
+  Function(dynamic)? thenFunc,
+}) async {
+  bool isNetworkAvailable = await NetworkStatusService().isNetwork();
+
+  if (!context.mounted) return;
+  isNetworkAvailable
+      ? Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => targetPage),
+        ).then((value) => thenFunc?.call(value))
+      : commonHintDialog(context, "提示", "请联网后使用该功能。", msgFontSize: 15);
 }

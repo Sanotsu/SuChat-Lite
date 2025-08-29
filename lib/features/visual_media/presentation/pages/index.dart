@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../shared/services/network_service.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../news/presentation/widgets/entrance_card.dart';
 import 'bangumi/bangumi_calendar.dart';
@@ -28,7 +27,7 @@ class _VisualMediaIndexState extends State<VisualMediaIndex> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      appBar: AppBar(title: const Text('图片动漫')),
+      appBar: AppBar(title: const Text('动漫资讯')),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -133,20 +132,4 @@ Widget _rowWidget(List<Widget> children) {
       children: children.map((child) => Expanded(child: child)).toList(),
     ),
   );
-}
-
-/// 卡片在没有网的时候，点击就显示弹窗；有网才跳转到功能页面
-void showNoNetworkOrGoTargetPage(
-  BuildContext context,
-  Widget targetPage,
-) async {
-  bool isNetworkAvailable = await NetworkStatusService().isNetwork();
-
-  if (!context.mounted) return;
-  isNetworkAvailable
-      ? Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => targetPage),
-        )
-      : commonHintDialog(context, "提示", "请联网后使用该功能。", msgFontSize: 15);
 }

@@ -64,6 +64,34 @@ String formatTimeAgo(String timeString) {
   }
 }
 
+String formatTimestampAgo(int? timestamp) {
+  if (timestamp == null) return '';
+
+  final dateTime = timestamp.bitLength > 10
+      ? DateTime.fromMillisecondsSinceEpoch(timestamp)
+      : DateTime.fromMicrosecondsSinceEpoch(timestamp);
+  final now = DateTime.now();
+  final difference = now.difference(dateTime);
+
+  // if (difference.inDays > 365) {
+  //   int years = (difference.inDays / 365).floor();
+  //   return '$years年前';
+  // } else if (difference.inDays > 30) {
+  //   int months = (difference.inDays / 30).floor();
+  //   return '$months月前';
+  // } else
+
+  if (difference.inDays > 0) {
+    return '${difference.inDays}天前';
+  } else if (difference.inHours > 0) {
+    return '${difference.inHours}小时前';
+  } else if (difference.inMinutes > 0) {
+    return '${difference.inMinutes}分钟前';
+  } else {
+    return '刚刚';
+  }
+}
+
 // 格式化相对日期
 String formatRelativeDate(DateTime? dateTime) {
   if (dateTime == null) return '';

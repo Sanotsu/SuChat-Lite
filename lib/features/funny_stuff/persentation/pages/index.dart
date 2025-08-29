@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../shared/services/network_service.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../news/presentation/widgets/entrance_card.dart';
 import 'random_image_page.dart';
@@ -123,20 +122,4 @@ Widget _rowWidget(List<Widget> children) {
       children: children.map((child) => Expanded(child: child)).toList(),
     ),
   );
-}
-
-/// 卡片在没有网的时候，点击就显示弹窗；有网才跳转到功能页面
-void showNoNetworkOrGoTargetPage(
-  BuildContext context,
-  Widget targetPage,
-) async {
-  bool isNetworkAvailable = await NetworkStatusService().isNetwork();
-
-  if (!context.mounted) return;
-  isNetworkAvailable
-      ? Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => targetPage),
-        )
-      : commonHintDialog(context, "提示", "请联网后使用该功能。", msgFontSize: 15);
 }

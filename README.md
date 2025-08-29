@@ -12,8 +12,10 @@ SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API �
 - 一些有少量使用 AI 特性的扩展功能，如训练助手、饮食日记、极简记账、记事本；
 - 集成了很多 [Sanotsu/swmate](https://github.com/Sanotsu/swmate) 中生活娱乐功能并新增更多：
   - 各种新闻热榜，杂文趣图；
-  - Bangumi、MyALimeList、TMDB、豆果美食、USDA食品数据中心等部分数据；
-  - “岛读APP的”文章阅读
+  - 使用官方(或开源)提供的 API 构建的服务：
+    - [Bangumi](https://github.com/bangumi/api)、[MyALimeList](https://docs.api.jikan.moe/)、[TMDB](https://developer.themoviedb.org/reference/intro/getting-started)、[USDA食品数据中心](https://fdc.nal.usda.gov/api-guide/)等；
+  - 使用第三方提供的 API 构建的服务：
+    - 豆果美食、岛读APP、好看漫画
 
 桌面主页面预览:
 
