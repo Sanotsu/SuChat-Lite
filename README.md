@@ -5,17 +5,19 @@
 
 # SuChat Lite
 
-SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API 驱动的、简洁版 AI 聊天应用。此外：
+(后续应该是 SuChat Life 了)
+
+SuChat 是一个以简洁 AI 聊天为核心，并集成多种生活娱乐工具的跨平台应用，由 Flutter 开发并通过云端大模型 API 驱动：
 
 - AI 聊天支持简单自定义角色；
 - 一些其他 AI 功能，例如支持简单的音频、图片、视频资源生成，录音文件识别，快速翻译；
 - 一些有少量使用 AI 特性的扩展功能，如训练助手、饮食日记、极简记账、记事本；
-- 集成了很多 [Sanotsu/swmate](https://github.com/Sanotsu/swmate) 中生活娱乐功能并新增更多：
+- 集成了很多基于官方、开源、第三方的 API 构建的生活娱乐功能：
   - 各种新闻热榜，杂文趣图；
   - 使用官方(或开源)提供的 API 构建的服务：
-    - [Bangumi](https://github.com/bangumi/api)、[MyALimeList](https://docs.api.jikan.moe/)、[TMDB](https://developer.themoviedb.org/reference/intro/getting-started)、[USDA食品数据中心](https://fdc.nal.usda.gov/api-guide/)等；
+    - [Bangumi](https://github.com/bangumi/api)、[MyALimeList](https://docs.api.jikan.moe/)、[TMDB](https://developer.themoviedb.org/reference/intro/getting-started)、[USDA 食品数据中心](https://fdc.nal.usda.gov/api-guide/)等；
   - 使用第三方提供的 API 构建的服务：
-    - 豆果美食、岛读APP、好看漫画
+    - 豆果美食、岛读 APP、好看漫画
 
 桌面主页面预览:
 
@@ -29,7 +31,7 @@ SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API �
 
 更多更新内容可查看 [CHANGELOG](CHANGELOG.md) 文件，不再此页面赘述。
 
-## 特性(对话部分)
+## AI 对话
 
 - **支持多个 LLM 提供商**
   - 支持多个云平台在线模型 HTTP API 的调用
@@ -62,6 +64,86 @@ SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API �
 
 ---
 
+## 更多功能
+
+除了核心的 AI 对话聊天部分，还添加了许多其他类型大模型使用的功能，以及之前 [Sanotsu/swmate](https://github.com/Sanotsu/swmate) 中的生活娱乐相关功能。
+
+**_"更多功能"的模块在移动端效果较好，桌面端没有适配，甚至部分功能有可能无法按预期使用。_**
+
+下方应用截图为开发时截取，实际完成效果可能有出入，以实际所见为准。
+
+### 1 “更多功能”入口
+
+![1更多功能入口首页和模型配置](./_doc/snapshots/more_features/1更多功能入口首页和模型配置.jpg)
+
+- 历史记录侧边栏点击“更多功能”按钮进入
+- 对话页面如果没有内容长按欢迎词、有对话内容滚动到顶部后继续下拉悬停 1.2 秒后进入
+
+注意，大部分 AI 相关功能需要使用云端大模型 API，虽然我内置了一小部分免费模型，但我所有开源项目同一个云平台都是同一个 AK，所以限制比较多。
+
+**最好使用自己的云平台 API Key**。直接的平台和导入方法参考下面章节。
+
+### 2 大模型相关功能列表
+
+**AI 语音合成、图片生成、视频生成、录音文件识别、快速翻译**:
+
+![more_features](./_doc/snapshots/more_features/2大模型相关功能截图.jpg)
+
+- AI 生成语音、图片、视频结构比较类似，支持的模型要自行导入。
+- 录音文件识别使用阿里云的模型，录音或者选择文件需要上传到云端去。我这里支持添加到 github 仓库当作云端存储，所以需要自行添加自己的 github 用户名、仓库名和访问令牌；否则只能输入可访问的云端音频地址进行识别。
+- 快速翻译也是使用阿里云的 paraformer-realtime-v2、qwen-mt、qwen-tts 模型，所以需要自己的阿里云百炼平台 API Key。
+
+### 3 扩展功能
+
+**训练助手、饮食日记**:
+
+![3训练助手和饮食日记](./_doc/snapshots/more_features/3训练助手和饮食日记.jpg)
+
+- 训练助手是调用大模型按照预定 json 格式生成训练计划，然后可以选择某个计划进行简单跟练。
+- 饮食记录可以记录自己的一日三餐。
+  - 食品数据可以自己一个个添加，可以拍照通过视觉大模型识别增加添加体验。
+  - 也支持 [Sanotsu/china-food-composition-data](https://github.com/Sanotsu/china-food-composition-data) 中食品营养素 json 文件的导入
+
+**极简记账、记事本**:
+
+![4极简记账和记事本](./_doc/snapshots/more_features/4极简记账和记事本.jpg)
+
+- 极简记账就是自己记录支出和收入，还有按周、月、年、自定义时间段的统计图表
+- 记事本就是一个富文本编辑器，可以简单记录一些内容
+
+### 4 生活娱乐
+
+这部分都是调用官方或者第三方 API 实现的功能，可能就和 AI 没什么关系了，但娱乐也是生活重要一部分。
+
+**新闻热榜、趣文趣图**:
+
+![5新闻热榜和趣文趣图](./_doc/snapshots/more_features/5新闻热榜和趣文趣图.jpg)
+
+- 新闻热榜、趣文趣图等我没有自己维护爬虫后台，所以都是使用别人的 API 或者在指定网站的控制台看到的接口，所以随时可能不可用
+
+**动漫资讯、waifu 图片**
+
+![6动漫资讯截图](./_doc/snapshots/more_features/6动漫资讯截图.jpg)
+
+- Bangumi、MyAnimeList、waifu 几个平台有官方或在开源的第三方 API，这是基于此增加的少量页面
+
+**TMDB、USDA FDC 数据**
+
+![7TMDB和USDAFDC数据](./_doc/snapshots/more_features/7TMDB和USDAFDC数据.jpg)
+
+- TMDB 是一个国外的社区维护构建的电影、影视剧、演员等信息的数据库，有官方的 API。
+- USDA FDC 是美国农业部食品数据中心的数据，算是美国政府机构提供的可访问数据 API。
+
+**豆果美食、岛读**
+
+![8豆果美食岛读等](./_doc/snapshots/more_features/8豆果美食岛读等.jpg)
+
+- 豆果美食、岛读等蓝绿色图表的功能模块，都是基于同一个供交流学习的平台`https://apis.netstart.cn/` API 的，所以随时可能不可用
+- 豆果美食是用户上传分享的美食食谱社区
+- 岛读官方每天有推一篇文章供读者阅读交流
+
+## 云端大模型 API 说明
+
 大模型 API 调用**只保留其 HTTP API 兼容 openAI API 结构的**云平台和对话模型。
 
 具体如下(2025-05-27)：
@@ -78,10 +160,6 @@ SuChat 是一个使用 Flutter 开发、以调用云平台在线大模型 API �
   - [硅基流动](https://docs.siliconflow.cn/cn/api-reference/chat-completions/chat-completions)
 - 其他兼容 openAI API 结构的云平台和 HTTP API，可使用自定义模式添加
   - 此时需要模型管理中平台选择自定义后，添加其请求地址、模型代号、平台密钥
-
-更多功能(2025-06-23)
-
-点击对话记录侧边栏页面上下方更多功能按钮，即可进入更多功能页面，即可使用简单的录音识别、语音合成、图片生成、视频生成和其他扩展功能。
 
 具体使用的云平台和大模型 API 如下：
 

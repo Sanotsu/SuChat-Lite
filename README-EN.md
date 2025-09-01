@@ -5,6 +5,8 @@
 
 # SuChat Lite
 
+Document last updated: 2025-05-28
+
 SuChat is a concise AI chat application developed using Flutter, powered by calling cloud platform-based large model APIs online. It supports simple custom characters for role-playing.
 
 **2025-05-28 more simple features**

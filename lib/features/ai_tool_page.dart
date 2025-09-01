@@ -5,7 +5,6 @@ import '../shared/widgets/feature_grid_card.dart';
 import '../shared/widgets/modern_feature_card.dart';
 import 'model_management/index.dart';
 import 'translator/presentation/pages/mini_translator_page.dart';
-import 'visual_media/data/datasources/igdb/igdb_apis.dart';
 import 'visual_media/presentation/pages/haokan/haokan_home_page.dart';
 import 'visual_media/presentation/pages/index.dart';
 import 'diet_diary/presentation/index.dart';
@@ -76,7 +75,7 @@ class _AIToolPageState extends State<AIToolPage> {
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                 child: Center(
                   child: Text(
-                    "注意：以下均使用第三方API接口，"
+                    "注意：以下功能模块均基于 API 实现，"
                     "随时可能停止服务或不可访问，"
                     "仅供学习交流，切不可他用。",
                     style: TextStyle(color: Colors.grey),
@@ -518,14 +517,14 @@ class _AIToolPageState extends State<AIToolPage> {
                   ),
                 ),
 
-                SizedBox(
-                  width: ScreenHelper.isDesktop() ? 150 : 80,
-                  height: ScreenHelper.isDesktop() ? 150 : 80,
-                  child: TextButton(
-                    onPressed: getIgdbAccessToken,
-                    child: Text("IGDB\n(TODO)"),
-                  ),
-                ),
+                // SizedBox(
+                //   width: ScreenHelper.isDesktop() ? 150 : 80,
+                //   height: ScreenHelper.isDesktop() ? 150 : 80,
+                //   child: TextButton(
+                //     onPressed: getIgdbAccessToken,
+                //     child: Text("IGDB\n(TODO)"),
+                //   ),
+                // ),
               ],
             ),
 
@@ -547,13 +546,13 @@ class _AIToolPageState extends State<AIToolPage> {
               ],
             ),
 
-            /// 这几个是统一使用 https://apic.netstart.cn/#/ 的API
-            Container(
-              padding: const EdgeInsets.all(8),
-              child: Center(
-                child: Text("蓝绿色的均使用的 https://apis.netstart.cn/ 接口"),
-              ),
-            ),
+            // /// 这几个是统一使用 https://apic.netstart.cn/#/ 的API
+            // Container(
+            //   padding: const EdgeInsets.all(8),
+            //   child: Center(
+            //     child: Text("蓝绿色的均使用的 https://apis.netstart.cn/ 接口"),
+            //   ),
+            // ),
             Wrap(
               // spacing: 8,
               // runSpacing: 8,
