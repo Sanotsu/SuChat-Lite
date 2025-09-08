@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../../shared/widgets/common_error_empty_widgets.dart';
 import '../../../data/datasources/tmdb/tmdb_apis.dart';
 import '../../../data/models/tmdb/tmdb_all_image_resp.dart';
 import '../../../data/models/tmdb/tmdb_common.dart';
@@ -225,33 +226,13 @@ class _TmdbDetailPageState extends State<TmdbDetailPage> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-          ? _buildErrorWidget()
+          ? buildCommonErrorWidget(
+              error: _error,
+              onRetry: _loadDetailData,
+              showBack: true,
+              context: context,
+            )
           : _buildDetailContent(),
-    );
-  }
-
-  /// 构建错误提示
-  Widget _buildErrorWidget() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text(
-            '加载详情失败',
-            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _error ?? '未知错误',
-            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(onPressed: _loadDetailData, child: const Text('重试')),
-        ],
-      ),
     );
   }
 

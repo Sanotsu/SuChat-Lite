@@ -5,7 +5,6 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:suchat_lite/shared/widgets/toast_utils.dart';
 import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
@@ -13,6 +12,7 @@ import 'dart:io';
 import '../../../../core/utils/screen_helper.dart';
 import '../../../../shared/widgets/common_dialog.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
+import '../../../../shared/widgets/toast_utils.dart';
 import '../../domain/entities/note.dart';
 import '../../domain/entities/note_category.dart';
 import '../../domain/entities/note_tag.dart';
@@ -256,10 +256,9 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
         );
 
         // 根据归档状态选择适当的更新方法
-        savedNote =
-            _isArchived
-                ? await notebookViewModel.archiveNote(updatedNote)
-                : await notebookViewModel.updateNote(updatedNote);
+        savedNote = _isArchived
+            ? await notebookViewModel.archiveNote(updatedNote)
+            : await notebookViewModel.updateNote(updatedNote);
 
         // 更新当前笔记引用
         if (mounted) {
@@ -299,21 +298,20 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
       // 显示保存确认对话框
       final result = await showDialog<bool>(
         context: context,
-        builder:
-            (context) => AlertDialog(
-              title: const Text('保存笔记'),
-              content: const Text('是否保存当前笔记？'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('不保存'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('保存'),
-                ),
-              ],
+        builder: (context) => AlertDialog(
+          title: const Text('保存笔记'),
+          content: const Text('是否保存当前笔记？'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('不保存'),
             ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('保存'),
+            ),
+          ],
+        ),
       );
 
       // 如果用户选择保存，则保存笔记
@@ -348,27 +346,25 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
           title: Text(widget.note == null ? '新建笔记' : '编辑笔记'),
           actions: buildActions(),
         ),
-        body:
-            _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : ScreenHelper.isDesktop()
-                // 如果是桌面端，则直接使用commonLayout，编辑器内部使用Expanded填充满剩下的区域
-                ? commonLayout()
-                // 如果是移动端，则使用可滚动组件包裹，且设定编辑器一个固定高度
-                : SingleChildScrollView(child: commonLayout()),
-        floatingActionButton:
-            _isReadOnly
-                ? null
-                : Stack(
-                  children: [
-                    buildFloatingActionButton(
-                      _saveNote,
-                      context,
-                      icon: Icons.save,
-                      tooltip: '保存笔记',
-                    ),
-                  ],
-                ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : ScreenHelper.isDesktop()
+            // 如果是桌面端，则直接使用commonLayout，编辑器内部使用Expanded填充满剩下的区域
+            ? commonLayout()
+            // 如果是移动端，则使用可滚动组件包裹，且设定编辑器一个固定高度
+            : SingleChildScrollView(child: commonLayout()),
+        floatingActionButton: _isReadOnly
+            ? null
+            : Stack(
+                children: [
+                  buildFloatingActionButton(
+                    _saveNote,
+                    context,
+                    icon: Icons.save,
+                    tooltip: '保存笔记',
+                  ),
+                ],
+              ),
       ),
     );
   }
@@ -469,69 +465,68 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
               break;
           }
         },
-        itemBuilder:
-            (context) => [
-              // 分类选项 - 只有非归档笔记才显示
-              if (!_isReadOnly)
-                const PopupMenuItem<String>(
-                  value: 'category',
-                  child: ListTile(
-                    leading: Icon(Icons.category),
-                    title: Text('选择分类'),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
+        itemBuilder: (context) => [
+          // 分类选项 - 只有非归档笔记才显示
+          if (!_isReadOnly)
+            const PopupMenuItem<String>(
+              value: 'category',
+              child: ListTile(
+                leading: Icon(Icons.category),
+                title: Text('选择分类'),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
 
-              // 标签选项 - 只有非归档笔记才显示
-              if (!_isReadOnly)
-                const PopupMenuItem<String>(
-                  value: 'tags',
-                  child: ListTile(
-                    leading: Icon(Icons.label),
-                    title: Text('管理标签'),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
+          // 标签选项 - 只有非归档笔记才显示
+          if (!_isReadOnly)
+            const PopupMenuItem<String>(
+              value: 'tags',
+              child: ListTile(
+                leading: Icon(Icons.label),
+                title: Text('管理标签'),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
 
-              // 颜色选项 - 只有非归档笔记才显示
-              if (!_isReadOnly)
-                const PopupMenuItem<String>(
-                  value: 'color',
-                  child: ListTile(
-                    leading: Icon(Icons.color_lens),
-                    title: Text('设置颜色'),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
+          // 颜色选项 - 只有非归档笔记才显示
+          if (!_isReadOnly)
+            const PopupMenuItem<String>(
+              value: 'color',
+              child: ListTile(
+                leading: Icon(Icons.color_lens),
+                title: Text('设置颜色'),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
 
-              // 归档/取消归档选项 - 只有笔记已保存（有ID）时才显示
-              if (_currentNote != null && _currentNote!.id != null)
-                PopupMenuItem<String>(
-                  value: 'archive',
-                  child: ListTile(
-                    leading: Icon(
-                      _isArchived ? Icons.unarchive : Icons.archive,
-                      color: Colors.blue,
-                    ),
-                    title: Text(
-                      _isArchived ? '取消归档' : '归档笔记',
-                      style: const TextStyle(color: Colors.blue),
-                    ),
-                    contentPadding: EdgeInsets.zero,
-                  ),
+          // 归档/取消归档选项 - 只有笔记已保存（有ID）时才显示
+          if (_currentNote != null && _currentNote!.id != null)
+            PopupMenuItem<String>(
+              value: 'archive',
+              child: ListTile(
+                leading: Icon(
+                  _isArchived ? Icons.unarchive : Icons.archive,
+                  color: Colors.blue,
                 ),
+                title: Text(
+                  _isArchived ? '取消归档' : '归档笔记',
+                  style: const TextStyle(color: Colors.blue),
+                ),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
 
-              // 删除选项 - 只有笔记已保存（有ID）时才显示
-              if (_currentNote != null && _currentNote!.id != null)
-                const PopupMenuItem<String>(
-                  value: 'delete',
-                  child: ListTile(
-                    leading: Icon(Icons.delete, color: Colors.red),
-                    title: Text('删除笔记', style: TextStyle(color: Colors.red)),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-            ],
+          // 删除选项 - 只有笔记已保存（有ID）时才显示
+          if (_currentNote != null && _currentNote!.id != null)
+            const PopupMenuItem<String>(
+              value: 'delete',
+              child: ListTile(
+                leading: Icon(Icons.delete, color: Colors.red),
+                title: Text('删除笔记', style: TextStyle(color: Colors.red)),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+        ],
       ),
     ];
   }
@@ -709,20 +704,18 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(0),
             ),
-            onDeleted:
-                _isReadOnly
-                    ? null
-                    : () {
-                      // 归档笔记不允许删除分类
-                      setState(() {
-                        _selectedCategoryId = null;
-                        _isEdited = true;
-                      });
-                    },
-            deleteIcon:
-                _isReadOnly
-                    ? null
-                    : const Icon(Icons.close, size: 16, color: Colors.white),
+            onDeleted: _isReadOnly
+                ? null
+                : () {
+                    // 归档笔记不允许删除分类
+                    setState(() {
+                      _selectedCategoryId = null;
+                      _isEdited = true;
+                    });
+                  },
+            deleteIcon: _isReadOnly
+                ? null
+                : const Icon(Icons.close, size: 16, color: Colors.white),
           ),
         );
       },
@@ -746,10 +739,9 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
             // 最多显示标签数量
             ..._selectedTags.take(showCount).map((tag) {
               // 限制标签名称长度
-              final displayName =
-                  tag.name.length > 5
-                      ? '${tag.name.substring(0, 5)}...'
-                      : tag.name;
+              final displayName = tag.name.length > 5
+                  ? '${tag.name.substring(0, 5)}...'
+                  : tag.name;
 
               return Padding(
                 padding: const EdgeInsets.only(right: 4),
@@ -764,24 +756,18 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
                   ),
                   labelStyle: const TextStyle(fontSize: 12),
                   visualDensity: VisualDensity.compact,
-                  onDeleted:
-                      _isReadOnly
-                          ? null
-                          : () {
-                            // 归档笔记不允许删除标签
-                            setState(() {
-                              _selectedTags.removeWhere((t) => t.id == tag.id);
-                              _isEdited = true;
-                            });
-                          },
-                  deleteIcon:
-                      _isReadOnly
-                          ? null
-                          : const Icon(
-                            Icons.close,
-                            size: 16,
-                            color: Colors.white,
-                          ),
+                  onDeleted: _isReadOnly
+                      ? null
+                      : () {
+                          // 归档笔记不允许删除标签
+                          setState(() {
+                            _selectedTags.removeWhere((t) => t.id == tag.id);
+                            _isEdited = true;
+                          });
+                        },
+                  deleteIcon: _isReadOnly
+                      ? null
+                      : const Icon(Icons.close, size: 16, color: Colors.white),
                 ),
               );
             }),
@@ -789,10 +775,9 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
             // 如果有更多标签，显示更多指示器
             if (_selectedTags.length > showCount)
               GestureDetector(
-                onTap:
-                    _isReadOnly
-                        ? null
-                        : () => _showTagsDialog(tagsAsyncValue.value ?? []),
+                onTap: _isReadOnly
+                    ? null
+                    : () => _showTagsDialog(tagsAsyncValue.value ?? []),
                 child: Chip(
                   label: Text(
                     '+${_selectedTags.length - showCount}',
@@ -824,16 +809,15 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
     return CheckboxListTile(
       title: const Text('已完成'),
       value: _isCompleted,
-      onChanged:
-          _isReadOnly
-              ? null
-              : (value) {
-                // 归档笔记不允许修改完成状态
-                setState(() {
-                  _isCompleted = value ?? false;
-                  _isEdited = true;
-                });
-              },
+      onChanged: _isReadOnly
+          ? null
+          : (value) {
+              // 归档笔记不允许修改完成状态
+              setState(() {
+                _isCompleted = value ?? false;
+                _isEdited = true;
+              });
+            },
       controlAffinity: ListTileControlAffinity.leading,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
     );
@@ -942,12 +926,11 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.grey.shade300),
                   borderRadius: BorderRadius.circular(8),
-                  color:
-                      _isReadOnly
-                          ? Colors.grey.shade50
-                          : (_selectedColor != null
-                              ? Color(_selectedColor!)
-                              : null),
+                  color: _isReadOnly
+                      ? Colors.grey.shade50
+                      : (_selectedColor != null
+                            ? Color(_selectedColor!)
+                            : null),
                 ),
                 child: commonQuillEditor(),
               ),
@@ -977,12 +960,9 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
             decoration: BoxDecoration(
               border: Border.all(color: Colors.grey.shade300),
               borderRadius: BorderRadius.circular(8),
-              color:
-                  _isReadOnly
-                      ? Colors.grey.shade50
-                      : (_selectedColor != null
-                          ? Color(_selectedColor!)
-                          : null),
+              color: _isReadOnly
+                  ? Colors.grey.shade50
+                  : (_selectedColor != null ? Color(_selectedColor!) : null),
             ),
             child: SizedBox(height: 0.75.sh, child: commonQuillEditor()),
           ),
@@ -997,10 +977,9 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
       focusNode: _editorFocusNode,
       config: QuillEditorConfig(
         placeholder: '在此输入笔记内容...',
-        embedBuilders:
-            kIsWeb
-                ? FlutterQuillEmbeds.editorWebBuilders()
-                : FlutterQuillEmbeds.editorBuilders(),
+        embedBuilders: kIsWeb
+            ? FlutterQuillEmbeds.editorWebBuilders()
+            : FlutterQuillEmbeds.editorBuilders(),
         autoFocus: true,
         showCursor: true,
         expands: ScreenHelper.isDesktop() ? true : false,
@@ -1031,40 +1010,35 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
               ),
               const SizedBox(height: 16),
               Expanded(
-                child:
-                    categories.isEmpty
-                        ? const Center(child: Text('暂无分类，请点击"新建分类"按钮创建'))
-                        : ListView.builder(
-                          itemCount: categories.length,
-                          itemBuilder: (context, index) {
-                            final category = categories[index];
-                            return ListTile(
-                              title: Text(category.name),
-                              leading: CircleAvatar(
-                                backgroundColor: category.getCategoryColor(),
-                                child: const Icon(
-                                  Icons.category,
-                                  color: Colors.white,
-                                ),
+                child: categories.isEmpty
+                    ? const Center(child: Text('暂无分类，请点击"新建分类"按钮创建'))
+                    : ListView.builder(
+                        itemCount: categories.length,
+                        itemBuilder: (context, index) {
+                          final category = categories[index];
+                          return ListTile(
+                            title: Text(category.name),
+                            leading: CircleAvatar(
+                              backgroundColor: category.getCategoryColor(),
+                              child: const Icon(
+                                Icons.category,
+                                color: Colors.white,
                               ),
-                              trailing: IconButton(
-                                icon: const Icon(
-                                  Icons.delete,
-                                  color: Colors.red,
-                                ),
-                                onPressed:
-                                    () => _confirmDeleteCategory(category),
-                              ),
-                              onTap: () {
-                                setState(() {
-                                  _selectedCategoryId = category.id;
-                                  _isEdited = true;
-                                });
-                                Navigator.of(context).pop();
-                              },
-                            );
-                          },
-                        ),
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => _confirmDeleteCategory(category),
+                            ),
+                            onTap: () {
+                              setState(() {
+                                _selectedCategoryId = category.id;
+                                _isEdited = true;
+                              });
+                              Navigator.of(context).pop();
+                            },
+                          );
+                        },
+                      ),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -1240,62 +1214,61 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
                   ),
                   const SizedBox(height: 8),
                   Expanded(
-                    child:
-                        allTags.isEmpty
-                            ? const Center(child: Text('暂无标签，请点击"新建标签"按钮创建'))
-                            : ListView.builder(
-                              itemCount: allTags.length,
-                              itemBuilder: (context, index) {
-                                final tag = allTags[index];
-                                final isSelected = tempSelectedTags.any(
-                                  (t) => t.id == tag.id,
-                                );
-                                return CheckboxListTile(
-                                  title: Text(tag.name),
-                                  value: isSelected,
-                                  secondary: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (tag.color != null)
-                                        CircleAvatar(
-                                          backgroundColor: tag.getTagColor(),
-                                          radius: 12,
-                                        ),
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.delete,
-                                          color: Colors.red,
-                                          size: 20,
-                                        ),
-                                        tooltip: '删除标签',
-                                        onPressed: () {
-                                          _confirmDeleteTag(
-                                            tag,
-                                            setDialogState,
-                                            tempSelectedTags,
-                                          );
-                                        },
+                    child: allTags.isEmpty
+                        ? const Center(child: Text('暂无标签，请点击"新建标签"按钮创建'))
+                        : ListView.builder(
+                            itemCount: allTags.length,
+                            itemBuilder: (context, index) {
+                              final tag = allTags[index];
+                              final isSelected = tempSelectedTags.any(
+                                (t) => t.id == tag.id,
+                              );
+                              return CheckboxListTile(
+                                title: Text(tag.name),
+                                value: isSelected,
+                                secondary: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (tag.color != null)
+                                      CircleAvatar(
+                                        backgroundColor: tag.getTagColor(),
+                                        radius: 12,
                                       ),
-                                    ],
-                                  ),
-                                  onChanged: (value) {
-                                    setDialogState(() {
-                                      if (value == true) {
-                                        if (!tempSelectedTags.any(
-                                          (t) => t.id == tag.id,
-                                        )) {
-                                          tempSelectedTags.add(tag);
-                                        }
-                                      } else {
-                                        tempSelectedTags.removeWhere(
-                                          (t) => t.id == tag.id,
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.delete,
+                                        color: Colors.red,
+                                        size: 20,
+                                      ),
+                                      tooltip: '删除标签',
+                                      onPressed: () {
+                                        _confirmDeleteTag(
+                                          tag,
+                                          setDialogState,
+                                          tempSelectedTags,
                                         );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                                onChanged: (value) {
+                                  setDialogState(() {
+                                    if (value == true) {
+                                      if (!tempSelectedTags.any(
+                                        (t) => t.id == tag.id,
+                                      )) {
+                                        tempSelectedTags.add(tag);
                                       }
-                                    });
-                                  },
-                                );
-                              },
-                            ),
+                                    } else {
+                                      tempSelectedTags.removeWhere(
+                                        (t) => t.id == tag.id,
+                                      );
+                                    }
+                                  });
+                                },
+                              );
+                            },
+                          ),
                   ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -1444,8 +1417,9 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
   // 显示颜色选择器
   void _showColorPicker() {
     // 当前颜色或默认颜色
-    Color pickerColor =
-        _selectedColor != null ? Color(_selectedColor!) : Colors.blue;
+    Color pickerColor = _selectedColor != null
+        ? Color(_selectedColor!)
+        : Colors.blue;
     bool showAdvancedPicker = false;
 
     buildDefaultColorPicker(BuildContext dialogContext) {
@@ -1575,10 +1549,9 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
                   ),
 
                   Expanded(
-                    child:
-                        showAdvancedPicker
-                            ? buildAdvancedColorPicker()
-                            : buildDefaultColorPicker(dialogContext),
+                    child: showAdvancedPicker
+                        ? buildAdvancedColorPicker()
+                        : buildDefaultColorPicker(dialogContext),
                   ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,

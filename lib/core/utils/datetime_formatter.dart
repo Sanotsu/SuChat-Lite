@@ -93,40 +93,33 @@ String formatTimestampAgo(int? timestamp) {
 }
 
 // 格式化相对日期
-String formatRelativeDate(DateTime? dateTime) {
+String formatRelativeDate(dynamic dateTime) {
   if (dateTime == null) return '';
 
-  final now = DateTime.now();
-  final difference = now.difference(dateTime);
+  try {
+    if (dateTime is String) {
+      dateTime = DateTime.parse(dateTime);
+    }
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
 
-  if (difference.inDays == 0) {
-    // 今天
-    return '今天 ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-  } else if (difference.inDays == 1) {
-    // 昨天
-    return '昨天';
-  } else if (difference.inDays < 7) {
-    // 本周
-    return '${difference.inDays}天前';
-  } else {
-    // 更早
-    return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')}';
-  }
-}
-
-// 尽量用上面个
-String formatLatestTime(DateTime dateTime) {
-  final now = DateTime.now();
-  final difference = now.difference(dateTime);
-
-  if (difference.inDays > 0) {
-    return '${difference.inDays}天前';
-  } else if (difference.inHours > 0) {
-    return '${difference.inHours}小时前';
-  } else if (difference.inMinutes > 0) {
-    return '${difference.inMinutes}分钟前';
-  } else {
-    return '刚刚';
+    if (difference.inMinutes < 1) {
+      return '刚刚';
+    } else if (difference.inHours < 1) {
+      return '${difference.inMinutes}分钟前';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}小时前';
+    } else if (difference.inDays < 30) {
+      return '${difference.inDays}天前';
+    } else if (difference.inDays > 30 && difference.inDays < 365) {
+      return '${difference.inDays ~/ 30}个月前';
+    } else if (difference.inDays > 365) {
+      return '${difference.inDays ~/ 365}年前';
+    } else {
+      return DateFormat(formatToYMD).format((dateTime as DateTime));
+    }
+  } catch (e) {
+    return dateTime.toString();
   }
 }
 
@@ -169,12 +162,20 @@ String formatTimeLabel(DateTime time) {
 }
 
 // 把各种时间字符串格式化指定格式的字符串
-String formatDateTimeString(String timeString, {String? formatType}) {
-  if (timeString.isEmpty) return "未知";
+String formatDateTimeString(String? timeString, {String? formatType}) {
+  if (timeString == null || timeString.isEmpty) return "";
 
-  return DateFormat(
-    formatType ?? formatToYMDHMS,
-  ).format(DateTime.tryParse(timeString) ?? DateTime.now());
+  // return DateFormat(
+  //   formatType ?? formatToYMDHMS,
+  // ).format(DateTime.tryParse(timeString) ?? DateTime.now());
+
+  try {
+    return DateFormat(
+      formatType ?? formatToYMDHMS,
+    ).format(DateTime.parse(timeString));
+  } catch (e) {
+    return timeString;
+  }
 }
 
 // 10位的时间戳转字符串

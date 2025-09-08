@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:suchat_lite/shared/widgets/simple_tool_widget.dart';
 
 import '../../../../core/utils/simple_tools.dart';
+import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../domain/entities/food_item.dart';
 import '../../domain/entities/meal_type.dart';
@@ -166,11 +166,8 @@ class _FoodSearchPageState extends State<FoodSearchPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder:
-            (context) => FoodDetailPage(
-              foodItem: food,
-              mealRecordId: widget.mealRecordId,
-            ),
+        builder: (context) =>
+            FoodDetailPage(foodItem: food, mealRecordId: widget.mealRecordId),
       ),
     ).then((_) {
       // 当从FoodDetailPage返回时，直接返回到餐次详情页
@@ -184,20 +181,19 @@ class _FoodSearchPageState extends State<FoodSearchPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder:
-            (context) => FoodEditPage(
-              initialName: initialName,
-              onSave: (foodItem) {
-                _viewModel.addFood(foodItem).then((addedFood) {
-                  if (addedFood != null && context.mounted) {
-                    ToastUtils.showInfo('食品添加成功');
+        builder: (context) => FoodEditPage(
+          initialName: initialName,
+          onSave: (foodItem) {
+            _viewModel.addFood(foodItem).then((addedFood) {
+              if (addedFood != null && context.mounted) {
+                ToastUtils.showInfo('食品添加成功');
 
-                    // 显示添加数量的对话框
-                    _showFoodQuantityEditor(addedFood);
-                  }
-                });
-              },
-            ),
+                // 显示添加数量的对话框
+                _showFoodQuantityEditor(addedFood);
+              }
+            });
+          },
+        ),
       ),
     );
   }
@@ -242,32 +238,31 @@ class _FoodSearchPageState extends State<FoodSearchPage> {
     if (!mounted) return;
     showDialog(
       context: context,
-      builder:
-          (context) => FoodQuantityEditor(
-            foodDetail: tempMealFood,
-            title: dialogTitle,
-            onQuantityChanged: (quantity) {
-              _viewModel
-                  .addFoodToMeal(widget.mealRecordId, food.id!, quantity, '克')
-                  .then((_) {
-                    // 添加成功后直接返回到餐次详情页
-                    if (!context.mounted) return;
-                    Navigator.of(context).pop();
+      builder: (context) => FoodQuantityEditor(
+        foodDetail: tempMealFood,
+        title: dialogTitle,
+        onQuantityChanged: (quantity) {
+          _viewModel
+              .addFoodToMeal(widget.mealRecordId, food.id!, quantity, '克')
+              .then((_) {
+                // 添加成功后直接返回到餐次详情页
+                if (!context.mounted) return;
+                Navigator.of(context).pop();
 
-                    // 如果是新添加的食品，添加到已存在列表中
-                    if (!isExistingFood) {
-                      setState(() {
-                        _existingFoodIds.add(food.id!);
-                      });
-                    }
-                    ToastUtils.showInfo(
-                      isExistingFood
-                          ? '已更新${food.name}的数量'
-                          : '已添加${food.name}到${_getMealTypeName(widget.mealType)}',
-                    );
+                // 如果是新添加的食品，添加到已存在列表中
+                if (!isExistingFood) {
+                  setState(() {
+                    _existingFoodIds.add(food.id!);
                   });
-            },
-          ),
+                }
+                ToastUtils.showInfo(
+                  isExistingFood
+                      ? '已更新${food.name}的数量'
+                      : '已添加${food.name}到${_getMealTypeName(widget.mealType)}',
+                );
+              });
+        },
+      ),
     );
   }
 }

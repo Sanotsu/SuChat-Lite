@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../../core/utils/datetime_formatter.dart';
 import '../../../../../shared/constants/constants.dart';
 import '../../../../../shared/widgets/expandable_text.dart';
-import '../../../../../shared/widgets/image_preview_helper.dart';
+import '../../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../data/models/daodu_models.dart';
 import '../../pages/daodu/user_detail_page.dart';
 
@@ -91,7 +91,8 @@ class CommentInfoCard extends StatelessWidget {
         child: Row(
           children: [
             // 用户头像
-            _buildUserAvatar(),
+            buildUserCircleAvatar(comment.user!.avatar, radius: 16),
+
             const SizedBox(width: 12),
             // 用户信息
             _buildUserDetails(context),
@@ -99,19 +100,6 @@ class CommentInfoCard extends StatelessWidget {
             _buildArrowIcon(),
           ],
         ),
-      ),
-    );
-  }
-
-  // 构建用户头像
-  Widget _buildUserAvatar() {
-    return CircleAvatar(
-      radius: 16,
-      backgroundColor: Colors.grey[300],
-      child: ClipOval(
-        child: comment.user?.avatar?.isNotEmpty == true
-            ? buildNetworkOrFileImage(comment.user!.avatar!)
-            : const Icon(Icons.person, size: 20),
       ),
     );
   }
@@ -185,7 +173,7 @@ class CommentInfoCard extends StatelessWidget {
           if (comment.createdAt != null)
             Text(
               "${formatTimestampToString(comment.createdAt.toString(), format: formatToYMD)}"
-              " (${formatLatestTime(DateTime.fromMillisecondsSinceEpoch(comment.createdAt! * 1000))})",
+              " (${formatRelativeDate(DateTime.fromMillisecondsSinceEpoch(comment.createdAt! * 1000))})",
               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
           Spacer(),

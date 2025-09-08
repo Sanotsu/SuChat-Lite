@@ -5,8 +5,9 @@ import 'package:webview_flutter/webview_flutter.dart';
 class FullWebPage extends StatefulWidget {
   final String url;
   final String? title;
+  final bool? showTitle;
 
-  const FullWebPage({super.key, required this.url, this.title});
+  const FullWebPage({super.key, required this.url, this.title, this.showTitle});
 
   @override
   State<FullWebPage> createState() => _FullWebPageState();
@@ -26,7 +27,9 @@ class _FullWebPageState extends State<FullWebPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title ?? "网页浏览")),
+      appBar: widget.showTitle == true
+          ? AppBar(title: Text(widget.title ?? "网页浏览"))
+          : null,
       body: WebViewWidget(controller: _controller),
     );
   }

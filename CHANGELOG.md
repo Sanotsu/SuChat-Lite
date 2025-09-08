@@ -2,6 +2,20 @@
 
 一些较大变更、新功能、bug 修复等记录放在此处，仅做参看的提交更新.
 
+## 0.1.3-beta.1
+
+- feat:
+  - 添加使用阿里百炼平台 qwen 系列模型 API 的“快速翻译”功能模块
+  - 集成了很多基于官方、开源、第三方的 API 构建的生活娱乐功能：
+    - 各种新闻热榜，杂文趣图；
+    - 使用官方(或开源)提供的 API 构建的服务：
+      - [Bangumi](https://github.com/bangumi/api)、[MyALimeList](https://docs.api.jikan.moe/)、[TMDB](https://developer.themoviedb.org/reference/intro/getting-started)、[USDA 食品数据中心](https://fdc.nal.usda.gov/api-guide/) 等；
+    - 使用第三方提供的 API 构建的服务：
+      - 豆果美食、岛读 APP、`ONE·一个` APP
+      - 好看漫画(默认未启用，需要自行取消注释后编译)
+- fix:
+  - 修正了一些错误和调整了一些细节
+
 ## 0.1.2-beta.1
 
 - chore:

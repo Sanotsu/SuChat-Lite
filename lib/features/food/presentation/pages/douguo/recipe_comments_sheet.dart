@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../../../../shared/widgets/simple_tool_widget.dart';
+import '../../../../../shared/widgets/common_error_empty_widgets.dart';
 import '../../../data/datasources/douguo/douguo_api_manager.dart';
 import '../../../data/models/douguo/douguo_recipe_comment_resp.dart';
 
@@ -184,7 +187,17 @@ class _RecipeCommentsSheetState extends State<RecipeCommentsSheet> {
     }
 
     if (_error != null && _displayComments.isEmpty) {
-      return _buildErrorWidget();
+      return buildCommonErrorWidget(
+        error: _error,
+        onRetry: () {
+          setState(() {
+            _page = 1;
+            _allComments.clear();
+            _displayComments.clear();
+            _loadComments();
+          });
+        },
+      );
     }
 
     if (_displayComments.isEmpty) {
@@ -296,11 +309,7 @@ class _RecipeCommentsSheetState extends State<RecipeCommentsSheet> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundImage: NetworkImage(comment.u?.p ?? ''),
-                onBackgroundImageError: (_, _) {},
-              ),
+              buildUserCircleAvatar(comment.u?.p, radius: 20),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -364,29 +373,6 @@ class _RecipeCommentsSheetState extends State<RecipeCommentsSheet> {
   Widget _buildEmptyWidget() {
     return const Center(
       child: Text('暂无评论', style: TextStyle(color: Colors.grey)),
-    );
-  }
-
-  Widget _buildErrorWidget() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text('加载失败', style: TextStyle(color: Colors.red)),
-          const SizedBox(height: 8),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _page = 1;
-                _allComments.clear();
-                _displayComments.clear();
-                _loadComments();
-              });
-            },
-            child: const Text('重试'),
-          ),
-        ],
-      ),
     );
   }
 }

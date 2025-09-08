@@ -7,8 +7,8 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 
-import '../constants/constants.dart';
 import '../../core/utils/simple_tools.dart';
+import '../constants/constants.dart';
 import 'simple_tool_widget.dart';
 import 'toast_utils.dart';
 
@@ -302,7 +302,7 @@ Widget buildNetworkOrFileImage(String imageUrl, {BoxFit? fit}) {
   if (imageUrl.startsWith('http')) {
     return CachedNetworkImage(
       imageUrl: imageUrl,
-      fit: fit,
+      fit: fit ?? BoxFit.cover,
       // progressIndicatorBuilder: (context, url, progress) => Center(
       //   child: CircularProgressIndicator(
       //     value: progress.progress,
@@ -322,7 +322,7 @@ Widget buildNetworkOrFileImage(String imageUrl, {BoxFit? fit}) {
   } else {
     return Image(
       image: getImageProvider(imageUrl),
-      fit: fit,
+      fit: fit ?? BoxFit.cover,
       errorBuilder: (_, _, _) =>
           Image.asset(placeholderImageUrl, fit: BoxFit.cover),
     );

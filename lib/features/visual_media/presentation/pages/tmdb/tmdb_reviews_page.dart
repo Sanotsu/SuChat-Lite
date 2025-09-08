@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../data/models/tmdb/tmdb_mt_review_resp.dart';
 import '../../widgets/tmdb_widgets.dart';
 
@@ -60,17 +61,9 @@ class _TmdbReviewsPageState extends State<TmdbReviewsPage> {
             // 用户信息
             Row(
               children: [
-                CircleAvatar(
+                buildUserCircleAvatar(
+                  _getAvatarUrl(review.authorDetails!.avatarPath ?? ''),
                   radius: 20,
-                  backgroundColor: Colors.grey[300],
-                  backgroundImage: review.authorDetails?.avatarPath != null
-                      ? NetworkImage(
-                          _getAvatarUrl(review.authorDetails!.avatarPath!),
-                        )
-                      : null,
-                  child: review.authorDetails?.avatarPath == null
-                      ? Icon(Icons.person, color: Colors.grey[600])
-                      : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -210,6 +203,10 @@ class _TmdbReviewsPageState extends State<TmdbReviewsPage> {
 
   /// 获取头像URL
   String _getAvatarUrl(String avatarPath) {
+    if (avatarPath.isEmpty) {
+      return "";
+    }
+
     if (avatarPath.startsWith('http')) {
       return avatarPath;
     }

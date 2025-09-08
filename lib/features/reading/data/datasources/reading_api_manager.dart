@@ -10,7 +10,7 @@ class ReadingApiManager extends BaseApiManager<ReadingApiConfig> {
   ReadingApiManager._internal() : super(ReadingApiConfig());
 
   // 源基础URL
-  static const String _daoduBase = "https://apis.netstart.cn/daodu/";
+  static const String _daoduBase = "https://apis.netstart.cn/daodu";
 
   /// 获取岛读首页列表
   Future<List<DaoduLesson>> getDaoduLessonList({

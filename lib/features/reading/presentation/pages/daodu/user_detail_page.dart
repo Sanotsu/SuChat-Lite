@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../../core/utils/datetime_formatter.dart';
 import '../../../../../shared/constants/constants.dart';
+import '../../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../data/models/daodu_models.dart';
 import '../../../data/datasources/reading_api_manager.dart';
 import 'user_snippets_page.dart';
@@ -145,15 +146,7 @@ class _DaoduUserDetailPageState extends State<DaoduUserDetailPage> {
       child: Column(
         children: [
           // 头像
-          CircleAvatar(
-            radius: 50,
-            backgroundImage: _userDetail!.avatar?.isNotEmpty == true
-                ? NetworkImage(_userDetail!.avatar!)
-                : null,
-            child: _userDetail!.avatar?.isEmpty != false
-                ? const Icon(Icons.person, size: 50)
-                : null,
-          ),
+          buildUserCircleAvatar(_userDetail!.avatar, radius: 50),
 
           const SizedBox(height: 16),
 

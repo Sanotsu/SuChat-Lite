@@ -51,19 +51,17 @@ class _CharacterListPageState extends State<CharacterListPage> {
     if (_searchQuery.isEmpty) {
       _filteredCharacters = List.from(_characters);
     } else {
-      _filteredCharacters =
-          _characters.where((character) {
-            return character.name.toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                ) ||
-                character.description.toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                ) ||
-                character.tags.any(
-                  (tag) =>
-                      tag.toLowerCase().contains(_searchQuery.toLowerCase()),
-                );
-          }).toList();
+      _filteredCharacters = _characters.where((character) {
+        return character.name.toLowerCase().contains(
+              _searchQuery.toLowerCase(),
+            ) ||
+            character.description.toLowerCase().contains(
+              _searchQuery.toLowerCase(),
+            ) ||
+            character.tags.any(
+              (tag) => tag.toLowerCase().contains(_searchQuery.toLowerCase()),
+            );
+      }).toList();
     }
   }
 
@@ -78,10 +76,9 @@ class _CharacterListPageState extends State<CharacterListPage> {
           _buildSearchBar(),
           // 角色卡列表
           Expanded(
-            child:
-                _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _buildCharacterGrid(),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _buildCharacterGrid(),
           ),
         ],
       ),
@@ -91,10 +88,9 @@ class _CharacterListPageState extends State<CharacterListPage> {
         icon: Icons.add,
         tooltip: '添加新角色',
       ),
-      floatingActionButtonLocation:
-          ScreenHelper.isDesktop()
-              ? FloatingActionButtonLocation.endFloat
-              : FloatingActionButtonLocation.centerFloat,
+      floatingActionButtonLocation: ScreenHelper.isDesktop()
+          ? FloatingActionButtonLocation.endFloat
+          : FloatingActionButtonLocation.centerFloat,
     );
   }
 
@@ -147,34 +143,33 @@ class _CharacterListPageState extends State<CharacterListPage> {
   // 构建角色卡网格
   Widget _buildCharacterGrid() {
     // 根据平台类型决定网格布局
-    final crossAxisCount =
-        ScreenHelper.isDesktop()
-            ? (MediaQuery.of(context).size.width / 240).floor().clamp(3, 6)
-            : MediaQuery.of(context).size.width > 600
-            ? 3
-            : 2;
+    final crossAxisCount = ScreenHelper.isDesktop()
+        ? (MediaQuery.of(context).size.width / 240).floor().clamp(3, 6)
+        : MediaQuery.of(context).size.width > 600
+        ? 3
+        : 2;
 
     return _filteredCharacters.isEmpty
         ? _buildEmptyState()
         : GridView.builder(
-          padding: EdgeInsets.all(12),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            childAspectRatio: 6 / 9,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-          ),
-          itemCount: _filteredCharacters.length,
-          itemBuilder: (context, index) {
-            final character = _filteredCharacters[index];
-            return CharacterCardItem(
-              character: character,
-              onTap: () => _handleCharacterTap(character),
-              onEdit: () => _navigateToCharacterEditor(character: character),
-              onDelete: () => _deleteCharacter(character),
-            );
-          },
-        );
+            padding: EdgeInsets.all(12),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              childAspectRatio: 6 / 9,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+            ),
+            itemCount: _filteredCharacters.length,
+            itemBuilder: (context, index) {
+              final character = _filteredCharacters[index];
+              return CharacterCardItem(
+                character: character,
+                onTap: () => _handleCharacterTap(character),
+                onEdit: () => _navigateToCharacterEditor(character: character),
+                onDelete: () => _deleteCharacter(character),
+              );
+            },
+          );
   }
 
   // 构建空状态提示
@@ -239,21 +234,20 @@ class _CharacterListPageState extends State<CharacterListPage> {
   Future<void> _deleteCharacter(CharacterCard character) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('删除角色'),
-            content: Text('确定要删除角色"${character.name}"吗？'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('删除'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('删除角色'),
+        content: Text('确定要删除角色"${character.name}"吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
     );
 
     if (confirmed == true) {
@@ -288,43 +282,40 @@ class _CharacterListPageState extends State<CharacterListPage> {
 
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('导入/导出'),
-            content: SizedBox(
-              width: ScreenHelper.isDesktop() ? 400 : null,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.upload),
-                    title: const Text('导出角色'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _exportCharacters();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.download),
-                    title: const Text('导入角色'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _importCharacters();
-                    },
-                  ),
-                ],
+      builder: (context) => AlertDialog(
+        title: const Text('导入/导出'),
+        content: SizedBox(
+          width: ScreenHelper.isDesktop() ? 400 : null,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.upload),
+                title: const Text('导出角色'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _exportCharacters();
+                },
               ),
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('取消'),
+              ListTile(
+                leading: const Icon(Icons.download),
+                title: const Text('导入角色'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _importCharacters();
+                },
               ),
             ],
           ),
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+        ],
+      ),
     );
   }
 

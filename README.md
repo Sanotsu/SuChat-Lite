@@ -15,9 +15,10 @@ SuChat 是一个以简洁 AI 聊天为核心，并集成多种生活娱乐工具
 - 集成了很多基于官方、开源、第三方的 API 构建的生活娱乐功能：
   - 各种新闻热榜，杂文趣图；
   - 使用官方(或开源)提供的 API 构建的服务：
-    - [Bangumi](https://github.com/bangumi/api)、[MyALimeList](https://docs.api.jikan.moe/)、[TMDB](https://developer.themoviedb.org/reference/intro/getting-started)、[USDA 食品数据中心](https://fdc.nal.usda.gov/api-guide/)等；
+    - [Bangumi](https://github.com/bangumi/api)、[MyALimeList](https://docs.api.jikan.moe/)、[TMDB](https://developer.themoviedb.org/reference/intro/getting-started)、[USDA 食品数据中心](https://fdc.nal.usda.gov/api-guide/) 等；
   - 使用第三方提供的 API 构建的服务：
-    - 豆果美食、岛读 APP、好看漫画
+    - 豆果美食、岛读 APP、`ONE·一个` APP
+    - 好看漫画(默认未启用，需要自行取消注释后编译)
 
 桌面主页面预览:
 
@@ -141,6 +142,10 @@ SuChat 是一个以简洁 AI 聊天为核心，并集成多种生活娱乐工具
 - 豆果美食、岛读等蓝绿色图表的功能模块，都是基于同一个供交流学习的平台`https://apis.netstart.cn/` API 的，所以随时可能不可用
 - 豆果美食是用户上传分享的美食食谱社区
 - 岛读官方每天有推一篇文章供读者阅读交流
+
+![9ONE一个截图](./_doc/snapshots/more_features/9ONE一个截图.jpg)
+
+- `ONE·一个` APP 是一个韩寒自任主编推出的电子读物
 
 ## 云端大模型 API 说明
 

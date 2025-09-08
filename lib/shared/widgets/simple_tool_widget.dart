@@ -7,6 +7,7 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 import '../../core/utils/screen_helper.dart';
 import '../services/network_service.dart';
+import 'image_preview_helper.dart';
 
 // 绘制转圈圈
 Widget buildLoader(bool isLoading) {
@@ -609,4 +610,21 @@ void showNoNetworkOrGoTargetPage(
           MaterialPageRoute(builder: (context) => targetPage),
         ).then((value) => thenFunc?.call(value))
       : commonHintDialog(context, "提示", "请联网后使用该功能。", msgFontSize: 15);
+}
+
+/// 构建用户头像组件
+Widget buildUserCircleAvatar(
+  String? avatarUrl, {
+  double radius = 16,
+  Color? backgroundColor,
+}) {
+  return CircleAvatar(
+    radius: radius,
+    backgroundColor: backgroundColor ?? Colors.grey[300],
+    child: ClipOval(
+      child: avatarUrl != null
+          ? buildNetworkOrFileImage(avatarUrl)
+          : Icon(Icons.person, size: radius),
+    ),
+  );
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../../../../../shared/widgets/image_preview_helper.dart';
+import '../../../../../shared/widgets/common_error_empty_widgets.dart';
 import '../../../data/datasources/douguo/douguo_api_manager.dart';
 import '../../../data/models/douguo/douguo_recipe_resp.dart';
 import 'full_view_page.dart';
@@ -99,7 +101,12 @@ class _RecipeDetailPageState extends State<RecipeDetailPage>
       body: _isLoading
           ? _buildLoadingWidget()
           : _error != null
-          ? _buildErrorWidget()
+          ? buildCommonErrorWidget(
+              error: _error,
+              onRetry: _loadRecipeDetail,
+              showBack: true,
+              context: context,
+            )
           : _buildRecipeDetail(),
     );
   }
@@ -108,40 +115,6 @@ class _RecipeDetailPageState extends State<RecipeDetailPage>
     return const Center(
       child: CircularProgressIndicator(
         valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
-      ),
-    );
-  }
-
-  Widget _buildErrorWidget() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              _error!,
-              style: TextStyle(color: Colors.grey[600], fontSize: 16),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadRecipeDetail,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange[400],
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('重试'),
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('返回'),
-            ),
-          ],
-        ),
       ),
     );
   }

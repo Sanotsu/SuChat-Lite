@@ -5,7 +5,6 @@ import '../shared/widgets/feature_grid_card.dart';
 import '../shared/widgets/modern_feature_card.dart';
 import 'model_management/index.dart';
 import 'translator/presentation/pages/mini_translator_page.dart';
-import 'visual_media/presentation/pages/haokan/haokan_home_page.dart';
 import 'visual_media/presentation/pages/index.dart';
 import 'diet_diary/presentation/index.dart';
 import 'food/presentation/pages/douguo/recipe_home_page.dart';
@@ -21,6 +20,7 @@ import 'training_assistant/presentation/index.dart';
 import 'visual_media/presentation/pages/tmdb/tmdb_home_page.dart';
 import 'voice_recognition/presentation/index.dart';
 import 'reading/presentation/pages/daodu/main_page.dart';
+import 'reading/presentation/pages/one/main_page.dart';
 
 class AIToolPage extends StatefulWidget {
   const AIToolPage({super.key});
@@ -516,15 +516,6 @@ class _AIToolPageState extends State<AIToolPage> {
                     accentColor: Colors.orange,
                   ),
                 ),
-
-                // SizedBox(
-                //   width: ScreenHelper.isDesktop() ? 150 : 80,
-                //   height: ScreenHelper.isDesktop() ? 150 : 80,
-                //   child: TextButton(
-                //     onPressed: getIgdbAccessToken,
-                //     child: Text("IGDB\n(TODO)"),
-                //   ),
-                // ),
               ],
             ),
 
@@ -584,12 +575,24 @@ class _AIToolPageState extends State<AIToolPage> {
                   width: ScreenHelper.isDesktop() ? 150 : 80,
                   height: ScreenHelper.isDesktop() ? 150 : 80,
                   child: FeatureGridCard(
-                    targetPage: const HaokanHomePage(),
-                    title: "好看漫画",
-                    icon: Icons.auto_stories,
+                    targetPage: const OneMainPage(),
+                    title: "ONE阅读",
+                    icon: Icons.book_outlined,
                     accentColor: Colors.teal,
                   ),
                 ),
+
+                // 2025-09-08 内容好几年每更新了，也偏女性向，仅供学习测试，默认暂不启用
+                // SizedBox(
+                //   width: ScreenHelper.isDesktop() ? 150 : 80,
+                //   height: ScreenHelper.isDesktop() ? 150 : 80,
+                //   child: FeatureGridCard(
+                //     targetPage: const HaokanHomePage(),
+                //     title: "好看漫画",
+                //     icon: Icons.auto_stories,
+                //     accentColor: Colors.teal,
+                //   ),
+                // ),
               ],
             ),
           ],

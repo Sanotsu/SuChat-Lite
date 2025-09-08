@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../../core/utils/datetime_formatter.dart';
-import '../../../../../shared/widgets/image_preview_helper.dart';
+import '../../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../data/models/haokan/haokan_models.dart';
 
 /// 评论项组件
@@ -72,26 +72,13 @@ class HaokanCommentItem extends StatelessWidget {
     return Row(
       children: [
         // 头像
-        _buildAvatar(),
+        buildUserCircleAvatar(comment.uhead, radius: avatarRadius),
         const SizedBox(width: 12),
         // 用户名和时间
         Expanded(child: _buildUserInfo()),
         // 点赞按钮
         _buildLikeButton(),
       ],
-    );
-  }
-
-  /// 构建头像
-  Widget _buildAvatar() {
-    return CircleAvatar(
-      radius: avatarRadius,
-      backgroundColor: Colors.grey[300],
-      child: ClipOval(
-        child: comment.uhead != null
-            ? buildNetworkOrFileImage(comment.uhead!)
-            : const Icon(Icons.person, size: 20),
-      ),
     );
   }
 

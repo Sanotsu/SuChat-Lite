@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:suchat_lite/core/utils/get_dir.dart';
 
+import '../../../../../core/utils/get_dir.dart';
 import '../../../../../core/utils/simple_tools.dart';
 import '../../../../../shared/widgets/image_preview_helper.dart';
 import '../../../data/datasources/haokan/haokan_api_manager.dart';

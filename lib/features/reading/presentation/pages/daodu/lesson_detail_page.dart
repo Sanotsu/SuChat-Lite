@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
+
 import '../../../../../shared/widgets/toast_utils.dart';
 import '../../../data/models/daodu_models.dart';
 import '../../../data/datasources/reading_api_manager.dart';
@@ -221,7 +222,7 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
 
           // 文章内容
           if (_currentLesson!.article?.isNotEmpty == true)
-            Text(
+            SelectableText(
               _currentLesson!.article!,
               style: TextStyle(
                 fontSize: _fontSize,

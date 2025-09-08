@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:suchat_lite/shared/widgets/simple_tool_widget.dart';
+
 import '../../../../../shared/widgets/image_preview_helper.dart';
+import '../../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../../shared/widgets/toast_utils.dart';
+import '../../../../../shared/widgets/common_error_empty_widgets.dart';
 import '../../../data/datasources/douguo/douguo_api_manager.dart';
 import '../../../data/models/douguo/douguo_recommended_resp.dart';
 import 'recipe_detail_page.dart';
@@ -330,7 +332,14 @@ class _RecipeHomePageState extends State<RecipeHomePage>
 
           // 菜谱列表
           if (_error != null)
-            SliverToBoxAdapter(child: _buildErrorWidget())
+            SliverToBoxAdapter(
+              child: buildCommonErrorWidget(
+                error: _error,
+                onRetry: _isSearchMode
+                    ? _searchRecipes
+                    : _loadRecommendedRecipes,
+              ),
+            )
           else if (_recipes.isEmpty && _isLoading)
             SliverToBoxAdapter(child: _buildLoadingWidget())
           else if (_recipes.isEmpty)
@@ -614,32 +623,6 @@ class _RecipeHomePageState extends State<RecipeHomePage>
         child: CircularProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
         ),
-      ),
-    );
-  }
-
-  Widget _buildErrorWidget() {
-    return Container(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        children: [
-          Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text(
-            _error!,
-            style: TextStyle(color: Colors.grey[600], fontSize: 16),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _isSearchMode ? _searchRecipes : _loadRecommendedRecipes,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange[400],
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('重试'),
-          ),
-        ],
       ),
     );
   }

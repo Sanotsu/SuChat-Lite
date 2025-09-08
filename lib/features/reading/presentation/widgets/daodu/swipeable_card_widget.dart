@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../../../../../core/utils/datetime_formatter.dart';
 import '../../../../../shared/constants/constants.dart';
-import '../../../../../shared/widgets/image_preview_helper.dart';
+import '../../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../data/models/daodu_models.dart';
 import '../../pages/daodu/lesson_detail_page.dart';
 import '../../pages/daodu/lesson_single_comment_page.dart';
@@ -260,15 +261,7 @@ class _SwipeableCardWidgetState extends State<SwipeableCardWidget> {
                 Row(
                   children: [
                     // 用户头像
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundColor: Colors.grey[300],
-                      child: ClipOval(
-                        child: comment.user?.avatar?.isNotEmpty == true
-                            ? buildNetworkOrFileImage(comment.user!.avatar!)
-                            : const Icon(Icons.person, size: 20),
-                      ),
-                    ),
+                    buildUserCircleAvatar(comment.user?.avatar),
                     const SizedBox(width: 8),
 
                     // 用户名
