@@ -538,9 +538,11 @@ class _RecipeDetailPageState extends State<RecipeDetailPage>
                 ),
               ),
             if (ingredient.note != null)
-              Text(
-                ingredient.note!,
-                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              Expanded(
+                child: Text(
+                  ingredient.note!,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                ),
               ),
           ],
         ),
