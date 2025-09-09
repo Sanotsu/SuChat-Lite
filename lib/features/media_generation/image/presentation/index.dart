@@ -76,12 +76,11 @@ class _ImagePageState extends MediaGenerationBaseState<GenImagePage> {
         value: _selectedImageSize,
         items: _imageSizeOptions,
         hintLabel: "选择类型",
-        onChanged:
-            isGenerating
-                ? null
-                : (value) {
-                  setState(() => _selectedImageSize = value!);
-                },
+        onChanged: isGenerating
+            ? null
+            : (value) {
+                setState(() => _selectedImageSize = value!);
+              },
         itemToString: (e) => (e as CusLabel).cnLabel,
       ),
     );
@@ -121,18 +120,30 @@ class _ImagePageState extends MediaGenerationBaseState<GenImagePage> {
     }
 
     if (model.platform == ApiPlatform.aliyun) {
-      // flux只有6中默认尺寸，但通义万相-文生图V2宽高边长的像素范围为[512, 1440]的任意尺寸，最大200w像素
-      // 所以默认使用flux的尺寸就好
-      // if (model.model.contains("flux")) {
-      _imageSizeOptions = [
-        CusLabel(cnLabel: "1:1", value: "1024*1024"),
-        CusLabel(cnLabel: "1:2", value: "512*1024"),
-        CusLabel(cnLabel: "3:2", value: "768*512"),
-        CusLabel(cnLabel: "3:4", value: "768*1024"),
-        CusLabel(cnLabel: "16:9", value: "1024*576"),
-        CusLabel(cnLabel: "9:16", value: "576*1024"),
-      ];
-      // }
+      // 2025-08-20 阿里云新的“通义千问-文生图”的尺寸和之前通义万相的支持列表不一样
+      // https://bailian.console.aliyun.com/?tab=api#/api/?type=model&url=2975126
+      if (model.model.contains("qwen-image")) {
+        _imageSizeOptions = [
+          CusLabel(cnLabel: "1:1", value: "1328*1328"),
+          CusLabel(cnLabel: "4:3", value: "1472*1140"),
+          CusLabel(cnLabel: "3:4", value: "1140*1472"),
+          CusLabel(cnLabel: "16:9", value: "1664*928"),
+          CusLabel(cnLabel: "9:16", value: "928*1664"),
+        ];
+      } else {
+        // flux只有6中默认尺寸，但通义万相-文生图V2宽高边长的像素范围为[512, 1440]的任意尺寸，最大200w像素
+        // 所以默认使用flux的尺寸就好
+        // if (model.model.contains("flux")) {
+        _imageSizeOptions = [
+          CusLabel(cnLabel: "1:1", value: "1024*1024"),
+          CusLabel(cnLabel: "1:2", value: "512*1024"),
+          CusLabel(cnLabel: "3:2", value: "768*512"),
+          CusLabel(cnLabel: "3:4", value: "768*1024"),
+          CusLabel(cnLabel: "16:9", value: "1024*576"),
+          CusLabel(cnLabel: "9:16", value: "576*1024"),
+        ];
+        // }
+      }
     }
     referenceImage = null;
     _selectedImageSize = _imageSizeOptions.first;
@@ -183,23 +194,23 @@ class _ImagePageState extends MediaGenerationBaseState<GenImagePage> {
     //
     return isGrid
         ? GridView.builder(
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 4,
-            childAspectRatio: 1,
-          ),
-          itemCount: _allTasks.length,
-          itemBuilder: (context, index) {
-            var task = _allTasks[index];
-            return _buildImageTaskCard(task, isGrid: isGrid);
-          },
-        )
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              childAspectRatio: 1,
+            ),
+            itemCount: _allTasks.length,
+            itemBuilder: (context, index) {
+              var task = _allTasks[index];
+              return _buildImageTaskCard(task, isGrid: isGrid);
+            },
+          )
         : ListView.builder(
-          itemCount: _allTasks.length,
-          itemBuilder: (context, index) {
-            var task = _allTasks[index];
-            return _buildImageTaskCard(task, isGrid: isGrid);
-          },
-        );
+            itemCount: _allTasks.length,
+            itemBuilder: (context, index) {
+              var task = _allTasks[index];
+              return _buildImageTaskCard(task, isGrid: isGrid);
+            },
+          );
   }
 
   // 构建图片任务卡片
@@ -323,8 +334,9 @@ class _ImagePageState extends MediaGenerationBaseState<GenImagePage> {
         negativePrompt: '',
         taskId: null,
         imageUrls: null,
-        refImageUrls:
-            referenceImage?.path != null ? [referenceImage!.path] : null,
+        refImageUrls: referenceImage?.path != null
+            ? [referenceImage!.path]
+            : null,
         gmtCreate: DateTime.now(),
         llmSpec: selectedModel!,
         modelType: selectedModel!.modelType,
@@ -340,9 +352,9 @@ class _ImagePageState extends MediaGenerationBaseState<GenImagePage> {
           size: _selectedImageSize.value,
           refImage:
               (selectedModel?.modelType == LLModelType.image ||
-                      selectedModel?.modelType == LLModelType.iti)
-                  ? referenceImage
-                  : null,
+                  selectedModel?.modelType == LLModelType.iti)
+              ? referenceImage
+              : null,
           // 必须传入requestId，否则阿里云平台的job没有无法保存到数据库，那这里的查询未完成job永远都是0
           requestId: requestId,
         );
@@ -368,10 +380,9 @@ class _ImagePageState extends MediaGenerationBaseState<GenImagePage> {
         // ？？？注意，其他平台生成图片报错还没准确处理
         if (selectedModel?.platform != ApiPlatform.aliyun) {
           await dbHelper.updateMediaGenerationHistoryByRequestId(requestId, {
-            'taskId':
-                selectedModel?.platform == ApiPlatform.aliyun
-                    ? response.output?.taskId
-                    : null,
+            'taskId': selectedModel?.platform == ApiPlatform.aliyun
+                ? response.output?.taskId
+                : null,
             'isSuccess': 1,
             'isProcessing': 0,
             'taskStatus': response.output?.taskStatus,
@@ -490,81 +501,78 @@ class _ImagePageState extends MediaGenerationBaseState<GenImagePage> {
 
     showDialog(
       context: context,
-      builder:
-          (context) => Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(0),
-            ),
-            insetPadding: ScreenHelper.isMobile() ? EdgeInsets.all(8) : null,
-            child: Container(
-              width: 800, // 桌面端限制宽度，手机端一般都达不到800的
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.8,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AppBar(
-                    title: Text('图片预览(共${task.imageUrls?.length}张)'),
-                    actions: [
-                      IconButton(
-                        icon: Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
+        insetPadding: ScreenHelper.isMobile() ? EdgeInsets.all(8) : null,
+        child: Container(
+          width: 800, // 桌面端限制宽度，手机端一般都达不到800的
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppBar(
+                title: Text('图片预览(共${task.imageUrls?.length}张)'),
+                actions: [
+                  IconButton(
+                    icon: Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                  Container(
-                    height: 160,
-                    padding: EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        buildImageCarouselSlider(
-                          task.imageUrls!,
-                          aspectRatio: 1,
-                        ),
-                        SizedBox(width: 10),
-
-                        Expanded(
-                          child: SingleChildScrollView(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  task.gmtCreate.toString(),
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                                Text(
-                                  CP_NAME_MAP[task.llmSpec.platform] ?? '',
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                                Text(
-                                  task.llmSpec.model,
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  Padding(
-                    padding: EdgeInsets.all(8),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: SelectableText(task.imageUrls?.join(';') ?? ''),
-                    ),
-                  ),
-
-                  promptCard,
-                  SizedBox(height: 10),
                 ],
               ),
-            ),
+              Container(
+                height: 160,
+                padding: EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    buildImageViewCarouselSlider(
+                      task.imageUrls!,
+                      aspectRatio: 1,
+                    ),
+                    SizedBox(width: 10),
+
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              task.gmtCreate.toString(),
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            Text(
+                              CP_NAME_MAP[task.llmSpec.platform] ?? '',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            Text(
+                              task.llmSpec.model,
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              Padding(
+                padding: EdgeInsets.all(8),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SelectableText(task.imageUrls?.join(';') ?? ''),
+                ),
+              ),
+
+              promptCard,
+              SizedBox(height: 10),
+            ],
           ),
+        ),
+      ),
     );
   }
 
@@ -588,8 +596,9 @@ class _ImagePageState extends MediaGenerationBaseState<GenImagePage> {
       await _queryAllTasks();
 
       // 过滤出未完成的任务
-      final unfinishedTasks =
-          _allTasks.where((e) => e.isProcessing == true).toList();
+      final unfinishedTasks = _allTasks
+          .where((e) => e.isProcessing == true)
+          .toList();
 
       if (unfinishedTasks.isEmpty) return;
 

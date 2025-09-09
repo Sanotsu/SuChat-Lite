@@ -6,7 +6,7 @@ part of 'notebook_viewmodel.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$notebookViewModelHash() => r'b469d53d6fe27d967489bd920d90604869b3f08c';
+String _$notebookViewModelHash() => r'a19f38488881391930cc01c4c184f8d54eb523be';
 
 /// See also [NotebookViewModel].
 @ProviderFor(NotebookViewModel)
@@ -14,36 +14,35 @@ final notebookViewModelProvider =
     AutoDisposeAsyncNotifierProvider<NotebookViewModel, List<Note>>.internal(
       NotebookViewModel.new,
       name: r'notebookViewModelProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$notebookViewModelHash,
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$notebookViewModelHash,
       dependencies: null,
       allTransitiveDependencies: null,
     );
 
 typedef _$NotebookViewModel = AutoDisposeAsyncNotifier<List<Note>>;
 String _$noteCategoryViewModelHash() =>
-    r'e2c3aa94d8033aadec0c779150063f8de8c274d5';
+    r'f675de181bcbdc80cd9b89f57fdcc623f527343f';
 
 /// See also [NoteCategoryViewModel].
 @ProviderFor(NoteCategoryViewModel)
-final noteCategoryViewModelProvider = AutoDisposeAsyncNotifierProvider<
-  NoteCategoryViewModel,
-  List<NoteCategory>
->.internal(
-  NoteCategoryViewModel.new,
-  name: r'noteCategoryViewModelProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
+final noteCategoryViewModelProvider =
+    AutoDisposeAsyncNotifierProvider<
+      NoteCategoryViewModel,
+      List<NoteCategory>
+    >.internal(
+      NoteCategoryViewModel.new,
+      name: r'noteCategoryViewModelProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
           ? null
           : _$noteCategoryViewModelHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
 
 typedef _$NoteCategoryViewModel = AutoDisposeAsyncNotifier<List<NoteCategory>>;
-String _$noteTagViewModelHash() => r'3ac89d287f7fd270aba054e1e9eecbb6a233dd6d';
+String _$noteTagViewModelHash() => r'a7e6e6170d2eb36ee8e0b9235e719bac5e7a95d7';
 
 /// See also [NoteTagViewModel].
 @ProviderFor(NoteTagViewModel)
@@ -51,10 +50,9 @@ final noteTagViewModelProvider =
     AutoDisposeAsyncNotifierProvider<NoteTagViewModel, List<NoteTag>>.internal(
       NoteTagViewModel.new,
       name: r'noteTagViewModelProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$noteTagViewModelHash,
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$noteTagViewModelHash,
       dependencies: null,
       allTransitiveDependencies: null,
     );

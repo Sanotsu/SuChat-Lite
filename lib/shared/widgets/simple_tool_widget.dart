@@ -6,6 +6,8 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 import '../../core/utils/screen_helper.dart';
+import '../services/network_service.dart';
+import 'image_preview_helper.dart';
 
 // 绘制转圈圈
 Widget buildLoader(bool isLoading) {
@@ -290,10 +292,9 @@ InputDecoration _buildInputDecoration(
   String? hintText,
   TextStyle? hintStyle,
 ) {
-  final contentPadding =
-      isOutline != null && isOutline
-          ? EdgeInsets.symmetric(horizontal: 5, vertical: 15)
-          : EdgeInsets.symmetric(horizontal: 5, vertical: 5);
+  final contentPadding = isOutline != null && isOutline
+      ? EdgeInsets.symmetric(horizontal: 5, vertical: 15)
+      : EdgeInsets.symmetric(horizontal: 5, vertical: 5);
 
   return InputDecoration(
     isDense: true,
@@ -301,12 +302,11 @@ InputDecoration _buildInputDecoration(
     hintText: hintText,
     hintStyle: hintStyle,
     contentPadding: contentPadding,
-    border:
-        isOutline != null && isOutline
-            ? OutlineInputBorder(borderRadius: BorderRadius.circular(10.0))
-            : isReadOnly
-            ? InputBorder.none
-            : null,
+    border: isOutline != null && isOutline
+        ? OutlineInputBorder(borderRadius: BorderRadius.circular(10.0))
+        : isReadOnly
+        ? InputBorder.none
+        : null,
     // 设置透明底色
     filled: true,
     fillColor: Colors.transparent,
@@ -366,10 +366,9 @@ SizedBox buildTinyButtonTag(
         labelText,
         style: TextStyle(
           // 传入大于10的字体，修正为10；不传则默认10
-          fontSize:
-              (labelTextSize != null && labelTextSize > 10)
-                  ? 10
-                  : labelTextSize ?? 10,
+          fontSize: (labelTextSize != null && labelTextSize > 10)
+              ? 10
+              : labelTextSize ?? 10,
         ),
       ),
     ),
@@ -583,5 +582,49 @@ Widget buildFloatingActionButton(
     backgroundColor: Theme.of(context).colorScheme.primary,
     foregroundColor: Theme.of(context).colorScheme.onPrimary,
     child: Icon(icon),
+  );
+}
+
+/// 构建页面上action位置的使用说明按钮
+Widget buildInfoButtonOnAction(BuildContext context, String note) {
+  return IconButton(
+    onPressed: () {
+      commonMDHintModalBottomSheet(context, "说明", note, msgFontSize: 15);
+    },
+    icon: const Icon(Icons.info_outline),
+  );
+}
+
+/// 没有网的时候，点击就显示弹窗；有网才跳转到功能页面
+void showNoNetworkOrGoTargetPage(
+  BuildContext context,
+  Widget targetPage, {
+  Function(dynamic)? thenFunc,
+}) async {
+  bool isNetworkAvailable = await NetworkStatusService().isNetwork();
+
+  if (!context.mounted) return;
+  isNetworkAvailable
+      ? Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => targetPage),
+        ).then((value) => thenFunc?.call(value))
+      : commonHintDialog(context, "提示", "请联网后使用该功能。", msgFontSize: 15);
+}
+
+/// 构建用户头像组件
+Widget buildUserCircleAvatar(
+  String? avatarUrl, {
+  double radius = 16,
+  Color? backgroundColor,
+}) {
+  return CircleAvatar(
+    radius: radius,
+    backgroundColor: backgroundColor ?? Colors.grey[300],
+    child: ClipOval(
+      child: avatarUrl != null
+          ? buildNetworkOrFileImage(avatarUrl)
+          : Icon(Icons.person, size: radius),
+    ),
   );
 }

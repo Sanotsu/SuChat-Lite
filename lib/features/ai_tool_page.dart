@@ -3,14 +3,24 @@ import 'package:flutter/material.dart';
 import '../core/utils/screen_helper.dart';
 import '../shared/widgets/feature_grid_card.dart';
 import '../shared/widgets/modern_feature_card.dart';
+import 'model_management/index.dart';
+import 'translator/presentation/pages/mini_translator_page.dart';
+import 'visual_media/presentation/pages/index.dart';
 import 'diet_diary/presentation/index.dart';
+import 'food/presentation/pages/douguo/recipe_home_page.dart';
+import 'food/presentation/pages/usda_food_data/index.dart';
+import 'funny_stuff/persentation/pages/index.dart';
 import 'media_generation/image/presentation/index.dart';
 import 'media_generation/video/presentation/index.dart';
 import 'media_generation/voice/presentation/index.dart';
+import 'news/presentation/pages/index.dart';
 import 'notebook/presentation/pages/notebook_page.dart';
 import 'simple_accounting/presentation/pages/bill_list_page.dart';
 import 'training_assistant/presentation/index.dart';
+import 'visual_media/presentation/pages/tmdb/home_page.dart';
 import 'voice_recognition/presentation/index.dart';
+import 'reading/presentation/pages/daodu/main_page.dart';
+import 'reading/presentation/pages/one/main_page.dart';
 
 class AIToolPage extends StatefulWidget {
   const AIToolPage({super.key});
@@ -23,7 +33,20 @@ class _AIToolPageState extends State<AIToolPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('更多功能')),
+      appBar: AppBar(
+        title: const Text('更多功能'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ModelConfig()),
+              );
+            },
+            child: Text('模型配置'),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
@@ -35,6 +58,8 @@ class _AIToolPageState extends State<AIToolPage> {
             // 免责声明
             disclaimer(),
 
+            if (!ScreenHelper.isMobile()) deviceHint(),
+
             // 所有功能网格
             featureGridTitle(),
             // 桌面端避免窗口缩放后卡片变化不好看，就固定大小
@@ -44,6 +69,23 @@ class _AIToolPageState extends State<AIToolPage> {
 
             // 推荐功能
             extendedFeature(),
+
+            SliverToBoxAdapter(
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Center(
+                  child: Text(
+                    "注意：以下功能模块均基于 API 实现，"
+                    "随时可能停止服务或不可访问，"
+                    "仅供学习交流，切不可他用。",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              ),
+            ),
+
+            // 娱乐功能
+            entertainmentFeature(),
 
             // 底部间距
             SliverToBoxAdapter(child: SizedBox(height: 24)),
@@ -135,6 +177,19 @@ class _AIToolPageState extends State<AIToolPage> {
     );
   }
 
+  SliverToBoxAdapter deviceHint() {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Text(
+          "本页面功能请在移动端设备中获得更佳体验；桌面端未进行适配，显示效果不佳。",
+          style: TextStyle(fontSize: 16, color: Colors.blue),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+
   SliverToBoxAdapter featureGridTitle() {
     return SliverToBoxAdapter(
       child: Padding(
@@ -203,11 +258,21 @@ class _AIToolPageState extends State<AIToolPage> {
               width: 150,
               height: 150,
               child: FeatureGridCard(
-                isNew: true,
                 targetPage: const VoiceRecognitionPage(),
                 title: "录音识别",
                 icon: Icons.audio_file,
                 accentColor: Colors.orange,
+              ),
+            ),
+            SizedBox(
+              width: 150,
+              height: 150,
+              child: FeatureGridCard(
+                isNew: true,
+                targetPage: const MiniTranslatorPage(),
+                title: "快速翻译",
+                icon: Icons.translate,
+                accentColor: Colors.purple,
               ),
             ),
           ],
@@ -221,8 +286,8 @@ class _AIToolPageState extends State<AIToolPage> {
       padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
       sliver: SliverGrid(
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          childAspectRatio: 0.9,
+          crossAxisCount: 4,
+          childAspectRatio: 1,
           crossAxisSpacing: 1,
           mainAxisSpacing: 1,
         ),
@@ -260,11 +325,17 @@ class _AIToolPageState extends State<AIToolPage> {
             accentColor: Colors.blue,
           ),
           FeatureGridCard(
-            isNew: true,
             targetPage: const VoiceRecognitionPage(),
             title: "录音识别",
             icon: Icons.audio_file,
             accentColor: Colors.orange,
+          ),
+          FeatureGridCard(
+            isNew: true,
+            targetPage: const MiniTranslatorPage(),
+            title: "快速翻译",
+            icon: Icons.translate,
+            accentColor: Colors.purple,
           ),
         ]),
       ),
@@ -353,14 +424,177 @@ class _AIToolPageState extends State<AIToolPage> {
                 ),
               ],
             ),
-            // SizedBox(height: 12),
-            // ModernFeatureCard(
-            //   targetPage: const TrainingAssistantPage(),
-            //   title: "训练助手",
-            //   subtitle: "使用大模型生成健身训练计划，可灵活跟练，强身健体",
-            //   icon: Icons.fitness_center,
-            //   accentColor: Colors.indigo,
+          ],
+        ),
+      ),
+    );
+  }
+
+  SliverToBoxAdapter entertainmentFeature() {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Text(
+                  "生活娱乐",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+
+            Wrap(
+              // spacing: 8,
+              // runSpacing: 8,
+              // alignment: WrapAlignment.center,
+              children: [
+                SizedBox(
+                  width: ScreenHelper.isDesktop() ? 150 : 80,
+                  height: ScreenHelper.isDesktop() ? 150 : 80,
+                  child: FeatureGridCard(
+                    targetPage: const NewsIndex(),
+                    title: "新闻热榜",
+                    icon: Icons.newspaper,
+                    accentColor: Colors.orange,
+                  ),
+                ),
+
+                //  _rowWidget([
+                //     LifeToolEntranceCard(
+                //       title: "热量计算器",
+                //       subtitle: "食物热量和运动消耗",
+                //       icon: Icons.calculate,
+                //       onTap: () => showNoNetworkOrGoTargetPage(
+                //         context,
+                //         NixSimpleCalculator(),
+                //       ),
+                //     ),
+                //     const SizedBox(),
+                //   ]),
+                SizedBox(
+                  width: ScreenHelper.isDesktop() ? 150 : 80,
+                  height: ScreenHelper.isDesktop() ? 150 : 80,
+                  child: FeatureGridCard(
+                    targetPage: const FunnyStuffIndex(),
+                    title: "趣图趣文",
+                    icon: Icons.image,
+                    accentColor: Colors.orange,
+                  ),
+                ),
+
+                SizedBox(
+                  width: ScreenHelper.isDesktop() ? 150 : 80,
+                  height: ScreenHelper.isDesktop() ? 150 : 80,
+                  child: FeatureGridCard(
+                    targetPage: const VisualMediaIndex(),
+                    title: "动漫资讯",
+                    icon: Icons.collections_bookmark,
+                    accentColor: Colors.orange,
+                  ),
+                ),
+
+                SizedBox(
+                  width: ScreenHelper.isDesktop() ? 150 : 80,
+                  height: ScreenHelper.isDesktop() ? 150 : 80,
+                  child: FeatureGridCard(
+                    targetPage: const TmdbHomePage(),
+                    title: "TMDB",
+                    icon: Icons.movie,
+                    accentColor: Colors.orange,
+                  ),
+                ),
+              ],
+            ),
+
+            Wrap(
+              // spacing: 8,
+              // runSpacing: 8,
+              // alignment: WrapAlignment.center,
+              children: [
+                SizedBox(
+                  width: ScreenHelper.isDesktop() ? 150 : 80,
+                  height: ScreenHelper.isDesktop() ? 150 : 80,
+                  child: FeatureGridCard(
+                    targetPage: const USDAFoodDataCentral(),
+                    title: "USDA FDC",
+                    icon: Icons.calculate,
+                    accentColor: Colors.orange,
+                  ),
+                ),
+              ],
+            ),
+
+            // /// 这几个是统一使用 https://apic.netstart.cn/#/ 的API
+            // Container(
+            //   padding: const EdgeInsets.all(8),
+            //   child: Center(
+            //     child: Text("蓝绿色的均使用的 https://apis.netstart.cn/ 接口"),
+            //   ),
             // ),
+            Wrap(
+              // spacing: 8,
+              // runSpacing: 8,
+              // alignment: WrapAlignment.center,
+              children: [
+                SizedBox(
+                  width: ScreenHelper.isDesktop() ? 150 : 80,
+                  height: ScreenHelper.isDesktop() ? 150 : 80,
+                  child: FeatureGridCard(
+                    targetPage: const RecipeHomePage(),
+                    title: "豆果美食",
+                    icon: Icons.menu_book,
+                    accentColor: Colors.teal,
+                  ),
+                ),
+
+                SizedBox(
+                  width: ScreenHelper.isDesktop() ? 150 : 80,
+                  height: ScreenHelper.isDesktop() ? 150 : 80,
+                  child: FeatureGridCard(
+                    targetPage: const DaoduMainPage(),
+                    title: "岛读",
+                    icon: Icons.article,
+                    accentColor: Colors.teal,
+                  ),
+                ),
+
+                SizedBox(
+                  width: ScreenHelper.isDesktop() ? 150 : 80,
+                  height: ScreenHelper.isDesktop() ? 150 : 80,
+                  child: FeatureGridCard(
+                    targetPage: const OneMainPage(),
+                    title: "ONE阅读",
+                    icon: Icons.book_outlined,
+                    accentColor: Colors.teal,
+                  ),
+                ),
+
+                // 2025-09-08 内容好几年每更新了，也偏女性向，仅供学习测试，默认暂不启用
+                // SizedBox(
+                //   width: ScreenHelper.isDesktop() ? 150 : 80,
+                //   height: ScreenHelper.isDesktop() ? 150 : 80,
+                //   child: FeatureGridCard(
+                //     targetPage: const HaokanHomePage(),
+                //     title: "好看漫画",
+                //     icon: Icons.auto_stories,
+                //     accentColor: Colors.teal,
+                //   ),
+                // ),
+              ],
+            ),
           ],
         ),
       ),

@@ -24,6 +24,8 @@ Widget buildDropdownButton2<T>({
   String? hintLabel,
   // 背景色
   Color? backgroundColor,
+  // 没有列表时的提示词
+  String? itemsEmptyHint,
 }) {
   if (items.isEmpty) {
     return Container(
@@ -33,7 +35,7 @@ Widget buildDropdownButton2<T>({
         color: backgroundColor ?? Colors.white,
       ),
       height: height ?? 30,
-      child: Center(child: Text('尚无可选列表')),
+      child: Center(child: Text(itemsEmptyHint ?? '尚无可选列表')),
     );
   }
 
@@ -57,22 +59,18 @@ Widget buildDropdownButton2<T>({
       // 提示词
       hint: Text(hintLabel ?? '请选择', style: TextStyle(fontSize: 14)),
       // 下拉选择
-      items:
-          items
-              .map(
-                (e) => DropdownMenuItem<T>(
-                  value: e,
-                  alignment: alignment ?? AlignmentDirectional.center,
-                  child: Text(
-                    itemToString != null ? itemToString(e) : e.toString(),
-                    style: TextStyle(
-                      fontSize: labelSize ?? 15,
-                      color: Colors.blue,
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
+      items: items
+          .map(
+            (e) => DropdownMenuItem<T>(
+              value: e,
+              alignment: alignment ?? AlignmentDirectional.center,
+              child: Text(
+                itemToString != null ? itemToString(e) : e.toString(),
+                style: TextStyle(fontSize: labelSize ?? 15, color: Colors.blue),
+              ),
+            ),
+          )
+          .toList(),
       // 下拉按钮当前被选中的值
       value: selectedValue,
       // 当值切换时触发的函数

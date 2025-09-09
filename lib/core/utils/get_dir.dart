@@ -99,6 +99,11 @@ Future<Directory> getVoiceGenDir() async {
   return getAppHomeDirectory(subfolder: "AI_GEN/voices");
 }
 
+// 翻译时语言合成单独一个文件夹
+Future<Directory> getTranslatorVoiceGenDir() async {
+  return getAppHomeDirectory(subfolder: "AI_GEN/voices/translator");
+}
+
 // 单独的多模态语音合成时文件保存的目录
 Future<Directory> getOmniChatVoiceGenDir() async {
   return getAppHomeDirectory(subfolder: "AI_GEN/voices/omni_chat");

@@ -43,13 +43,12 @@ Future<bool> requestPermission({
         PermissionStatus storageStatus = await Permission.storage.request();
         return storageStatus.isGranted;
       } else {
-        Map<Permission, PermissionStatus> statuses =
-            await [
-              // Permission.audio,
-              // Permission.photos,
-              // Permission.videos,
-              Permission.manageExternalStorage,
-            ].request();
+        Map<Permission, PermissionStatus> statuses = await [
+          // Permission.audio,
+          // Permission.photos,
+          // Permission.videos,
+          Permission.manageExternalStorage,
+        ].request();
 
         return (
         // statuses[Permission.audio]!.isGranted &&
@@ -58,8 +57,10 @@ Future<bool> requestPermission({
         statuses[Permission.manageExternalStorage]!.isGranted);
       }
     } else if (Platform.isIOS) {
-      Map<Permission, PermissionStatus> statuses =
-          await [Permission.mediaLibrary, Permission.storage].request();
+      Map<Permission, PermissionStatus> statuses = await [
+        Permission.mediaLibrary,
+        Permission.storage,
+      ].request();
       return (statuses[Permission.mediaLibrary]!.isGranted &&
           statuses[Permission.storage]!.isGranted);
     }
@@ -91,8 +92,10 @@ Future<bool> requestStoragePermission() async {
       return storageStatus.isGranted;
     }
   } else if (Platform.isIOS) {
-    Map<Permission, PermissionStatus> statuses =
-        await [Permission.mediaLibrary, Permission.storage].request();
+    Map<Permission, PermissionStatus> statuses = await [
+      Permission.mediaLibrary,
+      Permission.storage,
+    ].request();
     return (statuses[Permission.mediaLibrary]!.isGranted &&
         statuses[Permission.storage]!.isGranted);
   } else if (Platform.isLinux || Platform.isMacOS || Platform.isWindows) {
@@ -245,24 +248,20 @@ Future<File> saveTtiBase64ImageToLocal(
   return file;
 }
 
-// 保存文生图的图片到本地
+// 保存网络图片到本地
 Future<String?> saveImageToLocal(
   String netImageUrl, {
   String? prefix,
-  // 指定保存的名称，比如 xxx.png
   String? imageName,
   Directory? dlDir,
-  // 是否显示保存提示
   bool showSaveHint = true,
+  bool overwriteExisting = false,
 }) async {
   // 首先获取设备外部存储管理权限
   if (!(await requestStoragePermission())) {
     ToastUtils.showError("未授权访问设备外部存储，无法保存图片");
-
     return null;
   }
-
-  // print("原图片地址---$netImageUrl");
 
   // 2024-09-04 文生图片一般有一个随机的名称，就只使用它就好(可以避免同一个保存了多份)
   // 注意，像阿里云这种地址会带上过期日期token信息等参数内容，所以下载保存的文件名要过滤掉，只保留图片地址信息
@@ -270,53 +269,198 @@ Future<String?> saveImageToLocal(
   // 2024-11-04 如果有指定保存的图片名称，则不用从url获取
   imageName ??= netImageUrl.split("?").first.split('/').last;
 
-  // print("新获取的图片地址---$imageName");
-
   dynamic closeToast;
   try {
-    // 2024-09-14 支持自定义下载的文件夹
+    // 获取下载目录
     var dir = dlDir ?? (await getImageGenDir());
 
-    // 2024-08-17 直接保存文件到指定位置
+    // 确保目录存在
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
 
-    // 传入的前缀有强制带上下划线
-    final file = File('${dir.path}/${prefix ?? ""}$imageName');
+    // 构建文件路径 , 传入的前缀有强制带上下划线
+    final filePath = '${dir.path}/${prefix ?? ""}$imageName';
+    final file = File(filePath);
+
+    // 检查文件是否已存在
+    final bool fileExists = await file.exists();
+
+    if (fileExists && !overwriteExisting) {
+      // 文件已存在且不覆盖，直接返回现有文件路径
+      if (showSaveHint) {
+        ToastUtils.showToast("图片已存在，无需重复下载");
+      }
+      return filePath;
+    }
 
     if (showSaveHint) {
       closeToast = ToastUtils.showLoading('【图片保存中...】');
     }
 
+    // 下载图片
     var response = await Dio().get(
       netImageUrl,
       options: Options(responseType: ResponseType.bytes),
     );
 
+    // 写入文件
     await file.writeAsBytes(response.data);
 
-    if (showSaveHint && closeToast != null) {
-      closeToast();
-      ToastUtils.showToast("图片已保存在手机下/${file.path.split("/0/").last}");
+    if (showSaveHint) {
+      if (closeToast != null) {
+        closeToast();
+      }
+      if (fileExists && overwriteExisting) {
+        ToastUtils.showToast("图片已覆盖保存在手机下/${file.path.split("/0/").last}");
+      } else {
+        ToastUtils.showToast("图片已保存在手机下/${file.path.split("/0/").last}");
+      }
     }
 
     return file.path;
+  } catch (e) {
+    // 异常处理
+    if (showSaveHint && closeToast != null) {
+      closeToast();
+    }
+    ToastUtils.showError("图片保存失败: ${e.toString()}");
+    return null;
   } finally {
     if (showSaveHint && closeToast != null) {
       closeToast();
     }
   }
+}
 
-  // 用这个自定义的，阿里云地址会报403错误，原因不清楚
-  // var respData = await HttpUtils.get(
-  //   path: netImageUrl,
-  //   showLoading: true,
-  //   responseType: CusRespType.bytes,
-  // );
+/// 保存多张图片到本地
+Future<List<String?>> saveMultipleImagesToLocal(
+  List<String> netImageUrls, {
+  String? prefix,
+  List<String>? imageNames,
+  Directory? dlDir,
+  bool showSaveHint = true,
+  bool overwriteExisting = false,
+  bool stopOnError = false, // 是否在遇到错误时停止
+  Function(int, int)? onProgress, // 进度回调 (当前进度, 总数)
+}) async {
+  // 首先获取设备外部存储管理权限
+  if (!(await requestStoragePermission())) {
+    ToastUtils.showError("未授权访问设备外部存储，无法保存图片");
+    return List.filled(netImageUrls.length, null);
+  }
 
-  // await file.writeAsBytes(respData);
-  // ToastUtils.showToast("图片已保存${file.path}");
+  final List<String?> results = [];
+  int successCount = 0;
+  int failCount = 0;
+
+  dynamic closeToast;
+
+  try {
+    if (showSaveHint) {
+      closeToast = ToastUtils.showLoading('准备保存${netImageUrls.length}张图片...');
+    }
+
+    // 获取下载目录
+    var dir = dlDir ?? (await getImageGenDir());
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+
+    for (int i = 0; i < netImageUrls.length; i++) {
+      final String url = netImageUrls[i];
+      final String? customName = imageNames != null && i < imageNames.length
+          ? imageNames[i]
+          : null;
+
+      try {
+        if (showSaveHint && closeToast != null) {
+          closeToast();
+          closeToast = ToastUtils.showLoading(
+            '正在保存第${i + 1}/${netImageUrls.length}张图片...',
+          );
+        }
+
+        // 调用单张图片保存函数
+        final String? result = await saveImageToLocal(
+          url,
+          prefix: prefix,
+          imageName: customName,
+          dlDir: dir,
+          showSaveHint: false, // 不在内部显示提示，由本函数统一处理
+          overwriteExisting: overwriteExisting,
+        );
+
+        results.add(result);
+
+        if (result != null) {
+          successCount++;
+        } else {
+          failCount++;
+          if (stopOnError) {
+            break; // 遇到错误时停止
+          }
+        }
+
+        // 进度回调
+        onProgress?.call(i + 1, netImageUrls.length);
+      } catch (e) {
+        results.add(null);
+        failCount++;
+        if (stopOnError) {
+          break; // 遇到错误时停止
+        }
+      }
+    }
+
+    // 显示最终结果
+    if (showSaveHint) {
+      if (closeToast != null) {
+        closeToast();
+      }
+
+      if (successCount == netImageUrls.length) {
+        ToastUtils.showToast("所有图片保存成功 ($successCount张)");
+      } else if (successCount > 0) {
+        ToastUtils.showToast("图片保存完成: 成功 $successCount张, 失败 $failCount张");
+      } else {
+        ToastUtils.showError("图片保存失败");
+      }
+    }
+
+    return results;
+  } catch (e) {
+    if (showSaveHint && closeToast != null) {
+      closeToast();
+      ToastUtils.showError("批量保存失败: ${e.toString()}");
+    }
+    // 确保返回列表长度与输入一致
+    while (results.length < netImageUrls.length) {
+      results.add(null);
+    }
+    return results;
+  } finally {
+    if (showSaveHint && closeToast != null) {
+      closeToast();
+    }
+  }
+}
+
+/// 批量保存图片的简化版本（不显示详细进度）
+Future<List<String?>> saveImagesInBackground(
+  List<String> netImageUrls, {
+  String? prefix,
+  Directory? dlDir,
+  bool overwriteExisting = false,
+}) async {
+  return await saveMultipleImagesToLocal(
+    netImageUrls,
+    prefix: prefix,
+    dlDir: dlDir,
+    showSaveHint: false, // 不显示提示
+    overwriteExisting: overwriteExisting,
+    stopOnError: false,
+  );
 }
 
 // 保存文生视频的视频到本地

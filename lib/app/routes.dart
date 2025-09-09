@@ -52,12 +52,11 @@ class AppRoutes {
         final Map<String, dynamic> args =
             settings.arguments as Map<String, dynamic>;
         return MaterialPageRoute(
-          builder:
-              (_) => FoodEditPage(
-                foodItem: args['foodItem'],
-                initialName: args['initialName'],
-                onSave: args['onSave'],
-              ),
+          builder: (_) => FoodEditPage(
+            foodItem: args['foodItem'],
+            initialName: args['initialName'],
+            onSave: args['onSave'],
+          ),
         );
       case mealDetail:
         final MealRecord mealRecord = settings.arguments as MealRecord;
@@ -84,10 +83,8 @@ class AppRoutes {
 
       default:
         return MaterialPageRoute(
-          builder:
-              (_) => Scaffold(
-                body: Center(child: Text('没有找到路由: ${settings.name}')),
-              ),
+          builder: (_) =>
+              Scaffold(body: Center(child: Text('没有找到路由: ${settings.name}'))),
         );
     }
   }

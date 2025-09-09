@@ -9,30 +9,40 @@ import '../../../../shared/constants/constants.dart';
 import '../../domain/entities/character_card.dart';
 
 /// 构建空提示
-Widget buildEmptyMessageHint(CharacterCard? character) {
-  return Padding(
-    padding: EdgeInsets.all(8),
-    child: Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 60,
-            height: 60,
-            child:
-                character != null
-                    ? buildAvatarClipOval(character.avatar)
-                    : Icon(Icons.chat, size: 36, color: Colors.blue),
-          ),
-          Text(
-            '嗨，我是${character?.name ?? "SuChat"}',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
-          ),
-          Text(
-            character != null ? '让我们开始聊天吧！' : '我可以帮您完成很多任务，让我们开始吧！',
-            style: TextStyle(color: Colors.grey),
-          ),
-        ],
+/// 可以传入长按的回调函数
+Widget buildEmptyMessageHint(
+  CharacterCard? character, {
+  VoidCallback? onLongPress,
+}) {
+  return GestureDetector(
+    onLongPress: onLongPress,
+    child: Container(
+      padding: EdgeInsets.all(8),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 60,
+              height: 60,
+              child: character != null
+                  ? buildAvatarClipOval(character.avatar)
+                  : Icon(Icons.chat, size: 36, color: Colors.blue),
+            ),
+            Text(
+              '嗨，我是${character?.name ?? "SuChat"}',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+            ),
+            Text(
+              character != null ? '让我们开始聊天吧' : '我可以帮您完成很多任务，让我们开始吧',
+              style: TextStyle(color: Colors.grey),
+            ),
+            Text(
+              "(长按进入更多功能页面)",
+              style: TextStyle(fontSize: 12, color: Colors.blue),
+            ),
+          ],
+        ),
       ),
     ),
   );
@@ -157,11 +167,10 @@ Image buildNetworkImage(String url, {BoxFit fit = BoxFit.scaleDown}) {
       if (loadingProgress == null) return child;
       return Center(
         child: CircularProgressIndicator(
-          value:
-              loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded /
-                      loadingProgress.expectedTotalBytes!
-                  : null,
+          value: loadingProgress.expectedTotalBytes != null
+              ? loadingProgress.cumulativeBytesLoaded /
+                    loadingProgress.expectedTotalBytes!
+              : null,
         ),
       );
     },
@@ -182,11 +191,9 @@ List<Widget> buildReferences(List<Map<String, dynamic>>? refs) {
   return List.generate(
     refs?.length ?? 0,
     (index) => GestureDetector(
-      onTap:
-          () =>
-              refs?[index]['url'] != null
-                  ? launchStringUrl(refs?[index]['url']!)
-                  : null,
+      onTap: () => refs?[index]['url'] != null
+          ? launchStringUrl(refs?[index]['url']!)
+          : null,
       child: Padding(
         padding: EdgeInsets.only(top: 8),
         child: Column(
