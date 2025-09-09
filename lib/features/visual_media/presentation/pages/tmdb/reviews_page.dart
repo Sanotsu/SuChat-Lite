@@ -3,7 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../data/models/tmdb/tmdb_mt_review_resp.dart';
-import '../../widgets/tmdb_widgets.dart';
+import '../../widgets/tmdb/base_widgets.dart';
 
 /// TMDB 评论页面
 class TmdbReviewsPage extends StatefulWidget {

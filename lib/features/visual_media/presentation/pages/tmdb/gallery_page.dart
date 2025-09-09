@@ -9,7 +9,7 @@ import '../../../../../core/utils/simple_tools.dart';
 import '../../../../../shared/widgets/toast_utils.dart';
 import '../../../data/models/tmdb/tmdb_all_image_resp.dart';
 import '../../../data/models/tmdb/tmdb_common.dart';
-import '../../widgets/tmdb_widgets.dart';
+import '../../widgets/tmdb/base_widgets.dart';
 
 /// TMDB 图片画廊页面
 class TmdbGalleryPage extends StatefulWidget {

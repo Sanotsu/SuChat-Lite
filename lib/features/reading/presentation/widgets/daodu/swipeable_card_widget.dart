@@ -10,17 +10,22 @@ import '../../pages/daodu/lesson_single_comment_page.dart';
 /// 可滑动的卡片组件
 /// 支持文章和评论的卡片式展示
 /// 主要是探索页面会用到
-class SwipeableCardWidget extends StatefulWidget {
+class DaoduSwipeableCardWidget extends StatefulWidget {
   final List<dynamic> items; // 文章和评论的混合列表
   final VoidCallback? onRefresh;
 
-  const SwipeableCardWidget({super.key, required this.items, this.onRefresh});
+  const DaoduSwipeableCardWidget({
+    super.key,
+    required this.items,
+    this.onRefresh,
+  });
 
   @override
-  State<SwipeableCardWidget> createState() => _SwipeableCardWidgetState();
+  State<DaoduSwipeableCardWidget> createState() =>
+      _DaoduSwipeableCardWidgetState();
 }
 
-class _SwipeableCardWidgetState extends State<SwipeableCardWidget> {
+class _DaoduSwipeableCardWidgetState extends State<DaoduSwipeableCardWidget> {
   final PageController _pageController = PageController();
   int _currentIndex = 0;
 
@@ -425,7 +430,9 @@ class _SwipeableCardWidgetState extends State<SwipeableCardWidget> {
   void _navigateToArticleDetail(DaoduLesson lesson) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => LessonDetailPage(lesson: lesson)),
+      MaterialPageRoute(
+        builder: (context) => DaoduLessonDetailPage(lesson: lesson),
+      ),
     );
   }
 
@@ -433,7 +440,7 @@ class _SwipeableCardWidgetState extends State<SwipeableCardWidget> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => LessonSingleCommentPage(comment: comment),
+        builder: (context) => DaoduLessonSingleCommentPage(comment: comment),
       ),
     );
   }

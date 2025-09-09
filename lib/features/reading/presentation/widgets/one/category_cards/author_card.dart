@@ -4,11 +4,11 @@ import '../../../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../data/models/one/one_base_models.dart';
 
 /// 作者卡片组件
-class AuthorCard extends StatelessWidget {
+class OneAuthorCard extends StatelessWidget {
   final OneAuthor author;
   final VoidCallback? onTap;
 
-  const AuthorCard({super.key, required this.author, this.onTap});
+  const OneAuthorCard({super.key, required this.author, this.onTap});
 
   @override
   Widget build(BuildContext context) {

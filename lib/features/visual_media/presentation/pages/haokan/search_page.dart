@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../data/datasources/haokan/haokan_api_manager.dart';
 import '../../../data/models/haokan/haokan_models.dart';
-import '../../widgets/haokan/haokan_comic_card.dart';
+import '../../widgets/haokan/comic_card.dart';
 
 /// 好看漫画搜索页面
 class HaokanSearchPage extends StatefulWidget {
@@ -44,9 +44,7 @@ class _HaokanSearchPageState extends State<HaokanSearchPage> {
         _hotError = null;
       });
 
-      final data = await _apiManager.getHaokanComicListByHotSearch(
-        forceRefresh: true,
-      );
+      final data = await _apiManager.getHaokanComicListByHotSearch();
 
       setState(() {
         _hotComics = data;

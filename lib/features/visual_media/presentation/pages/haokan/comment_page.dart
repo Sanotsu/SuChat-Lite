@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../data/datasources/haokan/haokan_api_manager.dart';
 import '../../../data/models/haokan/haokan_models.dart';
-import '../../widgets/haokan/haokan_comment_item.dart';
+import '../../widgets/haokan/comment_item.dart';
 
 /// 好看漫画评论页面
 class HaokanCommentPage extends StatefulWidget {

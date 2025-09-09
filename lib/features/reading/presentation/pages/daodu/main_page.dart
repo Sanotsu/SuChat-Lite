@@ -14,7 +14,10 @@ class DaoduMainPage extends StatefulWidget {
 class _DaoduMainPageState extends State<DaoduMainPage> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = [const DailyCardPage(), const ExplorePage()];
+  final List<Widget> _pages = [
+    const DaoduDailyCardPage(),
+    const DaoduExplorePage(),
+  ];
 
   @override
   void initState() {

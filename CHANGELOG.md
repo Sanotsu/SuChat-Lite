@@ -13,6 +13,11 @@
     - 使用第三方提供的 API 构建的服务：
       - 豆果美食、岛读 APP、`ONE·一个` APP
       - 好看漫画(默认未启用，需要自行取消注释后编译)
+- refactor:
+  - 尽量将各个模块的 `presentation` 中的文件夹/文件/类名命名方式统一(data/暂不处理)：
+    - 类似:有前置文件夹的，文件名不重复，但类名要完整。
+    - `xxx/presentation/pages/one/home_page.dart` -> `OneHomePage`
+    - `xxx/presentation/widgets/one/content_card.dart` -> `OneContentCard`
 - fix:
   - 修正了一些错误和调整了一些细节
 

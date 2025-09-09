@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../../../shared/widgets/common_error_empty_widgets.dart';
 import '../../../../data/datasources/one_api_manager.dart';
 import '../../../../data/models/one/one_category_list.dart';
-import '../../../widgets/one/category_cards/hot_rank_card.dart';
+import '../../../widgets/one/category_cards/rank_card.dart';
 import 'rank_detail_page.dart';
 
 /// 热榜列表页面
@@ -80,7 +80,7 @@ class _RankListPageState extends State<RankListPage> {
         itemCount: _rankList.length,
         itemBuilder: (context, index) {
           final rank = _rankList[index];
-          return HotRankCard(
+          return OneRankCard(
             rank: rank,
             onTap: () => _navigateToRankDetail(rank),
             onViewAll: () => _navigateToRankDetail(rank),

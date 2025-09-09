@@ -17,7 +17,7 @@ import 'news/presentation/pages/index.dart';
 import 'notebook/presentation/pages/notebook_page.dart';
 import 'simple_accounting/presentation/pages/bill_list_page.dart';
 import 'training_assistant/presentation/index.dart';
-import 'visual_media/presentation/pages/tmdb/tmdb_home_page.dart';
+import 'visual_media/presentation/pages/tmdb/home_page.dart';
 import 'voice_recognition/presentation/index.dart';
 import 'reading/presentation/pages/daodu/main_page.dart';
 import 'reading/presentation/pages/one/main_page.dart';

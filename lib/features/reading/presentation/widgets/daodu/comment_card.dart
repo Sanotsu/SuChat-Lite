@@ -9,7 +9,7 @@ import '../../pages/daodu/user_detail_page.dart';
 
 /// 评论信息卡片
 /// 在文章的评论列表或者每日推荐评论详情页面有用到
-class CommentInfoCard extends StatelessWidget {
+class DaoduCommentCard extends StatelessWidget {
   final DaoduComment comment;
   final VoidCallback? onUserTap;
   final String? cardTitle;
@@ -19,7 +19,7 @@ class CommentInfoCard extends StatelessWidget {
   // 如果要折叠评论内容，可以指定显示的最大行数
   final int? maxLines;
 
-  const CommentInfoCard({
+  const DaoduCommentCard({
     super.key,
     required this.comment,
     this.onUserTap,

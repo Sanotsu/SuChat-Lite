@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-import '../../data/models/tmdb/tmdb_common.dart';
+import '../../../data/models/tmdb/tmdb_common.dart';
 
 /// TMDB 图片组件
 class TmdbImageWidget extends StatelessWidget {

@@ -4,9 +4,9 @@ import '../../../data/datasources/tmdb/tmdb_apis.dart';
 import '../../../data/models/tmdb/tmdb_common.dart';
 import '../../../data/models/tmdb/tmdb_filter_params.dart';
 import '../../../data/models/tmdb/tmdb_result_resp.dart';
-import '../../widgets/tmdb_widgets.dart';
-import 'tmdb_detail_page.dart';
-import 'tmdb_filter_sheet.dart';
+import '../../widgets/tmdb/base_widgets.dart';
+import 'detail_page.dart';
+import '../../widgets/tmdb/filter_sheet.dart';
 
 /// TMDB 发现页面（高级筛选）
 class TmdbDiscoverPage extends StatefulWidget {

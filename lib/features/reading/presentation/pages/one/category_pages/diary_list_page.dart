@@ -141,7 +141,7 @@ class _DiaryListPageState extends State<DiaryListPage> {
             }
             // 类型是 OneDiary，且没有小记详情，查询小记列表就包含所有内容了
             final diary = _allDiaryList[index];
-            return DiaryCard(
+            return OneDiaryCard(
               diary: diary,
               onTap: () => _navigateToDiaryDetail(diary),
             );

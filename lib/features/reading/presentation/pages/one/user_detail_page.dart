@@ -471,7 +471,7 @@ class _OneUserDetailPageState extends State<OneUserDetailPage>
 
   /// 构建作者卡片
   Widget _buildAuthorCard(OneAuthor author) {
-    return AuthorCard(
+    return OneAuthorCard(
       author: author,
       onTap: () => Navigator.push(
         context,
@@ -878,7 +878,7 @@ class _OneUserDetailPageState extends State<OneUserDetailPage>
           ),
         ],
       ),
-      child: DiaryCard(
+      child: OneDiaryCard(
         diary: diary,
         onTap: () {
           if (diary.id != null) {

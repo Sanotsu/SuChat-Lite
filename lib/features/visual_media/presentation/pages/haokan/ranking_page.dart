@@ -4,9 +4,9 @@ import '../../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../data/datasources/haokan/haokan_api_manager.dart';
 import '../../../data/models/haokan/haokan_models.dart';
 import '../../../data/models/haokan/haokan_enums.dart';
-import '../../widgets/haokan/haokan_comic_card.dart';
-import 'haokan_search_page.dart';
-import 'haokan_detail_page.dart';
+import '../../widgets/haokan/comic_card.dart';
+import 'search_page.dart';
+import 'detail_page.dart';
 
 /// 好看漫画榜单页面
 class HaokanRankingPage extends StatefulWidget {

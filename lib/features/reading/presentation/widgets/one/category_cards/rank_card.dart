@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import '../../../../data/models/one/one_category_list.dart';
 
 /// 热榜卡片组件
-class HotRankCard extends StatelessWidget {
+class OneRankCard extends StatelessWidget {
   final OneRank rank;
   final VoidCallback? onTap;
   final VoidCallback? onViewAll;
 
-  const HotRankCard({
+  const OneRankCard({
     super.key,
     required this.rank,
     this.onTap,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../data/models/tmdb/tmdb_mt_credit_resp.dart';
-import 'tmdb_widgets.dart';
+import '../../../data/models/tmdb/tmdb_mt_credit_resp.dart';
+import 'base_widgets.dart';
 
 /// 演职表组件
 /// 卡片显示宽度图片高度等尽量和 TmdbSectionWidget 中一致

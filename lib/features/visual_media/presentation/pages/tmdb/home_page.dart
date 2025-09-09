@@ -6,10 +6,10 @@ import '../../../../../shared/widgets/common_error_empty_widgets.dart';
 import '../../../data/datasources/tmdb/tmdb_apis.dart';
 import '../../../data/models/tmdb/tmdb_common.dart';
 import '../../../data/models/tmdb/tmdb_result_resp.dart';
-import '../../widgets/tmdb_widgets.dart';
-import 'tmdb_detail_page.dart';
-import 'tmdb_discover_page.dart';
-import 'tmdb_search_page.dart';
+import '../../widgets/tmdb/base_widgets.dart';
+import 'detail_page.dart';
+import 'discover_page.dart';
+import 'search_page.dart';
 
 /// TMDB 电影电视剧集主页
 class TmdbHomePage extends StatefulWidget {

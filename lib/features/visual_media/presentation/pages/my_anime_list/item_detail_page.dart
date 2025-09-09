@@ -13,17 +13,21 @@ import '../../../data/models/jikan/jikan_statistic.dart';
 import '../../widgets/common_widgets.dart';
 import '../../widgets/acg_bar_chart.dart';
 
-class MALItemDetail extends StatefulWidget {
+class MALItemDetailPage extends StatefulWidget {
   final JKData item;
   final CusLabel malType;
 
-  const MALItemDetail({super.key, required this.item, required this.malType});
+  const MALItemDetailPage({
+    super.key,
+    required this.item,
+    required this.malType,
+  });
 
   @override
-  State<MALItemDetail> createState() => _MALItemDetailState();
+  State<MALItemDetailPage> createState() => _MALItemDetailPageState();
 }
 
-class _MALItemDetailState extends State<MALItemDetail> {
+class _MALItemDetailPageState extends State<MALItemDetailPage> {
   bool isBotThinking = false;
   bool isStream = false;
 

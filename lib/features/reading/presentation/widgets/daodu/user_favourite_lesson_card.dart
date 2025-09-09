@@ -5,10 +5,10 @@ import '../../../data/models/daodu_models.dart';
 import '../../pages/daodu/lesson_detail_page.dart';
 
 /// 用户喜欢文章卡片组件
-class UserFavouriteLessonCard extends StatelessWidget {
+class DaoduUserFavouriteLessonCard extends StatelessWidget {
   final DaoduLesson lesson;
 
-  const UserFavouriteLessonCard({super.key, required this.lesson});
+  const DaoduUserFavouriteLessonCard({super.key, required this.lesson});
 
   @override
   Widget build(BuildContext context) {
@@ -126,7 +126,9 @@ class UserFavouriteLessonCard extends StatelessWidget {
   void _navigateToLessonDetail(BuildContext context, DaoduLesson lesson) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => LessonDetailPage(lesson: lesson)),
+      MaterialPageRoute(
+        builder: (context) => DaoduLessonDetailPage(lesson: lesson),
+      ),
     );
   }
 }

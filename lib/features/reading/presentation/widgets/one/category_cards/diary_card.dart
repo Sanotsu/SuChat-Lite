@@ -6,11 +6,11 @@ import '../../../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../data/models/one/one_category_list.dart';
 
 /// 小记卡片组件
-class DiaryCard extends StatelessWidget {
+class OneDiaryCard extends StatelessWidget {
   final OneDiary diary;
   final VoidCallback? onTap;
 
-  const DiaryCard({super.key, required this.diary, this.onTap});
+  const OneDiaryCard({super.key, required this.diary, this.onTap});
 
   @override
   Widget build(BuildContext context) {

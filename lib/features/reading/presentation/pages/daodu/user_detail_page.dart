@@ -9,7 +9,7 @@ import 'user_snippets_page.dart';
 import 'user_favourite_lessons_page.dart';
 import 'user_thoughts_page.dart';
 
-/// 用户详情页面（避免和其他用户详情页面歧义）
+/// 用户详情页面
 class DaoduUserDetailPage extends StatefulWidget {
   final String userId;
 
@@ -41,8 +41,6 @@ class _DaoduUserDetailPageState extends State<DaoduUserDetailPage> {
 
       final userDetail = await _apiManager.getDaoduUserDetail(
         id: widget.userId,
-        // id: "5f0ae18889f0fe0006d86b67",
-        forceRefresh: false,
       );
 
       setState(() {
@@ -420,7 +418,7 @@ class _DaoduUserDetailPageState extends State<DaoduUserDetailPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => UserSnippetsPage(
+        builder: (context) => DaoduUserSnippetsPage(
           userId: widget.userId,
           userName: _userDetail?.nickname ?? '未知用户',
         ),
@@ -432,7 +430,7 @@ class _DaoduUserDetailPageState extends State<DaoduUserDetailPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => UserThoughtsPage(
+        builder: (context) => DaoduUserThoughtsPage(
           userId: widget.userId,
           userName: _userDetail?.nickname ?? '未知用户',
         ),
@@ -444,7 +442,7 @@ class _DaoduUserDetailPageState extends State<DaoduUserDetailPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => UserFavouriteLessonsPage(
+        builder: (context) => DaoduUserFavouriteLessonsPage(
           userId: widget.userId,
           userName: _userDetail?.nickname ?? '未知用户',
         ),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../../shared/widgets/image_preview_helper.dart';
 import '../../../data/models/haokan/haokan_models.dart';
-import '../../pages/haokan/haokan_detail_page.dart';
+import '../../pages/haokan/detail_page.dart';
 
 /// 好看漫画卡片组件
 class HaokanComicCard extends StatelessWidget {

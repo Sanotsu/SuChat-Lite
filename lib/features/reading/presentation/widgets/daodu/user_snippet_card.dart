@@ -5,10 +5,10 @@ import '../../../../../shared/widgets/expandable_text.dart';
 import '../../../data/models/daodu_models.dart';
 
 /// 用户摘要卡片组件
-class UserSnippetCard extends StatelessWidget {
+class DaoduUserSnippetCard extends StatelessWidget {
   final DaoduUserSnippetsDetail snippet;
 
-  const UserSnippetCard({super.key, required this.snippet});
+  const DaoduUserSnippetCard({super.key, required this.snippet});
 
   @override
   Widget build(BuildContext context) {

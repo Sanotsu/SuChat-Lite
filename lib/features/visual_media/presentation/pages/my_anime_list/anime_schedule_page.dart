@@ -8,16 +8,16 @@ import '../../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../data/datasources/jikan/get_jikan_apis.dart';
 import '../../../data/models/jikan/jikan_data.dart';
 import '../../widgets/common_widgets.dart';
-import 'mal_item_detail.dart';
+import 'item_detail_page.dart';
 
-class MALAnimeSchedule extends StatefulWidget {
-  const MALAnimeSchedule({super.key});
+class MALAnimeSchedulePage extends StatefulWidget {
+  const MALAnimeSchedulePage({super.key});
 
   @override
-  State createState() => _MALAnimeScheduleState();
+  State createState() => _MALAnimeSchedulePageState();
 }
 
-class _MALAnimeScheduleState extends State<MALAnimeSchedule> {
+class _MALAnimeSchedulePageState extends State<MALAnimeSchedulePage> {
   // 暂定一行3个，所以一页查询24条(上限25)
   final int _pageSize = 24;
   int _currentPage = 1;
@@ -317,7 +317,7 @@ class _MALAnimeScheduleState extends State<MALAnimeSchedule> {
                     item.score ?? 0,
                     item.scoredBy ?? 0,
                     item.title ?? item.titleJapanese ?? "",
-                    targetPage: MALItemDetail(
+                    targetPage: MALItemDetailPage(
                       item: item,
                       // 放映默认应该只有动画
                       malType: CusLabel(cnLabel: "动画", value: MALType.anime),

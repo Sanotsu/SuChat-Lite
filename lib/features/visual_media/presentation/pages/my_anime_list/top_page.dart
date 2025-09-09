@@ -9,17 +9,17 @@ import '../../../../../shared/widgets/type_dropdown.dart';
 import '../../../data/datasources/jikan/get_jikan_apis.dart';
 import '../../../data/models/jikan/jikan_data.dart';
 import '../../widgets/common_widgets.dart';
-import 'mal_item_detail.dart';
-import 'mal_anime_schedule.dart';
+import 'item_detail_page.dart';
+import 'anime_schedule_page.dart';
 
-class MALTop extends StatefulWidget {
-  const MALTop({super.key});
+class MALTopPage extends StatefulWidget {
+  const MALTopPage({super.key});
 
   @override
-  State createState() => _MALTopState();
+  State createState() => _MALTopPageState();
 }
 
-class _MALTopState extends State<MALTop> {
+class _MALTopPageState extends State<MALTopPage> {
   final int pageSize = 10;
   int currentPage = 1;
   List<JKData> rankList = [];
@@ -143,7 +143,7 @@ class _MALTopState extends State<MALTop> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 /// 可跳转到MAL的播放日期表(不在当前页处理了)
-                buildGotoButton(context, "放映计划", const MALAnimeSchedule()),
+                buildGotoButton(context, "放映计划", const MALAnimeSchedulePage()),
 
                 /// 分类下拉框
                 TypeDropdown(
@@ -227,7 +227,7 @@ class _MALTopState extends State<MALTop> {
               item.favorites,
               index: query.isEmpty ? index : null,
             ),
-      targetPage: MALItemDetail(item: item, malType: selectedMalType),
+      targetPage: MALItemDetailPage(item: item, malType: selectedMalType),
       overviewList: [
         if ((selectedMalType.value as MALType) == MALType.anime)
           Text(

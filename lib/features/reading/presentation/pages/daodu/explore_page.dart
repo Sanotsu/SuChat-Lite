@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../../data/models/daodu_models.dart';
 import '../../../data/datasources/reading_api_manager.dart';
 import '../../widgets/daodu/swipeable_card_widget.dart';
 
 /// 探索页面 - 显示推荐文章和日期筛选
-class ExplorePage extends StatefulWidget {
-  const ExplorePage({super.key});
+class DaoduExplorePage extends StatefulWidget {
+  const DaoduExplorePage({super.key});
 
   @override
-  State<ExplorePage> createState() => _ExplorePageState();
+  State<DaoduExplorePage> createState() => _DaoduExplorePageState();
 }
 
-class _ExplorePageState extends State<ExplorePage> {
+class _DaoduExplorePageState extends State<DaoduExplorePage> {
   final ReadingApiManager _apiManager = ReadingApiManager();
 
   // 数据状态
@@ -44,9 +45,7 @@ class _ExplorePageState extends State<ExplorePage> {
         _isShowingRecommends = true;
       });
 
-      final recommends = await _apiManager.getDaoduTodayRecommendList(
-        forceRefresh: false,
-      );
+      final recommends = await _apiManager.getDaoduTodayRecommendList();
 
       setState(() {
         _todayRecommends = recommends;
@@ -78,11 +77,7 @@ class _ExplorePageState extends State<ExplorePage> {
       int from = int.parse(DateFormat("yyyyMMdd").format(startDate));
       int to = int.parse(DateFormat("yyyyMMdd").format(endDate));
 
-      final lessons = await _apiManager.getDaoduLessonList(
-        from: from,
-        to: to,
-        forceRefresh: false,
-      );
+      final lessons = await _apiManager.getDaoduLessonList(from: from, to: to);
 
       setState(() {
         _lessons = lessons;
@@ -356,7 +351,7 @@ class _ExplorePageState extends State<ExplorePage> {
 
     return RefreshIndicator(
       onRefresh: _loadTodayRecommends,
-      child: SwipeableCardWidget(
+      child: DaoduSwipeableCardWidget(
         items: allItems,
         onRefresh: _loadTodayRecommends,
       ),
@@ -377,7 +372,7 @@ class _ExplorePageState extends State<ExplorePage> {
       );
     }
 
-    return SwipeableCardWidget(items: _lessons);
+    return DaoduSwipeableCardWidget(items: _lessons);
   }
 
   String _formatDate(DateTime date) {

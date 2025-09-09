@@ -5,8 +5,8 @@ import '../../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../data/datasources/tmdb/tmdb_apis.dart';
 import '../../../data/models/tmdb/tmdb_common.dart';
 import '../../../data/models/tmdb/tmdb_result_resp.dart';
-import '../../widgets/tmdb_widgets.dart';
-import 'tmdb_detail_page.dart';
+import '../../widgets/tmdb/base_widgets.dart';
+import 'detail_page.dart';
 
 /// TMDB 搜索页面
 class TmdbSearchPage extends StatefulWidget {

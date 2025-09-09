@@ -31,18 +31,18 @@ class BaseApiWrapper {
 
   /// 安全headers配置
   static Map<String, String> get _safeHeaders => {
-        'User-Agent': _getRandomUserAgent(),
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-        'Sec-Fetch-Dest': 'empty',
-        'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'cross-site',
-        'X-Requested-With': 'XMLHttpRequest',
-      };
+    'User-Agent': _getRandomUserAgent(),
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Connection': 'keep-alive',
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache',
+    'Sec-Fetch-Dest': 'empty',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Site': 'cross-site',
+    'X-Requested-With': 'XMLHttpRequest',
+  };
 
   /// 获取随机User-Agent
   static String _getRandomUserAgent() {
@@ -75,16 +75,16 @@ class BaseApiWrapper {
     return now.difference(lastTime) > duration;
   }
 
-  /// 检查请求频率限制
-  bool _isRequestRateLimited(String cacheKey) {
-    final lastRequestTime = _requestLogStorage.read('${cacheKey}_last_request');
-    if (lastRequestTime == null) return false;
+  // /// 检查请求频率限制
+  // bool _isRequestRateLimited(String cacheKey) {
+  //   final lastRequestTime = _requestLogStorage.read('${cacheKey}_last_request');
+  //   if (lastRequestTime == null) return false;
 
-    final lastTime = DateTime.parse(lastRequestTime);
-    final now = DateTime.now();
+  //   final lastTime = DateTime.parse(lastRequestTime);
+  //   final now = DateTime.now();
 
-    return now.difference(lastTime) < _config.requestInterval;
-  }
+  //   return now.difference(lastTime) < _config.requestInterval;
+  // }
 
   /// 获取缓存数据
   dynamic _getCachedData(String cacheKey, Duration? cacheDuration) {
@@ -130,15 +130,15 @@ class BaseApiWrapper {
     try {
       // 合并headers
       final Map<String, dynamic> finalHeaders = {};
-      
+
       // 添加安全headers（如果启用）
       if (_config.enableSafeHeaders) {
         finalHeaders.addAll(_safeHeaders);
       }
-      
+
       // 添加自定义headers
       finalHeaders.addAll(_config.customHeaders);
-      
+
       // 添加传入的headers
       if (headers != null) {
         finalHeaders.addAll(headers);
@@ -166,8 +166,9 @@ class BaseApiWrapper {
       if (retryCount < _config.maxRetries && _shouldRetry(e)) {
         // 指数退避重试
         final delay = Duration(
-          milliseconds: (_config.baseRetryDelay.inMilliseconds * pow(2, retryCount))
-              .toInt(),
+          milliseconds:
+              (_config.baseRetryDelay.inMilliseconds * pow(2, retryCount))
+                  .toInt(),
         );
         await Future.delayed(delay);
         return _requestWithRetry(
@@ -213,10 +214,13 @@ class BaseApiWrapper {
 
     final cacheKey = customCacheKey ?? _generateCacheKey(path, queryParameters);
 
-    // 检查请求频率限制
-    if (!forceRefresh && _isRequestRateLimited(cacheKey)) {
-      throw Exception('请求过于频繁，请间隔至少${_config.requestInterval.inSeconds}秒，请稍后再试');
-    }
+    // 2025-09-09 暂时不限制请求间隔，只使用是否强制刷新。不强制刷新就是直接使用的缓存，再限制频率意义不大
+    // // 检查请求频率限制
+    // if (!forceRefresh && _isRequestRateLimited(cacheKey)) {
+    //   throw Exception(
+    //     '请求过于频繁，请间隔至少${_config.requestInterval.inSeconds}秒，请稍后再试',
+    //   );
+    // }
 
     // 检查缓存
     if (!forceRefresh) {

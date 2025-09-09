@@ -4,8 +4,8 @@ import 'package:tmdb_api/tmdb_api.dart';
 import '../../../data/datasources/tmdb/tmdb_apis.dart';
 import '../../../data/models/tmdb/tmdb_common.dart';
 import '../../../data/models/tmdb/tmdb_mt_credit_resp.dart';
-import '../../widgets/tmdb_widgets.dart';
-import 'tmdb_detail_page.dart';
+import '../../widgets/tmdb/base_widgets.dart';
+import 'detail_page.dart';
 
 /// TMDB 演职表页面
 class TmdbCastCrewPage extends StatefulWidget {

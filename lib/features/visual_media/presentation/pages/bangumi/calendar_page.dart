@@ -9,16 +9,16 @@ import '../../../../../shared/widgets/type_dropdown.dart';
 import '../../../data/datasources/bangumi/bangumi_apis.dart';
 import '../../../data/models/bangumi/bangumi.dart';
 import '../../widgets/common_widgets.dart';
-import 'bangumi_item_detail.dart';
+import 'item_detail_page.dart';
 
-class BangumiCalendar extends StatefulWidget {
-  const BangumiCalendar({super.key});
+class BangumiCalendarPage extends StatefulWidget {
+  const BangumiCalendarPage({super.key});
 
   @override
-  State createState() => _BangumiCalendarState();
+  State createState() => _BangumiCalendarPageState();
 }
 
-class _BangumiCalendarState extends State<BangumiCalendar> {
+class _BangumiCalendarPageState extends State<BangumiCalendarPage> {
   final int pageSize = 10;
   int currentPage = 1;
   // 查询的结果列表
@@ -257,7 +257,7 @@ class _BangumiCalendarState extends State<BangumiCalendar> {
         total: subject.rating?.total,
         rank: subject.rank,
       ),
-      targetPage: BangumiItemDetail(
+      targetPage: BangumiItemDetailPage(
         id: subject.id!,
         subType: selectedBgmType.cnLabel,
       ),
@@ -302,7 +302,7 @@ class _BangumiCalendarState extends State<BangumiCalendar> {
                   (subject.nameCn != null && subject.nameCn!.isNotEmpty)
                       ? subject.nameCn!
                       : subject.name ?? "",
-                  targetPage: BangumiItemDetail(
+                  targetPage: BangumiItemDetailPage(
                     id: subject.id!,
                     subType: type.cnLabel,
                   ),

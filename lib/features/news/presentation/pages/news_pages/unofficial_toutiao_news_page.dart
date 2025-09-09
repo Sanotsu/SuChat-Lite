@@ -76,12 +76,10 @@ class _UnofficialToutiaoNewsPageState
       UoToutiaoNewsResp htRst = currentPage == 1
           ? await newsApiManager.getUoToutiaoNewsList(
               category: (selectedNewsCategory.value as String),
-              forceRefresh: true,
             )
           : await newsApiManager.getUoToutiaoNewsList(
               category: (selectedNewsCategory.value as String),
               maxBehotTime: maxBehotTime,
-              forceRefresh: true,
             );
 
       if (!mounted) return;

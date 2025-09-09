@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../data/models/daodu_models.dart';
 import '../../../data/datasources/reading_api_manager.dart';
 import 'lesson_detail_page.dart';
 
 /// 今日文章卡片页面 - 支持左右滑动切换日期
-class DailyCardPage extends StatefulWidget {
-  const DailyCardPage({super.key});
+class DaoduDailyCardPage extends StatefulWidget {
+  const DaoduDailyCardPage({super.key});
 
   @override
-  State<DailyCardPage> createState() => _DailyCardPageState();
+  State<DaoduDailyCardPage> createState() => _DaoduDailyCardPageState();
 }
 
-class _DailyCardPageState extends State<DailyCardPage> {
+class _DaoduDailyCardPageState extends State<DaoduDailyCardPage> {
   final ReadingApiManager _apiManager = ReadingApiManager();
   final PageController _pageController = PageController(initialPage: 1000);
 
@@ -72,7 +73,6 @@ class _DailyCardPageState extends State<DailyCardPage> {
       final lessons = await _apiManager.getDaoduLessonList(
         from: int.parse(dateKey),
         to: int.parse(dateKey),
-        forceRefresh: false,
       );
 
       DaoduLesson? lesson;
@@ -82,10 +82,7 @@ class _DailyCardPageState extends State<DailyCardPage> {
         lesson = lessons.first;
         // 加载统计信息
         try {
-          stats = await _apiManager.getDaoduLessonActivityStats(
-            id: lesson.id!,
-            forceRefresh: false,
-          );
+          stats = await _apiManager.getDaoduLessonActivityStats(id: lesson.id!);
         } catch (e) {
           if (!mounted) return;
           commonExceptionDialog(context, '加载统计信息失败', e.toString());
@@ -216,7 +213,9 @@ class _DailyCardPageState extends State<DailyCardPage> {
   void _enterReadingDetail(DaoduLesson lesson) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => LessonDetailPage(lesson: lesson)),
+      MaterialPageRoute(
+        builder: (context) => DaoduLessonDetailPage(lesson: lesson),
+      ),
     );
   }
 

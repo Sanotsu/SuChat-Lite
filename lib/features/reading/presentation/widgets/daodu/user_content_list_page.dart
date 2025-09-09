@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 /// 通用的用户内容列表页面组件
 /// T: 数据类型 (DaoduUserSnippetsDetail, DaoduUserThoughtsProfile, DaoduLesson)
-class UserContentListPage<T> extends StatefulWidget {
+class DaoduUserContentListPage<T> extends StatefulWidget {
   final String userId;
   final String userName;
   final String title;
@@ -24,7 +24,7 @@ class UserContentListPage<T> extends StatefulWidget {
   /// 每页加载数量
   final int limit;
 
-  const UserContentListPage({
+  const DaoduUserContentListPage({
     super.key,
     required this.userId,
     required this.userName,
@@ -37,10 +37,12 @@ class UserContentListPage<T> extends StatefulWidget {
   });
 
   @override
-  State<UserContentListPage<T>> createState() => _UserContentListPageState<T>();
+  State<DaoduUserContentListPage<T>> createState() =>
+      _DaoduUserContentListPageState<T>();
 }
 
-class _UserContentListPageState<T> extends State<UserContentListPage<T>> {
+class _DaoduUserContentListPageState<T>
+    extends State<DaoduUserContentListPage<T>> {
   final ScrollController _scrollController = ScrollController();
 
   List<T> _items = [];

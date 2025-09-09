@@ -80,7 +80,7 @@ class _AuthorListPageState extends State<AuthorListPage> {
         itemCount: _authorList.length,
         itemBuilder: (context, index) {
           final author = _authorList[index];
-          return AuthorCard(
+          return OneAuthorCard(
             author: author,
             onTap: () => _navigateToAuthorDetail(author),
           );

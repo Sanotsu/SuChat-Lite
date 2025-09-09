@@ -6,11 +6,11 @@ import '../../widgets/daodu/user_content_list_page.dart';
 import '../../widgets/daodu/user_thought_card.dart';
 
 /// 用户想法列表页面
-class UserThoughtsPage extends StatelessWidget {
+class DaoduUserThoughtsPage extends StatelessWidget {
   final String userId;
   final String userName;
 
-  const UserThoughtsPage({
+  const DaoduUserThoughtsPage({
     super.key,
     required this.userId,
     required this.userName,
@@ -20,14 +20,14 @@ class UserThoughtsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final apiManager = ReadingApiManager();
 
-    return UserContentListPage<DaoduUserThoughtsProfile>(
+    return DaoduUserContentListPage<DaoduUserThoughtsProfile>(
       userId: userId,
       userName: userName,
       title: '$userName 的想法',
       emptyMessage: '暂无想法',
       emptyIcon: Icons.lightbulb_outline,
       loadDataFunction: apiManager.getDaoduUserThoughtsProfileList,
-      itemBuilder: (thought) => UserThoughtCard(thought: thought),
+      itemBuilder: (thought) => DaoduUserThoughtCard(thought: thought),
     );
   }
 }

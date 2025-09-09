@@ -3,20 +3,21 @@ import 'package:flutter/material.dart';
 import '../../../../../shared/widgets/toast_utils.dart';
 import '../../../data/models/daodu_models.dart';
 import '../../../data/datasources/reading_api_manager.dart';
-import '../../widgets/daodu/comment_info_card.dart';
+import '../../widgets/daodu/comment_card.dart';
 import '../../widgets/daodu/lesson_info_card.dart';
 
 /// 文章评论列表页面
-class LessonCommentsPage extends StatefulWidget {
+class DaoduLessonCommentsPage extends StatefulWidget {
   final String lessonId;
 
-  const LessonCommentsPage({super.key, required this.lessonId});
+  const DaoduLessonCommentsPage({super.key, required this.lessonId});
 
   @override
-  State<LessonCommentsPage> createState() => _LessonCommentsPageState();
+  State<DaoduLessonCommentsPage> createState() =>
+      _DaoduLessonCommentsPageState();
 }
 
-class _LessonCommentsPageState extends State<LessonCommentsPage> {
+class _DaoduLessonCommentsPageState extends State<DaoduLessonCommentsPage> {
   final ReadingApiManager _apiManager = ReadingApiManager();
   List<DaoduComment> _comments = [];
   DaoduLesson? _lessonInfo;
@@ -39,7 +40,6 @@ class _LessonCommentsPageState extends State<LessonCommentsPage> {
     try {
       final lesson = await _apiManager.getDaoduLessonDetail(
         id: widget.lessonId,
-        forceRefresh: false,
       );
 
       setState(() {
@@ -62,7 +62,6 @@ class _LessonCommentsPageState extends State<LessonCommentsPage> {
       // 获取文章统计信息
       final stats = await _apiManager.getDaoduLessonActivityStats(
         id: widget.lessonId,
-        forceRefresh: false,
       );
 
       // 一次性获取所有评论
@@ -70,7 +69,6 @@ class _LessonCommentsPageState extends State<LessonCommentsPage> {
         id: widget.lessonId,
         limit: stats.commentCount ?? 10,
         offset: 0,
-        forceRefresh: false,
       );
 
       setState(() {
@@ -138,7 +136,7 @@ class _LessonCommentsPageState extends State<LessonCommentsPage> {
         children: [
           // 文章信息卡片
           if (_lessonInfo != null)
-            LessonInfoCard(
+            DaoduLessonInfoCard(
               isLoading: _isLoading,
               errorMessage: _error,
               lessonInfo: _lessonInfo,
@@ -150,7 +148,7 @@ class _LessonCommentsPageState extends State<LessonCommentsPage> {
               padding: const EdgeInsets.all(4),
               itemCount: _comments.length,
               itemBuilder: (context, index) {
-                return CommentInfoCard(
+                return DaoduCommentCard(
                   comment: _comments[index],
                   isExpandable: true,
                   maxLines: 3,

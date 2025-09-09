@@ -4,7 +4,7 @@ import '../../../../../core/utils/datetime_formatter.dart';
 import '../../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../data/services/haokan_storage_service.dart';
-import 'haokan_detail_page.dart';
+import 'detail_page.dart';
 
 /// 好看漫画收藏列表页面
 class HaokanFavoritesPage extends StatefulWidget {

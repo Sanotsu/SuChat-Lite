@@ -8,21 +8,25 @@ import '../../../data/datasources/bangumi/bangumi_apis.dart';
 import '../../../data/models/bangumi/bangumi.dart';
 import '../../widgets/common_widgets.dart';
 import '../../widgets/acg_bar_chart.dart';
-import 'bangumi_item_episode_detail.dart';
+import 'item_episode_detail_page.dart';
 
-class BangumiItemDetail extends StatefulWidget {
+class BangumiItemDetailPage extends StatefulWidget {
   // 因为放送日历和查询结果的类型不一样，所以只需要传入编号和类型
   final int id;
   // 这里只用于显示标题，所以传入字符串即可
   final String subType;
 
-  const BangumiItemDetail({super.key, required this.id, required this.subType});
+  const BangumiItemDetailPage({
+    super.key,
+    required this.id,
+    required this.subType,
+  });
 
   @override
-  State<BangumiItemDetail> createState() => _BangumiItemDetailState();
+  State<BangumiItemDetailPage> createState() => _BangumiItemDetailPageState();
 }
 
-class _BangumiItemDetailState extends State<BangumiItemDetail> {
+class _BangumiItemDetailPageState extends State<BangumiItemDetailPage> {
   // 是否根据id查询条目中
   bool isLoading = false;
 
@@ -150,7 +154,7 @@ class _BangumiItemDetailState extends State<BangumiItemDetail> {
                   buildGotoButton(
                     context,
                     "分集简介",
-                    BangumiEpisodeDetail(
+                    BangumiEpisodeDetailPage(
                       subjectId: bgmSub.id!,
                       subjectName:
                           (bgmSub.nameCn != null && bgmSub.nameCn!.isNotEmpty)
@@ -169,7 +173,7 @@ class _BangumiItemDetailState extends State<BangumiItemDetail> {
                         .map((e) => buildRelatedSimpleMap(e))
                         .toList(),
                     targetPageBuilder: (int data, String type) =>
-                        BangumiItemDetail(id: data, subType: type),
+                        BangumiItemDetailPage(id: data, subType: type),
                     dataExtractor: (Map<String, dynamic> item) => item["data"],
                     typeExtractor: (Map<String, dynamic> item) => item["type"],
                   ),
@@ -181,7 +185,7 @@ class _BangumiItemDetailState extends State<BangumiItemDetail> {
                         .map((e) => buildRelatedSimpleMap(e))
                         .toList(),
                     targetPageBuilder: (int data, String type) =>
-                        BangumiItemDetail(id: data, subType: type),
+                        BangumiItemDetailPage(id: data, subType: type),
                     dataExtractor: (Map<String, dynamic> item) => item["data"],
                     typeExtractor: (Map<String, dynamic> item) => item["type"],
                   ),
@@ -193,7 +197,7 @@ class _BangumiItemDetailState extends State<BangumiItemDetail> {
                         .map((e) => buildRelatedSimpleMap(e))
                         .toList(),
                     targetPageBuilder: (int data, String type) =>
-                        BangumiItemDetail(id: data, subType: type),
+                        BangumiItemDetailPage(id: data, subType: type),
                     dataExtractor: (Map<String, dynamic> item) => item["data"],
                     typeExtractor: (Map<String, dynamic> item) => item["type"],
                   ),

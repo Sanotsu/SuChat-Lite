@@ -12,13 +12,13 @@ import '../../../data/models/tmdb/tmdb_person_credit_resp.dart';
 import '../../../data/models/tmdb/tmdb_person_detail_resp.dart';
 import '../../../data/models/tmdb/tmdb_result_resp.dart';
 import '../../../data/models/tmdb/tmdb_tv_detail_resp.dart';
-import '../../widgets/tmdb_widgets.dart';
-import '../../widgets/tmdb_cast_crew_widget.dart';
-import 'tmdb_full_review_page.dart';
-import 'tmdb_gallery_page.dart';
-import 'tmdb_cast_crew_page.dart';
-import 'tmdb_reviews_page.dart';
-import 'tmdb_similar_page.dart';
+import '../../widgets/tmdb/base_widgets.dart';
+import '../../widgets/tmdb/cast_crew_widget.dart';
+import 'full_review_page.dart';
+import 'gallery_page.dart';
+import 'cast_crew_page.dart';
+import 'reviews_page.dart';
+import 'similar_page.dart';
 
 /// TMDB 详情页（电影/剧集/人物通用）
 class TmdbDetailPage extends StatefulWidget {

@@ -4,11 +4,11 @@ import '../../../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../data/models/one/one_category_list.dart';
 
 /// 专题卡片组件
-class TopicCard extends StatelessWidget {
+class OneTopicCard extends StatelessWidget {
   final OneTopic topic;
   final VoidCallback? onTap;
 
-  const TopicCard({super.key, required this.topic, this.onTap});
+  const OneTopicCard({super.key, required this.topic, this.onTap});
 
   @override
   Widget build(BuildContext context) {

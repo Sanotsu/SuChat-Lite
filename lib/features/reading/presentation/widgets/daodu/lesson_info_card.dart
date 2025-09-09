@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
 
-import '../../../../../core/utils/datetime_formatter.dart';
 import '../../../data/models/daodu_models.dart';
 import '../../pages/daodu/lesson_detail_page.dart';
 
 /// 关联文章信息卡片
 /// 一般是评论详情和评论列表页面显示在顶部的文章信息卡片
-class LessonInfoCard extends StatelessWidget {
+class DaoduLessonInfoCard extends StatelessWidget {
   final bool isLoading;
   final String? errorMessage;
   final DaoduLesson? lessonInfo;
   final VoidCallback? onTap;
   final String cardTitle;
 
-  const LessonInfoCard({
+  const DaoduLessonInfoCard({
     super.key,
     required this.isLoading,
     this.errorMessage,
@@ -134,7 +133,7 @@ class LessonInfoCard extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => LessonDetailPage(lesson: lessonInfo),
+                builder: (context) => DaoduLessonDetailPage(lesson: lessonInfo),
               ),
             );
           },
@@ -197,7 +196,7 @@ class LessonInfoCard extends StatelessWidget {
           const SizedBox(width: 16),
         ],
         // 时间信息
-        if (lessonInfo!.createdAt != null) _buildTimeInfo(),
+        if (lessonInfo!.dateByDay != null) _buildTimeInfo(),
       ],
     );
   }
@@ -223,13 +222,18 @@ class LessonInfoCard extends StatelessWidget {
         Icon(Icons.schedule, size: 14, color: Colors.grey[500]),
         const SizedBox(width: 4),
         Text(
-          formatRelativeDate(
-            DateTime.fromMillisecondsSinceEpoch(lessonInfo!.createdAt! * 1000),
-          ),
+          formatLessonDateByDay(lessonInfo!.dateByDay!),
           style: TextStyle(fontSize: 12, color: Colors.grey[500]),
         ),
       ],
     );
+  }
+
+  String formatLessonDateByDay(int dateInt) {
+    var str = dateInt.toString();
+    return str.length == 8
+        ? '${str.substring(0, 4)}-${str.substring(4, 6)}-${str.substring(6, 8)}'
+        : "未知日期";
   }
 
   // 构建点击提示

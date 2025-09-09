@@ -49,7 +49,6 @@ class _AuthorDetailPageState extends State<AuthorDetailPage> {
       final works = await _apiManager.getOneAuthorContentList(
         authorId: int.tryParse(widget.author.userId?.toString() ?? '') ?? 0,
         pageNum: _currentPage,
-        forceRefresh: true,
       );
 
       if (mounted) {

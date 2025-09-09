@@ -5,10 +5,10 @@ import '../../../../../shared/widgets/toast_utils.dart';
 import '../../../data/datasources/haokan/haokan_api_manager.dart';
 import '../../../data/models/haokan/haokan_models.dart';
 import '../../../data/services/haokan_storage_service.dart';
-import '../../widgets/haokan/haokan_comic_card.dart';
-import '../../widgets/haokan/haokan_comment_item.dart';
-import 'haokan_reading_page.dart';
-import 'haokan_comment_page.dart';
+import '../../widgets/haokan/comic_card.dart';
+import '../../widgets/haokan/comment_item.dart';
+import 'reading_page.dart';
+import 'comment_page.dart';
 
 /// 好看漫画详情页面
 class HaokanDetailPage extends StatefulWidget {

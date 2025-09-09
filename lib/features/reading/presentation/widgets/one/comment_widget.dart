@@ -13,8 +13,13 @@ import '../../pages/one/user_detail_page.dart';
 ///
 class OneCommentWidget extends StatefulWidget {
   final OneComment comment;
+  final bool isDarkMode;
 
-  const OneCommentWidget({super.key, required this.comment});
+  const OneCommentWidget({
+    super.key,
+    required this.comment,
+    this.isDarkMode = false,
+  });
 
   @override
   State<OneCommentWidget> createState() => _OneCommentWidgetState();
@@ -26,10 +31,12 @@ class _OneCommentWidgetState extends State<OneCommentWidget> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: widget.isDarkMode ? Colors.grey[850] : Colors.white,
         border: Border(
           bottom: BorderSide(
-            color: Colors.grey.withValues(alpha: 0.2),
+            color: widget.isDarkMode
+                ? Colors.grey.withValues(alpha: 0.3)
+                : Colors.grey.withValues(alpha: 0.2),
             width: 0.5,
           ),
         ),
@@ -80,17 +87,22 @@ class _OneCommentWidgetState extends State<OneCommentWidget> {
             children: [
               Text(
                 widget.comment.user?.userName ?? '匿名用户',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: Colors.black87,
+                  color: widget.isDarkMode ? Colors.white : Colors.black87,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 "${formatDateTimeString(widget.comment.inputDate ?? '')}"
                 " (${formatRelativeDate(widget.comment.inputDate ?? '')})",
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: widget.isDarkMode
+                      ? Colors.grey[400]
+                      : Colors.grey[600],
+                ),
               ),
             ],
           ),
@@ -106,9 +118,14 @@ class _OneCommentWidgetState extends State<OneCommentWidget> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: widget.isDarkMode ? Colors.grey[800] : Colors.grey[50],
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.3), width: 1),
+        border: Border.all(
+          color: widget.isDarkMode
+              ? Colors.grey.withValues(alpha: 0.4)
+              : Colors.grey.withValues(alpha: 0.3),
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,13 +134,21 @@ class _OneCommentWidgetState extends State<OneCommentWidget> {
           if (widget.comment.touser != null)
             Row(
               children: [
-                Icon(Icons.reply, size: 14, color: Colors.grey[600]),
+                Icon(
+                  Icons.reply,
+                  size: 14,
+                  color: widget.isDarkMode
+                      ? Colors.grey[400]
+                      : Colors.grey[600],
+                ),
                 const SizedBox(width: 4),
                 Text(
                   '回复 ${widget.comment.touser!.userName ?? '匿名用户'}',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey[600],
+                    color: widget.isDarkMode
+                        ? Colors.grey[400]
+                        : Colors.grey[600],
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -136,7 +161,7 @@ class _OneCommentWidgetState extends State<OneCommentWidget> {
             widget.comment.quote!,
             style: TextStyle(
               fontSize: 13,
-              color: Colors.grey[700],
+              color: widget.isDarkMode ? Colors.grey[300] : Colors.grey[700],
               fontStyle: FontStyle.italic,
             ),
             maxLines: 3,
@@ -157,7 +182,11 @@ class _OneCommentWidgetState extends State<OneCommentWidget> {
     return ExpandableText(
       text: widget.comment.content ?? '',
       maxLines: 5,
-      style: const TextStyle(fontSize: 15, height: 1.5),
+      style: TextStyle(
+        fontSize: 15,
+        height: 1.5,
+        color: widget.isDarkMode ? Colors.white : Colors.black87,
+      ),
       buttonStyle: TextStyle(
         fontSize: 14,
         color: Colors.lightBlue,
@@ -173,18 +202,25 @@ class _OneCommentWidgetState extends State<OneCommentWidget> {
     Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: widget.isDarkMode ? Colors.grey[700] : Colors.grey[100],
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.thumb_up_outlined, size: 14, color: Colors.grey[600]),
+          Icon(
+            Icons.thumb_up_outlined,
+            size: 14,
+            color: widget.isDarkMode ? Colors.grey[400] : Colors.grey[600],
+          ),
           if ((widget.comment.praisenum ?? 0) > 0) ...[
             const SizedBox(width: 4),
             Text(
               '${widget.comment.praisenum}',
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              style: TextStyle(
+                fontSize: 12,
+                color: widget.isDarkMode ? Colors.grey[400] : Colors.grey[600],
+              ),
             ),
           ],
         ],
@@ -194,7 +230,6 @@ class _OneCommentWidgetState extends State<OneCommentWidget> {
 }
 
 /// 评论列表组件
-/// TODO 缺少深色模式
 class OneCommentListWidget extends StatefulWidget {
   final String contentType;
   final String contentId;
@@ -249,7 +284,6 @@ class _OneCommentListWidgetState extends State<OneCommentListWidget> {
             : apiCategory,
         contentId: int.parse(widget.contentId),
         commentId: 0,
-        forceRefresh: true,
       );
 
       if (!mounted) return;
@@ -284,7 +318,6 @@ class _OneCommentListWidgetState extends State<OneCommentListWidget> {
         categoryName: apiCategory,
         contentId: int.parse(widget.contentId),
         commentId: int.parse(_lastCommentId),
-        forceRefresh: false,
       );
 
       if (!mounted) return;
@@ -336,24 +369,34 @@ class _OneCommentListWidgetState extends State<OneCommentListWidget> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: (widget.isDarkMode ?? false)
+            ? Colors.grey[800]
+            : Colors.grey[50],
         border: Border(
           bottom: BorderSide(
-            color: Colors.grey.withValues(alpha: 0.2),
+            color: (widget.isDarkMode ?? false)
+                ? Colors.grey.withValues(alpha: 0.3)
+                : Colors.grey.withValues(alpha: 0.2),
             width: 1,
           ),
         ),
       ),
       child: Row(
         children: [
-          const Icon(Icons.comment_outlined, size: 20, color: Colors.black87),
+          Icon(
+            Icons.comment_outlined,
+            size: 20,
+            color: (widget.isDarkMode ?? false) ? Colors.white : Colors.black87,
+          ),
           const SizedBox(width: 8),
           Text(
             '评论列表',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: (widget.isDarkMode ?? false)
+                  ? Colors.white
+                  : Colors.black87,
             ),
           ),
           if (commentCount > 0) ...[
@@ -361,12 +404,19 @@ class _OneCommentListWidgetState extends State<OneCommentListWidget> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: (widget.isDarkMode ?? false)
+                    ? Colors.grey[600]
+                    : Colors.grey[300],
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 '$commentCount',
-                style: const TextStyle(fontSize: 12, color: Colors.black54),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: (widget.isDarkMode ?? false)
+                      ? Colors.grey[300]
+                      : Colors.black54,
+                ),
               ),
             ),
           ],
@@ -395,12 +445,20 @@ class _OneCommentListWidgetState extends State<OneCommentListWidget> {
             onPressed: () {
               _loadMoreComments();
             },
-            child: Text('加载更多'),
+            child: Text(
+              '加载更多',
+              style: TextStyle(
+                color: (widget.isDarkMode ?? false) ? Colors.white : null,
+              ),
+            ),
           );
         }
 
         final comment = _comments[index];
-        return OneCommentWidget(comment: comment);
+        return OneCommentWidget(
+          comment: comment,
+          isDarkMode: widget.isDarkMode ?? false,
+        );
       },
     );
   }

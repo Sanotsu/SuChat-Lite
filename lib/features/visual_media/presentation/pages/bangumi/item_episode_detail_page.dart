@@ -9,23 +9,23 @@ import '../../../../../shared/widgets/type_dropdown.dart';
 import '../../../data/datasources/bangumi/bangumi_apis.dart';
 import '../../../data/models/bangumi/bangumi.dart';
 import '../../widgets/common_widgets.dart';
-import 'bangumi_item_detail.dart';
+import 'item_detail_page.dart';
 
-class BangumiEpisodeDetail extends StatefulWidget {
+class BangumiEpisodeDetailPage extends StatefulWidget {
   final int subjectId;
   final String subjectName;
 
-  const BangumiEpisodeDetail({
+  const BangumiEpisodeDetailPage({
     super.key,
     required this.subjectId,
     required this.subjectName,
   });
 
   @override
-  State createState() => _BangumiEpisodeDetailState();
+  State createState() => _BangumiEpisodeDetailPageState();
 }
 
-class _BangumiEpisodeDetailState extends State<BangumiEpisodeDetail> {
+class _BangumiEpisodeDetailPageState extends State<BangumiEpisodeDetailPage> {
   final int _pageSize = 15;
   int _currentPage = 1;
   // 查询的结果列表

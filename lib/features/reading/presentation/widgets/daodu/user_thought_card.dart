@@ -5,10 +5,10 @@ import '../../../../../shared/widgets/expandable_text.dart';
 import '../../../data/models/daodu_models.dart';
 
 /// 用户想法卡片组件
-class UserThoughtCard extends StatelessWidget {
+class DaoduUserThoughtCard extends StatelessWidget {
   final DaoduUserThoughtsProfile thought;
 
-  const UserThoughtCard({super.key, required this.thought});
+  const DaoduUserThoughtCard({super.key, required this.thought});
 
   @override
   Widget build(BuildContext context) {

@@ -10,16 +10,16 @@ import '../../../data/services/reading_settings_service.dart';
 import 'lesson_comments_page.dart';
 
 /// 文章内容详情页面
-class LessonDetailPage extends StatefulWidget {
+class DaoduLessonDetailPage extends StatefulWidget {
   final DaoduLesson? lesson;
 
-  const LessonDetailPage({super.key, this.lesson});
+  const DaoduLessonDetailPage({super.key, this.lesson});
 
   @override
-  State<LessonDetailPage> createState() => _LessonDetailPageState();
+  State<DaoduLessonDetailPage> createState() => _DaoduLessonDetailPageState();
 }
 
-class _LessonDetailPageState extends State<LessonDetailPage> {
+class _DaoduLessonDetailPageState extends State<DaoduLessonDetailPage> {
   final ReadingApiManager _apiManager = ReadingApiManager();
   final ReadingSettingsService _settingsService = ReadingSettingsService();
   DaoduLesson? _currentLesson;
@@ -98,7 +98,6 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
       final lessons = await _apiManager.getDaoduLessonList(
         from: int.parse(todayStr),
         to: int.parse(todayStr),
-        forceRefresh: false,
       );
 
       if (lessons.isNotEmpty && mounted) {
@@ -126,10 +125,7 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
 
   // 获取文章统计信息
   Future<void> _loadLessonActivityStats(DaoduLesson lesson) async {
-    final stats = await _apiManager.getDaoduLessonActivityStats(
-      id: lesson.id!,
-      forceRefresh: false,
-    );
+    final stats = await _apiManager.getDaoduLessonActivityStats(id: lesson.id!);
 
     if (!mounted) return;
     setState(() {
@@ -298,7 +294,7 @@ class _LessonDetailPageState extends State<LessonDetailPage> {
                 context,
                 MaterialPageRoute(
                   builder: (context) =>
-                      LessonCommentsPage(lessonId: _currentLesson!.id!),
+                      DaoduLessonCommentsPage(lessonId: _currentLesson!.id!),
                 ),
               );
             }

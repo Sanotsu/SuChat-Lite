@@ -6,11 +6,11 @@ import '../../widgets/daodu/user_content_list_page.dart';
 import '../../widgets/daodu/user_snippet_card.dart';
 
 /// 用户摘要列表页面
-class UserSnippetsPage extends StatelessWidget {
+class DaoduUserSnippetsPage extends StatelessWidget {
   final String userId;
   final String userName;
 
-  const UserSnippetsPage({
+  const DaoduUserSnippetsPage({
     super.key,
     required this.userId,
     required this.userName,
@@ -20,14 +20,14 @@ class UserSnippetsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final apiManager = ReadingApiManager();
 
-    return UserContentListPage<DaoduUserSnippetsDetail>(
+    return DaoduUserContentListPage<DaoduUserSnippetsDetail>(
       userId: userId,
       userName: userName,
       title: '$userName 的摘要',
       emptyMessage: '暂无摘要',
       emptyIcon: Icons.note_outlined,
       loadDataFunction: apiManager.getDaoduUserSnippetList,
-      itemBuilder: (snippet) => UserSnippetCard(snippet: snippet),
+      itemBuilder: (snippet) => DaoduUserSnippetCard(snippet: snippet),
     );
   }
 }

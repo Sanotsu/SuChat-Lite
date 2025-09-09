@@ -80,7 +80,7 @@ class _TopicListPageState extends State<TopicListPage> {
         itemCount: _topicList.length,
         itemBuilder: (context, index) {
           final topic = _topicList[index];
-          return TopicCard(
+          return OneTopicCard(
             topic: topic,
             onTap: () => _navigateToTopicDetail(topic),
           );

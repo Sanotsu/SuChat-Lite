@@ -8,6 +8,7 @@ import '../../../data/datasources/one_api_manager.dart';
 import '../../../data/models/one/one_base_models.dart';
 import '../../../data/models/one/one_detail_models.dart';
 import '../../../data/models/one/one_enums.dart';
+import '../../../data/services/reading_settings_service.dart';
 import '../../widgets/one/comment_widget.dart';
 import '../../widgets/one/reading_settings.dart';
 import 'category_pages/author_detail_page.dart';
@@ -35,6 +36,7 @@ class OneDetailPage extends StatefulWidget {
 class _OneDetailPageState extends State<OneDetailPage> {
   final OneApiManager _apiManager = OneApiManager();
   final ScrollController _scrollController = ScrollController();
+  final ReadingSettingsService _settingsService = ReadingSettingsService();
 
   // 数据状态
   bool _isLoading = false;
@@ -57,9 +59,21 @@ class _OneDetailPageState extends State<OneDetailPage> {
     // 使用枚举映射正确的API分类名称
     _apiCategory = OneCategory.getApiName(widget.contentType);
 
+    // 加载缓存的阅读设置
+    _loadSettings();
+
     _loadDetailData();
 
     _setupScrollListener();
+  }
+
+  /// 加载缓存的阅读设置
+  void _loadSettings() {
+    setState(() {
+      _fontSize = _settingsService.getFontSize();
+      _isDarkMode = _settingsService.getIsDarkMode();
+      _showReadingProgress = _settingsService.getShowReadingProgress();
+    });
   }
 
   @override
@@ -97,10 +111,7 @@ class _OneDetailPageState extends State<OneDetailPage> {
     try {
       if (_apiCategory == 'hp') {
         // 图文详情
-        final detail = await _apiManager.getOneHpDetail(
-          date: widget.contentId,
-          forceRefresh: true,
-        );
+        final detail = await _apiManager.getOneHpDetail(date: widget.contentId);
         if (mounted) {
           setState(() {
             _hpDetail = detail;
@@ -111,7 +122,6 @@ class _OneDetailPageState extends State<OneDetailPage> {
         final detail = await _apiManager.getOneContentDetail(
           category: _apiCategory,
           contentId: int.parse(widget.contentId),
-          forceRefresh: true,
         );
         if (mounted) {
           setState(() {
@@ -163,20 +173,23 @@ class _OneDetailPageState extends State<OneDetailPage> {
           isDarkMode: _isDarkMode,
           fontSize: _fontSize,
           showReadingProgress: _showReadingProgress,
-          onDarkModeChanged: (value) {
+          onDarkModeChanged: (value) async {
             setState(() {
               _isDarkMode = value;
             });
+            await _settingsService.setIsDarkMode(value);
           },
-          onFontSizeChanged: (value) {
+          onFontSizeChanged: (value) async {
             setState(() {
               _fontSize = value;
             });
+            await _settingsService.setFontSize(value);
           },
-          onShowProgressChanged: (value) {
+          onShowProgressChanged: (value) async {
             setState(() {
               _showReadingProgress = value;
             });
+            await _settingsService.setShowReadingProgress(value);
           },
         ),
       ),
@@ -533,11 +546,15 @@ class _OneDetailPageState extends State<OneDetailPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Divider(),
+          Divider(color: _isDarkMode ? Colors.grey[700] : null),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             '作者',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: _isDarkMode ? Colors.white : Colors.black,
+            ),
           ),
           const SizedBox(height: 12),
           ...authors.map(
@@ -547,7 +564,7 @@ class _OneDetailPageState extends State<OneDetailPage> {
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
+                  color: _isDarkMode ? Colors.grey[800] : Colors.grey[100],
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -560,14 +577,19 @@ class _OneDetailPageState extends State<OneDetailPage> {
                         children: [
                           Text(
                             author.userName ?? '',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: _isDarkMode ? Colors.white : Colors.black,
+                            ),
                           ),
                           if (author.desc != null)
                             Text(
                               author.desc!,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey[600],
+                                color: _isDarkMode
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600],
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -607,6 +629,7 @@ class _OneDetailPageState extends State<OneDetailPage> {
           contentType: widget.contentType,
           contentId: widget.contentId,
           initialCommentCount: _contentDetail?.commentnum,
+          isDarkMode: _isDarkMode,
         ),
       ],
     );

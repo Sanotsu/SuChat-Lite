@@ -6,11 +6,11 @@ import '../../widgets/daodu/user_content_list_page.dart';
 import '../../widgets/daodu/user_favourite_lesson_card.dart';
 
 /// 用户喜欢文章列表页面
-class UserFavouriteLessonsPage extends StatelessWidget {
+class DaoduUserFavouriteLessonsPage extends StatelessWidget {
   final String userId;
   final String userName;
 
-  const UserFavouriteLessonsPage({
+  const DaoduUserFavouriteLessonsPage({
     super.key,
     required this.userId,
     required this.userName,
@@ -20,14 +20,14 @@ class UserFavouriteLessonsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final apiManager = ReadingApiManager();
 
-    return UserContentListPage<DaoduLesson>(
+    return DaoduUserContentListPage<DaoduLesson>(
       userId: userId,
       userName: userName,
       title: '$userName 喜欢的文章',
       emptyMessage: '暂无喜欢的文章',
       emptyIcon: Icons.favorite_outline,
       loadDataFunction: apiManager.getDaoduUserFavouriteLessonList,
-      itemBuilder: (lesson) => UserFavouriteLessonCard(lesson: lesson),
+      itemBuilder: (lesson) => DaoduUserFavouriteLessonCard(lesson: lesson),
     );
   }
 }

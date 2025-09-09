@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../news/presentation/widgets/entrance_card.dart';
-import 'bangumi/bangumi_calendar.dart';
-import 'my_anime_list/mal_top_index.dart';
+import 'bangumi/calendar_page.dart';
+import 'my_anime_list/top_page.dart';
 import 'waifu_pics/index.dart';
 
 ///
@@ -101,12 +101,13 @@ List<Widget> _animeAndComics(BuildContext context) {
         title: 'BGM动漫资讯',
         subtitle: "Bangumi番组计划",
         icon: Icons.newspaper,
-        onTap: () => showNoNetworkOrGoTargetPage(context, BangumiCalendar()),
+        onTap: () =>
+            showNoNetworkOrGoTargetPage(context, BangumiCalendarPage()),
       ),
       EntranceCard(
         title: 'MAL动漫排行',
         subtitle: "MyAnimeList排行榜",
-        onTap: () => showNoNetworkOrGoTargetPage(context, MALTop()),
+        onTap: () => showNoNetworkOrGoTargetPage(context, MALTopPage()),
       ),
     ]),
   ];
