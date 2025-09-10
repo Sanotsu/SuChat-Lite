@@ -284,7 +284,8 @@ Future<(Stream<ChatCompletionResponse>, VoidCallback)> getStreamResponse(
             finishReason: 'error',
           ),
         ],
-        cusText: """HTTP请求响应异常:\n\n错误代码: ${e.cusCode}
+        cusText:
+            """HTTP请求响应异常:\n\n错误代码: ${e.cusCode}
             \n\n错误信息: ${e.cusMsg}
             \n\n错误原文: ${e.errMessage}
             \n\n原始信息: ${e.errRespString}

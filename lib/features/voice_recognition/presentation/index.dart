@@ -239,32 +239,40 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
 
   // 提交录音识别任务
   Future<void> _submitRecognitionTask() async {
-    // 检查是使用本地音频还是云端音频
-    if (!_useCloudAudio && _recordingPath == null) {
-      ToastUtils.showError('请先录制或选择音频文件');
-      return;
-    }
-
-    if (_useCloudAudio &&
-        (_cloudAudioUrlController.text.isEmpty ||
-            (!_cloudAudioUrlController.text.startsWith('http://') &&
-                !_cloudAudioUrlController.text.startsWith('https://')))) {
-      ToastUtils.showError('请输入有效的云端音频URL，必须以http://或https://开头');
-      return;
-    }
-
-    setState(() {
-      _isSubmitting = true;
-    });
-
-    // 显示提交中的遮罩
-    LoadingOverlay.show(
-      context,
-      title: '正在提交识别任务...',
-      messages: ["请耐心等待一会儿", "请勿退出当前页面", "录音文件过大上传会比较耗时"],
-    );
-
     try {
+      final apiKey = await VoiceRecognitionService.getAliyunAK();
+
+      if (apiKey.isEmpty) {
+        ToastUtils.showError('请先配置阿里云AK');
+        return;
+      }
+
+      // 检查是使用本地音频还是云端音频
+      if (!_useCloudAudio && _recordingPath == null) {
+        ToastUtils.showError('请先录制或选择音频文件');
+        return;
+      }
+
+      if (_useCloudAudio &&
+          (_cloudAudioUrlController.text.isEmpty ||
+              (!_cloudAudioUrlController.text.startsWith('http://') &&
+                  !_cloudAudioUrlController.text.startsWith('https://')))) {
+        ToastUtils.showError('请输入有效的云端音频URL，必须以http://或https://开头');
+        return;
+      }
+
+      setState(() {
+        _isSubmitting = true;
+      });
+
+      // 显示提交中的遮罩
+      if (!mounted) return;
+      LoadingOverlay.show(
+        context,
+        title: '正在提交识别任务...',
+        messages: ["请耐心等待一会儿", "请勿退出当前页面", "录音文件过大上传会比较耗时"],
+      );
+
       // 调用服务提交识别任务
       final taskId = await VoiceRecognitionService.submitRecognitionTask(
         model: _selectedModel,
@@ -362,14 +370,13 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
           ),
         ],
       ),
-      body:
-          _isLoading
-              ? const Center(child: CusLoadingIndicator(text: '加载中...'))
-              : isDesktop
-              // 桌面端布局 - 左右两栏
-              ? _buildDesktopLayout()
-              // 移动端布局 - 保持原有的垂直布局
-              : _buildMobileLayout(),
+      body: _isLoading
+          ? const Center(child: CusLoadingIndicator(text: '加载中...'))
+          : isDesktop
+          // 桌面端布局 - 左右两栏
+          ? _buildDesktopLayout()
+          // 移动端布局 - 保持原有的垂直布局
+          : _buildMobileLayout(),
     );
   }
 
@@ -422,26 +429,25 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
 
               // 列表部分 - 使用Expanded包裹让它占据剩余空间
               Expanded(
-                child:
-                    _recognitionTasks.isEmpty
-                        ? const Center(
-                          child: Text(
-                            '暂无识别任务',
-                            style: TextStyle(color: Colors.grey, fontSize: 16),
-                          ),
-                        )
-                        : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(
-                            24.0,
-                            8.0,
-                            24.0,
-                            24.0,
-                          ),
-                          itemCount: _recognitionTasks.length,
-                          itemBuilder: (context, index) {
-                            return _buildTaskCard(_recognitionTasks[index]);
-                          },
+                child: _recognitionTasks.isEmpty
+                    ? const Center(
+                        child: Text(
+                          '暂无识别任务',
+                          style: TextStyle(color: Colors.grey, fontSize: 16),
                         ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(
+                          24.0,
+                          8.0,
+                          24.0,
+                          24.0,
+                        ),
+                        itemCount: _recognitionTasks.length,
+                        itemBuilder: (context, index) {
+                          return _buildTaskCard(_recognitionTasks[index]);
+                        },
+                      ),
               ),
             ],
           ),
@@ -489,8 +495,8 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
                 alignment: Alignment.centerLeft,
                 hintLabel: "选择模型",
                 onChanged: _onModelChanged,
-                itemToString:
-                    (e) => "${(e as CusLLMSpec).model} (${e.description})",
+                itemToString: (e) =>
+                    "${(e as CusLLMSpec).model} (${e.description})",
               ),
             ),
           ],
@@ -523,12 +529,11 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
             onChanged: (value) {
               setState(() {});
             },
-            onTryListen:
-                () => _remoteAudioPlayer.playRemoteAudio(
-                  _cloudAudioUrlController.text,
-                  _audioRecordManager,
-                  context: context,
-                ),
+            onTryListen: () => _remoteAudioPlayer.playRemoteAudio(
+              _cloudAudioUrlController.text,
+              _audioRecordManager,
+              context: context,
+            ),
             isDownloading: _isDownloading,
           ),
 
@@ -856,11 +861,10 @@ class WaveformPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (amplitudes.isEmpty) return;
 
-    final paint =
-        Paint()
-          ..color = color
-          ..strokeWidth = 3
-          ..strokeCap = StrokeCap.round;
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round;
 
     final centerY = size.height / 2;
     final width = size.width;

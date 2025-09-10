@@ -181,14 +181,13 @@ class AIResponseHandler {
 
         if (isPrefixSame) {
           // 检查是否是由于用户编辑创建的新分支
-          final userMessages =
-              state.allMessages
-                  .where(
-                    (m) =>
-                        m.role == CusRole.user.name &&
-                        m.branchPath == state.currentBranchPath,
-                  )
-                  .toList();
+          final userMessages = state.allMessages
+              .where(
+                (m) =>
+                    m.role == CusRole.user.name &&
+                    m.branchPath == state.currentBranchPath,
+              )
+              .toList();
 
           isAfterUserEdit = userMessages.isNotEmpty;
         }
@@ -212,14 +211,13 @@ class AIResponseHandler {
 
         if (commonPrefixLength > 0) {
           // 如果有共同父路径，判断当前路径是否包含用户消息
-          final userMessagesOnCurrentPath =
-              state.allMessages
-                  .where(
-                    (m) =>
-                        m.role == CusRole.user.name &&
-                        m.branchPath == state.currentBranchPath,
-                  )
-                  .toList();
+          final userMessagesOnCurrentPath = state.allMessages
+              .where(
+                (m) =>
+                    m.role == CusRole.user.name &&
+                    m.branchPath == state.currentBranchPath,
+              )
+              .toList();
 
           isAfterUserEdit = userMessagesOnCurrentPath.isNotEmpty;
         }
@@ -241,10 +239,9 @@ class AIResponseHandler {
         newBranchIndex = 0;
       } else {
         // 常规情况下，使用当前同级分支的最大索引+1
-        newBranchIndex =
-            availableSiblings.isEmpty
-                ? 0
-                : availableSiblings.last.branchIndex + 1;
+        newBranchIndex = availableSiblings.isEmpty
+            ? 0
+            : availableSiblings.last.branchIndex + 1;
       }
 
       // 构建新的分支路径
@@ -338,6 +335,7 @@ class AIResponseHandler {
         history,
         advancedOptions: state.advancedOptions,
         stream: true,
+        enableWebSearch: state.inputMessageData?.enableWebSearch ?? false,
       );
 
       state.cancelResponse = cancelFunc;
@@ -353,24 +351,21 @@ class AIResponseHandler {
 
           // 1. 更新内容
           state.streamingContent += chunk.cusText;
-          state.streamingReasoningContent +=
-              chunk.choices.isNotEmpty
-                  ? (chunk.choices.first.delta?["reasoning_content"] ??
-                      chunk.choices.first.delta?["reasoning"] ??
-                      '')
-                  : '';
+          state.streamingReasoningContent += chunk.choices.isNotEmpty
+              ? (chunk.choices.first.delta?["reasoning_content"] ??
+                    chunk.choices.first.delta?["reasoning"] ??
+                    '')
+              : '';
           finalContent += chunk.cusText;
-          finalReasoningContent +=
-              chunk.choices.isNotEmpty
-                  ? (chunk.choices.first.delta?["reasoning_content"] ??
-                      chunk.choices.first.delta?["reasoning"] ??
-                      '')
-                  : '';
+          finalReasoningContent += chunk.choices.isNotEmpty
+              ? (chunk.choices.first.delta?["reasoning_content"] ??
+                    chunk.choices.first.delta?["reasoning"] ??
+                    '')
+              : '';
 
-          finalAudioBase64 +=
-              chunk.choices.isNotEmpty
-                  ? (chunk.choices.first.delta?["audio"]?['data'] ?? '')
-                  : '';
+          finalAudioBase64 += chunk.choices.isNotEmpty
+              ? (chunk.choices.first.delta?["audio"]?['data'] ?? '')
+              : '';
 
           // 计算思考时间(从发起调用开始，到当流式内容不为空时计算结束)
           if (endTime == null && state.streamingContent.isNotEmpty) {

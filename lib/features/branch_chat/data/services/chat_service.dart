@@ -6,6 +6,7 @@ import '../../../../shared/constants/constant_llm_enum.dart';
 import '../../../../shared/constants/default_models.dart';
 import '../../../../core/storage/cus_get_storage.dart';
 import '../../domain/advanced_options_presets.dart';
+import '../../domain/entities/input_message_data.dart';
 import '../datasources/openai_compatible_apis.dart';
 import '../models/chat_completion_response.dart';
 import '../models/chat_completion_request.dart';
@@ -141,6 +142,7 @@ class ChatService {
     List<Map<String, dynamic>> messages, {
     bool stream = true,
     Map<String, dynamic>? advancedOptions,
+    bool enableWebSearch = false,
   }) async {
     // 如果是自定义平台模型，url、apikey等直接在模型规格中
     Map<String, String> headers;
@@ -190,6 +192,55 @@ class ChatService {
         // 之前通用是 {"choices":[{"delta":{"content":"'xxx"},"finish_reason":null,"index":0,"logprobs":null}]
         additionalParams["audio"] = {"voice": audioVoice, "format": "wav"};
       }
+    }
+
+    // 2025-09-10 阿里云的部分模型支持联网搜索，这里配置这些模型的请求参数
+    // 文档: https://help.aliyun.com/zh/model-studio/web-search
+    if (enableWebSearch &&
+        model.platform == ApiPlatform.aliyun &&
+        aliyunWebSearchModels.contains(model.model)) {
+      additionalParams = {
+        ...?additionalParams,
+        "enable_search": true,
+        "search_options": {
+          "forced_search": true,
+          // 搜索策略可选 turbo max
+          "search_strategy": "turbo",
+        },
+      };
+    }
+
+    // 智谱开放平台的搜索
+    // 文档: https://docs.bigmodel.cn/api-reference/工具-api/网络搜索
+    if (enableWebSearch &&
+        model.platform == ApiPlatform.zhipu &&
+        zhipuWebSearchModels.contains(model.model)) {
+      additionalParams = {
+        ...?additionalParams,
+        "tools": [
+          {
+            "type": "web_search",
+            "web_search": {
+              // 是否启用搜索功能，默认值为 false，启用时设置为 true
+              "search_enable": true,
+              // search_std (0.01元 / 次)、
+              // search_pro (0.03元 / 次)、
+              // search_pro_sogou (0.05元 / 次)、
+              // search_pro_quark (0.05元 / 次)。
+              "search_engine": "search_std",
+              // 是否进行搜索意图识别，默认执行搜索意图识别。
+              // true：执行搜索意图识别，有搜索意图后执行搜索；
+              // false：跳过搜索意图识别，直接执行搜索
+              "search_intent": false,
+              // 返回结果的条数。可填范围：1-50，最大单次搜索返回50条，默认为10。
+              // 支持的搜索引擎：search_std、search_pro、search_pro_sogou。
+              // 对于search_pro_sogou: 可选枚举值，10、20、30、40、50
+              "search_count": 10,
+            },
+          },
+        ],
+        "tool_choice": "auto",
+      };
     }
 
     final request = ChatCompletionRequest(

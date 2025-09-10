@@ -516,14 +516,6 @@ class _AIToolPageState extends State<AIToolPage> {
                     accentColor: Colors.orange,
                   ),
                 ),
-              ],
-            ),
-
-            Wrap(
-              // spacing: 8,
-              // runSpacing: 8,
-              // alignment: WrapAlignment.center,
-              children: [
                 SizedBox(
                   width: ScreenHelper.isDesktop() ? 150 : 80,
                   height: ScreenHelper.isDesktop() ? 150 : 80,
@@ -536,6 +528,24 @@ class _AIToolPageState extends State<AIToolPage> {
                 ),
               ],
             ),
+
+            // Wrap(
+            //   // spacing: 8,
+            //   // runSpacing: 8,
+            //   // alignment: WrapAlignment.center,
+            //   children: [
+            //     SizedBox(
+            //       width: ScreenHelper.isDesktop() ? 150 : 80,
+            //       height: ScreenHelper.isDesktop() ? 150 : 80,
+            //       child: FeatureGridCard(
+            //         targetPage: const USDAFoodDataCentral(),
+            //         title: "USDA FDC",
+            //         icon: Icons.calculate,
+            //         accentColor: Colors.orange,
+            //       ),
+            //     ),
+            //   ],
+            // ),
 
             // /// 这几个是统一使用 https://apic.netstart.cn/#/ 的API
             // Container(
