@@ -5,6 +5,7 @@ import '../shared/widgets/feature_grid_card.dart';
 import '../shared/widgets/modern_feature_card.dart';
 import 'model_management/index.dart';
 import 'translator/presentation/pages/mini_translator_page.dart';
+import 'unified_chat/presentation/pages/unified_chat_page.dart';
 import 'visual_media/presentation/pages/index.dart';
 import 'diet_diary/presentation/index.dart';
 import 'food/presentation/pages/douguo/recipe_home_page.dart';
@@ -523,6 +524,17 @@ class _AIToolPageState extends State<AIToolPage> {
                     targetPage: const USDAFoodDataCentral(),
                     title: "USDA FDC",
                     icon: Icons.calculate,
+                    accentColor: Colors.orange,
+                  ),
+                ),
+
+                SizedBox(
+                  width: ScreenHelper.isDesktop() ? 150 : 80,
+                  height: ScreenHelper.isDesktop() ? 150 : 80,
+                  child: FeatureGridCard(
+                    targetPage: const UnifiedChatPage(),
+                    title: "Chat",
+                    icon: Icons.chat,
                     accentColor: Colors.orange,
                   ),
                 ),

@@ -8,6 +8,7 @@ import '../../../../../core/theme/style/app_colors.dart';
 import '../../../../../shared/constants/constant_llm_enum.dart';
 import '../../../../../shared/services/model_manager_service.dart';
 import '../../../../../shared/widgets/cus_dropdown_button.dart';
+import '../../../../../shared/widgets/toast_utils.dart';
 
 /// 录音区域组件
 ///
@@ -153,18 +154,10 @@ class _RecordingSectionState extends State<RecordingSection> {
         // 开始录音流
         await _startRecordingStream();
       } else {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('需要录音权限才能使用语音识别功能')));
-        }
+        ToastUtils.showError('需要录音权限才能使用语音识别功能');
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('启动录音失败: $e')));
-      }
+      ToastUtils.showError('启动录音失败: $e');
     }
   }
 

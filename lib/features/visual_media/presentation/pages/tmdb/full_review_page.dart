@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../../../shared/widgets/toast_utils.dart';
 import '../../../data/models/tmdb/tmdb_mt_review_resp.dart';
 
 /// 完整评论页面
@@ -177,30 +178,22 @@ class TmdbFullReviewPage extends StatelessWidget {
 
   void shareReview(BuildContext context) {
     // 实现分享功能
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('分享功能开发中...')));
+    ToastUtils.showInfo('分享功能开发中...');
   }
 
   void _copyReview(BuildContext context) {
     final content = '作者: ${review.author ?? '匿名用户'}\n\n${review.content ?? ''}';
     Clipboard.setData(ClipboardData(text: content));
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('已复制到剪贴板')));
+    ToastUtils.showSuccess('已复制到剪贴板');
   }
 
   void _likeReview(BuildContext context) {
     // 实现点赞功能
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('点赞功能开发中...')));
+    ToastUtils.showInfo('点赞功能开发中...');
   }
 
   void _reportReview(BuildContext context) {
     //  实现举报功能
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('举报功能开发中...')));
+    ToastUtils.showInfo('举报功能开发中...');
   }
 }

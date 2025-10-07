@@ -59,6 +59,26 @@ Future<Directory> getAppHomeDirectory({String? subfolder}) async {
   }
 }
 
+/// 清理文件名，移除非法字符
+String sanitizeFileName(String fileName, {String replacement = '_'}) {
+  // 移除或替换文件名中的非法字符
+  final illegalChars = RegExp(r'[\\/:*?"<>|]');
+  var cleanName = fileName.replaceAll(illegalChars, replacement);
+
+  // 确保文件名不以点号开头或结尾（某些系统限制）
+  cleanName = cleanName.replaceAll(RegExp(r'^\.+|\.+$'), '');
+
+  // 移除连续的下划线
+  cleanName = cleanName.replaceAll(RegExp('_+'), '_');
+
+  // 确保文件名不为空
+  if (cleanName.isEmpty) {
+    cleanName = 'unnamed_file_${DateTime.now().millisecondsSinceEpoch}';
+  }
+
+  return cleanName;
+}
+
 /// 获取sqlite数据库文件保存的目录
 Future<Directory> getSqliteDbDir() async {
   return getAppHomeDirectory(subfolder: "DB/sqlite_db");

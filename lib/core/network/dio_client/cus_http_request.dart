@@ -8,6 +8,7 @@ import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 
 import '../../../shared/widgets/toast_utils.dart';
 import 'cus_http_options.dart';
+import 'cus_log_interceptor.dart';
 import 'intercepter_response.dart';
 import 'interceptor_error.dart';
 import 'interceptor_request.dart';
@@ -31,6 +32,8 @@ class HttpRequest {
       sendTimeout: HttpOptions.sendTimeout,
       baseUrl: HttpOptions.baseUrl,
       contentType: HttpOptions.contentType,
+      // 确保在错误状态时也能接收数据
+      receiveDataWhenStatusError: true,
     );
 
     dio = Dio(options);
@@ -55,15 +58,34 @@ class HttpRequest {
       const RequestInterceptor(),
       const ResponseIntercepter(),
       ErrorInterceptor(),
+
+      // 1. 添加自定义日志拦截器，处理长数据截断
+      CustomLogInterceptor(
+        sensitiveKeys: ['url', 'content'],
+        truncateLength: 50,
+        maxWidth: 100,
+        requestEnabled: true,
+        responseEnabled: false, // 禁用自定义拦截器的响应日志，避免重复
+        errorEnabled: false, // 禁用自定义拦截器的错误日志，避免重复
+      ),
+      // 2. 添加 pretty_dio_logger，但禁用它的 requestBody
       PrettyDioLogger(
-        requestHeader: true,
+        requestHeader: false, // 禁用，因为自定义拦截器已处理
+        requestBody: false, // 禁用，因为自定义拦截器已处理
         responseHeader: true,
-        // requestBody: true,
-        // responseBody: true,
-        requestBody: false,
-        responseBody: false, // 响应太多了，不显示
+        responseBody: true, // 响应体继续由它打印
+        error: true,
         maxWidth: 150,
       ),
+
+      // PrettyDioLogger(
+      //   requestHeader: true,
+      //   requestBody: true,
+      //   responseHeader: true,
+      //   responseBody: true,
+      //   error: true,
+      //   maxWidth: 150,
+      // ),
     ]);
   }
 
@@ -116,6 +138,7 @@ class HttpRequest {
       // 2024-03-11 这里是要取得http的错误，但默认类型时Object?，所以要转一下
       CusHttpException cusHttpException = error.error as CusHttpException;
 
+      print("========================");
       print("这里是执行HttpRequest的request()方法在报错:");
       print(cusHttpException);
       print(cusHttpException.cusCode);

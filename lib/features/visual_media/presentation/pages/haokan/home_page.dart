@@ -4,6 +4,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import '../../../../../shared/services/network_service.dart';
 import '../../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../../shared/widgets/simple_tool_widget.dart';
+import '../../../../../shared/widgets/toast_utils.dart';
 import '../../../data/datasources/haokan/haokan_api_manager.dart';
 import '../../../data/models/haokan/haokan_models.dart';
 import '../../../data/services/haokan_storage_service.dart';
@@ -362,11 +363,7 @@ class _HaokanHomePageState extends State<HaokanHomePage> {
         }
       });
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('换一换失败: $e')));
-      }
+      ToastUtils.showError('换一换失败: $e');
       rethrow;
     }
   }

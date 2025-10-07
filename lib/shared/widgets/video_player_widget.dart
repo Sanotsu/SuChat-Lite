@@ -8,11 +8,14 @@ import '../../core/utils/screen_helper.dart';
 class VideoPlayerWidget extends StatefulWidget {
   final String videoUrl;
   final String? sourceType;
+  // 是否紧凑型(true,只显示进度条和播放/暂停按钮；false，显示进度条、播放/暂停按钮、音量控制、快进快退等按钮)
+  final bool dense;
 
   const VideoPlayerWidget({
     super.key,
     required this.videoUrl,
     this.sourceType = 'file',
+    this.dense = false,
   });
 
   @override
@@ -111,8 +114,9 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         // final aspectRatio = _controller.value.aspectRatio;
 
         // 测试
-        final aspectRatio =
-            ScreenHelper.isDesktop() ? 3 / 2 : _controller.value.aspectRatio;
+        final aspectRatio = ScreenHelper.isDesktop()
+            ? 3 / 2
+            : _controller.value.aspectRatio;
 
         final videoHeight = maxWidth / aspectRatio;
 
@@ -139,8 +143,8 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                     /// 进度条和时间显示
                     buildSliderRow(),
 
-                    /// 控制按钮行
-                    buildControlRow(),
+                    /// 如果是密集型，则不显示单独行控制按钮
+                    if (!widget.dense) buildControlRow(),
                   ],
                 ),
               ),
@@ -196,6 +200,31 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
             color: Colors.grey[700],
           ),
         ),
+
+        // 如果是密集型，则只显示播放/暂停按钮，不显示单独按钮行
+        if (widget.dense)
+        // 播放/暂停
+        ...[
+          SizedBox(width: ScreenHelper.adaptWidth(16)),
+          IconButton(
+            constraints: BoxConstraints(
+              minWidth: ScreenHelper.adaptWidth(32),
+              minHeight: ScreenHelper.adaptHeight(32),
+            ),
+            padding: EdgeInsets.zero,
+            icon: Icon(
+              _isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+              size: ScreenHelper.adaptWidth(28),
+              color: Colors.blue,
+            ),
+            onPressed: () {
+              setState(() {
+                _isPlaying = !_isPlaying;
+                _isPlaying ? _controller.play() : _controller.pause();
+              });
+            },
+          ),
+        ],
       ],
     );
   }

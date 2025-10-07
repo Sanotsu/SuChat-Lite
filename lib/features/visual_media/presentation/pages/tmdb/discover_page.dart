@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../shared/widgets/toast_utils.dart';
 import '../../../data/datasources/tmdb/tmdb_apis.dart';
 import '../../../data/models/tmdb/tmdb_common.dart';
 import '../../../data/models/tmdb/tmdb_filter_params.dart';
@@ -135,11 +136,7 @@ class _TmdbDiscoverPageState extends State<TmdbDiscoverPage> {
       setState(() {
         _isLoadingMore = false;
       });
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('加载更多失败: ${e.toString()}')));
-      }
+      ToastUtils.showError('加载更多失败: ${e.toString()}');
     }
   }
 

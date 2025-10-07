@@ -692,3 +692,65 @@ Future<void> launchStringUrl(String url) async {
     throw Exception('无法访问 $url');
   }
 }
+
+void cusLaunchUrl(String url) async {
+  try {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  } catch (e) {
+    ToastUtils.showError('无法打开链接: $url, 错误: $e');
+  }
+}
+
+/// 根据文件路径获取MIME类型
+String? getMimeTypeByFilePath(String filePath) {
+  final extension = filePath.toLowerCase().split('.').last;
+  switch (extension) {
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg';
+    case 'png':
+      return 'image/png';
+    case 'gif':
+      return 'image/gif';
+    case 'webp':
+      return 'image/webp';
+    case 'mp3':
+      return 'audio/mpeg';
+    case 'wav':
+      return 'audio/wav';
+    case 'mp4':
+      return 'video/mp4';
+    case 'avi':
+      return 'video/avi';
+    case 'pdf':
+      return 'application/pdf';
+    case 'txt':
+      return 'text/plain';
+    case 'doc':
+    case 'docx':
+      return 'application/msword';
+    case 'xls':
+    case 'xlsx':
+      return 'application/vnd.ms-excel';
+    case 'ppt':
+    case 'pptx':
+      return 'application/vnd.ms-powerpoint';
+    default:
+      return 'application/octet-stream';
+  }
+}
+
+/// 获取文件大小
+Future<int?> getFileSize(File file) async {
+  try {
+    if (await file.exists()) {
+      return await file.length();
+    }
+  } catch (e) {
+    print('获取文件大小失败: $e');
+  }
+  return null;
+}

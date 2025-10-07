@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../../core/utils/datetime_formatter.dart';
 import '../../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../../shared/widgets/simple_tool_widget.dart';
+import '../../../../../shared/widgets/toast_utils.dart';
 import '../../../data/services/haokan_storage_service.dart';
 import 'detail_page.dart';
 
@@ -78,11 +79,7 @@ class _HaokanFavoritesPageState extends State<HaokanFavoritesPage> {
       await _storageService.removeFavorite(favorite.comicId);
       _loadFavorites();
 
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('已取消收藏')));
-      }
+      ToastUtils.showSuccess('已取消收藏');
     }
   }
 
@@ -297,11 +294,7 @@ class _HaokanFavoritesPageState extends State<HaokanFavoritesPage> {
 
               _loadFavorites();
 
-              if (context.mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('已清空所有收藏')));
-              }
+              ToastUtils.showSuccess('已清空所有收藏');
             },
             child: const Text('确定'),
           ),

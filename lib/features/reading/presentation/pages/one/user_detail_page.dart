@@ -5,6 +5,7 @@ import '../../../../../shared/constants/constants.dart';
 import '../../../../../shared/widgets/common_error_empty_widgets.dart';
 import '../../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../../shared/widgets/simple_tool_widget.dart';
+import '../../../../../shared/widgets/toast_utils.dart';
 import '../../../data/datasources/one_api_manager.dart';
 import '../../../data/models/one/one_base_models.dart';
 import '../../../data/models/one/one_category_list.dart';
@@ -255,9 +256,7 @@ class _OneUserDetailPageState extends State<OneUserDetailPage>
           _collectionLoading[category] = false;
           _collectionHasMore[category] = false;
         });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('加载收藏失败: $e')));
+        ToastUtils.showError('加载收藏失败: $e');
       }
     }
   }

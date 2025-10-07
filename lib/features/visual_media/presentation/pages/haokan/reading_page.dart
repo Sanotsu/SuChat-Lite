@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../../core/utils/get_dir.dart';
 import '../../../../../core/utils/simple_tools.dart';
 import '../../../../../shared/widgets/image_preview_helper.dart';
+import '../../../../../shared/widgets/toast_utils.dart';
 import '../../../data/datasources/haokan/haokan_api_manager.dart';
 import '../../../data/models/haokan/haokan_models.dart';
 import '../../../data/services/haokan_storage_service.dart';
@@ -204,12 +205,7 @@ class _HaokanReadingPageState extends State<HaokanReadingPage> {
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(isNext ? '已经是最新章节了' : '已经是第一章节了'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      ToastUtils.showInfo(isNext ? '已经是最新章节了' : '已经是第一章节了');
     }
   }
 

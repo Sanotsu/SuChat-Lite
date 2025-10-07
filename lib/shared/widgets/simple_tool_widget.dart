@@ -628,3 +628,18 @@ Widget buildUserCircleAvatar(
     ),
   );
 }
+
+///
+/// 简单的打印对齐长度补充空格的字符串
+///
+String formatStringToLength(String input, int targetLength) {
+  if (input.length >= targetLength) {
+    return input.substring(0, targetLength);
+  }
+
+  // 计算需要添加的空格数量
+  int spacesNeeded = targetLength - input.length;
+  String fullWidthSpaces = ' ' * spacesNeeded; // 空格
+
+  return '|${input + fullWidthSpaces}|';
+}

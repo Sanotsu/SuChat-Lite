@@ -47,15 +47,19 @@ class _DaoduExplorePageState extends State<DaoduExplorePage> {
 
       final recommends = await _apiManager.getDaoduTodayRecommendList();
 
-      setState(() {
-        _todayRecommends = recommends;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _todayRecommends = recommends;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _error = '加载推荐失败: $e';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = '加载推荐失败: $e';
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -79,15 +83,19 @@ class _DaoduExplorePageState extends State<DaoduExplorePage> {
 
       final lessons = await _apiManager.getDaoduLessonList(from: from, to: to);
 
-      setState(() {
-        _lessons = lessons;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _lessons = lessons;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _error = '加载文章失败: $e';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = '加载文章失败: $e';
+          _isLoading = false;
+        });
+      }
     }
   }
 

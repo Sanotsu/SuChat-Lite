@@ -18,6 +18,8 @@ Widget buildDropdownButton2<T>({
   double? itemMaxHeight,
   // 标签的字号
   double? labelSize,
+  // 标签显示的最大行数
+  int? labelMaxLines,
   // 标签对齐方式(默认居中，像模型列表靠左，方便对比)
   AlignmentGeometry? alignment,
   // 提示词
@@ -67,6 +69,8 @@ Widget buildDropdownButton2<T>({
               child: Text(
                 itemToString != null ? itemToString(e) : e.toString(),
                 style: TextStyle(fontSize: labelSize ?? 15, color: Colors.blue),
+                maxLines: labelMaxLines ?? 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           )
