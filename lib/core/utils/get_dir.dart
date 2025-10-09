@@ -109,6 +109,11 @@ Future<Directory> getImageGenDir() async {
   return getAppHomeDirectory(subfolder: "AI_GEN/images");
 }
 
+/// 新版本统一对话时生成的媒体资源
+Future<Directory> getUnifiedChatMediaDir() async {
+  return getAppHomeDirectory(subfolder: "AI_GEN/unified_chat_media");
+}
+
 /// 视频生成时，视频文件保存的目录
 Future<Directory> getVideoGenDir() async {
   return getAppHomeDirectory(subfolder: "AI_GEN/videos");

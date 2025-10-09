@@ -335,18 +335,18 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
   Widget _buildNote() {
     String note = '';
     if (widget.message.tokenCount > 0) {
-      note += 'tokens used: ${widget.message.tokenCount}';
+      note += 'tokens used: ${widget.message.tokenCount}; ';
     }
     // 没有保存模型的价格，所以其实没有实际的花费
     // if (widget.message.cost > 0) {
-    //   note += ', cost: ${widget.message.cost}';
+    //   note += 'cost: ${widget.message.cost}; ';
     // }
     if (widget.message.responseTimeMs != null) {
-      note += ', response time: ${widget.message.responseTimeMs} ms';
+      note += 'response time: ${widget.message.responseTimeMs} ms; ';
     }
     if (!widget.message.isUser && widget.message.modelNameUsed != null) {
       note +=
-          ', model: ${widget.message.platformIdUsed ?? ''}(${widget.message.modelNameUsed!})';
+          'model: ${widget.message.platformIdUsed ?? ''}(${widget.message.modelNameUsed!}).';
     }
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: 0.8.sw),

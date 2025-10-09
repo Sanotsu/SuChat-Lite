@@ -754,3 +754,62 @@ Future<int?> getFileSize(File file) async {
   }
   return null;
 }
+
+///
+/// 将图片或视频转换为base64格式
+///
+String convertToBase64(String fileUrl, {String fileType = 'image'}) {
+  // 如果已经是base64格式的图片，直接返回
+  if (fileType == 'image' && fileUrl.startsWith('data:image/')) {
+    return fileUrl;
+  }
+
+  // 如果已经是base64格式的视频，直接返回
+  if (fileType == 'video' && fileUrl.startsWith('data:video/')) {
+    return fileUrl;
+  }
+
+  // 如果是网络图片/视频，直接返回URL
+  if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
+    return fileUrl;
+  }
+
+  // 如果是本地文件，转换为base64
+  try {
+    final file = File(fileUrl);
+    if (file.existsSync()) {
+      final bytes = file.readAsBytesSync();
+      final base64String = base64Encode(bytes);
+
+      // 如果是视频，直接返回base64字符串
+      if (fileType == 'video') {
+        return 'data:video/mp4;base64,$base64String';
+      }
+
+      // 根据文件扩展名确定MIME类型
+      String mimeType = 'image/jpeg'; // 默认
+      final extension = fileUrl.toLowerCase().split('.').last;
+      switch (extension) {
+        case 'png':
+          mimeType = 'image/png';
+          break;
+        case 'gif':
+          mimeType = 'image/gif';
+          break;
+        case 'webp':
+          mimeType = 'image/webp';
+          break;
+        case 'bmp':
+          mimeType = 'image/bmp';
+          break;
+      }
+
+      return 'data:$mimeType;base64,$base64String';
+    }
+  } catch (e) {
+    print('转换图片到base64失败: $e');
+  }
+
+  // 如果转换失败，返回原始URL
+  return fileUrl;
+}

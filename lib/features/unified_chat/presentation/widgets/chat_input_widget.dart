@@ -9,9 +9,12 @@ import 'package:provider/provider.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/models/unified_platform_spec.dart';
+import '../../data/models/unified_model_spec.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
 import 'model_selector_dialog.dart';
 import 'chat_settings_dialog.dart';
+import 'image_generation_settings_dialog.dart';
+import 'model_type_icon.dart';
 
 /// 聊天输入组件
 /// 包含预览区域、输入区域、工具按钮区域
@@ -359,9 +362,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                         contentPadding: EdgeInsets.zero,
                       ),
                       onChanged: (text) {
-                        setState(() {
-                          _textController.text = text;
-                        });
+                        setState(() {});
                       },
                       onSubmitted: (text) => _sendMessage(viewModel),
                     ),
@@ -408,6 +409,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 ),
                 const SizedBox(width: 16),
               ],
+
+              if (viewModel.currentModel?.type == UnifiedModelType.imageToImage)
+                _buildToolButton(
+                  icon: Icons.image_outlined,
+                  label: '图片',
+                  onPressed: _pickImages,
+                ),
 
               // _buildToolButton(
               //   icon: Icons.attach_file_outlined,
@@ -477,6 +485,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            buildModelTypeIconWithTooltip(viewModel.currentModel!, size: 16),
+            const SizedBox(width: 4),
             Expanded(
               child: Text(
                 viewModel.currentModel?.displayName ?? '选择模型',
@@ -543,26 +553,27 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             ),
           ),
 
-          // 联网搜索开关
-          InkWell(
-            onTap: _canToggleWebSearch(viewModel)
-                ? () => viewModel.toggleWebSearch()
-                : () => ToastUtils.showInfo("该平台或模型不支持联网搜索"),
-            onLongPress: () => _showTooltipDialog(),
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              child: Icon(
-                Icons.language,
-                size: 20,
-                color:
-                    viewModel.hasAvailableSearchTools() &&
-                        viewModel.isWebSearchEnabled
-                    ? Theme.of(context).primaryColor
-                    : Theme.of(context).disabledColor,
+          // 联网搜索开关(暂时只让对话模型显示联网按钮)
+          if (viewModel.currentModel?.type == UnifiedModelType.cc)
+            InkWell(
+              onTap: _canToggleWebSearch(viewModel)
+                  ? () => viewModel.toggleWebSearch()
+                  : () => ToastUtils.showInfo("该平台或模型不支持联网搜索"),
+              onLongPress: () => _showTooltipDialog(),
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                child: Icon(
+                  Icons.language,
+                  size: 20,
+                  color:
+                      viewModel.hasAvailableSearchTools() &&
+                          viewModel.isWebSearchEnabled
+                      ? Theme.of(context).primaryColor
+                      : Theme.of(context).disabledColor,
+                ),
               ),
             ),
-          ),
 
           // 高级设置按钮
           InkWell(
@@ -634,6 +645,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   }
 
   Future<void> _sendMessage(UnifiedChatViewModel viewModel) async {
+    unfocusHandle();
+
     if (!_canSend() || viewModel.isStreaming) return;
 
     final text = _textController.text.trim();
@@ -646,10 +659,18 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       );
       _textController.clear();
       _clearAllAttachments();
-      unfocusHandle();
       return;
     }
 
+    // 检查当前模型类型
+    // 用户需要手动选择图片生成模型来使用图片生成功能
+    if (viewModel.isImageGenerationModel) {
+      // 图片生成模型：输入内容作为提示词，选择的图片作为参考图
+      await _handleImageGeneration(viewModel, text);
+      return;
+    }
+
+    // 对于非图片生成模型，不再自动识别图片生成意图
     if (_hasAttachments()) {
       // 发送多模态消息
       await viewModel.sendMultimodalMessage(
@@ -671,11 +692,60 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     // 清空输入
     _textController.clear();
     _clearAllAttachments();
-
     // 收起工具栏
     _isToolExpanded = false;
+    // unfocusHandle();
+  }
 
-    unfocusHandle();
+  /// 处理图片生成
+  Future<void> _handleImageGeneration(
+    UnifiedChatViewModel viewModel,
+    String prompt,
+  ) async {
+    if (prompt.isEmpty) {
+      ToastUtils.showError('请输入图片描述');
+      return;
+    }
+
+    try {
+      // 获取当前平台和模型
+      final platform = viewModel.currentPlatform;
+      final model = viewModel.currentModel;
+
+      if (platform == null || model == null) {
+        ToastUtils.showError('请先选择平台和模型');
+        return;
+      }
+
+      // 获取当前对话的图片生成设置 (图片生成高级设置弹窗配置的参数会放在对话的extraParams属性中)
+      final conversation = viewModel.currentConversation;
+      final Map<String, dynamic> currentSettings =
+          conversation?.extraParams?['imageGenParams'] ?? {};
+
+      // 先深拷贝一份输入框文本和附件文件，在发送消息之前清空输入框和附件,避免发送按钮等在发送后依旧可见
+      final String prompt = _textController.text.trim();
+      final List<File> images = List.from(_selectedImages);
+
+      // 清空输入框和附件(避免耗时太久输入框等未复原)
+      _textController.clear();
+      _clearAllAttachments();
+      _isToolExpanded = false;
+
+      // 调用专门的图片生成方法
+      await viewModel.sendImageGenerationMessage(
+        prompt: prompt,
+        images: images,
+        settings: currentSettings,
+      );
+
+      // 清空输入
+      // _textController.clear();
+      // _clearAllAttachments();
+      // _isToolExpanded = false;
+    } catch (e) {
+      ToastUtils.showError('图片生成失败: $e');
+      rethrow;
+    }
   }
 
   void _pickImages() async {
@@ -762,6 +832,21 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   }
 
   void _showAdvancedSettings(UnifiedChatViewModel viewModel) {
+    final currentModel = viewModel.currentModel;
+    final isImageGenerationModel =
+        currentModel?.type == UnifiedModelType.textToImage ||
+        currentModel?.type == UnifiedModelType.imageToImage;
+
+    if (isImageGenerationModel) {
+      // 显示图片生成设置对话框
+      _showImageGenerationSettings(viewModel);
+    } else {
+      // 显示常规聊天设置对话框
+      _showChatSettings(viewModel);
+    }
+  }
+
+  void _showChatSettings(UnifiedChatViewModel viewModel) {
     // 获取当前对话的设置，使用有效搭档（当前搭档或默认搭档）
     final conversation = viewModel.currentConversation;
     final effectivePartner = viewModel.effectivePartner;
@@ -788,6 +873,26 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             ...settings,
             'partnerId': viewModel.currentPartner?.id,
           });
+        },
+      ),
+    );
+  }
+
+  void _showImageGenerationSettings(UnifiedChatViewModel viewModel) {
+    final conversation = viewModel.currentConversation;
+    // 这里只取图片生成部分的参数
+    final Map<String, dynamic> currentSettings =
+        conversation?.extraParams?['imageGenParams'] ?? {};
+
+    showDialog(
+      context: context,
+      builder: (context) => ImageGenerationSettingsDialog(
+        currentPlatform: viewModel.currentPlatform,
+        currentModel: viewModel.currentModel,
+        currentSettings: currentSettings,
+        onSave: (settings) {
+          // 保存时也使用同样的参数
+          viewModel.updateConversationSettings({'imageGenParams': settings});
         },
       ),
     );

@@ -3,6 +3,7 @@
 import 'dart:convert';
 
 import 'package:json_annotation/json_annotation.dart';
+import 'unified_model_spec.dart';
 
 part 'unified_platform_spec.g.dart';
 
@@ -43,6 +44,18 @@ class UnifiedPlatformSpec {
   @JsonKey(name: 'api_prefix')
   final String apiPrefix;
 
+  // 图片生成API端点
+  @JsonKey(name: 'image_generation_prefix')
+  final String? imageGenerationPrefix;
+
+  // 语音合成API端点
+  @JsonKey(name: 'text_to_speech_prefix')
+  final String? textToSpeechPrefix;
+
+  // 语音识别API端点
+  @JsonKey(name: 'speech_to_text_prefix')
+  final String? speechToTextPrefix;
+
   // 是否是内置的
   @JsonKey(name: 'is_built_in')
   final bool isBuiltIn;
@@ -67,6 +80,9 @@ class UnifiedPlatformSpec {
     required this.displayName,
     required this.hostUrl,
     this.apiPrefix = '/v1/chat/completions',
+    this.imageGenerationPrefix,
+    this.textToSpeechPrefix,
+    this.speechToTextPrefix,
     this.isBuiltIn = false,
     this.isActive = false,
     this.description,
@@ -86,6 +102,9 @@ class UnifiedPlatformSpec {
       displayName: map['display_name'] as String,
       hostUrl: map['host_url'] as String,
       apiPrefix: map['api_prefix'] as String? ?? '/v1/chat/completions',
+      imageGenerationPrefix: map['image_generation_prefix'] as String?,
+      textToSpeechPrefix: map['text_to_speech_prefix'] as String?,
+      speechToTextPrefix: map['speech_to_text_prefix'] as String?,
       isBuiltIn: (map['is_built_in'] as int? ?? 0) == 1,
       isActive: (map['is_active'] as int? ?? 0) == 1,
       description: map['description'] as String?,
@@ -103,6 +122,9 @@ class UnifiedPlatformSpec {
       'display_name': displayName,
       'host_url': hostUrl,
       'api_prefix': apiPrefix,
+      'image_generation_prefix': imageGenerationPrefix,
+      'text_to_speech_prefix': textToSpeechPrefix,
+      'speech_to_text_prefix': speechToTextPrefix,
       'is_built_in': isBuiltIn ? 1 : 0,
       'is_active': isActive ? 1 : 0,
       'description': description,
@@ -117,6 +139,9 @@ class UnifiedPlatformSpec {
     String? displayName,
     String? hostUrl,
     String? apiPrefix,
+    String? imageGenerationPrefix,
+    String? textToSpeechPrefix,
+    String? speechToTextPrefix,
     bool? isBuiltIn,
     bool? isActive,
     String? description,
@@ -129,6 +154,10 @@ class UnifiedPlatformSpec {
       displayName: displayName ?? this.displayName,
       hostUrl: hostUrl ?? this.hostUrl,
       apiPrefix: apiPrefix ?? this.apiPrefix,
+      imageGenerationPrefix:
+          imageGenerationPrefix ?? this.imageGenerationPrefix,
+      textToSpeechPrefix: textToSpeechPrefix ?? this.textToSpeechPrefix,
+      speechToTextPrefix: speechToTextPrefix ?? this.speechToTextPrefix,
       isBuiltIn: isBuiltIn ?? this.isBuiltIn,
       isActive: isActive ?? this.isActive,
       description: description ?? this.description,
@@ -153,12 +182,74 @@ class UnifiedPlatformSpec {
   }
 
   /// 获取完整的API URL
-  String getApiUrl() {
+  String getChatCompletionsUrl() {
     final cleanBaseUrl = hostUrl.endsWith('/')
         ? hostUrl.substring(0, hostUrl.length - 1)
         : hostUrl;
     final cleanEndpoint = apiPrefix.startsWith('/') ? apiPrefix : '/$apiPrefix';
     return '$cleanBaseUrl$cleanEndpoint';
+  }
+
+  /// 获取图片生成API URL
+  String? getImageGenerationUrl() {
+    if (imageGenerationPrefix == null) return null;
+    final cleanBaseUrl = hostUrl.endsWith('/')
+        ? hostUrl.substring(0, hostUrl.length - 1)
+        : hostUrl;
+    final cleanEndpoint = imageGenerationPrefix!.startsWith('/')
+        ? imageGenerationPrefix!
+        : '/$imageGenerationPrefix!';
+    return '$cleanBaseUrl$cleanEndpoint';
+  }
+
+  /// 获取语音合成API URL
+  String? getTextToSpeechUrl() {
+    if (textToSpeechPrefix == null) return null;
+    final cleanBaseUrl = hostUrl.endsWith('/')
+        ? hostUrl.substring(0, hostUrl.length - 1)
+        : hostUrl;
+    final cleanEndpoint = textToSpeechPrefix!.startsWith('/')
+        ? textToSpeechPrefix!
+        : '/$textToSpeechPrefix!';
+    return '$cleanBaseUrl$cleanEndpoint';
+  }
+
+  /// 获取语音识别API URL
+  String? getSpeechToTextUrl() {
+    if (speechToTextPrefix == null) return null;
+    final cleanBaseUrl = hostUrl.endsWith('/')
+        ? hostUrl.substring(0, hostUrl.length - 1)
+        : hostUrl;
+    final cleanEndpoint = speechToTextPrefix!.startsWith('/')
+        ? speechToTextPrefix!
+        : '/$speechToTextPrefix!';
+    return '$cleanBaseUrl$cleanEndpoint';
+  }
+
+  /// 根据模型类型获取对应的API端点
+  String? getApiUrlForModelType(UnifiedModelType modelType) {
+    switch (modelType) {
+      case UnifiedModelType.cc:
+        return getChatCompletionsUrl();
+      case UnifiedModelType.textToImage:
+      case UnifiedModelType.imageToImage:
+        return getImageGenerationUrl();
+      case UnifiedModelType.textToSpeech:
+        return getTextToSpeechUrl();
+      case UnifiedModelType.speechToText:
+        return getSpeechToTextUrl();
+      case UnifiedModelType.embedding:
+      case UnifiedModelType.reranker:
+        return getChatCompletionsUrl(); // 暂时使用聊天端点
+      case UnifiedModelType.textToVideo:
+      case UnifiedModelType.imageToVideo:
+        return null; // 暂未支持
+    }
+  }
+
+  /// 检查是否支持指定的模型类型
+  bool supportsModelType(UnifiedModelType modelType) {
+    return getApiUrlForModelType(modelType) != null;
   }
 
   /// 获取认证头

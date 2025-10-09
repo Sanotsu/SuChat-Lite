@@ -194,7 +194,7 @@ class UnifiedChatService {
     pl.d('实际发送的消息内容>>>>>>>>>>>>>>>>>>>>>>>>>>>>: ${requestBody.length}');
 
     final responseData = await HttpUtils.post(
-      path: platform.getApiUrl(),
+      path: platform.getChatCompletionsUrl(),
       data: requestBody,
       headers: platform.getAuthHeaders(apiKey),
       responseType: stream ? CusRespType.stream : CusRespType.json,
@@ -649,12 +649,17 @@ class UnifiedChatService {
 
       String apiPerfix = "/v1/models";
       // 注意，20250916 实测智谱开放平台的API版本是v4,所以获取模型的API也是v4
-      if (platform.hostUrl.contains("open.bigmodel.cn")) {
+      if (platformId == UnifiedPlatformId.zhipu.name) {
         apiPerfix = "/v4/models";
       }
 
+      // 2025-10-08 因为阿里云的cc和多媒体资源生成的url差异很多，直接hostUrl拼接v1/models是不完整的
+      if (platformId == UnifiedPlatformId.aliyun.name) {
+        apiPerfix = "/compatible-mode/v1/models";
+      }
+
       // TODO 火山方舟无法获取模型列表，所以这里不测试
-      if (platform.hostUrl.contains("volces.com")) {
+      if (platformId == UnifiedPlatformId.volcengine.name) {
         return true;
       }
 
@@ -679,26 +684,25 @@ class UnifiedChatService {
 
     try {
       final platform = await _chatDao.getPlatformSpec(platformId);
-
-      print("1111111111111111");
       if (platform == null) return [];
 
       final apiKey = await UnifiedSecureStorage.getApiKey(platformId);
-
-      print("22222222222222222222");
-
       if (apiKey == null) return [];
 
-      print("333333333333333333333");
-
       String apiPerfix = "/v1/models";
+
       // 注意，20250916 实测智谱开放平台的API版本是v4,所以获取模型的API也是v4
-      if (platform.hostUrl.contains("open.bigmodel.cn")) {
+      if (platformId == UnifiedPlatformId.zhipu.name) {
         apiPerfix = "/v4/models";
       }
 
+      // 2025-10-08 同测试连接
+      if (platformId == UnifiedPlatformId.aliyun.name) {
+        apiPerfix = "/compatible-mode/v1/models";
+      }
+
       // TODO 火山方舟无法获取模型列表，所以这里不测试
-      if (platform.hostUrl.contains("volces.com")) {
+      if (platformId == UnifiedPlatformId.volcengine.name) {
         return [];
       }
 

@@ -122,7 +122,7 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
     if (imageUrl == null) return const SizedBox.shrink();
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       constraints: const BoxConstraints(maxWidth: 300, maxHeight: 300),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
@@ -134,7 +134,7 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
   // 简单的图片预览
   Widget _buildImage(String imageUrl) {
     return Container(
-      margin: EdgeInsets.only(top: 8),
+      margin: EdgeInsets.only(right: 8),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: SizedBox(
@@ -418,9 +418,22 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
     // 显示图片附件
     if (metadata.containsKey('images')) {
       final images = metadata['images'] as List<dynamic>;
+
+      final imageWidgets = <Widget>[];
+
       for (final imagePath in images) {
-        widgets.add(_buildMetadataImage(imagePath.toString()));
+        imageWidgets.add(_buildMetadataImage(imagePath.toString()));
       }
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 文本内容放一行
+          ...widgets,
+          // 图片再放在一行
+          Wrap(children: imageWidgets),
+        ],
+      );
     }
 
     // 显示音频附件
@@ -452,7 +465,7 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
   /// 从metadata构建图片显示
   Widget _buildMetadataImage(String imagePath) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       constraints: const BoxConstraints(maxWidth: 300, maxHeight: 300),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),

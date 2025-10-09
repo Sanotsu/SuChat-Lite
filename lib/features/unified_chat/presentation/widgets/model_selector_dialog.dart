@@ -6,6 +6,7 @@ import '../../data/models/unified_model_spec.dart';
 import '../../data/models/unified_platform_spec.dart';
 import '../../data/database/unified_chat_dao.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
+import 'model_type_icon.dart';
 import 'platform_icon.dart';
 
 /// 模型选择器弹窗
@@ -91,46 +92,37 @@ class _ModelSelectorDialogState extends State<ModelSelectorDialog> {
     }
   }
 
-  // 如果是收藏分类，模型才显示平台图标
-  Widget _buildModelItem(UnifiedModelSpec model, {bool inFavorite = false}) {
-    final isSelected = widget.currentModel?.id == model.id;
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('选择模型'),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 0.6.sh,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 收藏模型区域
+                    _buildFavoriteSection(),
 
-    return Container(
-      margin: EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isSelected ? Colors.blue : Colors.grey,
-          width: isSelected ? 2 : 1,
-        ),
-        color: isSelected ? Colors.blue.withValues(alpha: 0.1) : null,
+                    // 按平台分组的模型
+                    ..._modelsByPlatform.entries.map((entry) {
+                      return _buildPlatformSection(entry.key, entry.value);
+                    }),
+                  ],
+                ),
+              ),
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.only(left: 8),
-        dense: true,
-        leading: (inFavorite && _platforms[model.platformId] != null)
-            ? buildPlatformIcon(_platforms[model.platformId]!)
-            : null,
-        title: Text(
-          model.displayName,
-          style: TextStyle(
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            // fontSize: 12,
-          ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('取消'),
         ),
-        trailing: IconButton(
-          onPressed: () => _toggleFavorite(model),
-          icon: Icon(
-            model.isFavorite ? Icons.star : Icons.star_border,
-            color: model.isFavorite ? Colors.blue : Colors.grey,
-            size: 20,
-          ),
-        ),
-        onTap: () {
-          widget.onModelSelected(model);
-          Navigator.of(context).pop();
-        },
-      ),
+      ],
     );
   }
 
@@ -199,37 +191,47 @@ class _ModelSelectorDialogState extends State<ModelSelectorDialog> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('选择模型'),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16),
-      content: SizedBox(
-        width: double.maxFinite,
-        height: 0.6.sh,
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 收藏模型区域
-                    _buildFavoriteSection(),
+  Widget _buildModelItem(UnifiedModelSpec model, {bool inFavorite = false}) {
+    final isSelected = widget.currentModel?.id == model.id;
 
-                    // 按平台分组的模型
-                    ..._modelsByPlatform.entries.map((entry) {
-                      return _buildPlatformSection(entry.key, entry.value);
-                    }),
-                  ],
-                ),
-              ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
+    return Container(
+      margin: EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isSelected ? Colors.blue : Colors.grey,
+          width: isSelected ? 2 : 1,
         ),
-      ],
+        color: isSelected ? Colors.blue.withValues(alpha: 0.1) : null,
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.only(left: 8),
+        dense: true,
+        // 如果是收藏分类，模型才显示平台图标
+        leading: (inFavorite && _platforms[model.platformId] != null)
+            ? buildPlatformIcon(_platforms[model.platformId]!)
+            // : ModelTypeIcon(type: model.type),
+            : buildModelTypeIconWithTooltip(model),
+        title: Text(
+          model.displayName,
+          style: TextStyle(
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            // fontSize: 12,
+          ),
+        ),
+        trailing: IconButton(
+          onPressed: () => _toggleFavorite(model),
+          icon: Icon(
+            model.isFavorite ? Icons.star : Icons.star_border,
+            color: model.isFavorite ? Colors.blue : Colors.grey,
+            size: 20,
+          ),
+        ),
+        onTap: () {
+          widget.onModelSelected(model);
+          Navigator.of(context).pop();
+        },
+      ),
     );
   }
 }

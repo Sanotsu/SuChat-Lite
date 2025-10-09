@@ -794,4 +794,9 @@ class UnifiedChatMessage {
     // 如果转换失败，返回原始URL
     return fileUrl;
   }
+
+  /// 获取多模态内容项列表
+  List<UnifiedContentItem> getMultimodalContentItems() {
+    return multimodalContent ?? [];
+  }
 }

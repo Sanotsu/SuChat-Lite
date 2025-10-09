@@ -11,12 +11,14 @@ import '../../../../core/utils/get_dir.dart';
 import '../../../../core/utils/simple_tools.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/database/unified_chat_dao.dart';
-import '../../data/models/unified_platform_spec.dart';
-import '../../data/models/unified_model_spec.dart';
-import '../../data/models/unified_conversation.dart';
 import '../../data/models/unified_chat_message.dart';
 import '../../data/models/unified_chat_partner.dart';
+import '../../data/models/unified_conversation.dart';
+import '../../data/models/unified_model_spec.dart';
+import '../../data/models/unified_platform_spec.dart';
 import '../../data/services/unified_chat_service.dart';
+import '../../data/services/image_generation_service.dart';
+import '../../data/models/image_generation_request.dart';
 import '../../data/services/unified_secure_storage.dart';
 import '../../data/services/web_search_tool_manager.dart';
 
@@ -61,6 +63,10 @@ class UnifiedChatViewModel extends ChangeNotifier {
   UnifiedPlatformSpec? get currentPlatform => _currentPlatform;
   UnifiedChatPartner? get currentPartner => _currentPartner;
   bool get isWebSearchEnabled => _isWebSearchEnabled;
+
+  bool get isImageGenerationModel =>
+      _currentModel?.type == UnifiedModelType.textToImage ||
+      _currentModel?.type == UnifiedModelType.imageToImage;
 
   // 状态getters
   bool get isLoading => _isLoading;
@@ -408,7 +414,10 @@ class UnifiedChatViewModel extends ChangeNotifier {
         isStream: settings['isStream'] as bool?,
         frequencyPenalty: settings['frequencyPenalty'] as double?,
         presencePenalty: settings['presencePenalty'] as double?,
-        extraParams: {'enableThinking': settings['enableThinking'] as bool?},
+        extraParams: {
+          'enableThinking': settings['enableThinking'] as bool?,
+          'imageGenParams': settings['imageGenParams'] as Map<String, dynamic>?,
+        },
         updatedAt: DateTime.now(),
       );
 
@@ -916,6 +925,196 @@ class UnifiedChatViewModel extends ChangeNotifier {
       // notifyListeners();
       _setStreaming(false);
     }
+  }
+
+  /// 发送图片生成消息
+  Future<void> sendImageGenerationMessage({
+    required String prompt,
+    List<File>? images,
+    Map<String, dynamic>? settings,
+  }) async {
+    print(
+      "-------------发送图片生成消息 ${_currentConversation?.id} $_currentModel $_currentPlatform",
+    );
+    print(prompt);
+
+    if (_currentConversation == null ||
+        _currentModel == null ||
+        _currentPlatform == null) {
+      return;
+    }
+
+    // 先保存对话（如果需要）
+    await _saveConversationIfNeeded(prompt.trim());
+
+    // 构建多模态内容列表（图片生成，只处理图片内容）
+    final multimodalContent = <UnifiedContentItem>[];
+
+    print("图片生成---开始添加图片 $images ${images != null} ${images?.isNotEmpty}");
+    // 添加图片内容
+    if (images != null && images.isNotEmpty) {
+      for (final image in images) {
+        print("添加图片: ${image.path}");
+
+        multimodalContent.add(
+          UnifiedContentItem.image(image.path, detail: 'auto'),
+        );
+      }
+    }
+
+    // 创建用户消息
+    final userMessage = UnifiedChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      conversationId: _currentConversation!.id,
+      role: UnifiedMessageRole.user,
+      content: prompt,
+      contentType: UnifiedContentType.multimodal,
+      multimodalContent: multimodalContent,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      cost: 0,
+      isStreaming: false,
+      metadata: {'model': _currentModel, 'platform': _currentPlatform},
+      // 这两个还有必要吗？
+      modelNameUsed: _currentModel!.modelName,
+      platformIdUsed: _currentPlatform!.id,
+    );
+
+    // 添加用户消息到列表
+    _messages.add(userMessage);
+    notifyListeners();
+
+    // 保存用户消息到数据库
+    await _chatDao.saveMessage(userMessage);
+
+    // 构建完整的图片生成提示词（包含历史用户消息）
+    final allUserMessages = _messages
+        .where((m) => m.role == UnifiedMessageRole.user)
+        .map((m) => m.content ?? '')
+        .where((content) => content.isNotEmpty)
+        .toList();
+
+    final combinedPrompt = allUserMessages.join('\n\n');
+
+    // 创建助手消息占位符
+    final assistantMessage = UnifiedChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      conversationId: _currentConversation!.id,
+      role: UnifiedMessageRole.assistant,
+      content: '正在生成图片，请勿退出...\n',
+      contentType: UnifiedContentType.text,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      cost: 0,
+      isStreaming: true,
+      modelNameUsed: _currentModel!.modelName,
+      platformIdUsed: _currentPlatform!.id,
+      metadata: {'model': _currentModel, 'platform': _currentPlatform},
+    );
+
+    _messages.add(assistantMessage);
+    notifyListeners();
+
+    try {
+      // 准备参考图片地址（如果是图生图模型且有选择的图片）
+      List<String>? referenceImages;
+      if (_currentModel!.type == UnifiedModelType.imageToImage &&
+          images?.isNotEmpty == true) {
+        referenceImages = images!.map((file) => file.path).toList();
+      }
+
+      // 创建图片生成请求
+      final request = ImageGenerationRequest(
+        model: _currentModel!.modelName,
+        prompt: combinedPrompt,
+        image: referenceImages?.isNotEmpty == true
+            ? referenceImages!.first
+            : null,
+        size: settings?['size'],
+        quality: settings?['quality'],
+        n: double.tryParse(settings?['n'].toString() ?? '1')?.toInt(),
+        seed: settings?['seed'],
+        steps: settings?['steps'],
+        guidanceScale: settings?['guidanceScale'],
+        watermark: settings?['watermark'] ?? true,
+      );
+
+      // 调用图片生成服务
+      final imageService = ImageGenerationService();
+      final response = await imageService.generateImage(
+        request: request,
+        platform: _currentPlatform!,
+        model: _currentModel!,
+      );
+
+      // 更新助手消息内容
+      // 注意，大模型API生成的图片都是网络图片，有效期是24小时。
+      // 所以需要先下载到本地，然后将本地的图片地址存入对话消息中，以避免失效后无法显示的问题
+      var imageUrls = response.data.map((r) => r.url).toList();
+      List<String> newUrls = [];
+      for (final url in imageUrls) {
+        if (url == null) {
+          continue;
+        }
+        var localPath = await saveImageToLocal(
+          url,
+          dlDir: await getUnifiedChatMediaDir(),
+          showSaveHint: false,
+        );
+
+        if (localPath != null) {
+          newUrls.add(localPath);
+        }
+      }
+
+      final updatedAssistantMessage = assistantMessage.copyWith(
+        content: response.data.isNotEmpty
+            ? '生成了 ${response.data.length} 张图片'
+            : '图片生成完成',
+        isStreaming: false,
+        metadata: {
+          'images': newUrls,
+          // 'images': response.data
+          //     .map((img) => img.url)
+          //     .where((url) => url != null)
+          //     .toList(),
+          // 图片有效期只有一个小时，可以不存，节约资源
+          // 'image_data': response.data,
+        },
+      );
+
+      // 更新消息列表
+      final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
+      if (index != -1) {
+        _messages[index] = updatedAssistantMessage;
+      }
+
+      // 保存助手消息到数据库
+      await _chatDao.saveMessage(updatedAssistantMessage);
+
+      // 更新对话的最后消息时间
+      final updatedConversation = _currentConversation!.copyWith(
+        updatedAt: DateTime.now(),
+      );
+      await _chatDao.updateConversation(updatedConversation);
+      _currentConversation = updatedConversation;
+    } catch (e) {
+      // 更新助手消息为错误状态
+      final errorMessage = assistantMessage.copyWith(
+        content: '图片生成失败: $e',
+        isStreaming: false,
+      );
+
+      final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
+      if (index != -1) {
+        _messages[index] = errorMessage;
+      }
+
+      // 保存错误消息到数据库
+      await _chatDao.saveMessage(errorMessage);
+    }
+
+    notifyListeners();
   }
 
   /// 计算消息成本(只显示token数量,不计算花费)

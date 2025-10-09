@@ -7,13 +7,29 @@ import 'package:json_annotation/json_annotation.dart';
 part 'unified_model_spec.g.dart';
 
 /// 模型类型枚举
-enum UnifiedModelType { cc, embedding, reranker }
+enum UnifiedModelType {
+  cc,
+  embedding,
+  reranker,
+  textToImage,
+  imageToImage,
+  textToSpeech,
+  speechToText,
+  textToVideo,
+  imageToVideo,
+}
 
 // 模型类型对应的中文名
 final Map<UnifiedModelType, String> UMT_NAME_MAP = {
   UnifiedModelType.cc: '对话',
   UnifiedModelType.embedding: '嵌入',
   UnifiedModelType.reranker: '重排',
+  UnifiedModelType.textToImage: '文生图',
+  UnifiedModelType.imageToImage: '图生图',
+  UnifiedModelType.textToSpeech: '语音合成',
+  UnifiedModelType.speechToText: '语音识别',
+  UnifiedModelType.textToVideo: '文生视频',
+  UnifiedModelType.imageToVideo: '图生视频',
 };
 
 /// 统一模型规格模型
@@ -181,6 +197,32 @@ class UnifiedModelSpec {
   @override
   String toString() {
     return 'UnifiedModelSpec(id: $id, modelName: $modelName, displayName: $displayName)';
+  }
+
+  /// 获取模型类型枚举
+  UnifiedModelType get type {
+    switch (modelType) {
+      case 'cc':
+        return UnifiedModelType.cc;
+      case 'embedding':
+        return UnifiedModelType.embedding;
+      case 'reranker':
+        return UnifiedModelType.reranker;
+      case 'textToImage':
+        return UnifiedModelType.textToImage;
+      case 'imageToImage':
+        return UnifiedModelType.imageToImage;
+      case 'textToSpeech':
+        return UnifiedModelType.textToSpeech;
+      case 'speechToText':
+        return UnifiedModelType.speechToText;
+      case 'textToVideo':
+        return UnifiedModelType.textToVideo;
+      case 'imageToVideo':
+        return UnifiedModelType.imageToVideo;
+      default:
+        return UnifiedModelType.cc;
+    }
   }
 
   /// 是否支持指定功能
