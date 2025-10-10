@@ -9,6 +9,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:video_player_media_kit/video_player_media_kit.dart';
 
 import '../core/storage/cus_get_storage.dart';
+import '../core/utils/logger_utils.dart';
 import '../core/utils/simple_tools.dart';
 import '../features/branch_chat/presentation/viewmodels/branch_store.dart';
 import '../shared/services/model_manager_service.dart';
@@ -43,6 +44,9 @@ class AppCatchError {
       // 默认使用path_provider 的 getTemporaryDirectory()作为存储路径,且无法修改
       // 又因为检查设备存储权限等是否授权需要把标记存入缓存,避免每次都弹窗显示,所以要在检查前进行缓存初始化
       await GetStorage.init(CusGetStorage.storeName);
+
+      // 初始化Logger
+      await LogHelper.init();
 
       // 启动初始检查权限的界面，而不是直接进入应用
       runApp(const PermissionCheckApp());

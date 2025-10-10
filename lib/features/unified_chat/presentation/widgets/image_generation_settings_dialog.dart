@@ -286,12 +286,13 @@ class _ImageGenerationSettingsDialogState
   }
 
   List<String> _getSupportedSizes() {
-    final modelId = widget.currentModel?.id.toLowerCase();
+    // 模型名称才是请求时作为model参数的那个值
+    final modelName = widget.currentModel?.modelName.toLowerCase();
 
     switch (widget.currentPlatform?.id) {
       case 'aliyun':
         // qwen-image 系列
-        if (modelId?.startsWith('qwen-image') ?? false) {
+        if (modelName?.startsWith('qwen-image') ?? false) {
           return [
             '1328*1328',
             '1664*928',
@@ -302,8 +303,8 @@ class _ImageGenerationSettingsDialogState
         }
 
         // 文生图V2系列
-        if ((modelId?.startsWith('wanx2') ?? false) ||
-            (modelId?.startsWith('wan2') ?? false)) {
+        if ((modelName?.startsWith('wanx2') ?? false) ||
+            (modelName?.startsWith('wan2') ?? false)) {
           return [
             '1024*1024',
             '800*1200',
@@ -317,7 +318,7 @@ class _ImageGenerationSettingsDialogState
         }
 
         // 如果是flux系列模型
-        if (modelId?.startsWith('flux-') ?? false) {
+        if (modelName?.startsWith('flux-') ?? false) {
           return [
             '1024*1024',
             '512*1024',
@@ -332,11 +333,11 @@ class _ImageGenerationSettingsDialogState
       case 'siliconCloud':
 
         // 如果是kolor模型
-        if (modelId?.startsWith('kolor') ?? false) {
+        if (modelName?.startsWith('kolor') ?? false) {
           return ['1024x1024', '960x1280', '768x1024', '720x1440', '720x1280'];
         }
         // 如果是qwen-image模型
-        if (modelId?.startsWith('qwen-image') ?? false) {
+        if (modelName?.startsWith('qwen-image') ?? false) {
           return [
             '1328x1328',
             '1664x928',
@@ -375,14 +376,14 @@ class _ImageGenerationSettingsDialogState
   }
 
   int _getMaxImageCount() {
-    final modelId = widget.currentModel?.id.toLowerCase();
+    final modelName = widget.currentModel?.modelName.toLowerCase();
     switch (widget.currentPlatform?.id) {
       case 'siliconCloud':
         return 4;
       case 'aliyun':
         // 文生图V2系列
-        if ((modelId?.startsWith('wanx2') ?? false) ||
-            (modelId?.startsWith('wan2') ?? false)) {
+        if ((modelName?.startsWith('wanx2') ?? false) ||
+            (modelName?.startsWith('wan2') ?? false)) {
           return 4;
         }
         // qwen-image 、flux 都为1

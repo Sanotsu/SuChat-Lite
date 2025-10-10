@@ -1,5 +1,3 @@
-// ignore_for_file: non_constant_identifier_names
-
 import 'package:json_annotation/json_annotation.dart';
 
 part 'image_generation_response.g.dart';

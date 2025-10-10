@@ -22,7 +22,7 @@ ImageGenerationRequest _$ImageGenerationRequestFromJson(
   style: json['style'] as String?,
   image: json['image'] as String?,
   maskImage: json['maskImage'] as String?,
-  watermark: json['watermark'] as bool?,
+  watermark: json['watermark'] as bool? ?? false,
   userId: json['userId'] as String?,
 );
 

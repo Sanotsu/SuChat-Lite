@@ -333,6 +333,95 @@ Future<String?> saveImageToLocal(
   }
 }
 
+// 2025-10-09 实测图片、音频等都可以下载，可以混用
+Future<String?> saveNetMediaToLocal(
+  String netMediaUrl, {
+  String? prefix,
+  String? mediaName,
+  Directory? dlDir,
+  bool showSaveHint = true,
+  bool overwriteExisting = false,
+}) async {
+  // 首先获取设备外部存储管理权限
+  if (!(await requestStoragePermission())) {
+    ToastUtils.showError("未授权访问设备外部存储，无法保存图片");
+    return null;
+  }
+
+  // 如果有指定保存的图片名称，则不用从url获取;需要过滤地址带有过期日期token信息等额外内容
+  mediaName ??= netMediaUrl.split("?").first.split('/').last;
+
+  dynamic closeToast;
+
+  // 使用直接的Dio实例下载音频内容并保存到文件
+  final dio = Dio();
+  try {
+    // 获取下载目录
+    var dir = dlDir ?? (await getDioDownloadDir());
+
+    // 确保目录存在
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+
+    // 构建文件路径 , 传入的前缀有强制带上下划线
+    final filePath = '${dir.path}/${prefix ?? ""}$mediaName';
+    final file = File(filePath);
+
+    // 检查文件是否已存在
+    final bool fileExists = await file.exists();
+
+    if (fileExists && !overwriteExisting) {
+      // 文件已存在且不覆盖，直接返回现有文件路径
+      if (showSaveHint) {
+        ToastUtils.showToast("资源已存在，无需重复下载");
+      }
+      return filePath;
+    }
+
+    if (showSaveHint) {
+      closeToast = ToastUtils.showLoading('【资源保存中...】');
+    }
+
+    // 下载资源
+    final mediaResponse = await dio.get(
+      netMediaUrl,
+      options: Options(
+        responseType: ResponseType.bytes,
+        followRedirects: true,
+        validateStatus: (status) => status != null && status < 500,
+      ),
+      onReceiveProgress: (received, total) {
+        if (total != -1) {
+          debugPrint('下载进度: ${(received / total * 100).toStringAsFixed(0)}%');
+        }
+      },
+    );
+
+    if (mediaResponse.statusCode != 200) {
+      throw Exception('下载资源失败: ${mediaResponse.statusCode}');
+    }
+
+    // 写入文件
+    await file.writeAsBytes(mediaResponse.data);
+
+    if (showSaveHint) {
+      if (closeToast != null) {
+        closeToast();
+      }
+      if (fileExists && overwriteExisting) {
+        ToastUtils.showToast("资源已覆盖保存在手机下/${file.path.split("/0/").last}");
+      } else {
+        ToastUtils.showToast("资源已保存在手机下/${file.path.split("/0/").last}");
+      }
+    }
+
+    return file.path;
+  } finally {
+    dio.close();
+  }
+}
+
 /// 保存多张图片到本地
 Future<List<String?>> saveMultipleImagesToLocal(
   List<String> netImageUrls, {

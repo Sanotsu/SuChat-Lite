@@ -63,17 +63,22 @@ class HttpRequest {
       CustomLogInterceptor(
         sensitiveKeys: ['url', 'content', 'images', 'image'],
         truncateLength: 50,
-        maxWidth: 100,
+        maxWidth: 150,
+        // 使用自定义拦截器的请求/响应(包含header和body)、错误日志
         requestEnabled: true,
-        responseEnabled: false, // 禁用自定义拦截器的响应日志，避免重复
-        errorEnabled: false, // 禁用自定义拦截器的错误日志，避免重复
+        responseEnabled: true,
+        errorEnabled: true,
       ),
       // 2. 添加 pretty_dio_logger，但禁用它的 requestBody
       PrettyDioLogger(
-        requestHeader: false, // 禁用，因为自定义拦截器已处理
-        requestBody: false, // 禁用，因为自定义拦截器已处理
-        responseHeader: true,
-        responseBody: true, // 响应体继续由它打印
+        // 因为使用了自定义拦截器的请求响应日志(包含header和body)，所以这里的禁用掉
+        enabled: false,
+
+        request: false,
+        requestHeader: false,
+        requestBody: false,
+        responseHeader: false,
+        responseBody: false,
         error: true,
         maxWidth: 150,
       ),

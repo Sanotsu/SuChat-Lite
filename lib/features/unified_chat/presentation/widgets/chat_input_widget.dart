@@ -14,6 +14,7 @@ import '../viewmodels/unified_chat_viewmodel.dart';
 import 'model_selector_dialog.dart';
 import 'chat_settings_dialog.dart';
 import 'image_generation_settings_dialog.dart';
+import 'speech_synthesis_settings_dialog.dart';
 import 'model_type_icon.dart';
 
 /// 聊天输入组件
@@ -539,19 +540,20 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       child: Row(
         children: [
           // 添加附件内容
-          InkWell(
-            onTap: () => setState(() => _isToolExpanded = !_isToolExpanded),
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              child: Icon(
-                _isToolExpanded
-                    ? Icons.remove_circle_outline
-                    : Icons.add_circle_outline,
-                size: 20,
+          if (viewModel.currentModel?.type != UnifiedModelType.textToSpeech)
+            InkWell(
+              onTap: () => setState(() => _isToolExpanded = !_isToolExpanded),
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                child: Icon(
+                  _isToolExpanded
+                      ? Icons.remove_circle_outline
+                      : Icons.add_circle_outline,
+                  size: 20,
+                ),
               ),
             ),
-          ),
 
           // 联网搜索开关(暂时只让对话模型显示联网按钮)
           if (viewModel.currentModel?.type == UnifiedModelType.cc)
@@ -665,8 +667,23 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     // 检查当前模型类型
     // 用户需要手动选择图片生成模型来使用图片生成功能
     if (viewModel.isImageGenerationModel) {
+      // 如果是阿里的图生图(图像编辑)，可能必须传入图片
+      if (viewModel.currentPlatform?.id == UnifiedPlatformId.aliyun.name &&
+          viewModel.currentModel?.type == UnifiedModelType.imageToImage) {
+        if (_selectedImages.isEmpty) {
+          ToastUtils.showError('请上传图片');
+          return;
+        }
+      }
+
       // 图片生成模型：输入内容作为提示词，选择的图片作为参考图
       await _handleImageGeneration(viewModel, text);
+      return;
+    }
+
+    // 语音合成模型：输入内容作为要合成的文本
+    if (viewModel.isSpeechSynthesisModel) {
+      await _handleSpeechSynthesis(viewModel, text);
       return;
     }
 
@@ -737,14 +754,50 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         images: images,
         settings: currentSettings,
       );
-
-      // 清空输入
-      // _textController.clear();
-      // _clearAllAttachments();
-      // _isToolExpanded = false;
     } catch (e) {
       ToastUtils.showError('图片生成失败: $e');
-      rethrow;
+    }
+  }
+
+  /// 处理语音合成
+  Future<void> _handleSpeechSynthesis(
+    UnifiedChatViewModel viewModel,
+    String text,
+  ) async {
+    if (text.isEmpty) {
+      ToastUtils.showError('请输入要合成的文本');
+      return;
+    }
+
+    try {
+      // 获取当前平台和模型
+      final platform = viewModel.currentPlatform;
+      final model = viewModel.currentModel;
+
+      if (platform == null || model == null) {
+        ToastUtils.showError('请先选择平台和模型');
+        return;
+      }
+
+      // 获取当前对话的语音合成设置
+      final conversation = viewModel.currentConversation;
+      final Map<String, dynamic> currentSettings =
+          conversation?.extraParams?['speechSynthesisParams'] ?? {};
+
+      // 先深拷贝一份输入框文本，在发送消息之前清空输入框
+      final String textToSynthesize = _textController.text.trim();
+
+      // 清空输入框(避免耗时太久输入框等未复原)
+      _textController.clear();
+      _isToolExpanded = false;
+
+      // 调用专门的语音合成方法
+      await viewModel.sendSpeechSynthesisMessage(
+        text: textToSynthesize,
+        settings: currentSettings,
+      );
+    } catch (e) {
+      ToastUtils.showError('语音合成失败: $e');
     }
   }
 
@@ -836,10 +889,15 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final isImageGenerationModel =
         currentModel?.type == UnifiedModelType.textToImage ||
         currentModel?.type == UnifiedModelType.imageToImage;
+    final isSpeechSynthesisModel =
+        currentModel?.type == UnifiedModelType.textToSpeech;
 
     if (isImageGenerationModel) {
       // 显示图片生成设置对话框
       _showImageGenerationSettings(viewModel);
+    } else if (isSpeechSynthesisModel) {
+      // 显示语音合成设置对话框
+      _showSpeechSynthesisSettings(viewModel);
     } else {
       // 显示常规聊天设置对话框
       _showChatSettings(viewModel);
@@ -893,6 +951,28 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         onSave: (settings) {
           // 保存时也使用同样的参数
           viewModel.updateConversationSettings({'imageGenParams': settings});
+        },
+      ),
+    );
+  }
+
+  void _showSpeechSynthesisSettings(UnifiedChatViewModel viewModel) {
+    final conversation = viewModel.currentConversation;
+    // 这里只取语音合成部分的参数
+    final Map<String, dynamic> currentSettings =
+        conversation?.extraParams?['speechSynthesisParams'] ?? {};
+
+    showDialog(
+      context: context,
+      builder: (context) => SpeechSynthesisSettingsDialog(
+        currentPlatform: viewModel.currentPlatform,
+        currentModel: viewModel.currentModel,
+        currentSettings: currentSettings,
+        onSave: (settings) {
+          // 保存时也使用同样的参数
+          viewModel.updateConversationSettings({
+            'speechSynthesisParams': settings,
+          });
         },
       ),
     );

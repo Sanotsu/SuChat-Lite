@@ -19,6 +19,8 @@ import '../../data/models/unified_platform_spec.dart';
 import '../../data/services/unified_chat_service.dart';
 import '../../data/services/image_generation_service.dart';
 import '../../data/models/image_generation_request.dart';
+import '../../data/services/speech_synthesis_service.dart';
+import '../../data/models/speech_synthesis_request.dart';
 import '../../data/services/unified_secure_storage.dart';
 import '../../data/services/web_search_tool_manager.dart';
 
@@ -67,6 +69,9 @@ class UnifiedChatViewModel extends ChangeNotifier {
   bool get isImageGenerationModel =>
       _currentModel?.type == UnifiedModelType.textToImage ||
       _currentModel?.type == UnifiedModelType.imageToImage;
+
+  bool get isSpeechSynthesisModel =>
+      _currentModel?.type == UnifiedModelType.textToSpeech;
 
   // 状态getters
   bool get isLoading => _isLoading;
@@ -417,6 +422,8 @@ class UnifiedChatViewModel extends ChangeNotifier {
         extraParams: {
           'enableThinking': settings['enableThinking'] as bool?,
           'imageGenParams': settings['imageGenParams'] as Map<String, dynamic>?,
+          'speechSynthesisParams':
+              settings['speechSynthesisParams'] as Map<String, dynamic>?,
         },
         updatedAt: DateTime.now(),
       );
@@ -972,7 +979,6 @@ class UnifiedChatViewModel extends ChangeNotifier {
       multimodalContent: multimodalContent,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
-      cost: 0,
       isStreaming: false,
       metadata: {'model': _currentModel, 'platform': _currentPlatform},
       // 这两个还有必要吗？
@@ -1005,7 +1011,6 @@ class UnifiedChatViewModel extends ChangeNotifier {
       contentType: UnifiedContentType.text,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
-      cost: 0,
       isStreaming: true,
       modelNameUsed: _currentModel!.modelName,
       platformIdUsed: _currentPlatform!.id,
@@ -1032,7 +1037,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
             : null,
         size: settings?['size'],
         quality: settings?['quality'],
-        n: double.tryParse(settings?['n'].toString() ?? '1')?.toInt(),
+        n: double.tryParse(settings?['n'].toString() ?? '1')?.toInt() ?? 1,
         seed: settings?['seed'],
         steps: settings?['steps'],
         guidanceScale: settings?['guidanceScale'],
@@ -1092,16 +1097,160 @@ class UnifiedChatViewModel extends ChangeNotifier {
       // 保存助手消息到数据库
       await _chatDao.saveMessage(updatedAssistantMessage);
 
-      // 更新对话的最后消息时间
-      final updatedConversation = _currentConversation!.copyWith(
-        updatedAt: DateTime.now(),
-      );
-      await _chatDao.updateConversation(updatedConversation);
-      _currentConversation = updatedConversation;
+      // 更新对话统计
+      await _updateConversationStats();
+      notifyListeners();
     } catch (e) {
       // 更新助手消息为错误状态
       final errorMessage = assistantMessage.copyWith(
         content: '图片生成失败: $e',
+        isStreaming: false,
+      );
+
+      final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
+      if (index != -1) {
+        _messages[index] = errorMessage;
+      }
+
+      // 保存错误消息到数据库
+      await _chatDao.saveMessage(errorMessage);
+    }
+
+    notifyListeners();
+  }
+
+  /// 发送语音合成消息
+  Future<void> sendSpeechSynthesisMessage({
+    required String text,
+    Map<String, dynamic>? settings,
+  }) async {
+    if (_currentConversation == null ||
+        _currentModel == null ||
+        _currentPlatform == null) {
+      return;
+    }
+
+    // 先保存对话（如果需要）
+    await _saveConversationIfNeeded(text.trim());
+
+    // 创建用户消息
+    final userMessage = UnifiedChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      conversationId: _currentConversation!.id,
+      role: UnifiedMessageRole.user,
+      content: text,
+      contentType: UnifiedContentType.text,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      isStreaming: false,
+      metadata: {'model': _currentModel, 'platform': _currentPlatform},
+      modelNameUsed: _currentModel!.modelName,
+      platformIdUsed: _currentPlatform!.id,
+    );
+
+    // 添加用户消息到列表
+    _messages.add(userMessage);
+    notifyListeners();
+
+    // 保存用户消息到数据库
+    await _chatDao.saveMessage(userMessage);
+
+    // 创建助手消息占位符
+    final assistantMessage = UnifiedChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      conversationId: _currentConversation!.id,
+      role: UnifiedMessageRole.assistant,
+      content: '正在合成语音...',
+      contentType: UnifiedContentType.text,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      isStreaming: true,
+      modelNameUsed: _currentModel!.modelName,
+      platformIdUsed: _currentPlatform!.id,
+      metadata: {'model': _currentModel, 'platform': _currentPlatform},
+    );
+
+    _messages.add(assistantMessage);
+    notifyListeners();
+
+    try {
+      // 创建语音合成请求
+      final request = SpeechSynthesisRequest(
+        model: _currentModel!.modelName,
+        input: text,
+        voice: settings?['voice'],
+        responseFormat: settings?['responseFormat'] ?? 'wav',
+        speed: double.tryParse(settings?['speed'].toString() ?? '1.0'),
+        volume: double.tryParse(settings?['volume'].toString() ?? '1.0'),
+
+        // 下面这几个暂时不处理了
+        // stream(默认为false，先不处理流式的)
+        // languageType encodeFormat watermark gain
+      );
+
+      // 调用语音合成服务
+      final speechService = SpeechSynthesisService();
+      final response = await speechService.synthesizeSpeech(
+        request: request,
+        platform: _currentPlatform!,
+        model: _currentModel!,
+      );
+
+      // 更新助手消息内容
+      // 注意，大模型API生成的图片都是网络图片，有效期是24小时。
+      // 所以需要先下载到本地，然后将本地的图片地址存入对话消息中，以避免失效后无法显示的问题
+      var url = response.audioUrl;
+      String? newUrl;
+
+      if (url != null) {
+        // 阿里百炼的是在线地址；硅基流动和智谱是二进制文件，已先保存到本地了
+        var localPath = (url.startsWith('https') || url.startsWith('http'))
+            ? await saveNetMediaToLocal(
+                url,
+                dlDir: await getUnifiedChatMediaDir(),
+                showSaveHint: false,
+              )
+            : url;
+
+        if (localPath != null) {
+          newUrl = localPath;
+        }
+      }
+
+      // 更新助手消息内容
+      final updatedAssistantMessage = assistantMessage.copyWith(
+        content: response.hasAudio ? '语音合成完成' : '语音合成失败',
+        contentType: response.hasAudio
+            ? UnifiedContentType.audio
+            : UnifiedContentType.text,
+        isStreaming: false,
+        metadata: {
+          // 这个参数在消息组件会展示
+          if (newUrl != null) 'audio': newUrl,
+          'audio_url': response.audioUrl,
+          'audio_base64': response.audioBase64,
+          'audio_format': response.format ?? 'mp3',
+          'duration': response.duration,
+          'synthesis_settings': settings,
+        },
+      );
+
+      // 更新消息列表
+      final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
+      if (index != -1) {
+        _messages[index] = updatedAssistantMessage;
+      }
+
+      // 保存助手消息到数据库
+      await _chatDao.saveMessage(updatedAssistantMessage);
+
+      // 更新对话统计
+      await _updateConversationStats();
+      notifyListeners();
+    } catch (e) {
+      // 更新助手消息为错误状态
+      final errorMessage = assistantMessage.copyWith(
+        content: '语音合成失败: $e',
         isStreaming: false,
       );
 

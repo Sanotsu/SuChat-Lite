@@ -205,6 +205,9 @@ class UnifiedChatDdl {
         // 2025-10-08 目前仅少数生图模型（qwen-image）支持同步任务，所以这里用轮询的异步任务前缀
         'image_generation_prefix':
             '/api/v1/services/aigc/text2image/image-synthesis',
+        // 2025-10-09 语言合成 qwen-tts和qwen3-tts 都是同步任务了(和文生图同步任务一样的前缀)
+        'text_to_speech_prefix':
+            '/api/v1/services/aigc/multimodal-generation/generation',
       },
       {
         'id': 'siliconCloud',
@@ -212,12 +215,7 @@ class UnifiedChatDdl {
         'host_url': 'https://api.siliconflow.cn',
         'api_prefix': '/v1/chat/completions',
         'image_generation_prefix': '/v1/images/generations',
-      },
-      {
-        'id': 'deepseek',
-        'display_name': 'DeepSeek',
-        'host_url': 'https://api.deepseek.com',
-        'api_prefix': '/v1/chat/completions',
+        'text_to_speech_prefix': '/v1/audio/speech',
       },
       {
         'id': 'zhipu',
@@ -225,6 +223,13 @@ class UnifiedChatDdl {
         'host_url': 'https://open.bigmodel.cn/api/paas',
         'api_prefix': '/v4/chat/completions',
         'image_generation_prefix': '/v4/images/generations',
+        'text_to_speech_prefix': '/v4/audio/speech',
+      },
+      {
+        'id': 'deepseek',
+        'display_name': 'DeepSeek',
+        'host_url': 'https://api.deepseek.com',
+        'api_prefix': '/v1/chat/completions',
       },
       {
         'id': 'infini',
@@ -254,7 +259,7 @@ class UnifiedChatDdl {
         'is_active': 0,
         'created_at': now,
         'updated_at': now,
-      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
     await batch.commit();
 
@@ -390,6 +395,75 @@ class UnifiedChatDdl {
         'supports_vision': 0,
         'supports_tool_calling': 0,
       },
+      // 阿里百炼语音合成模型
+      {
+        'id': 'qwen-tts',
+        'platform_id': 'aliyun',
+        'model_name': 'qwen-tts',
+        'display_name': 'qwen-tts',
+        'model_type': 'textToSpeech',
+        'supports_thinking': 0,
+        'supports_vision': 0,
+        'supports_tool_calling': 0,
+        'description': '中文、英文,每1秒的音频对应 50个 Token',
+      },
+      {
+        'id': 'qwen-tts-latest',
+        'platform_id': 'aliyun',
+        'model_name': 'qwen-tts-latest',
+        'display_name': 'qwen-tts-latest',
+        'model_type': 'textToSpeech',
+        'supports_thinking': 0,
+        'supports_vision': 0,
+        'supports_tool_calling': 0,
+        'description': '中文、英文,每1秒的音频对应 50个 Token',
+      },
+      {
+        'id': 'qwen-tts-2025-05-22',
+        'platform_id': 'aliyun',
+        'model_name': 'qwen-tts-2025-05-22',
+        'display_name': 'qwen-tts-2025-05-22',
+        'model_type': 'textToSpeech',
+        'supports_thinking': 0,
+        'supports_vision': 0,
+        'supports_tool_calling': 0,
+        'description': '中文、英文,每1秒的音频对应 50个 Token',
+      },
+      {
+        'id': 'qwen-tts-2025-04-10',
+        'platform_id': 'aliyun',
+        'model_name': 'qwen-tts-2025-04-10',
+        'display_name': 'qwen-tts-2025-04-10',
+        'model_type': 'textToSpeech',
+        'supports_thinking': 0,
+        'supports_vision': 0,
+        'supports_tool_calling': 0,
+        'description': '中文、英文,每1秒的音频对应 50个 Token',
+      },
+      {
+        'id': 'qwen3-tts-flash',
+        'platform_id': 'aliyun',
+        'model_name': 'qwen3-tts-flash',
+        'display_name': 'qwen3-tts-flash',
+        'model_type': 'textToSpeech',
+        'supports_thinking': 0,
+        'supports_vision': 0,
+        'supports_tool_calling': 0,
+        'description':
+            '中文（普通话、北京、上海、四川、南京、陕西、闽南、天津、粤语）、英文、西班牙语、俄语、意大利语、法语、韩语、日语、德语、葡萄牙语;0.8元/万字符,一个汉字 = 2个字符',
+      },
+      {
+        'id': 'qwen3-tts-flash-2025-09-18',
+        'platform_id': 'aliyun',
+        'model_name': 'qwen3-tts-flash-2025-09-18',
+        'display_name': 'qwen3-tts-flash-2025-09-18',
+        'model_type': 'textToSpeech',
+        'supports_thinking': 0,
+        'supports_vision': 0,
+        'supports_tool_calling': 0,
+        'description':
+            '中文（普通话、北京、上海、四川、南京、陕西、闽南、天津、粤语）、英文、西班牙语、俄语、意大利语、法语、韩语、日语、德语、葡萄牙语;0.8元/万字符,一个汉字 = 2个字符',
+      },
     ];
 
     // siliconflow 模型
@@ -448,31 +522,28 @@ class UnifiedChatDdl {
         'supports_vision': 0,
         'supports_tool_calling': 0,
       },
-    ];
-
-    // DeepSeek模型
-    final deepseekModels = [
+      // 硅基流动语音合成模型
       {
-        'id': 'deepseek-chat',
-        'platform_id': 'deepseek',
-        'model_name': 'deepseek-chat',
-        'display_name': 'DeepSeek Chat',
-        'model_type': 'cc',
+        'id': 'fnlp-moss-ttsd-v0.5',
+        'platform_id': 'siliconCloud',
+        'model_name': 'fnlp/MOSS-TTSD-v0.5',
+        'display_name': 'fnlp/MOSS-TTSD-v0.5',
+        'model_type': 'textToSpeech',
         'supports_thinking': 0,
         'supports_vision': 0,
-        'supports_tool_calling': 1,
-        'description': 'DeepSeek的对话模型',
+        'supports_tool_calling': 0,
+        'description': '¥50/ M UTF-8 bytes',
       },
       {
-        'id': 'deepseek-reasoner',
-        'platform_id': 'deepseek',
-        'model_name': 'deepseek-reasoner',
-        'display_name': 'DeepSeek Reasoner',
-        'model_type': 'cc',
-        'supports_thinking': 1,
+        'id': 'funaudio-llm-cosyvoice2-0.5b',
+        'platform_id': 'siliconCloud',
+        'model_name': 'FunAudioLLM/CosyVoice2-0.5B',
+        'display_name': 'FunAudioLLM/CosyVoice2-0.5B',
+        'model_type': 'textToSpeech',
+        'supports_thinking': 0,
         'supports_vision': 0,
-        'supports_tool_calling': 1,
-        'description': 'DeepSeek的推理模型',
+        'supports_tool_calling': 0,
+        'description': '¥50/ M UTF-8 bytes',
       },
     ];
 
@@ -562,6 +633,44 @@ class UnifiedChatDdl {
         'supports_thinking': 0,
         'supports_vision': 0,
         'supports_tool_calling': 0,
+      },
+      // 智谱语音合成模型
+      {
+        'id': 'cogtts',
+        'platform_id': 'zhipu',
+        'model_name': 'cogtts',
+        'display_name': 'CogTTS',
+        'model_type': 'textToSpeech',
+        'supports_thinking': 0,
+        'supports_vision': 0,
+        'supports_tool_calling': 0,
+        'description': '¥4/万字符',
+      },
+    ];
+
+    // DeepSeek模型
+    final deepseekModels = [
+      {
+        'id': 'deepseek-chat',
+        'platform_id': 'deepseek',
+        'model_name': 'deepseek-chat',
+        'display_name': 'DeepSeek Chat',
+        'model_type': 'cc',
+        'supports_thinking': 0,
+        'supports_vision': 0,
+        'supports_tool_calling': 1,
+        'description': 'DeepSeek的对话模型',
+      },
+      {
+        'id': 'deepseek-reasoner',
+        'platform_id': 'deepseek',
+        'model_name': 'deepseek-reasoner',
+        'display_name': 'DeepSeek Reasoner',
+        'model_type': 'cc',
+        'supports_thinking': 1,
+        'supports_vision': 0,
+        'supports_tool_calling': 1,
+        'description': 'DeepSeek的推理模型',
       },
     ];
 

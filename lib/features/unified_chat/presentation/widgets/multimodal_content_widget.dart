@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../../../shared/widgets/audio_player_widget.dart';
 import '../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../../../shared/widgets/video_player_widget.dart';
@@ -156,20 +157,16 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
 
   Widget _buildAudioItem(UnifiedContentItem item) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Theme.of(context).disabledColor),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.audiotrack,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
+          Icon(Icons.audiotrack),
+          const SizedBox(width: 4),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -194,16 +191,8 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
               ],
             ),
           ),
-          IconButton(
-            onPressed: () {
-              // TODO: 实现音频播放功能
-              ToastUtils.showInfo('音频播放功能待实现');
-            },
-            icon: Icon(
-              Icons.play_arrow,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
+          if (item.audioUrl != null)
+            AudioPlayerWidget(audioUrl: item.audioUrl!, onlyIcon: true),
         ],
       ),
     );
@@ -478,38 +467,18 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
   Widget _buildMetadataAudio(String audioPath) {
     final fileName = audioPath.split('/').last;
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Theme.of(context).disabledColor),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.audiotrack,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              fileName,
-              style: TextStyle(
-                fontWeight: FontWeight.normal,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          IconButton(
-            onPressed: () {
-              ToastUtils.showInfo('音频播放功能待实现');
-            },
-            icon: Icon(
-              Icons.play_arrow,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
+          const SizedBox(width: 4),
+          Icon(Icons.audiotrack),
+          const SizedBox(width: 4),
+          Expanded(child: Text(fileName, style: TextStyle(fontSize: 12))),
+          AudioPlayerWidget(audioUrl: audioPath, onlyIcon: true),
         ],
       ),
     );
