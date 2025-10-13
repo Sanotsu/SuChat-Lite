@@ -21,6 +21,8 @@ import '../../data/services/image_generation_service.dart';
 import '../../data/models/image_generation_request.dart';
 import '../../data/services/speech_synthesis_service.dart';
 import '../../data/models/speech_synthesis_request.dart';
+import '../../data/services/speech_recognition_service.dart';
+import '../../data/models/speech_recognition_request.dart';
 import '../../data/services/unified_secure_storage.dart';
 import '../../data/services/web_search_tool_manager.dart';
 
@@ -72,6 +74,9 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
   bool get isSpeechSynthesisModel =>
       _currentModel?.type == UnifiedModelType.textToSpeech;
+
+  bool get isSpeechRecognitionModel =>
+      _currentModel?.type == UnifiedModelType.speechToText;
 
   // 状态getters
   bool get isLoading => _isLoading;
@@ -424,6 +429,8 @@ class UnifiedChatViewModel extends ChangeNotifier {
           'imageGenParams': settings['imageGenParams'] as Map<String, dynamic>?,
           'speechSynthesisParams':
               settings['speechSynthesisParams'] as Map<String, dynamic>?,
+          'speechRecognitionParams':
+              settings['speechRecognitionParams'] as Map<String, dynamic>?,
         },
         updatedAt: DateTime.now(),
       );
@@ -1251,6 +1258,140 @@ class UnifiedChatViewModel extends ChangeNotifier {
       // 更新助手消息为错误状态
       final errorMessage = assistantMessage.copyWith(
         content: '语音合成失败: $e',
+        isStreaming: false,
+      );
+
+      final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
+      if (index != -1) {
+        _messages[index] = errorMessage;
+      }
+
+      // 保存错误消息到数据库
+      await _chatDao.saveMessage(errorMessage);
+    }
+
+    notifyListeners();
+  }
+
+  /// 发送语音识别消息
+  Future<void> sendSpeechRecognitionMessage({
+    required String audioPath,
+    Map<String, dynamic>? settings,
+  }) async {
+    if (_currentConversation == null ||
+        _currentModel == null ||
+        _currentPlatform == null) {
+      return;
+    }
+
+    // 先保存对话（如果需要）
+    await _saveConversationIfNeeded('语音识别');
+
+    // 创建用户消息（显示音频文件）
+    final userMessage = UnifiedChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      conversationId: _currentConversation!.id,
+      role: UnifiedMessageRole.user,
+      // content: '语音消息',
+      contentType: UnifiedContentType.audio,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      isStreaming: false,
+      metadata: {
+        'audio': audioPath,
+        'model': _currentModel,
+        'platform': _currentPlatform,
+      },
+      modelNameUsed: _currentModel!.modelName,
+      platformIdUsed: _currentPlatform!.id,
+    );
+
+    // 添加用户消息到列表
+    _messages.add(userMessage);
+    notifyListeners();
+
+    // 保存用户消息到数据库
+    await _chatDao.saveMessage(userMessage);
+
+    // 创建助手消息占位符
+    final assistantMessage = UnifiedChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      conversationId: _currentConversation!.id,
+      role: UnifiedMessageRole.assistant,
+      content: '正在识别语音...',
+      contentType: UnifiedContentType.text,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      isStreaming: true,
+      modelNameUsed: _currentModel!.modelName,
+      platformIdUsed: _currentPlatform!.id,
+      metadata: {'model': _currentModel, 'platform': _currentPlatform},
+    );
+
+    _messages.add(assistantMessage);
+    notifyListeners();
+
+    try {
+      // 获取API Key
+      final apiKey = await UnifiedSecureStorage.getApiKey(_currentPlatform!.id);
+      if (apiKey == null) {
+        throw Exception('未配置API Key');
+      }
+
+      // 创建语音识别请求(暂时只启用必要的)
+      final request = SpeechRecognitionRequest(
+        model: _currentModel!.modelName,
+        audioPath: audioPath,
+        language: settings?['language'],
+        temperature: double.tryParse(
+          settings?['temperature']?.toString() ?? '0.95',
+        ),
+        stream: settings?['stream'] ?? false,
+        enableLid: settings?['enableLid'],
+        enableItn: settings?['enableItn'],
+        context: settings?['context'],
+        requestId: settings?['requestId'],
+        userId: settings?['userId'],
+      );
+
+      // 调用语音识别服务
+      final response = await SpeechRecognitionService.recognizeSpeech(
+        platform: _currentPlatform!,
+        request: request,
+        apiKey: apiKey,
+      );
+
+      // 更新助手消息内容
+      final updatedAssistantMessage = assistantMessage.copyWith(
+        content: response.text.isNotEmpty ? response.text : '语音识别失败',
+        contentType: UnifiedContentType.text,
+        isStreaming: false,
+        metadata: {
+          'recognition_result': response.text,
+          'language': response.language,
+          'segments': response.segments?.map((s) => s.toJson()).toList(),
+          'recognition_settings': settings,
+          'request_id': response.requestId,
+          'task_id': response.taskId,
+        },
+      );
+
+      // 更新消息列表
+      final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
+      if (index != -1) {
+        _messages[index] = updatedAssistantMessage;
+      }
+
+      // 保存助手消息到数据库
+      await _chatDao.saveMessage(updatedAssistantMessage);
+
+      // 更新对话统计
+      await _updateConversationStats();
+      notifyListeners();
+    } catch (e) {
+      // 更新助手消息为错误状态
+      final errorMessage = assistantMessage.copyWith(
+        content: '语音识别失败: $e',
         isStreaming: false,
       );
 

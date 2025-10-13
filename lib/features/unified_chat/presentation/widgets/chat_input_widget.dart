@@ -15,6 +15,7 @@ import 'model_selector_dialog.dart';
 import 'chat_settings_dialog.dart';
 import 'image_generation_settings_dialog.dart';
 import 'speech_synthesis_settings_dialog.dart';
+import 'speech_recognition_settings_dialog.dart';
 import 'model_type_icon.dart';
 
 /// 聊天输入组件
@@ -401,7 +402,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   onPressed: _pickImages,
                 ),
 
-                // TODO 视频、文件、语言等资源的处理还没有实现
                 const SizedBox(width: 16),
                 _buildToolButton(
                   icon: Icons.videocam_outlined,
@@ -418,11 +418,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   onPressed: _pickImages,
                 ),
 
-              // _buildToolButton(
-              //   icon: Icons.attach_file_outlined,
-              //   label: '文件',
-              //   onPressed: _pickFiles,
-              // ),
+              _buildToolButton(
+                icon: Icons.attach_file_outlined,
+                label: '文件',
+                onPressed: () => _pickFiles(viewModel),
+              ),
               // const SizedBox(width: 16),
               // _buildToolButton(
               //   icon: Icons.audio_file_outlined,
@@ -687,6 +687,12 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       return;
     }
 
+    // 语音识别模型：需要选择音频文件进行识别
+    if (viewModel.isSpeechRecognitionModel) {
+      await _handleSpeechRecognition(viewModel);
+      return;
+    }
+
     // 对于非图片生成模型，不再自动识别图片生成意图
     if (_hasAttachments()) {
       // 发送多模态消息
@@ -801,6 +807,35 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     }
   }
 
+  /// 处理语音识别
+  Future<void> _handleSpeechRecognition(UnifiedChatViewModel viewModel) async {
+    try {
+      // 获取当前对话的语音识别设置
+      final conversation = viewModel.currentConversation;
+      final Map<String, dynamic> currentSettings =
+          conversation?.extraParams?['speechRecognitionParams'] ?? {};
+
+      // 先深拷贝一份输入框文本和附件文件，在发送消息之前清空输入框和附件,避免发送按钮等在发送后依旧可见
+      //  录音文件识别不需要输入框文本，只需要选择的单个文件
+      final List<File> files = List.from(_selectedFiles);
+
+      // 清空输入框和附件(避免耗时太久输入框等未复原)
+      _textController.clear();
+      _clearAllAttachments();
+      _isToolExpanded = false;
+
+      if (files.isNotEmpty) {
+        // 调用专门的语音识别方法
+        await viewModel.sendSpeechRecognitionMessage(
+          audioPath: files.first.path,
+          settings: currentSettings,
+        );
+      }
+    } catch (e) {
+      ToastUtils.showError('语音识别失败: $e');
+    }
+  }
+
   void _pickImages() async {
     final images = await _imagePicker.pickMultiImage();
     if (images.isNotEmpty) {
@@ -810,10 +845,24 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     }
   }
 
-  void _pickFiles() async {
+  void _pickFiles(UnifiedChatViewModel viewModel) async {
+    // 获取当前平台和模型
+    final platform = viewModel.currentPlatform;
+    final model = viewModel.currentModel;
+
+    if (platform == null || model == null) {
+      ToastUtils.showError('请先选择平台和模型');
+      return;
+    }
+
     final result = await FilePicker.platform.pickFiles(
-      allowMultiple: true,
-      type: FileType.any,
+      allowMultiple: viewModel.isSpeechRecognitionModel ? false : true,
+      // type: viewModel.isSpeechRecognitionModel ? FileType.audio : FileType.any,
+      type: FileType.custom,
+      // 如果指定自定义类型：智谱只支持wav、mp3格式的音频；阿里百炼多一点；硅基流动没有明确限制
+      allowedExtensions: viewModel.isSpeechRecognitionModel
+          ? ['wav', 'mp3']
+          : null,
     );
     if (result != null) {
       setState(() {
@@ -891,6 +940,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         currentModel?.type == UnifiedModelType.imageToImage;
     final isSpeechSynthesisModel =
         currentModel?.type == UnifiedModelType.textToSpeech;
+    final isSpeechRecognitionModel =
+        currentModel?.type == UnifiedModelType.speechToText;
 
     if (isImageGenerationModel) {
       // 显示图片生成设置对话框
@@ -898,6 +949,15 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     } else if (isSpeechSynthesisModel) {
       // 显示语音合成设置对话框
       _showSpeechSynthesisSettings(viewModel);
+    } else if (isSpeechRecognitionModel) {
+      // 显示语音识别设置对话框
+      // 2025-10-13 硅基流动暂时没有语音识别的高级设置
+      if (viewModel.currentPlatform?.id ==
+          UnifiedPlatformId.siliconCloud.name) {
+        ToastUtils.showInfo('硅基流动暂时没有语音识别的高级设置');
+      } else {
+        _showSpeechRecognitionSettings(viewModel);
+      }
     } else {
       // 显示常规聊天设置对话框
       _showChatSettings(viewModel);
@@ -972,6 +1032,28 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           // 保存时也使用同样的参数
           viewModel.updateConversationSettings({
             'speechSynthesisParams': settings,
+          });
+        },
+      ),
+    );
+  }
+
+  void _showSpeechRecognitionSettings(UnifiedChatViewModel viewModel) {
+    final conversation = viewModel.currentConversation;
+    // 这里只取语音识别部分的参数
+    final Map<String, dynamic> currentSettings =
+        conversation?.extraParams?['speechRecognitionParams'] ?? {};
+
+    showDialog(
+      context: context,
+      builder: (context) => SpeechRecognitionSettingsDialog(
+        currentPlatform: viewModel.currentPlatform,
+        currentModel: viewModel.currentModel,
+        currentSettings: currentSettings,
+        onSave: (settings) {
+          // 保存时也使用同样的参数
+          viewModel.updateConversationSettings({
+            'speechRecognitionParams': settings,
           });
         },
       ),

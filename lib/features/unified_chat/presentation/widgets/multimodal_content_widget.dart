@@ -469,7 +469,7 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Theme.of(context).disabledColor),
+        // border: Border.all(color: widget.textStyle?.color ?? Colors.black),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -477,7 +477,12 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
           const SizedBox(width: 4),
           Icon(Icons.audiotrack),
           const SizedBox(width: 4),
-          Expanded(child: Text(fileName, style: TextStyle(fontSize: 12))),
+          Expanded(
+            child: Text(
+              fileName,
+              style: widget.textStyle?.copyWith(fontSize: 12),
+            ),
+          ),
           AudioPlayerWidget(audioUrl: audioPath, onlyIcon: true),
         ],
       ),

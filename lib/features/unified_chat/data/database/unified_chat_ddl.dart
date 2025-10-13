@@ -208,6 +208,8 @@ class UnifiedChatDdl {
         // 2025-10-09 语言合成 qwen-tts和qwen3-tts 都是同步任务了(和文生图同步任务一样的前缀)
         'text_to_speech_prefix':
             '/api/v1/services/aigc/multimodal-generation/generation',
+        'speech_to_text_prefix':
+            '/api/v1/services/aigc/multimodal-generation/generation',
       },
       {
         'id': 'siliconCloud',
@@ -216,6 +218,7 @@ class UnifiedChatDdl {
         'api_prefix': '/v1/chat/completions',
         'image_generation_prefix': '/v1/images/generations',
         'text_to_speech_prefix': '/v1/audio/speech',
+        'speech_to_text_prefix': '/v1/audio/transcriptions',
       },
       {
         'id': 'zhipu',
@@ -224,6 +227,7 @@ class UnifiedChatDdl {
         'api_prefix': '/v4/chat/completions',
         'image_generation_prefix': '/v4/images/generations',
         'text_to_speech_prefix': '/v4/audio/speech',
+        'speech_to_text_prefix': '/v4/audio/transcriptions',
       },
       {
         'id': 'deepseek',
@@ -461,8 +465,30 @@ class UnifiedChatDdl {
         'supports_thinking': 0,
         'supports_vision': 0,
         'supports_tool_calling': 0,
-        'description':
-            '中文（普通话、北京、上海、四川、南京、陕西、闽南、天津、粤语）、英文、西班牙语、俄语、意大利语、法语、韩语、日语、德语、葡萄牙语;0.8元/万字符,一个汉字 = 2个字符',
+        'description': '阿里百炼语音合成模型',
+      },
+      // 阿里百炼语音识别模型
+      {
+        'id': 'qwen3-asr-flash',
+        'platform_id': 'aliyun',
+        'model_name': 'qwen3-asr-flash',
+        'display_name': 'Qwen3-ASR-Flash',
+        'model_type': 'speechToText',
+        'supports_thinking': 0,
+        'supports_vision': 0,
+        'supports_tool_calling': 0,
+        'description': '录音文件识别-通义千问;0.00022元/秒',
+      },
+      {
+        'id': 'qwen3-asr-flash-2025-09-08',
+        'platform_id': 'aliyun',
+        'model_name': 'qwen3-asr-flash-2025-09-08',
+        'display_name': 'Qwen3-ASR-Flash-2025-09-08',
+        'model_type': 'speechToText',
+        'supports_thinking': 0,
+        'supports_vision': 0,
+        'supports_tool_calling': 0,
+        'description': '录音文件识别-通义千问;0.00022元/秒',
       },
     ];
 
@@ -543,7 +569,28 @@ class UnifiedChatDdl {
         'supports_thinking': 0,
         'supports_vision': 0,
         'supports_tool_calling': 0,
-        'description': '¥50/ M UTF-8 bytes',
+        'description': '硅基流动语音合成模型',
+      },
+      // 硅基流动语音识别模型
+      {
+        'id': 'funaudio-llm-sensevoicesmall',
+        'platform_id': 'siliconCloud',
+        'model_name': 'FunAudioLLM/SenseVoiceSmall',
+        'display_name': 'FunAudioLLM/SenseVoiceSmall',
+        'model_type': 'speechToText',
+        'supports_thinking': 0,
+        'supports_vision': 0,
+        'supports_tool_calling': 0,
+      },
+      {
+        'id': 'teleai-telespeechasr',
+        'platform_id': 'siliconCloud',
+        'model_name': 'TeleAI/TeleSpeechASR',
+        'display_name': 'TeleAI/TeleSpeechASR',
+        'model_type': 'speechToText',
+        'supports_thinking': 0,
+        'supports_vision': 0,
+        'supports_tool_calling': 0,
       },
     ];
 
@@ -645,6 +692,18 @@ class UnifiedChatDdl {
         'supports_vision': 0,
         'supports_tool_calling': 0,
         'description': '¥4/万字符',
+      },
+      // 智谱语音识别模型
+      {
+        'id': 'glm-asr',
+        'platform_id': 'zhipu',
+        'model_name': 'glm-asr',
+        'display_name': 'GLM-ASR',
+        'model_type': 'speechToText',
+        'supports_thinking': 0,
+        'supports_vision': 0,
+        'supports_tool_calling': 0,
+        'description': '0.06 元/分钟',
       },
     ];
 
