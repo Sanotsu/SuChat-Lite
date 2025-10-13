@@ -24,6 +24,13 @@ class ImageGenerationRequest {
   final bool? watermark;
   final String? userId;
 
+  /// 火山方舟的 doubao-seedream-4.0 支持
+  // 是否关闭组图功能 auto(自动判断) disabled(默认)
+  final String? sequentialImageGeneration;
+  final dynamic sequentialImageGenerationOptions;
+  // 返回图片格式:url(默认)、b64_json
+  final String? responseFormat;
+
   const ImageGenerationRequest({
     required this.model,
     required this.prompt,
@@ -40,6 +47,9 @@ class ImageGenerationRequest {
     this.maskImage,
     this.watermark = false,
     this.userId,
+    this.sequentialImageGeneration,
+    this.sequentialImageGenerationOptions,
+    this.responseFormat,
   });
 
   factory ImageGenerationRequest.fromJson(Map<String, dynamic> json) =>
@@ -232,6 +242,35 @@ class ImageGenerationRequest {
 
     if (userId != null) {
       data['user_id'] = userId;
+    }
+
+    return data;
+  }
+
+  /// 转换为火山方舟API格式(组图的不开启)
+  Map<String, dynamic> toVolcengineFormat() {
+    final Map<String, dynamic> data = {'model': model, 'prompt': prompt};
+
+    if (image != null) {
+      data['image'] = convertToBase64(image!);
+    }
+
+    if (size != null) {
+      data['size'] = size;
+    }
+
+    // doubao-seedream-3.0-t2i 默认值 2.5doubao-seededit-3.0-i2i 默认值 5.5doubao-seedream-4.0 不支持
+    if (guidanceScale != null) {
+      data['guidance_scale'] = guidanceScale;
+    }
+
+    if (watermark != null) {
+      data['watermark'] = watermark;
+    }
+
+    // 默认就是24小时有效的url，不需要改变
+    if (responseFormat != null) {
+      data['response_format'] = responseFormat;
     }
 
     return data;

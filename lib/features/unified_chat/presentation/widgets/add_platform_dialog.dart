@@ -94,7 +94,7 @@ class _AddPlatformDialogState extends State<AddPlatformDialog> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          '自定义平台需要兼容OpenAI API格式',
+                          '自定义平台需要兼容OpenAI API格式\n且只支持对话(ChatCompletions)模型',
                           style: TextStyle(
                             color: Colors.blue.shade700,
                             fontSize: 12,

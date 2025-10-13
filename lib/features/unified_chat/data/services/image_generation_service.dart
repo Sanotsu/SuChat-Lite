@@ -41,6 +41,9 @@ class ImageGenerationService {
       case 'zhipu':
         requestBody = request.toZhipuFormat();
         break;
+      case 'volcengine':
+        requestBody = request.toVolcengineFormat();
+        break;
       default:
         requestBody = request.toSiliconCloudFormat();
     }
@@ -83,6 +86,8 @@ class ImageGenerationService {
           return ImageGenerationResponse.fromSiliconCloudResponse(responseData);
         case 'zhipu':
           return ImageGenerationResponse.fromZhipuResponse(responseData);
+        case 'volcengine':
+          return ImageGenerationResponse.fromVolcengineResponse(responseData);
         default:
           return ImageGenerationResponse.fromSiliconCloudResponse(responseData);
       }

@@ -99,8 +99,11 @@ class _ImageGenerationSettingsDialogState
                 // 质量选择
                 if (widget.currentPlatform?.id == UnifiedPlatformId.zhipu.name)
                   _buildQualitySelector(),
-                // 智谱的没有负面提示词栏位
-                if (widget.currentPlatform?.id != UnifiedPlatformId.zhipu.name)
+                // 智谱、火山方舟的没有负面提示词栏位
+                if (widget.currentPlatform?.id ==
+                        UnifiedPlatformId.aliyun.name ||
+                    widget.currentPlatform?.id ==
+                        UnifiedPlatformId.siliconCloud.name)
                   _buildNegativePromptField(),
                 // 硅基流动的没有水印栏位
                 if (widget.currentPlatform?.id !=
@@ -360,6 +363,29 @@ class _ImageGenerationSettingsDialogState
           '1440x720',
           '720x1440',
         ];
+      case 'volcengine':
+        // doubao-seedream-4.0 系列
+        if (modelName?.startsWith('doubao-seedream-4-0') ?? false) {
+          return ['1K', '2K', '4K'];
+        }
+        // doubao-seedream-3.0-t2i 系列
+        if (modelName?.startsWith('doubao-seedream-3-0-t2i') ?? false) {
+          return [
+            '1024x1024',
+            '1152x864',
+            '864x1152',
+            '1280x720',
+            '720x1280',
+            '1248x832',
+            '832x1248',
+            '1512x648',
+          ];
+        }
+        if (modelName?.startsWith('doubao-seededit-3-0-i2i') ?? false) {
+          return ['adaptive'];
+        }
+        return [];
+
       default:
         return ['1024x1024'];
     }

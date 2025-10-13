@@ -19,6 +19,7 @@ ImageGenerationResponse _$ImageGenerationResponseFromJson(
       ?.map((e) => ContentFilter.fromJson(e as Map<String, dynamic>))
       .toList(),
   requestId: json['requestId'] as String?,
+  metadata: json['metadata'] as Map<String, dynamic>?,
 );
 
 Map<String, dynamic> _$ImageGenerationResponseToJson(
@@ -30,6 +31,7 @@ Map<String, dynamic> _$ImageGenerationResponseToJson(
   'seed': instance.seed,
   'contentFilter': instance.contentFilter?.map((e) => e.toJson()).toList(),
   'requestId': instance.requestId,
+  'metadata': instance.metadata,
 };
 
 GeneratedImage _$GeneratedImageFromJson(Map<String, dynamic> json) =>

@@ -1,0 +1,43 @@
+// 无问芯穹模型
+final infiniModels = [
+  {
+    'id': 'deepseek-v3.1',
+    'platform_id': 'infini',
+    'model_name': 'deepseek-v3.1',
+    'display_name': 'DeepSeek V3.1',
+    'model_type': 'cc',
+    'supports_thinking': 1,
+    'supports_vision': 0,
+    'supports_tool_calling': 1,
+  },
+  {
+    'id': 'kimi-k2-instruct',
+    'platform_id': 'infini',
+    'model_name': 'kimi-k2-instruct',
+    'display_name': 'Kimi K2 Instruct',
+    'model_type': 'cc',
+    'supports_thinking': 0,
+    'supports_vision': 0,
+    'supports_tool_calling': 1,
+  },
+  {
+    'id': 'glm-4.5',
+    'platform_id': 'infini',
+    'model_name': 'glm-4.5',
+    'display_name': 'GLM-4.5',
+    'model_type': 'cc',
+    'supports_thinking': 1,
+    'supports_vision': 0,
+    'supports_tool_calling': 1,
+  },
+  {
+    'id': 'glm-4.5v',
+    'platform_id': 'infini',
+    'model_name': 'glm-4.5v',
+    'display_name': 'GLM-4.5V',
+    'model_type': 'cc',
+    'supports_thinking': 1,
+    'supports_vision': 1,
+    'supports_tool_calling': 0,
+  },
+];

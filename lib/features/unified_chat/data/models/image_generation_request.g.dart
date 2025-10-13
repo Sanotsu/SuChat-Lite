@@ -24,6 +24,9 @@ ImageGenerationRequest _$ImageGenerationRequestFromJson(
   maskImage: json['maskImage'] as String?,
   watermark: json['watermark'] as bool? ?? false,
   userId: json['userId'] as String?,
+  sequentialImageGeneration: json['sequentialImageGeneration'] as String?,
+  sequentialImageGenerationOptions: json['sequentialImageGenerationOptions'],
+  responseFormat: json['responseFormat'] as String?,
 );
 
 Map<String, dynamic> _$ImageGenerationRequestToJson(
@@ -44,4 +47,7 @@ Map<String, dynamic> _$ImageGenerationRequestToJson(
   'maskImage': instance.maskImage,
   'watermark': instance.watermark,
   'userId': instance.userId,
+  'sequentialImageGeneration': instance.sequentialImageGeneration,
+  'sequentialImageGenerationOptions': instance.sequentialImageGenerationOptions,
+  'responseFormat': instance.responseFormat,
 };

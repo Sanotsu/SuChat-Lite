@@ -3,19 +3,19 @@ import 'package:flutter/material.dart';
 import '../../../../shared/widgets/image_preview_helper.dart';
 import '../../data/models/unified_platform_spec.dart';
 
-Widget buildPlatformIcon(UnifiedPlatformSpec platform) {
+Widget buildPlatformIcon(UnifiedPlatformSpec platform, {double size = 24}) {
   final iconPath = _getPlatformIcon(platform.id);
 
   return ClipRRect(
     borderRadius: BorderRadius.circular(4),
     child: SizedBox(
-      width: 24,
-      height: 24,
+      width: size,
+      height: size,
       child: iconPath.isNotEmpty
           ? buildNetworkOrFileImage(iconPath)
           : CircleAvatar(
               backgroundColor: Colors.grey,
-              radius: 12,
+              radius: size / 2,
               child: Text(
                 platform.displayName.isNotEmpty == true
                     ? platform.displayName[0].toUpperCase()

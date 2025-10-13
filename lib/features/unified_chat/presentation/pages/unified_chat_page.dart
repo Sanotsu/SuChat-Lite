@@ -8,6 +8,7 @@ import '../widgets/chat_input_widget.dart';
 import '../widgets/chat_history_drawer.dart';
 import '../widgets/chat_app_bar.dart';
 import '../widgets/partner_horizontal_list.dart';
+import 'platform_list_page.dart';
 
 /// 统一AI聊天主页面
 class UnifiedChatPage extends StatefulWidget {
@@ -84,6 +85,48 @@ class _UnifiedChatPageState extends State<UnifiedChatPage> {
                       ElevatedButton(
                         onPressed: () => _initializeChat(),
                         child: const Text('重试'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              if (viewModel.currentModel == null) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'SuChat',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        '选择并配置AI大模型平台和模型',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const PlatformListPage(),
+                            ),
+                          ).then((value) async {
+                            // print("从平台列表返回刷新可用平台和模型");
+                            viewModel.refreshPlatformsAndModels();
+
+                            await viewModel.initialize();
+                          });
+                        },
+                        child: const Text('使用自己的API Key'),
                       ),
                     ],
                   ),

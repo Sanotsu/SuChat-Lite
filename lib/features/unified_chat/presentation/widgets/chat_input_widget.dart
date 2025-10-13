@@ -486,7 +486,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            buildModelTypeIconWithTooltip(viewModel.currentModel!, size: 16),
+            if (viewModel.currentModel != null)
+              buildModelTypeIconWithTooltip(viewModel.currentModel!, size: 16),
             const SizedBox(width: 4),
             Expanded(
               child: Text(
@@ -505,22 +506,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   }
 
   void _showModelSelector(UnifiedChatViewModel viewModel) {
-    // showModalBottomSheet(
-    //   context: context,
-    //   isScrollControlled: true,
-    //   builder: (context) => SizedBox(
-    //     height: MediaQuery.of(context).size.height * 0.8,
-    //     child: ModelSelectorBottomSheet(
-    //       currentModel: viewModel.currentModel,
-    //       onModelSelected: (model) {
-    //         viewModel.switchModel(model);
-    //         // 切换模型后，新建对话
-    //         viewModel.createNewConversation();
-    //       },
-    //     ),
-    //   ),
-    // );
-
     showDialog(
       context: context,
       builder: (context) => ModelSelectorDialog(
@@ -648,6 +633,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
   Future<void> _sendMessage(UnifiedChatViewModel viewModel) async {
     unfocusHandle();
+
+    if (viewModel.currentModel == null) {
+      ToastUtils.showError("请先选择模型");
+      return;
+    }
 
     if (!_canSend() || viewModel.isStreaming) return;
 

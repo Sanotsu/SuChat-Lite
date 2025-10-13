@@ -12,6 +12,9 @@ class ImageGenerationResponse {
   final List<ContentFilter>? contentFilter;
   final String? requestId;
 
+  /// 元数据
+  final Map<String, dynamic>? metadata;
+
   const ImageGenerationResponse({
     this.created,
     required this.data,
@@ -19,6 +22,7 @@ class ImageGenerationResponse {
     this.seed,
     this.contentFilter,
     this.requestId,
+    this.metadata,
   });
 
   factory ImageGenerationResponse.fromJson(Map<String, dynamic> json) =>
@@ -45,6 +49,7 @@ class ImageGenerationResponse {
     return ImageGenerationResponse(
       data: images,
       requestId: json['request_id'] as String?,
+      metadata: json,
     );
   }
 
@@ -66,6 +71,7 @@ class ImageGenerationResponse {
     return ImageGenerationResponse(
       data: images,
       requestId: json['request_id'] as String?,
+      metadata: json,
     );
   }
 
@@ -85,6 +91,7 @@ class ImageGenerationResponse {
       data: generatedImages,
       timings: json['timings'] as Map<String, dynamic>?,
       seed: json['seed'] as int?,
+      metadata: json,
     );
   }
 
@@ -114,6 +121,26 @@ class ImageGenerationResponse {
       created: json['created'] as int?,
       data: images,
       contentFilter: filters,
+      metadata: json,
+    );
+  }
+
+  /// 从火山方舟响应格式创建
+  /// https://www.volcengine.com/docs/82379/1541523
+  factory ImageGenerationResponse.fromVolcengineResponse(
+    Map<String, dynamic> json,
+  ) {
+    final images = json['data'] as List<dynamic>? ?? [];
+
+    final generatedImages = images.map((image) {
+      final imageMap = image as Map<String, dynamic>;
+      return GeneratedImage(url: imageMap['url'] as String, b64Json: null);
+    }).toList();
+
+    return ImageGenerationResponse(
+      created: json['created'] as int?,
+      data: generatedImages,
+      metadata: {'usage': json['usage'], 'model': json['model']},
     );
   }
 

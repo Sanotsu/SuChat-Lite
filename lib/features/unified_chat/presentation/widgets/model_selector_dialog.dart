@@ -97,6 +97,7 @@ class _ModelSelectorDialogState extends State<ModelSelectorDialog> {
     return AlertDialog(
       title: const Text('选择模型'),
       insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       content: SizedBox(
         width: double.maxFinite,
         height: 0.6.sh,
@@ -136,7 +137,7 @@ class _ModelSelectorDialogState extends State<ModelSelectorDialog> {
       children: [
         Row(
           children: [
-            Icon(Icons.star, color: Colors.grey.shade600, size: 20),
+            Icon(Icons.star, color: Colors.blue, size: 24),
             const SizedBox(width: 8),
             Text(
               '收藏',
@@ -194,43 +195,55 @@ class _ModelSelectorDialogState extends State<ModelSelectorDialog> {
   Widget _buildModelItem(UnifiedModelSpec model, {bool inFavorite = false}) {
     final isSelected = widget.currentModel?.id == model.id;
 
-    return Container(
-      margin: EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isSelected ? Colors.blue : Colors.grey,
-          width: isSelected ? 2 : 1,
-        ),
-        color: isSelected ? Colors.blue.withValues(alpha: 0.1) : null,
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.only(left: 8),
-        dense: true,
-        // 如果是收藏分类，模型才显示平台图标
-        leading: (inFavorite && _platforms[model.platformId] != null)
-            ? buildPlatformIcon(_platforms[model.platformId]!)
-            // : ModelTypeIcon(type: model.type),
-            : buildModelTypeIconWithTooltip(model),
-        title: Text(
-          model.displayName,
-          style: TextStyle(
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            // fontSize: 12,
+    return GestureDetector(
+      onTap: () {
+        widget.onModelSelected(model);
+        Navigator.of(context).pop();
+      },
+      child: Container(
+        margin: EdgeInsets.only(bottom: 8),
+        height: 36,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? Colors.blue : Colors.grey,
+            width: isSelected ? 2 : 1,
           ),
+          color: isSelected ? Colors.blue.withValues(alpha: 0.1) : null,
         ),
-        trailing: IconButton(
-          onPressed: () => _toggleFavorite(model),
-          icon: Icon(
-            model.isFavorite ? Icons.star : Icons.star_border,
-            color: model.isFavorite ? Colors.blue : Colors.grey,
-            size: 20,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(width: 8),
+            (inFavorite && _platforms[model.platformId] != null)
+                ? buildPlatformIcon(_platforms[model.platformId]!, size: 18)
+                // : ModelTypeIcon(type: model.type),
+                : buildModelTypeIconWithTooltip(model, size: 18),
+            SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                model.displayName,
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+
+            IconButton(
+              onPressed: () => _toggleFavorite(model),
+              style: IconButton.styleFrom(
+                minimumSize: Size(24, 24),
+                padding: EdgeInsets.zero,
+              ),
+              icon: Icon(
+                model.isFavorite ? Icons.star : Icons.star_border,
+                color: model.isFavorite ? Colors.blue : Colors.grey,
+                size: 20,
+              ),
+            ),
+          ],
         ),
-        onTap: () {
-          widget.onModelSelected(model);
-          Navigator.of(context).pop();
-        },
       ),
     );
   }

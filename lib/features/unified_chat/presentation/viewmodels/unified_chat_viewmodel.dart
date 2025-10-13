@@ -89,9 +89,12 @@ class UnifiedChatViewModel extends ChangeNotifier {
   UnifiedChatPartner get effectivePartner => _currentPartner ?? defaultPartner;
   // 是否在新对话中显示搭档（会在“我的搭档”页面进行设置）
   bool get showPartnersInNewChat => _showPartnersInNewChat;
-  // 只有在新对话（消息列表为空）且未选择搭档时才显示搭档列表
+  // 只有在新对话（消息列表为空）、且未选择搭档、且选中模型为cc类型时才显示搭档列表
   bool get shouldShowPartnersList =>
-      _showPartnersInNewChat && _messages.isEmpty && !_isPartnerSelected;
+      _showPartnersInNewChat &&
+      _messages.isEmpty &&
+      !_isPartnerSelected &&
+      _currentModel?.type == UnifiedModelType.cc;
   // 是否有搭档工具被选择（配合消息列表是否为空，来控制在对话主页面是否显示被选中的搭档工具）
   bool get isPartnerSelected => _isPartnerSelected;
   // 只有在新对话（消息列表为空）且有搭档工具被选择时才显示被选中的搭档工具
@@ -965,6 +968,12 @@ class UnifiedChatViewModel extends ChangeNotifier {
     final multimodalContent = <UnifiedContentItem>[];
 
     print("图片生成---开始添加图片 $images ${images != null} ${images?.isNotEmpty}");
+
+    // 添加文本内容（如果存在）
+    if (prompt.trim().isNotEmpty) {
+      multimodalContent.add(UnifiedContentItem.text(prompt.trim()));
+    }
+
     // 添加图片内容
     if (images != null && images.isNotEmpty) {
       for (final image in images) {
