@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../data/models/unified_chat_partner.dart';
+import '../viewmodels/unified_chat_viewmodel.dart';
 
 /// 对话设置弹窗
 class ChatSettingsDialog extends StatefulWidget {
+  final UnifiedChatViewModel viewModel;
   final String? title;
   final String? systemPrompt;
   final int? contextMessageLength;
@@ -13,9 +17,11 @@ class ChatSettingsDialog extends StatefulWidget {
   final bool? isStream;
   final bool? enableThinking;
   final UnifiedChatPartner? selectedPartner;
+  final Map<String, dynamic>? omniParams;
   final Function(Map<String, dynamic>) onSave;
 
   const ChatSettingsDialog({
+    required this.viewModel,
     super.key,
     this.title,
     this.systemPrompt,
@@ -26,6 +32,7 @@ class ChatSettingsDialog extends StatefulWidget {
     this.isStream = true,
     this.enableThinking = false,
     this.selectedPartner,
+    this.omniParams,
     required this.onSave,
   });
 
@@ -44,8 +51,16 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
   bool _isStream = true;
   // 比如Qwen3 、GLM4.5等，可以配置是否启用思考模式
   bool _enableThinking = false;
+  // qwen的omni可以指定输出音频
+  bool _isOutputAudio = false;
+  // 如果指定输出音频，也必须指定音色
+  String _audioVoice = 'Cherry';
 
   bool showAdvancedSettings = false;
+
+  bool get isOmniModel =>
+      widget.viewModel.currentModel?.modelName.toLowerCase().contains('omni') ??
+      false;
 
   @override
   void initState() {
@@ -63,6 +78,10 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
     _topP = widget.topP ?? 1.0;
     _isStream = widget.isStream ?? true;
     _enableThinking = widget.enableThinking ?? false;
+
+    _isOutputAudio =
+        (widget.omniParams?['modalities'] as List?)?.contains('audio') ?? false;
+    _audioVoice = widget.omniParams?['audio']?['voice'] ?? 'Cherry';
 
     // 如果有选择搭档,则默认显示高级设置
     showAdvancedSettings = widget.selectedPartner != null;
@@ -92,6 +111,11 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
     if (oldWidget.topP != widget.topP) {
       _topP = widget.topP ?? 1.0;
     }
+    if (oldWidget.omniParams != widget.omniParams) {
+      _isOutputAudio =
+          widget.omniParams?['modalities']?.contains('audio') ?? false;
+      _audioVoice = widget.omniParams?['audio']?['voice'] ?? 'Cherry';
+    }
   }
 
   @override
@@ -112,6 +136,9 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
       'maxTokens': int.tryParse(_maxTokensController.text) ?? 4096,
       'isStream': _isStream,
       'enableThinking': _enableThinking,
+      // qwen-omni模型还可以指定
+      'modalities': _isOutputAudio ? ['text', 'audio'] : ['text'],
+      if (_isOutputAudio) 'audio': {'voice': _audioVoice, 'format': 'wav'},
     };
 
     widget.onSave(settings);
@@ -204,23 +231,7 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
       child: Row(
         children: [
           // 搭档头像
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: Colors.blue,
-            child: partner.avatarUrl != null && partner.avatarUrl!.isNotEmpty
-                ? ClipOval(
-                    child: Image.network(
-                      partner.avatarUrl!,
-                      width: 40,
-                      height: 40,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(Icons.person, color: Colors.white);
-                      },
-                    ),
-                  )
-                : const Icon(Icons.person, color: Colors.white),
-          ),
+          buildUserCircleAvatar(partner.avatarUrl, radius: 20),
           const SizedBox(width: 12),
 
           // 搭档信息
@@ -270,6 +281,8 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
             _maxTokensController.text = '4096';
             _isStream = true;
             _enableThinking = false;
+            _isOutputAudio = false;
+            _audioVoice = 'Cherry';
           });
         },
         child: Text('重置'),
@@ -461,20 +474,53 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
         ),
         const SizedBox(height: 8),
 
-        Row(
-          children: [
-            const Text('流式输出'),
-            const SizedBox(width: 12),
-            Switch(
-              value: _isStream,
-              onChanged: (value) => setState(() {
-                _isStream = value;
-              }),
-            ),
-          ],
-        ),
-
+        // Qwen-Omni 目前仅支持以流式输出的方式进行调用,stream设为false会报错
+        if (!isOmniModel)
+          Row(
+            children: [
+              const Text('流式输出'),
+              const SizedBox(width: 12),
+              Switch(
+                value: _isStream,
+                onChanged: (value) => setState(() {
+                  _isStream = value;
+                }),
+              ),
+            ],
+          ),
         const SizedBox(height: 8),
+
+        // 可指定输出音频
+        if (isOmniModel)
+          Row(
+            children: [
+              const Text('输出音频'),
+              const SizedBox(width: 12),
+              Switch(
+                value: _isOutputAudio,
+                onChanged: (value) => setState(() {
+                  _isOutputAudio = value;
+                }),
+              ),
+              const Spacer(),
+              Tooltip(
+                message:
+                    'Qwen-Omni系列模型默认只输出文本，\n'
+                    '启用此选项可同时输出文本+音频。',
+                triggerMode: TooltipTriggerMode.tap,
+                showDuration: Duration(seconds: 20),
+                margin: EdgeInsets.all(24),
+                child: Icon(Icons.info_outline, size: 16, color: Colors.grey),
+              ),
+            ],
+          ),
+        const SizedBox(height: 8),
+
+        // 可选择音色
+        if (isOmniModel && _isOutputAudio) ...[
+          _buildAudioSelector(),
+          const SizedBox(height: 8),
+        ],
 
         Row(
           children: [
@@ -501,5 +547,32 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
         ),
       ],
     );
+  }
+
+  Widget _buildAudioSelector() {
+    return FormBuilderDropdown<String>(
+      name: 'size',
+      // initialValue: _initialValues['size']?.toString(),
+      initialValue: _audioVoice,
+      decoration: const InputDecoration(
+        labelText: '图片尺寸',
+        border: OutlineInputBorder(),
+      ),
+      items: supportedVoices()
+          .map((size) => DropdownMenuItem(value: size, child: Text(size)))
+          .toList(),
+      onChanged: (value) => setState(() {
+        _audioVoice = value!;
+      }),
+    );
+  }
+
+  List<String> supportedVoices() {
+    return [
+      // 音色比较多，还有方言
+      'Cherry', 'Ethan', 'Nofish', 'Jennifer', 'Ryan',
+      'Katerina', 'Elias', 'Jada', 'Dylan', 'Sunny',
+      'Li', 'Marcus', 'Roy', 'Peter', 'Rocky', 'Kiki', 'Eric',
+    ];
   }
 }

@@ -7,29 +7,19 @@ import 'package:json_annotation/json_annotation.dart';
 part 'unified_model_spec.g.dart';
 
 /// 模型类型枚举
-enum UnifiedModelType {
-  cc,
-  embedding,
-  reranker,
-  textToImage,
-  imageToImage,
-  textToSpeech,
-  speechToText,
-  textToVideo,
-  imageToVideo,
-}
+enum UnifiedModelType { cc, embedding, reranker, tti, iti, tts, asr, ttv, itv }
 
 // 模型类型对应的中文名
 final Map<UnifiedModelType, String> UMT_NAME_MAP = {
   UnifiedModelType.cc: '对话',
   UnifiedModelType.embedding: '嵌入',
   UnifiedModelType.reranker: '重排',
-  UnifiedModelType.textToImage: '文生图',
-  UnifiedModelType.imageToImage: '图生图',
-  UnifiedModelType.textToSpeech: '语音合成',
-  UnifiedModelType.speechToText: '语音识别',
-  UnifiedModelType.textToVideo: '文生视频',
-  UnifiedModelType.imageToVideo: '图生视频',
+  UnifiedModelType.tti: '文生图',
+  UnifiedModelType.iti: '图生图',
+  UnifiedModelType.tts: '语音合成',
+  UnifiedModelType.asr: '语音识别',
+  UnifiedModelType.ttv: '文生视频',
+  UnifiedModelType.itv: '图生视频',
 };
 
 /// 统一模型规格模型
@@ -208,18 +198,18 @@ class UnifiedModelSpec {
         return UnifiedModelType.embedding;
       case 'reranker':
         return UnifiedModelType.reranker;
-      case 'textToImage':
-        return UnifiedModelType.textToImage;
-      case 'imageToImage':
-        return UnifiedModelType.imageToImage;
-      case 'textToSpeech':
-        return UnifiedModelType.textToSpeech;
-      case 'speechToText':
-        return UnifiedModelType.speechToText;
-      case 'textToVideo':
-        return UnifiedModelType.textToVideo;
-      case 'imageToVideo':
-        return UnifiedModelType.imageToVideo;
+      case 'tti':
+        return UnifiedModelType.tti;
+      case 'iti':
+        return UnifiedModelType.iti;
+      case 'tts':
+        return UnifiedModelType.tts;
+      case 'asr':
+        return UnifiedModelType.asr;
+      case 'ttv':
+        return UnifiedModelType.ttv;
+      case 'itv':
+        return UnifiedModelType.itv;
       default:
         return UnifiedModelType.cc;
     }

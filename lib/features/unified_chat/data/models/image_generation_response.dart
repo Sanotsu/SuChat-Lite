@@ -68,6 +68,10 @@ class ImageGenerationResponse {
       return GeneratedImage(url: url, b64Json: null);
     }).toList();
 
+    if (output?['image_url'] != null) {
+      images.add(GeneratedImage(url: output?['image_url'], b64Json: null));
+    }
+
     return ImageGenerationResponse(
       data: images,
       requestId: json['request_id'] as String?,

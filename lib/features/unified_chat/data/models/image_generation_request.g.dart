@@ -20,13 +20,14 @@ ImageGenerationRequest _$ImageGenerationRequestFromJson(
   cfg: (json['cfg'] as num?)?.toDouble(),
   quality: json['quality'] as String?,
   style: json['style'] as String?,
-  image: json['image'] as String?,
-  maskImage: json['maskImage'] as String?,
+  images: (json['images'] as List<dynamic>?)?.map((e) => e as String).toList(),
   watermark: json['watermark'] as bool? ?? false,
   userId: json['userId'] as String?,
   sequentialImageGeneration: json['sequentialImageGeneration'] as String?,
   sequentialImageGenerationOptions: json['sequentialImageGenerationOptions'],
   responseFormat: json['responseFormat'] as String?,
+  targetLanguage: json['targetLanguage'] as String?,
+  sourceLanguage: json['sourceLanguage'] as String?,
 );
 
 Map<String, dynamic> _$ImageGenerationRequestToJson(
@@ -43,11 +44,12 @@ Map<String, dynamic> _$ImageGenerationRequestToJson(
   'cfg': instance.cfg,
   'quality': instance.quality,
   'style': instance.style,
-  'image': instance.image,
-  'maskImage': instance.maskImage,
+  'images': instance.images,
   'watermark': instance.watermark,
   'userId': instance.userId,
   'sequentialImageGeneration': instance.sequentialImageGeneration,
   'sequentialImageGenerationOptions': instance.sequentialImageGenerationOptions,
   'responseFormat': instance.responseFormat,
+  'targetLanguage': instance.targetLanguage,
+  'sourceLanguage': instance.sourceLanguage,
 };

@@ -1,16 +1,16 @@
 // ignore_for_file: avoid_print
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../../core/network/dio_client/interceptor_error.dart';
 import '../../../../core/utils/get_dir.dart';
 import '../../../../core/utils/simple_tools.dart';
+import '../../../../core/utils/wav_audio_handler.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/database/unified_chat_dao.dart';
+import '../../data/models/openai_response.dart';
 import '../../data/models/unified_chat_message.dart';
 import '../../data/models/unified_chat_partner.dart';
 import '../../data/models/unified_conversation.dart';
@@ -69,14 +69,14 @@ class UnifiedChatViewModel extends ChangeNotifier {
   bool get isWebSearchEnabled => _isWebSearchEnabled;
 
   bool get isImageGenerationModel =>
-      _currentModel?.type == UnifiedModelType.textToImage ||
-      _currentModel?.type == UnifiedModelType.imageToImage;
+      _currentModel?.type == UnifiedModelType.tti ||
+      _currentModel?.type == UnifiedModelType.iti;
 
   bool get isSpeechSynthesisModel =>
-      _currentModel?.type == UnifiedModelType.textToSpeech;
+      _currentModel?.type == UnifiedModelType.tts;
 
   bool get isSpeechRecognitionModel =>
-      _currentModel?.type == UnifiedModelType.speechToText;
+      _currentModel?.type == UnifiedModelType.asr;
 
   // 状态getters
   bool get isLoading => _isLoading;
@@ -130,7 +130,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
   }
 
   /// ******************************************
-  /// 对话相关
+  /// 对话管理
   /// ******************************************
 
   /// 加载最近对话或创建新对话
@@ -141,8 +141,6 @@ class UnifiedChatViewModel extends ChangeNotifier {
         pageSize: 1,
         pageNumber: 0,
       );
-
-      print("获取到的对话 ${conversations.length}");
 
       if (conversations.isNotEmpty) {
         final lastConversation = conversations.first;
@@ -155,41 +153,13 @@ class UnifiedChatViewModel extends ChangeNotifier {
             conversationDate.month == today.month &&
             conversationDate.day == today.day;
 
-        print("获取到的对话lastConversation ${lastConversation.id} isToday $isToday");
-
         if (isToday) {
           // 加载今天的最后对话
           await loadConversation(lastConversation.id);
           return;
         } else {
-          // 获取最后使用的模型
-          final messages = await _chatDao.getMessagesByConversationId(
-            lastConversation.id,
-          );
-          if (messages.isNotEmpty) {
-            // 从最后的消息中获取使用的模型
-            final lastMessage = messages.last;
-            if (lastMessage.modelNameUsed != null) {
-              final lastUsedModel = _availableModels
-                  .cast<UnifiedModelSpec?>()
-                  .firstWhere(
-                    (model) => model?.id == lastMessage.modelNameUsed,
-                    orElse: () => null,
-                  );
-              if (lastUsedModel != null) {
-                _currentModel = lastUsedModel;
-                final matchingPlatform = _availablePlatforms
-                    .cast<UnifiedPlatformSpec?>()
-                    .firstWhere(
-                      (platform) => platform?.id == lastUsedModel.platformId,
-                      orElse: () => null,
-                    );
-                if (matchingPlatform != null) {
-                  _currentPlatform = matchingPlatform;
-                }
-              }
-            }
-          }
+          // 如果不是今天的对话，加载最后使用的模型
+          await _loadLastUsedModel(lastConversation.id);
         }
       }
 
@@ -197,12 +167,47 @@ class UnifiedChatViewModel extends ChangeNotifier {
       await createNewConversation();
     } catch (e) {
       print('加载最近对话失败: $e');
-      // 设置默认平台和模型
-      if (_availablePlatforms.isNotEmpty && _availableModels.isNotEmpty) {
-        _currentPlatform = _availablePlatforms.first;
-        _currentModel = _availableModels.first;
-      }
+      await _setDefaultPlatformAndModel();
       await createNewConversation();
+    }
+  }
+
+  /// 加载最后使用的模型
+  Future<void> _loadLastUsedModel(String conversationId) async {
+    final messages = await _chatDao.getMessagesByConversationId(conversationId);
+    if (messages.isNotEmpty) {
+      // 从最后的消息中获取使用的模型
+      final lastMessage = messages.last;
+
+      if (lastMessage.modelNameUsed != null) {
+        final lastUsedModel = _availableModels
+            .cast<UnifiedModelSpec?>()
+            .firstWhere(
+              (model) => model?.id == lastMessage.modelNameUsed,
+              orElse: () => null,
+            );
+
+        if (lastUsedModel != null) {
+          _currentModel = lastUsedModel;
+          final matchingPlatform = _availablePlatforms
+              .cast<UnifiedPlatformSpec?>()
+              .firstWhere(
+                (platform) => platform?.id == lastUsedModel.platformId,
+                orElse: () => null,
+              );
+          if (matchingPlatform != null) {
+            _currentPlatform = matchingPlatform;
+          }
+        }
+      }
+    }
+  }
+
+  /// 设置默认平台和模型
+  Future<void> _setDefaultPlatformAndModel() async {
+    if (_availablePlatforms.isNotEmpty && _availableModels.isNotEmpty) {
+      _currentPlatform = _availablePlatforms.first;
+      _currentModel = _availableModels.first;
     }
   }
 
@@ -212,17 +217,14 @@ class UnifiedChatViewModel extends ChangeNotifier {
     String? systemPrompt,
   }) async {
     try {
-      // 如果没有指定系统提示词，使用默认搭档的提示词
-      final effectiveSystemPrompt = systemPrompt ?? defaultPartner.prompt;
-
-      // 创建临时对话对象，不立即保存到数据库
       final conversationId = const Uuid().v4();
       _currentConversation = UnifiedConversation(
         id: conversationId,
         title: title ?? '新对话',
         modelId: _currentModel?.id ?? '',
         platformId: _currentPlatform?.id ?? '',
-        systemPrompt: effectiveSystemPrompt,
+        // 如果没有指定系统提示词，使用默认搭档的提示词
+        systemPrompt: systemPrompt ?? defaultPartner.prompt,
         temperature: defaultPartner.temperature ?? 0.7,
         topP: defaultPartner.topP ?? 1.0,
         maxTokens: defaultPartner.maxTokens ?? 4096,
@@ -234,25 +236,24 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
       // 初始化空的消息列表，不添加任何消息
       _messages = [];
-
       // 重置搭档选择状态，以便在新对话时重新显示搭档工具组件
       _currentPartner = null;
       _isPartnerSelected = false;
 
       print('创建新对话: ${_currentConversation!.id}');
 
-      // 都创建新对话了肯定要清空搜索参考
+      // 创建新对话了要清空搜索参考
       _chatService.clearLastSearchReferences();
-      // 确保UI能收到状态变化通知
       notifyListeners();
     } catch (e) {
       _setError('创建新对话失败: $e');
     }
   }
 
-  /// 保存对话到数据库（在用户首次发送消息时调用）
-  Future<void> _saveConversationIfNeeded(String userMessage) async {
-    print("_saveConversationIfNeeded中的对话 $userMessage $_currentConversation");
+  ///初始化时（即在用户首次发送消息时）保存对话到数据库
+  Future<void> _initSaveConversation(String userMessage) async {
+    print("_initSaveConversation中的对话 $userMessage $_currentConversation");
+
     if (_currentConversation == null) return;
 
     try {
@@ -260,28 +261,17 @@ class UnifiedChatViewModel extends ChangeNotifier {
       final existingConversation = await _chatDao.getConversation(
         _currentConversation!.id,
       );
-      if (existingConversation != null) return; // 已存在，无需保存
+
+      // 已存在，无需保存
+      if (existingConversation != null) return;
 
       // 生成对话标题
-      String conversationTitle;
-      if (_currentPartner != null && _isPartnerSelected) {
-        // 如果选择了搭档，使用"搭档名称+用户消息"作为标题
-        final userMessagePart = userMessage.length > 20
-            ? userMessage.substring(0, 20)
-            : userMessage;
-        conversationTitle = '${_currentPartner!.name}: $userMessagePart';
-      } else {
-        // 使用默认助手时，直接使用用户消息作为标题
-        conversationTitle = userMessage.length > 30
-            ? userMessage.substring(0, 30)
-            : userMessage;
-      }
+      final conversationTitle = _generateConversationTitle(userMessage);
 
       // 更新对话标题并保存
       final updatedConversation = _currentConversation!.copyWith(
         title: conversationTitle,
       );
-
       await _chatDao.saveConversation(updatedConversation);
       _currentConversation = updatedConversation;
 
@@ -296,9 +286,26 @@ class UnifiedChatViewModel extends ChangeNotifier {
     }
   }
 
+  /// 生成对话标题
+  String _generateConversationTitle(String userMessage) {
+    // 如果选择了搭档，使用"搭档名称+用户消息"作为标题
+    if (_currentPartner != null && _isPartnerSelected) {
+      final userMessagePart = userMessage.length > 20
+          ? userMessage.substring(0, 20)
+          : userMessage;
+      return '${_currentPartner!.name}: $userMessagePart';
+    } else {
+      // 使用默认助手时，直接使用用户消息作为标题
+      return userMessage.length > 30
+          ? userMessage.substring(0, 30)
+          : userMessage;
+    }
+  }
+
   /// 加载现有对话
   Future<void> loadConversation(String conversationId) async {
     _setLoading(true);
+
     try {
       // 如果没有可用的平台和模型，则忽略该对话
       if (_availablePlatforms.isEmpty || _availableModels.isEmpty) {
@@ -328,9 +335,6 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
         // 更新当前模型
         final modelId = _currentConversation!.modelId;
-
-        print("当前的模型编号 $modelId");
-
         _currentModel = _availableModels.firstWhere(
           (m) => m.id == modelId,
           orElse: () => _availableModels.first,
@@ -404,7 +408,6 @@ class UnifiedChatViewModel extends ChangeNotifier {
       return file.path;
     } catch (e) {
       _setError('导出失败: $e');
-      // return null;
       rethrow;
     }
   }
@@ -429,7 +432,9 @@ class UnifiedChatViewModel extends ChangeNotifier {
         presencePenalty: settings['presencePenalty'] as double?,
         extraParams: {
           'enableThinking': settings['enableThinking'] as bool?,
-          'imageGenParams': settings['imageGenParams'] as Map<String, dynamic>?,
+          'omniParams': settings['omniParams'] as Map<String, dynamic>?,
+          'imageGenerationParams':
+              settings['imageGenerationParams'] as Map<String, dynamic>?,
           'speechSynthesisParams':
               settings['speechSynthesisParams'] as Map<String, dynamic>?,
           'speechRecognitionParams':
@@ -468,7 +473,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
   }
 
   /// ******************************************
-  /// 消息相关
+  /// 消息处理
   /// ******************************************
 
   /// 发送文本消息
@@ -480,32 +485,21 @@ class UnifiedChatViewModel extends ChangeNotifier {
     if (content.trim().isEmpty || _currentConversation == null) return;
 
     try {
-      // 先保存对话（如果需要）
-      await _saveConversationIfNeeded(content.trim());
-
       // 如果是第一条用户消息，先创建并保存系统消息
       if (_messages.isEmpty) {
+        await _initSaveConversation(content.trim());
+
         await _createAndSaveSystemMessageIfNeeded();
       }
 
       // 添加用户消息
-      final userMessage = UnifiedChatMessage(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        conversationId: _currentConversation!.id,
-        role: UnifiedMessageRole.user,
-        content: content.trim(),
-        contentType: UnifiedContentType.text,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        cost: 0.0,
-        metadata: {'model': _currentModel, 'platform': _currentPlatform},
-      );
+      final userMessage = _createUserPlaceholder(content.trim());
 
       _messages.add(userMessage);
       await _chatDao.saveMessage(userMessage);
       notifyListeners();
 
-      // 发送消息并获取回复
+      // 发送消息并处理响应回复
       await _sendMessageToAI(
         _messages.where((m) => !m.isStreaming).toList(),
         isWebSearch: isWebSearch,
@@ -534,86 +528,28 @@ class UnifiedChatViewModel extends ChangeNotifier {
     print("文件: ${files?.map((f) => f.path).join(', ')}");
 
     try {
-      // 先保存对话（如果需要）
-      await _saveConversationIfNeeded(
-        text.trim().isNotEmpty ? text.trim() : '多模态消息',
-      );
-
       // 如果是第一条用户消息，先创建并保存系统消息
       if (_messages.isEmpty) {
+        await _initSaveConversation(
+          text.trim().isNotEmpty ? text.trim() : '多模态消息',
+        );
         await _createAndSaveSystemMessageIfNeeded();
       }
 
       // 构建多模态内容列表
-      final multimodalContent = <UnifiedContentItem>[];
-
-      // 添加文本内容（如果存在）
-      if (text.trim().isNotEmpty) {
-        multimodalContent.add(UnifiedContentItem.text(text.trim()));
-      }
-
-      print("开始添加图片 $images ${images != null} ${images?.isNotEmpty}");
-      // 添加图片内容
-      if (images != null && images.isNotEmpty) {
-        for (final image in images) {
-          print("添加图片: ${image.path}");
-
-          multimodalContent.add(
-            UnifiedContentItem.image(image.path, detail: 'auto'),
-          );
-        }
-      }
-
-      // 添加音频内容
-      if (audio != null) {
-        multimodalContent.add(
-          UnifiedContentItem.audio(
-            audio.path,
-            fileName: audio.path.split('/').last,
-            fileSize: await getFileSize(audio),
-          ),
-        );
-      }
-
-      // 添加视频内容
-      if (video != null) {
-        multimodalContent.add(
-          UnifiedContentItem.video(
-            video.path,
-            fileName: video.path.split('/').last,
-            fileSize: await getFileSize(video),
-          ),
-        );
-      }
-
-      // 添加文件内容
-      if (files != null && files.isNotEmpty) {
-        for (final file in files) {
-          multimodalContent.add(
-            UnifiedContentItem.file(
-              file.path,
-              file.path.split('/').last,
-              fileSize: await getFileSize(file),
-              mimeType: getMimeTypeByFilePath(file.path),
-            ),
-          );
-        }
-      }
-
-      print(
-        "发送多模态消息的内容 multimodalContent: ${multimodalContent.map((c) => c.toRawJson()).join('\n')}",
+      final multimodalContent = await _buildMultimodalContent(
+        text: text.trim(),
+        images: images,
+        audio: audio,
+        video: video,
+        files: files,
       );
 
-      final userMessage = UnifiedChatMessage(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        conversationId: _currentConversation!.id,
-        role: UnifiedMessageRole.user,
-        content: text.trim().isNotEmpty ? text.trim() : null,
+      // 构建多模态的用户消息
+      final userMessage = _createUserPlaceholder(
+        text.trim().isNotEmpty ? text.trim() : '多模态消息',
         contentType: UnifiedContentType.multimodal,
         multimodalContent: multimodalContent,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        cost: 0.0,
         metadata: {
           'model': _currentModel,
           'platform': _currentPlatform,
@@ -634,7 +570,6 @@ class UnifiedChatViewModel extends ChangeNotifier {
         'sendMultimodalMessage------发送请求前的消息内容: ${_messages.where((m) => !m.isStreaming).map((m) => m.toRawJson()).join('\n')}',
       );
 
-      // 发送消息并获取回复
       await _sendMessageToAI(
         _messages.where((m) => !m.isStreaming).toList(),
         isWebSearch: isWebSearch,
@@ -643,6 +578,69 @@ class UnifiedChatViewModel extends ChangeNotifier {
       _setError('发送多模态消息失败: $e');
       rethrow;
     }
+  }
+
+  /// 构建多模态内容
+  Future<List<UnifiedContentItem>> _buildMultimodalContent({
+    String? text,
+    List<File>? images,
+    File? audio,
+    File? video,
+    List<File>? files,
+  }) async {
+    final multimodalContent = <UnifiedContentItem>[];
+
+    // 添加文本内容
+    if (text?.isNotEmpty ?? false) {
+      multimodalContent.add(UnifiedContentItem.text(text!));
+    }
+
+    // 添加图片内容
+    if (images != null && images.isNotEmpty) {
+      for (final image in images) {
+        multimodalContent.add(
+          UnifiedContentItem.image(image.path, detail: 'auto'),
+        );
+      }
+    }
+
+    // 添加音频内容
+    if (audio != null) {
+      multimodalContent.add(
+        UnifiedContentItem.audio(
+          audio.path,
+          fileName: audio.path.split('/').last,
+          fileSize: await getFileSize(audio),
+        ),
+      );
+    }
+
+    // 添加视频内容
+    if (video != null) {
+      multimodalContent.add(
+        UnifiedContentItem.video(
+          video.path,
+          fileName: video.path.split('/').last,
+          fileSize: await getFileSize(video),
+        ),
+      );
+    }
+
+    // 添加文件内容
+    if (files != null && files.isNotEmpty) {
+      for (final file in files) {
+        multimodalContent.add(
+          UnifiedContentItem.file(
+            file.path,
+            file.path.split('/').last,
+            fileSize: await getFileSize(file),
+            mimeType: getMimeTypeByFilePath(file.path),
+          ),
+        );
+      }
+    }
+
+    return multimodalContent;
   }
 
   /// 发送消息到AI并处理回复
@@ -658,65 +656,14 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
     // 发送请求前不应该保留之前的参考内容
     _chatService.clearLastSearchReferences();
-
     _setStreaming(true);
 
     try {
-      // 准备发送的消息列表，根据 contextMessageLength 限制消息数量
-      List<UnifiedChatMessage> messagesToSend = List.from(messages);
-
-      // 应用上下文消息列表长度限制
-      final contextMessageLength = _currentConversation!.contextMessageLength;
-      if (messagesToSend.length > contextMessageLength) {
-        // 保留最近的 contextMessageLength 条消息，但保留系统消息
-        final systemMessages = messagesToSend
-            .where((m) => m.role == UnifiedMessageRole.system)
-            .toList();
-        final nonSystemMessages = messagesToSend
-            .where((m) => m.role != UnifiedMessageRole.system)
-            .toList();
-
-        // 取最近的消息
-        final recentMessages =
-            nonSystemMessages.length >
-                (contextMessageLength - systemMessages.length)
-            ? nonSystemMessages.sublist(
-                nonSystemMessages.length -
-                    (contextMessageLength - systemMessages.length),
-              )
-            : nonSystemMessages;
-
-        messagesToSend = [...systemMessages, ...recentMessages];
-      }
-
-      print("----------------${messagesToSend.length}");
-
-      // 验证并修复消息序列
-      messagesToSend = _validateAndFixMessageSequence(messagesToSend);
-
-      // 注意：不要在这里清除搭档选择状态，保持搭档信息在整个对话期间可用
-
-      // 创建助手消息占位符
-      final assistantMessage = UnifiedChatMessage(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        conversationId: _currentConversation!.id,
-        role: UnifiedMessageRole.assistant,
-        content: '',
-        thinkingContent: '',
-        contentType: UnifiedContentType.text,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        cost: 0.0,
-        isStreaming: true,
-        modelNameUsed: _currentModel?.modelName,
-        platformIdUsed: _currentPlatform?.id,
-        metadata: {'model': _currentModel, 'platform': _currentPlatform},
-      );
+      final messagesToSend = _prepareMessagesForSending(messages);
+      final assistantMessage = _createAssistantPlaceholder();
 
       _messages.add(assistantMessage);
       notifyListeners();
-
-      // 发送流式请求
 
       final stream = _chatService.sendMessage(
         conversationId: _currentConversation!.id,
@@ -731,217 +678,605 @@ class UnifiedChatViewModel extends ChangeNotifier {
         isWebSearch: isWebSearch && _isWebSearchEnabled,
       );
 
-      String accumulatedContent = '';
-      String accumulatedThinking = '';
-      bool isInThinking = false;
-      // 计算思考时间
-      var startTime = DateTime.now();
-      DateTime? endTime;
-      var thinkingTime = 0;
-
-      _streamSubscription = stream.listen(
-        (response) {
-          // print('收到流式响应: ${response.choices.length} choices');
-
-          // 更新消息内容
-          final index = _messages.indexWhere(
-            (m) => m.id == assistantMessage.id,
-          );
-          if (index != -1) {
-            // 处理流式内容
-            if (response.choices.isNotEmpty) {
-              final choice = response.choices.first;
-              // 如果非流式响应的内容放在message中，包装成一次流式响应。delta和message结构一致，可以统一处理
-              final delta = choice.delta ?? choice.message;
-
-              // 如果reasoning_content非空，也是推理过程
-              if (delta != null &&
-                  delta.reasoningContent != null &&
-                  delta.reasoningContent!.isNotEmpty) {
-                final newThinking = delta.reasoningContent!;
-                // print('新推理片段: "$newThinking"');
-                accumulatedThinking += newThinking;
-
-                // 计算思考时间(从发起调用开始，到当流式内容不为空时计算结束)
-                if (endTime == null &&
-                    delta.content != null &&
-                    delta.content!.isNotEmpty) {
-                  endTime = DateTime.now();
-                  thinkingTime = endTime!.difference(startTime).inMilliseconds;
-                }
-              }
-
-              // print('Delta内容: role=${delta.role}, content=${delta.content}');
-
-              if (delta != null &&
-                  delta.content != null &&
-                  delta.content!.isNotEmpty) {
-                final newContent = delta.content!;
-                // print('新内容片段: "$newContent"');
-
-                // 检测思考内容的开始和结束标记
-                if (newContent.contains('<thinking>') ||
-                    newContent.contains('<think>')) {
-                  isInThinking = true;
-                  startTime = DateTime.now();
-                  print('开始思考模式');
-                }
-
-                if (isInThinking) {
-                  accumulatedThinking += newContent;
-                  if (newContent.contains('</thinking>') ||
-                      newContent.contains('</think>')) {
-                    isInThinking = false;
-                    print('结束思考模式');
-                    // 清理思考内容的标记
-                    accumulatedThinking = accumulatedThinking
-                        .replaceAll('<thinking>', '')
-                        .replaceAll('</thinking>', '')
-                        .replaceAll('<think>', '')
-                        .replaceAll('</think>', '')
-                        .trim();
-                  }
-                } else {
-                  if (endTime == null) {
-                    endTime = DateTime.now();
-                    thinkingTime = endTime!
-                        .difference(startTime)
-                        .inMilliseconds;
-                  }
-
-                  accumulatedContent += newContent;
-                  // print('累积内容长度: ${accumulatedContent.length}');
-                }
-              }
-
-              // 检查是否完成
-              // 模型停止生成 token 的原因。
-              // stop：模型自然停止生成，或遇到 stop 序列中列出的字符串。
-              // length ：输出长度达到了模型上下文长度限制，或达到了 max_tokens 的限制。
-              // content_filter：输出内容因触发过滤策略而被过滤。
-              // insufficient_system_resource：系统推理资源不足，生成被打断。
-              if (choice.finishReason != null) {
-                print('流式完成，原因: ${choice.finishReason}');
-                print(
-                  'Delta内容: role=${json.encode(choice.toJson())}, content=${choice.delta?.content}',
-                );
-              }
-            }
-
-            _messages[index] = _messages[index].copyWith(
-              content: accumulatedContent,
-              thinkingContent: accumulatedThinking.isNotEmpty
-                  ? accumulatedThinking
-                  : null,
-              thinkingTime: thinkingTime,
-              tokenCount:
-                  response.usage?.totalTokens ?? _messages[index].tokenCount,
-              cost: response.usage?.totalTokens != null
-                  ? _calculateCost(response.usage!.totalTokens, _currentModel!)
-                  : _messages[index].cost,
-              // 如果是搜索相关的响应，添加搜索结果链接
-              searchReferences: isWebSearch && _isWebSearchEnabled
-                  ? _getSearchReferencesFromService()
-                  : _messages[index].searchReferences,
-              updatedAt: DateTime.now(),
-            );
-
-            // print('更新消息内容: "${_messages[index].content}"');
-            notifyListeners();
-          }
-        },
-        onDone: () async {
-          print('流式响应完成');
-          // 流式完成，保存最终消息(注意，有时候解析失败，会无法正确保存token使用量等内容)
-          final index = _messages.indexWhere(
-            (m) => m.id == assistantMessage.id,
-          );
-          if (index != -1) {
-            final finalMessage = _messages[index].copyWith(
-              isStreaming: false,
-              updatedAt: DateTime.now(),
-            );
-
-            print(
-              "-------------正常保存消息 ${finalMessage.id} ${finalMessage.tokenCount}",
-            );
-
-            _messages[index] = finalMessage;
-            print('保存最终消息: "${finalMessage.content}"');
-            await _chatDao.saveMessage(finalMessage);
-
-            // 更新对话统计
-            await _updateConversationStats();
-
-            // 对话处理完了要清空搜索参考
-            _chatService.clearLastSearchReferences();
-          }
-          _setStreaming(false);
-        },
-        onError: (error) {
-          print('流式响应错误: $error');
-
-          print(error.runtimeType);
-
-          if (error is CusHttpException) {
-            print("CusHttpException错误的code: ${error.cusCode}");
-          }
-
-          // 在对话中显示错误而不是统一错误页面
-          final index = _messages.indexWhere(
-            (m) => m.id == assistantMessage.id,
-          );
-          if (index != -1) {
-            final errorMessage = _messages[index].copyWith(
-              content: 'AI回复失败: $error',
-              isStreaming: false,
-              isError: true,
-              errorMessage: error.toString(),
-              updatedAt: DateTime.now(),
-            );
-            _messages[index] = errorMessage;
-            // 保存错误消息到数据库
-            _chatDao.saveMessage(errorMessage);
-            notifyListeners();
-          }
-
-          // 对话处理完了要清空搜索参考
-          _chatService.clearLastSearchReferences();
-          _setStreaming(false);
-        },
-      );
+      await _handleStreamResponse(stream, assistantMessage, isWebSearch);
     } catch (e) {
-      print('发送请求异常: $e');
-      // 在对话中显示错误而不是统一错误页面
-      final errorMessage = UnifiedChatMessage(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        conversationId: _currentConversation!.id,
-        role: UnifiedMessageRole.assistant,
-        content: '发送请求失败: $e',
-        contentType: UnifiedContentType.text,
-        isError: true,
-        errorMessage: e.toString(),
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        metadata: {'model': _currentModel, 'platform': _currentPlatform},
-      );
+      _handleMessageSendError(e);
+    }
+  }
 
-      // 如果已有助手消息占位符，替换它；否则添加新的错误消息
-      final assistantIndex = _messages.lastIndexWhere(
-        (m) => m.role == UnifiedMessageRole.assistant && m.isStreaming,
+  /// 准备发送的消息列表
+  List<UnifiedChatMessage> _prepareMessagesForSending(
+    List<UnifiedChatMessage> messages,
+  ) {
+    // 准备发送的消息列表，根据 contextMessageLength 限制消息数量
+    List<UnifiedChatMessage> messagesToSend = List.from(messages);
+
+    // 应用上下文消息列表长度限制
+    final contextMessageLength = _currentConversation!.contextMessageLength;
+    if (messagesToSend.length > contextMessageLength) {
+      // 保留最近的 contextMessageLength 条消息，但保留系统消息
+      final systemMessages = messagesToSend
+          .where((m) => m.role == UnifiedMessageRole.system)
+          .toList();
+      final nonSystemMessages = messagesToSend
+          .where((m) => m.role != UnifiedMessageRole.system)
+          .toList();
+
+      // 取最近的消息
+      final recentMessages =
+          nonSystemMessages.length >
+              (contextMessageLength - systemMessages.length)
+          ? nonSystemMessages.sublist(
+              nonSystemMessages.length -
+                  (contextMessageLength - systemMessages.length),
+            )
+          : nonSystemMessages;
+
+      messagesToSend = [...systemMessages, ...recentMessages];
+    }
+
+    print("----------------${messagesToSend.length}");
+    // 验证并修复消息序列
+    // 注意：不要在这里清除搭档选择状态，保持搭档信息在整个对话期间可用
+    return _validateAndFixMessageSequence(messagesToSend);
+  }
+
+  /// 创建用户消息
+  UnifiedChatMessage _createUserPlaceholder(
+    String content, {
+    UnifiedContentType? contentType,
+    List<UnifiedContentItem>? multimodalContent,
+    Map<String, dynamic>? metadata,
+  }) {
+    return UnifiedChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      conversationId: _currentConversation!.id,
+      role: UnifiedMessageRole.user,
+      content: content.trim(),
+      contentType: contentType ?? UnifiedContentType.text,
+      multimodalContent: multimodalContent,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      modelNameUsed: _currentModel!.modelName,
+      platformIdUsed: _currentPlatform!.id,
+      metadata:
+          metadata ?? {'model': _currentModel, 'platform': _currentPlatform},
+    );
+  }
+
+  /// 创建助手消息占位符
+  UnifiedChatMessage _createAssistantPlaceholder({String? content}) {
+    return UnifiedChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      conversationId: _currentConversation!.id,
+      role: UnifiedMessageRole.assistant,
+      content: content,
+      thinkingContent: '',
+      contentType: UnifiedContentType.text,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      isStreaming: true,
+      modelNameUsed: _currentModel?.modelName,
+      platformIdUsed: _currentPlatform?.id,
+      metadata: {'model': _currentModel, 'platform': _currentPlatform},
+    );
+  }
+
+  /// 创建系统消息占位符
+  UnifiedChatMessage _createSystemPlaceholder(String content) {
+    return UnifiedChatMessage(
+      id: 'system_${DateTime.now().millisecondsSinceEpoch}',
+      conversationId: _currentConversation!.id,
+      role: UnifiedMessageRole.system,
+      content: content,
+      contentType: UnifiedContentType.text,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      cost: 0.0,
+      modelNameUsed: _currentModel?.modelName,
+      platformIdUsed: _currentPlatform?.id,
+      metadata: {'model': _currentModel, 'platform': _currentPlatform},
+    );
+  }
+
+  /// 处理流式响应
+  Future<void> _handleStreamResponse(
+    Stream<OpenAIChatCompletionResponse> stream,
+    UnifiedChatMessage assistantMessage,
+    bool isWebSearch,
+  ) async {
+    // 流式响应累加的文本内容
+    String accumulatedContent = '';
+    // 流式响应累加的思考内容
+    String accumulatedThinking = '';
+    // 构建多模态内容列表
+    final multimodalContent = <UnifiedContentItem>[];
+    // 2025-10-16 多模态千问omni可以合成语音，响应中有base64语音片段
+    // 在流响应完成或者手动终止时，才把已经收集到的片段转为语音，再提供播放
+    String finalAudioBase64 = "";
+    // 是否在思考中
+    bool isInThinking = false;
+    // 开始思考时间
+    var startTime = DateTime.now();
+    // 结束思考时间
+    DateTime? endTime;
+    // 思考时长
+    var thinkingTime = 0;
+
+    _streamSubscription = stream.listen(
+      (response) async {
+        // // 第一种：直接在这里更新消息内容
+        // final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
+
+        // if (index == -1) {
+        //   return;
+        // }
+
+        // // 处理流式内容
+        // if (response.choices.isNotEmpty) {
+        //   final choice = response.choices.first;
+        //   // 如果非流式响应的内容放在message中，包装成一次流式响应。delta和message结构一致，可以统一处理
+        //   final delta = choice.delta ?? choice.message;
+
+        //   // print('收到流式响应delta数据: ${delta?.toRawJson()} ');
+
+        //   // 如果reasoning_content非空，也是推理过程
+        //   if (delta != null &&
+        //       delta.reasoningContent != null &&
+        //       delta.reasoningContent!.isNotEmpty) {
+        //     final newThinking = delta.reasoningContent!;
+        //     // print('新推理片段: "$newThinking"');
+        //     accumulatedThinking += newThinking;
+
+        //     // 计算思考时间(从发起调用开始，到当流式内容不为空时计算结束)
+        //     if (endTime == null &&
+        //         delta.content != null &&
+        //         delta.content!.isNotEmpty) {
+        //       endTime = DateTime.now();
+        //       thinkingTime = endTime!.difference(startTime).inMilliseconds;
+        //     }
+        //   }
+
+        //   // print('Delta内容: role=${delta?.role}, content=${delta?.content}');
+
+        //   if (delta != null &&
+        //       delta.content != null &&
+        //       delta.content!.isNotEmpty) {
+        //     final newContent = delta.content!;
+        //     // print('新内容片段: "$newContent"');
+
+        //     // 检测思考内容的开始和结束标记
+        //     if (newContent.contains('<thinking>') ||
+        //         newContent.contains('<think>')) {
+        //       isInThinking = true;
+        //       startTime = DateTime.now();
+        //       print('开始思考模式');
+        //     }
+
+        //     if (isInThinking) {
+        //       accumulatedThinking += newContent;
+        //       if (newContent.contains('</thinking>') ||
+        //           newContent.contains('</think>')) {
+        //         isInThinking = false;
+        //         print('结束思考模式');
+        //         // 清理思考内容的标记
+        //         accumulatedThinking = accumulatedThinking
+        //             .replaceAll('<thinking>', '')
+        //             .replaceAll('</thinking>', '')
+        //             .replaceAll('<think>', '')
+        //             .replaceAll('</think>', '')
+        //             .trim();
+        //       }
+        //     } else {
+        //       if (endTime == null) {
+        //         endTime = DateTime.now();
+        //         thinkingTime = endTime!.difference(startTime).inMilliseconds;
+        //       }
+
+        //       accumulatedContent += newContent;
+        //       // print('累积内容长度: ${accumulatedContent.length}');
+        //     }
+        //   }
+
+        //   // print("音频数据内容 ${delta?.audio?['data']}");
+
+        //   finalAudioBase64 += delta?.audio?['data'] ?? '';
+
+        //   // 检查是否完成
+        //   // 模型停止生成 token 的原因。
+        //   // stop：模型自然停止生成，或遇到 stop 序列中列出的字符串。
+        //   // length ：输出长度达到了模型上下文长度限制，或达到了 max_tokens 的限制。
+        //   // content_filter：输出内容因触发过滤策略而被过滤。
+        //   // insufficient_system_resource：系统推理资源不足，生成被打断。
+        //   if (choice.finishReason != null) {
+        //     print('流式完成，原因: ${choice.finishReason}');
+        //     // print(
+        //     //   'Delta内容: role=${json.encode(choice.toJson())}, content=${choice.delta?.content}',
+        //     // );
+
+        //     String voicePath = '';
+        //     // 如果是多模态有响应音频base64数据，保存到固定的位置
+        //     if (finalAudioBase64.isNotEmpty) {
+        //       voicePath = await WavAudioHandler.saveBase64Wav(
+        //         finalAudioBase64,
+        //         model: _currentModel?.modelName,
+        //       );
+        //     }
+
+        //     // 添加文本内容（如果存在）
+        //     if (accumulatedContent.trim().isNotEmpty) {
+        //       multimodalContent.add(
+        //         UnifiedContentItem.text(accumulatedContent.trim()),
+        //       );
+        //     }
+
+        //     // 添加音频内容
+        //     if (voicePath.isNotEmpty) {
+        //       multimodalContent.add(
+        //         UnifiedContentItem.audio(
+        //           voicePath,
+        //           fileName: voicePath.split('/').last,
+        //           fileSize: await getFileSize(File(voicePath)),
+        //         ),
+        //       );
+        //     }
+        //   }
+        // }
+
+        // _messages[index] = _messages[index].copyWith(
+        //   content: accumulatedContent,
+        //   thinkingContent: accumulatedThinking.isNotEmpty
+        //       ? accumulatedThinking
+        //       : null,
+        //   thinkingTime: thinkingTime,
+        //   multimodalContent: multimodalContent,
+        //   tokenCount:
+        //       response.usage?.totalTokens ?? _messages[index].tokenCount,
+        //   cost: response.usage?.totalTokens != null
+        //       ? _calculateCost(response.usage!.totalTokens, _currentModel!)
+        //       : _messages[index].cost,
+        //   // 如果是搜索相关的响应，添加搜索结果链接
+        //   searchReferences: isWebSearch && _isWebSearchEnabled
+        //       ? _getSearchReferencesFromService()
+        //       : _messages[index].searchReferences,
+        //   updatedAt: DateTime.now(),
+        // );
+
+        // // print('更新消息内容: "${_messages[index].content}"');
+        // notifyListeners();
+
+        // 第二种：使用单独处理方法，通过返回值更新累加变量（嫌麻烦但已经写了就留个备份）
+        final chunkResult = await _processStreamChunk(
+          response,
+          assistantMessage,
+          isWebSearch,
+          accumulatedContent,
+          accumulatedThinking,
+          multimodalContent,
+          finalAudioBase64,
+          isInThinking,
+          startTime,
+          endTime,
+          thinkingTime,
+        );
+
+        // 更新累加变量
+        accumulatedContent = chunkResult.accumulatedContent;
+        accumulatedThinking = chunkResult.accumulatedThinking;
+        finalAudioBase64 = chunkResult.finalAudioBase64;
+        isInThinking = chunkResult.isInThinking;
+        endTime = chunkResult.endTime;
+        thinkingTime = chunkResult.thinkingTime;
+
+        notifyListeners();
+      },
+      onDone: () async {
+        await _handleStreamDone(assistantMessage);
+      },
+      onError: (error) {
+        _handleStreamError(error, assistantMessage);
+      },
+    );
+  }
+
+  /// 处理流式数据块
+  Future<_StreamChunkResult> _processStreamChunk(
+    OpenAIChatCompletionResponse response,
+    UnifiedChatMessage assistantMessage,
+    bool isWebSearch,
+    String accumulatedContent,
+    String accumulatedThinking,
+    List<UnifiedContentItem> multimodalContent,
+    String finalAudioBase64,
+    bool isInThinking,
+    DateTime startTime,
+    DateTime? endTime,
+    int thinkingTime,
+  ) async {
+    // 更新消息内容
+    final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
+    // 如果没有助手消则无法更新AI响应,直接返回原始值
+    if (index == -1) {
+      return _StreamChunkResult(
+        accumulatedContent: accumulatedContent,
+        accumulatedThinking: accumulatedThinking,
+        finalAudioBase64: finalAudioBase64,
+        isInThinking: isInThinking,
+        endTime: endTime,
+        thinkingTime: thinkingTime,
+        multimodalContent: multimodalContent,
       );
-      if (assistantIndex != -1) {
-        _messages[assistantIndex] = errorMessage;
-      } else {
-        _messages.add(errorMessage);
+    }
+
+    // 有助手消息,处理流式内容
+    if (response.choices.isNotEmpty) {
+      final choice = response.choices.first;
+      // 如果非流式响应的内容放在message中，包装成一次流式响应。
+      // delta和message结构一致，可以统一处理
+      final delta = choice.delta ?? choice.message;
+
+      // print('收到流式响应xxx: ${delta?.toRawJson()} ');
+
+      // 处理单独推理内容
+      if (delta != null &&
+          delta.reasoningContent != null &&
+          delta.reasoningContent!.isNotEmpty) {
+        accumulatedThinking += delta.reasoningContent!;
       }
 
-      await _chatDao.saveMessage(errorMessage);
-      // 对话处理完了要清空搜索参考
-      _chatService.clearLastSearchReferences();
-      // notifyListeners();
-      _setStreaming(false);
+      // 处理正常内容中思考模式
+      if (delta != null && delta.content != null && delta.content!.isNotEmpty) {
+        final newContent = delta.content!;
+
+        // 检测思考内容的开始和结束标记
+        if (newContent.contains('<thinking>') ||
+            newContent.contains('<think>')) {
+          isInThinking = true;
+          startTime = DateTime.now();
+          print('开始思考模式');
+        }
+
+        // 处理正常内容中的思考内容
+        if (isInThinking) {
+          accumulatedThinking += newContent;
+          if (newContent.contains('</thinking>') ||
+              newContent.contains('</think>')) {
+            isInThinking = false;
+            print('结束思考模式');
+            // 清理思考内容的标记
+            accumulatedThinking = accumulatedThinking
+                .replaceAll('<thinking>', '')
+                .replaceAll('</thinking>', '')
+                .replaceAll('<think>', '')
+                .replaceAll('</think>', '')
+                .trim();
+          }
+        } else {
+          // 思考标签结束后,计算思考时长
+          if (endTime == null) {
+            endTime = DateTime.now();
+            thinkingTime = endTime.difference(startTime).inMilliseconds;
+          }
+
+          // 处理正常内容的正常响应
+          accumulatedContent += newContent;
+        }
+      }
+
+      // print("正常累加内容$accumulatedContent");
+
+      // 处理语音(omni等模型可能有流式追加的音频二进制数据需要累加起来)
+      finalAudioBase64 += delta?.audio?['data'] ?? '';
+
+      print("xxxxxxxxxxxxxxx$multimodalContent");
+
+      // 检查是否完成
+      // 模型停止生成 token 的原因。
+      // stop：模型自然停止生成，或遇到 stop 序列中列出的字符串。
+      // length ：输出长度达到了模型上下文长度限制，或达到了 max_tokens 的限制。
+      // content_filter：输出内容因触发过滤策略而被过滤。
+      // insufficient_system_resource：系统推理资源不足，生成被打断。
+      if (choice.finishReason != null) {
+        print('流式完成，原因: ${choice.finishReason}');
+        // 正常停止时,需要把累加的音频数据转为音频文件,并把文本和音频文件等放到消息多模态栏位
+
+        print("文本内容 $accumulatedContent 音频内容 $finalAudioBase64 ");
+
+        String voicePath = '';
+        // 如果是多模态有响应音频base64数据，保存到固定的位置
+        if (finalAudioBase64.isNotEmpty) {
+          voicePath = await WavAudioHandler.saveBase64Wav(
+            finalAudioBase64,
+            model: _currentModel?.modelName,
+          );
+        }
+
+        // 添加文本内容（如果存在）
+        if (accumulatedContent.trim().isNotEmpty) {
+          multimodalContent.add(
+            UnifiedContentItem.text(accumulatedContent.trim()),
+          );
+        }
+
+        print("voicePath: $voicePath");
+
+        // 添加音频内容
+        if (voicePath.isNotEmpty) {
+          print("xxxxxxxxvoicePath: $voicePath");
+
+          multimodalContent.add(
+            UnifiedContentItem.audio(
+              voicePath,
+              fileName: voicePath.split('/').last,
+              fileSize: await getFileSize(File(voicePath)),
+            ),
+          );
+        }
+
+        // 有多模态异步处理数据，在此处保存到数据库，否则在流结束时保存时是null的
+        final saveMessage = _messages[index].copyWith(
+          content: accumulatedContent,
+          thinkingContent: accumulatedThinking.isNotEmpty
+              ? accumulatedThinking
+              : null,
+          thinkingTime: thinkingTime,
+          contentType: multimodalContent.isNotEmpty
+              ? UnifiedContentType.multimodal
+              : UnifiedContentType.text,
+          multimodalContent: multimodalContent.isNotEmpty
+              ? multimodalContent
+              : null,
+          tokenCount:
+              response.usage?.totalTokens ?? _messages[index].tokenCount,
+          cost: response.usage?.totalTokens != null
+              ? _calculateCost(response.usage!.totalTokens, _currentModel!)
+              : _messages[index].cost,
+          // 如果是搜索相关的响应，添加搜索结果链接
+          searchReferences: isWebSearch && _isWebSearchEnabled
+              ? _getSearchReferencesFromService()
+              : _messages[index].searchReferences,
+          updatedAt: DateTime.now(),
+        );
+
+        _chatDao.saveMessage(saveMessage);
+      }
+
+      /// 实时追加更新助手消息
+      _messages[index] = _messages[index].copyWith(
+        content: accumulatedContent,
+        thinkingContent: accumulatedThinking.isNotEmpty
+            ? accumulatedThinking
+            : null,
+        thinkingTime: thinkingTime,
+        contentType: multimodalContent.isNotEmpty
+            ? UnifiedContentType.multimodal
+            : UnifiedContentType.text,
+        multimodalContent: multimodalContent.isNotEmpty
+            ? multimodalContent
+            : null,
+        tokenCount: response.usage?.totalTokens ?? _messages[index].tokenCount,
+        cost: response.usage?.totalTokens != null
+            ? _calculateCost(response.usage!.totalTokens, _currentModel!)
+            : _messages[index].cost,
+        // 如果是搜索相关的响应，添加搜索结果链接
+        searchReferences: isWebSearch && _isWebSearchEnabled
+            ? _getSearchReferencesFromService()
+            : _messages[index].searchReferences,
+        updatedAt: DateTime.now(),
+      );
+      // print('更新消息内容: "${_messages[index].content}"');
+      notifyListeners();
     }
+
+    // 返回更新后的累加变量
+    return _StreamChunkResult(
+      accumulatedContent: accumulatedContent,
+      accumulatedThinking: accumulatedThinking,
+      finalAudioBase64: finalAudioBase64,
+      isInThinking: isInThinking,
+      endTime: endTime,
+      thinkingTime: thinkingTime,
+      multimodalContent: multimodalContent,
+    );
+  }
+
+  /// 处理流式完成
+  /// 特别注意，在finishReason不为null时的结束处理，和这里没有关系
+  /// 在finishReason保存音频文件等异步操作构建的多模态数据，这里是取不到的，所以在finishReason需要先保存
+  /// 那么在这里，就不太清楚实际作用了
+  Future<void> _handleStreamDone(UnifiedChatMessage assistantMessage) async {
+    print('流式响应完成');
+
+    // 流式完成，保存最终消息(注意，有时候解析失败，会无法正确保存token使用量等内容)
+    final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
+
+    print(_messages[index]);
+
+    if (index != -1) {
+      final finalMessage = _messages[index].copyWith(
+        isStreaming: false,
+        updatedAt: DateTime.now(),
+      );
+      print(
+        '[流式完成]保存最终消息: "${finalMessage.content}"\n${finalMessage.multimodalContent}',
+      );
+
+      _updateAssistantMessage(finalMessage);
+
+      // 更新对话统计, 对话处理完了要清空搜索参考
+      await _updateConversationStats();
+      _chatService.clearLastSearchReferences();
+    }
+
+    _setStreaming(false);
+  }
+
+  /// 处理流式错误
+  void _handleStreamError(Object error, UnifiedChatMessage assistantMessage) {
+    print('流式响应错误, 类型:${error.runtimeType} 内容:$error');
+
+    // 在对话中显示错误而不是统一错误页面
+    final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
+    if (index != -1) {
+      final errorMessage = _messages[index].copyWith(
+        content: 'AI回复失败: $error',
+        isStreaming: false,
+        isError: true,
+        errorMessage: error.toString(),
+        updatedAt: DateTime.now(),
+      );
+      _messages[index] = errorMessage;
+      _chatDao.saveMessage(errorMessage);
+      notifyListeners();
+    }
+
+    _chatService.clearLastSearchReferences();
+    _setStreaming(false);
+  }
+
+  /// 处理发送请求异常
+  Future<void> _handleMessageSendError(Object error) async {
+    print('发送请求异常: $error');
+    if (_currentConversation == null) return;
+
+    // 在对话中显示错误而不是统一错误页面
+    final assistantMessage = _createAssistantPlaceholder(
+      content: '发送请求失败: $error',
+    );
+    final errorMessage = assistantMessage.copyWith(
+      isError: true,
+      errorMessage: error.toString(),
+      isStreaming: false,
+    );
+
+    // 如果已有助手消息占位符，替换它；否则添加新的错误消息
+    final assistantIndex = _messages.lastIndexWhere(
+      (m) => m.role == UnifiedMessageRole.assistant && m.isStreaming,
+    );
+    if (assistantIndex != -1) {
+      _messages[assistantIndex] = errorMessage;
+    } else {
+      _messages.add(errorMessage);
+    }
+
+    // 保存发送错误消息并清空搜索参考
+    await _chatDao.saveMessage(errorMessage);
+    _chatService.clearLastSearchReferences();
+    _setStreaming(false);
+  }
+
+  /// 更新占位助手消息(包括cc\多模态正常响应,报错等情况)
+  Future<void> _updateAssistantMessage(
+    // 被更新的助手消息
+    UnifiedChatMessage assistantMessage,
+  ) async {
+    final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
+    if (index != -1) {
+      _messages[index] = assistantMessage;
+    }
+
+    // 保存错误消息到数据库
+    await _chatDao.saveMessage(assistantMessage);
   }
 
   /// 发送图片生成消息
@@ -961,8 +1296,8 @@ class UnifiedChatViewModel extends ChangeNotifier {
       return;
     }
 
-    // 先保存对话（如果需要）
-    await _saveConversationIfNeeded(prompt.trim());
+    // 初始化对话保存
+    await _initSaveConversation(prompt.trim());
 
     // 构建多模态内容列表（图片生成，只处理图片内容）
     final multimodalContent = <UnifiedContentItem>[];
@@ -986,20 +1321,16 @@ class UnifiedChatViewModel extends ChangeNotifier {
     }
 
     // 创建用户消息
-    final userMessage = UnifiedChatMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      conversationId: _currentConversation!.id,
-      role: UnifiedMessageRole.user,
-      content: prompt,
+    final userMessage = _createUserPlaceholder(
+      prompt,
       contentType: UnifiedContentType.multimodal,
       multimodalContent: multimodalContent,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      isStreaming: false,
-      metadata: {'model': _currentModel, 'platform': _currentPlatform},
-      // 这两个还有必要吗？
-      modelNameUsed: _currentModel!.modelName,
-      platformIdUsed: _currentPlatform!.id,
+      metadata: {
+        'model': _currentModel,
+        'platform': _currentPlatform,
+        'sourceLanguage': settings?['sourceLanguage'],
+        'targetLanguage': settings?['targetLanguage'],
+      },
     );
 
     // 添加用户消息到列表
@@ -1019,18 +1350,8 @@ class UnifiedChatViewModel extends ChangeNotifier {
     final combinedPrompt = allUserMessages.join('\n\n');
 
     // 创建助手消息占位符
-    final assistantMessage = UnifiedChatMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      conversationId: _currentConversation!.id,
-      role: UnifiedMessageRole.assistant,
+    final assistantMessage = _createAssistantPlaceholder(
       content: '正在生成图片，请勿退出...\n',
-      contentType: UnifiedContentType.text,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      isStreaming: true,
-      modelNameUsed: _currentModel!.modelName,
-      platformIdUsed: _currentPlatform!.id,
-      metadata: {'model': _currentModel, 'platform': _currentPlatform},
     );
 
     _messages.add(assistantMessage);
@@ -1039,7 +1360,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
     try {
       // 准备参考图片地址（如果是图生图模型且有选择的图片）
       List<String>? referenceImages;
-      if (_currentModel!.type == UnifiedModelType.imageToImage &&
+      if (_currentModel!.type == UnifiedModelType.iti &&
           images?.isNotEmpty == true) {
         referenceImages = images!.map((file) => file.path).toList();
       }
@@ -1048,9 +1369,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
       final request = ImageGenerationRequest(
         model: _currentModel!.modelName,
         prompt: combinedPrompt,
-        image: referenceImages?.isNotEmpty == true
-            ? referenceImages!.first
-            : null,
+        images: referenceImages,
         size: settings?['size'],
         quality: settings?['quality'],
         n: double.tryParse(settings?['n'].toString() ?? '1')?.toInt() ?? 1,
@@ -1058,6 +1377,8 @@ class UnifiedChatViewModel extends ChangeNotifier {
         steps: settings?['steps'],
         guidanceScale: settings?['guidanceScale'],
         watermark: settings?['watermark'] ?? true,
+        sourceLanguage: settings?['sourceLanguage'],
+        targetLanguage: settings?['targetLanguage'],
       );
 
       // 调用图片生成服务
@@ -1093,25 +1414,11 @@ class UnifiedChatViewModel extends ChangeNotifier {
             ? '生成了 ${response.data.length} 张图片'
             : '图片生成完成',
         isStreaming: false,
-        metadata: {
-          'images': newUrls,
-          // 'images': response.data
-          //     .map((img) => img.url)
-          //     .where((url) => url != null)
-          //     .toList(),
-          // 图片有效期只有一个小时，可以不存，节约资源
-          // 'image_data': response.data,
-        },
+        metadata: {'images': newUrls},
       );
 
       // 更新消息列表
-      final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
-      if (index != -1) {
-        _messages[index] = updatedAssistantMessage;
-      }
-
-      // 保存助手消息到数据库
-      await _chatDao.saveMessage(updatedAssistantMessage);
+      await _updateAssistantMessage(updatedAssistantMessage);
 
       // 更新对话统计
       await _updateConversationStats();
@@ -1123,13 +1430,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
         isStreaming: false,
       );
 
-      final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
-      if (index != -1) {
-        _messages[index] = errorMessage;
-      }
-
-      // 保存错误消息到数据库
-      await _chatDao.saveMessage(errorMessage);
+      _updateAssistantMessage(errorMessage);
     }
 
     notifyListeners();
@@ -1146,23 +1447,11 @@ class UnifiedChatViewModel extends ChangeNotifier {
       return;
     }
 
-    // 先保存对话（如果需要）
-    await _saveConversationIfNeeded(text.trim());
+    // 初始化对话保存
+    await _initSaveConversation(text.trim());
 
     // 创建用户消息
-    final userMessage = UnifiedChatMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      conversationId: _currentConversation!.id,
-      role: UnifiedMessageRole.user,
-      content: text,
-      contentType: UnifiedContentType.text,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      isStreaming: false,
-      metadata: {'model': _currentModel, 'platform': _currentPlatform},
-      modelNameUsed: _currentModel!.modelName,
-      platformIdUsed: _currentPlatform!.id,
-    );
+    final userMessage = _createUserPlaceholder(text);
 
     // 添加用户消息到列表
     _messages.add(userMessage);
@@ -1172,18 +1461,8 @@ class UnifiedChatViewModel extends ChangeNotifier {
     await _chatDao.saveMessage(userMessage);
 
     // 创建助手消息占位符
-    final assistantMessage = UnifiedChatMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      conversationId: _currentConversation!.id,
-      role: UnifiedMessageRole.assistant,
-      content: '正在合成语音...',
-      contentType: UnifiedContentType.text,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      isStreaming: true,
-      modelNameUsed: _currentModel!.modelName,
-      platformIdUsed: _currentPlatform!.id,
-      metadata: {'model': _currentModel, 'platform': _currentPlatform},
+    final assistantMessage = _createAssistantPlaceholder(
+      content: '正在合成语音，请勿退出...\n',
     );
 
     _messages.add(assistantMessage);
@@ -1252,13 +1531,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
       );
 
       // 更新消息列表
-      final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
-      if (index != -1) {
-        _messages[index] = updatedAssistantMessage;
-      }
-
-      // 保存助手消息到数据库
-      await _chatDao.saveMessage(updatedAssistantMessage);
+      await _updateAssistantMessage(updatedAssistantMessage);
 
       // 更新对话统计
       await _updateConversationStats();
@@ -1269,14 +1542,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
         content: '语音合成失败: $e',
         isStreaming: false,
       );
-
-      final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
-      if (index != -1) {
-        _messages[index] = errorMessage;
-      }
-
-      // 保存错误消息到数据库
-      await _chatDao.saveMessage(errorMessage);
+      _updateAssistantMessage(errorMessage);
     }
 
     notifyListeners();
@@ -1293,26 +1559,18 @@ class UnifiedChatViewModel extends ChangeNotifier {
       return;
     }
 
-    // 先保存对话（如果需要）
-    await _saveConversationIfNeeded('语音识别');
+    // 初始化对话保存
+    await _initSaveConversation('语音识别');
 
     // 创建用户消息（显示音频文件）
-    final userMessage = UnifiedChatMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      conversationId: _currentConversation!.id,
-      role: UnifiedMessageRole.user,
-      // content: '语音消息',
+    final userMessage = _createUserPlaceholder(
+      '',
       contentType: UnifiedContentType.audio,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      isStreaming: false,
       metadata: {
         'audio': audioPath,
         'model': _currentModel,
         'platform': _currentPlatform,
       },
-      modelNameUsed: _currentModel!.modelName,
-      platformIdUsed: _currentPlatform!.id,
     );
 
     // 添加用户消息到列表
@@ -1323,18 +1581,8 @@ class UnifiedChatViewModel extends ChangeNotifier {
     await _chatDao.saveMessage(userMessage);
 
     // 创建助手消息占位符
-    final assistantMessage = UnifiedChatMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      conversationId: _currentConversation!.id,
-      role: UnifiedMessageRole.assistant,
-      content: '正在识别语音...',
-      contentType: UnifiedContentType.text,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      isStreaming: true,
-      modelNameUsed: _currentModel!.modelName,
-      platformIdUsed: _currentPlatform!.id,
-      metadata: {'model': _currentModel, 'platform': _currentPlatform},
+    final assistantMessage = _createAssistantPlaceholder(
+      content: '正在识别语音，请勿退出...\n',
     );
 
     _messages.add(assistantMessage);
@@ -1386,13 +1634,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
       );
 
       // 更新消息列表
-      final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
-      if (index != -1) {
-        _messages[index] = updatedAssistantMessage;
-      }
-
-      // 保存助手消息到数据库
-      await _chatDao.saveMessage(updatedAssistantMessage);
+      await _updateAssistantMessage(updatedAssistantMessage);
 
       // 更新对话统计
       await _updateConversationStats();
@@ -1403,22 +1645,10 @@ class UnifiedChatViewModel extends ChangeNotifier {
         content: '语音识别失败: $e',
         isStreaming: false,
       );
-
-      final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
-      if (index != -1) {
-        _messages[index] = errorMessage;
-      }
-
-      // 保存错误消息到数据库
-      await _chatDao.saveMessage(errorMessage);
+      _updateAssistantMessage(errorMessage);
     }
 
     notifyListeners();
-  }
-
-  /// 计算消息成本(只显示token数量,不计算花费)
-  double _calculateCost(int tokens, UnifiedModelSpec model) {
-    return tokens * 1.0;
   }
 
   /// 重新生成响应消息
@@ -1482,6 +1712,10 @@ class UnifiedChatViewModel extends ChangeNotifier {
     }
   }
 
+  /// ******************************************
+  /// 消息辅助方法
+  /// ******************************************
+
   /// 创建并保存系统消息（如果需要）
   Future<void> _createAndSaveSystemMessageIfNeeded() async {
     final effectivePartner = _currentPartner ?? defaultPartner;
@@ -1489,17 +1723,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
         _currentConversation?.systemPrompt ?? effectivePartner.prompt;
 
     if (systemPrompt.isNotEmpty) {
-      final systemMessage = UnifiedChatMessage(
-        id: 'system_${DateTime.now().millisecondsSinceEpoch}',
-        conversationId: _currentConversation!.id,
-        role: UnifiedMessageRole.system,
-        content: systemPrompt,
-        contentType: UnifiedContentType.text,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        cost: 0.0,
-        metadata: {'model': _currentModel, 'platform': _currentPlatform},
-      );
+      final systemMessage = _createSystemPlaceholder(systemPrompt);
 
       _messages.insert(0, systemMessage);
       await _chatDao.saveMessage(systemMessage);
@@ -1533,17 +1757,12 @@ class UnifiedChatViewModel extends ChangeNotifier {
           }
         } else if (message.role == UnifiedMessageRole.assistant) {
           // 连续助手消息：插入一个占位用户消息
-          final placeholderMessage = UnifiedChatMessage(
+          final userMessage = _createUserPlaceholder("继续");
+          final placeholderMessage = userMessage.copyWith(
             id: 'placeholder_${DateTime.now().millisecondsSinceEpoch}',
             conversationId: message.conversationId,
-            role: UnifiedMessageRole.user,
-            content: '继续',
-            contentType: UnifiedContentType.text,
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-            cost: 0.0,
-            metadata: {'model': _currentModel, 'platform': _currentPlatform},
           );
+
           fixedMessages.add(placeholderMessage);
         }
       }
@@ -1583,17 +1802,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
       }
     } else if (newSystemPrompt != null && newSystemPrompt.isNotEmpty) {
       // 如果没有系统消息但新提示词不为空，创建新的系统消息
-      final systemMessage = UnifiedChatMessage(
-        id: 'system_${DateTime.now().millisecondsSinceEpoch}',
-        conversationId: _currentConversation!.id,
-        role: UnifiedMessageRole.system,
-        content: newSystemPrompt,
-        contentType: UnifiedContentType.text,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        cost: 0.0,
-        metadata: {'model': _currentModel, 'platform': _currentPlatform},
-      );
+      final systemMessage = _createSystemPlaceholder(newSystemPrompt);
 
       await _chatDao.saveMessage(systemMessage);
       _messages.insert(0, systemMessage);
@@ -1787,6 +1996,13 @@ class UnifiedChatViewModel extends ChangeNotifier {
       await _chatDao.updateConversation(_currentConversation!);
     }
 
+    // 清空多模态配置属性，以确保切换到不同平台模型后不会使用其他平台的配置
+    await updateConversationSettings({
+      'imageGenerationParams': null,
+      'speechSynthesisParams': null,
+      'speechRecognitionParams': null,
+    });
+
     notifyListeners();
   }
 
@@ -1843,6 +2059,11 @@ class UnifiedChatViewModel extends ChangeNotifier {
   void _clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  /// 计算消息成本(只显示token数量,不计算花费)
+  double _calculateCost(int tokens, UnifiedModelSpec model) {
+    return tokens * 1.0;
   }
 
   /// ******************************************
@@ -2007,4 +2228,25 @@ class UnifiedChatViewModel extends ChangeNotifier {
     _streamSubscription?.cancel();
     super.dispose();
   }
+}
+
+/// 流式处理结果
+class _StreamChunkResult {
+  final String accumulatedContent;
+  final String accumulatedThinking;
+  final String finalAudioBase64;
+  final bool isInThinking;
+  final DateTime? endTime;
+  final int thinkingTime;
+  final List<UnifiedContentItem> multimodalContent;
+
+  _StreamChunkResult({
+    required this.accumulatedContent,
+    required this.accumulatedThinking,
+    required this.finalAudioBase64,
+    required this.isInThinking,
+    required this.endTime,
+    required this.thinkingTime,
+    required this.multimodalContent,
+  });
 }

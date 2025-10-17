@@ -304,7 +304,11 @@ class CustomLogInterceptor extends Interceptor {
         return jsonEncode(processed);
       } catch (e) {
         // 如果不是JSON字符串，直接返回
-        return data;
+        // return data;
+        // 不是json的字符串，也截断返回
+        return data.length <= truncateLength
+            ? data
+            : '${data.substring(0, truncateLength)}……[不是JSON的字符串]$truncateIndicator';
       }
     }
 

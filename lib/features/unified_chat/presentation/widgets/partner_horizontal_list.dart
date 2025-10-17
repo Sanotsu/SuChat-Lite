@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../data/models/unified_chat_partner.dart';
 import '../../data/database/unified_chat_dao.dart';
 import '../pages/my_partners_page.dart';
@@ -61,7 +62,7 @@ class _PartnerHorizontalListState extends State<PartnerHorizontalList> {
 
     return Container(
       height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Row(
         children: [
           Expanded(
@@ -100,26 +101,12 @@ class _PartnerHorizontalListState extends State<PartnerHorizontalList> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // 头像
-            Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: Colors.blue,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: partner.avatarUrl != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        partner.avatarUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return _buildDefaultAvatar(partner);
-                        },
-                      ),
-                    )
-                  : _buildDefaultAvatar(partner),
+            buildUserCircleAvatar(
+              partner.avatarUrl,
+              radius: 12,
+              defaultAvatar: _buildDefaultAvatar(partner),
             ),
+
             const SizedBox(width: 4),
             // 名称
             Text(

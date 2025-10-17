@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:mime/mime.dart';
 
 import '../../../../core/utils/wav_audio_handler.dart';
 import '../../../../shared/constants/constants.dart';
@@ -73,9 +74,11 @@ class AIResponseHandler {
               try {
                 final bytes = File(url.trim()).readAsBytesSync();
                 final base64Image = base64Encode(bytes);
+                final mimeType = lookupMimeType(url.trim());
+
                 contentList.add({
                   'type': 'image_url',
-                  'image_url': {'url': 'data:image/jpeg;base64,$base64Image'},
+                  'image_url': {'url': 'data:$mimeType;base64,$base64Image'},
                 });
               } catch (e) {
                 _showErrorDialog('处理图片失败: $e');
@@ -96,7 +99,8 @@ class AIResponseHandler {
                 contentList.add({
                   'type': 'input_audio',
                   'input_audio': {
-                    'data': 'data:;base64,$base64Audio',
+                    'data':
+                        'data:${lookupMimeType(audioUrl.trim())};base64,$base64Audio',
                     "format": audioUrl.split('.').last,
                   },
                 });

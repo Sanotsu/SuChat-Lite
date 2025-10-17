@@ -10,6 +10,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:mime/mime.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:proste_logger/proste_logger.dart';
@@ -681,7 +682,7 @@ Future<void> savevgVideoToLocal(String netVideoUrl, {String? prefix}) async {
 Future<String?> getImageBase64String(File? image) async {
   if (image == null) return null;
   var tempStr = base64Encode(await image.readAsBytes());
-  return "data:image/png;base64,$tempStr";
+  return "data:${lookupMimeType(image.path)};base64,$tempStr";
 }
 
 ///
@@ -848,13 +849,14 @@ Future<int?> getFileSize(File file) async {
 /// 将图片或视频转换为base64格式
 ///
 String convertToBase64(String fileUrl, {String fileType = 'image'}) {
-  // 如果已经是base64格式的图片，直接返回
+  // 如果已经是base64格式的，直接返回
   if (fileType == 'image' && fileUrl.startsWith('data:image/')) {
     return fileUrl;
   }
-
-  // 如果已经是base64格式的视频，直接返回
   if (fileType == 'video' && fileUrl.startsWith('data:video/')) {
+    return fileUrl;
+  }
+  if (fileType == 'audio' && fileUrl.startsWith('data:audio/')) {
     return fileUrl;
   }
 
@@ -869,29 +871,7 @@ String convertToBase64(String fileUrl, {String fileType = 'image'}) {
     if (file.existsSync()) {
       final bytes = file.readAsBytesSync();
       final base64String = base64Encode(bytes);
-
-      // 如果是视频，直接返回base64字符串
-      if (fileType == 'video') {
-        return 'data:video/mp4;base64,$base64String';
-      }
-
-      // 根据文件扩展名确定MIME类型
-      String mimeType = 'image/jpeg'; // 默认
-      final extension = fileUrl.toLowerCase().split('.').last;
-      switch (extension) {
-        case 'png':
-          mimeType = 'image/png';
-          break;
-        case 'gif':
-          mimeType = 'image/gif';
-          break;
-        case 'webp':
-          mimeType = 'image/webp';
-          break;
-        case 'bmp':
-          mimeType = 'image/bmp';
-          break;
-      }
+      final mimeType = lookupMimeType(file.path);
 
       return 'data:$mimeType;base64,$base64String';
     }

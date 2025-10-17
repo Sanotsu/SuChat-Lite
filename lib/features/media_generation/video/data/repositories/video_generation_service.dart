@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:mime/mime.dart';
+
 import '../../../../../shared/constants/default_models.dart';
 import '../../../../../core/entities/cus_llm_model.dart';
 import '../../../../../shared/constants/constant_llm_enum.dart';
@@ -113,7 +115,8 @@ class VideoGenerationService {
     String? referenceImage;
     if (referenceImagePath != null) {
       final bytes = await File(referenceImagePath).readAsBytes();
-      referenceImage = "data:image/png;base64,${base64Encode(bytes)}";
+      final mimeType = lookupMimeType(referenceImagePath);
+      referenceImage = "data:$mimeType;base64,${base64Encode(bytes)}";
     }
 
     final request = VideoGenerationRequest(
@@ -171,10 +174,9 @@ class VideoGenerationService {
               requestId: submitResp?.requestId,
               taskId: taskId,
               status: 'SUCCEEDED',
-              results:
-                  response.output?.videoUrl != null
-                      ? [VideoResult(url: response.output?.videoUrl ?? '')]
-                      : [],
+              results: response.output?.videoUrl != null
+                  ? [VideoResult(url: response.output?.videoUrl ?? '')]
+                  : [],
             );
           }
           if (response.output?.taskStatus == 'FAILED' ||

@@ -79,18 +79,6 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
     final content = widget.message.displayContent;
     if (content.isEmpty) return const SizedBox.shrink();
 
-    // 对于AI助手的回复，使用Markdown渲染
-    // if (widget.message.isAssistant) {
-    //   return CusMarkdownRenderer.instance.render(
-    //     content,
-    //     textStyle: widget.textStyle,
-    //     selectable: true,
-    //   );
-    // }
-
-    // // 用户消息使用普通文本
-    // return SelectableText(content, style: widget.textStyle);
-
     return CusMarkdownRenderer.instance.render(
       content,
       textStyle: widget.textStyle,
@@ -99,22 +87,9 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
 
   Widget _buildTextItem(String text) {
     if (text.isEmpty) return const SizedBox.shrink();
-
-    // 对于AI助手的回复，使用Markdown渲染
-    if (widget.message.isAssistant) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: CusMarkdownRenderer.instance.render(
-          text,
-          textStyle: widget.textStyle,
-          selectable: true,
-        ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: SelectableText(text, style: widget.textStyle),
+    return CusMarkdownRenderer.instance.render(
+      text,
+      textStyle: widget.textStyle,
     );
   }
 
@@ -157,36 +132,46 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
 
   Widget _buildAudioItem(UnifiedContentItem item) {
     return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Theme.of(context).disabledColor),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.primaryContainer,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(width: 4),
-          Icon(Icons.audiotrack),
+          Icon(
+            Icons.audiotrack,
+            color: widget.textStyle?.color != null
+                ? widget.textStyle!.color!.withValues(alpha: 0.7)
+                : null,
+          ),
           const SizedBox(width: 4),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item.fileName ?? '音频文件',
-                  style: TextStyle(
-                    fontWeight: FontWeight.normal,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                  item.audioUrl ?? '音频文件',
+                  style: widget.textStyle?.copyWith(fontSize: 12),
+                  // style: TextStyle(
+                  //   fontWeight: FontWeight.normal,
+                  //   color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  // ),
                 ),
                 if (item.fileSize != null)
                   Text(
                     _formatFileSize(item.fileSize!),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                    ),
+                    style: widget.textStyle?.copyWith(fontSize: 12),
+                    // style: TextStyle(
+                    //   fontSize: 12,
+                    //   color: Theme.of(
+                    //     context,
+                    //   ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    // ),
                   ),
               ],
             ),
@@ -467,15 +452,24 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
   Widget _buildMetadataAudio(String audioPath) {
     final fileName = audioPath.split('/').last;
     return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(16),
         // border: Border.all(color: widget.textStyle?.color ?? Colors.black),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.primaryContainer,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(width: 4),
-          Icon(Icons.audiotrack),
+          Icon(
+            Icons.audiotrack,
+            color: widget.textStyle?.color != null
+                ? widget.textStyle!.color!.withValues(alpha: 0.7)
+                : null,
+          ),
           const SizedBox(width: 4),
           Expanded(
             child: Text(

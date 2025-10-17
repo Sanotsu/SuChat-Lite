@@ -31,6 +31,23 @@ class _ImageGenerationSettingsDialogState
 
   late Map<String, dynamic> _initialValues;
 
+  // 添加状态变量来跟踪当前选择的值
+  String? _currentSourceLanguage;
+  String? _currentTargetLanguage;
+
+  // 简化一些判断的逻辑
+  bool get isQwenMtImage =>
+      widget.currentModel?.modelName.contains('qwen-mt-image') ?? false;
+
+  bool get isAliyunPlatform =>
+      widget.currentPlatform?.id == UnifiedPlatformId.aliyun.name;
+
+  bool get isSiliconCloudPlatform =>
+      widget.currentPlatform?.id == UnifiedPlatformId.siliconCloud.name;
+
+  bool get isZhipuPlatform =>
+      widget.currentPlatform?.id == UnifiedPlatformId.zhipu.name;
+
   @override
   void initState() {
     super.initState();
@@ -45,15 +62,25 @@ class _ImageGenerationSettingsDialogState
       'guidanceScale': 7.5,
       'watermark': true,
       'negativePrompt': '',
+      'sourceLanguage': 'auto',
+      'targetLanguage': 'zh',
     };
 
     _initialValues = {...defaultSettings, ...widget.currentSettings};
 
     final supportedSizes = _getSupportedSizes();
     // 传入的配置中尺寸可能与平台模型支持的尺寸不一致，需要进行调整
-    _initialValues['size'] = supportedSizes.isNotEmpty
+    _initialValues['size'] =
+        (supportedSizes.isNotEmpty &&
+            supportedSizes.contains(_initialValues['size']))
+        ? _initialValues['size']
+        : supportedSizes.isNotEmpty
         ? supportedSizes.first
         : '1024x1024';
+
+    // 初始化状态变量
+    _currentSourceLanguage = _initialValues['sourceLanguage'] as String?;
+    _currentTargetLanguage = _initialValues['targetLanguage'] as String?;
   }
 
   @override
@@ -89,7 +116,8 @@ class _ImageGenerationSettingsDialogState
               children: [
                 // 尺寸选择
                 const SizedBox(height: 10),
-                _buildSizeSelector(),
+
+                if (!isQwenMtImage) _buildSizeSelector(),
 
                 // 数量选择
                 const SizedBox(height: 10),
@@ -97,23 +125,30 @@ class _ImageGenerationSettingsDialogState
                 const SizedBox(height: 10),
 
                 // 质量选择
-                if (widget.currentPlatform?.id == UnifiedPlatformId.zhipu.name)
-                  _buildQualitySelector(),
+                if (isZhipuPlatform) _buildQualitySelector(),
                 // 智谱、火山方舟的没有负面提示词栏位
-                if (widget.currentPlatform?.id ==
-                        UnifiedPlatformId.aliyun.name ||
-                    widget.currentPlatform?.id ==
-                        UnifiedPlatformId.siliconCloud.name)
+                if ((isAliyunPlatform || isSiliconCloudPlatform) &&
+                    !isQwenMtImage)
                   _buildNegativePromptField(),
                 // 硅基流动的没有水印栏位
-                if (widget.currentPlatform?.id !=
-                    UnifiedPlatformId.siliconCloud.name)
+                if (!isSiliconCloudPlatform && !isQwenMtImage)
                   _buildWatermarkField(),
+
+                // 只有阿里云的qwen-mt-image有语言选择
+                if (isAliyunPlatform && isQwenMtImage) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(child: _buildSourceLanguageSelector()),
+                      const SizedBox(width: 8),
+                      Expanded(child: _buildTargetLanguageSelector()),
+                    ],
+                  ),
+                ],
+
                 // 高级设置
                 // TEST 暂时只有硅基流动的
-                if (widget.currentPlatform?.id ==
-                    UnifiedPlatformId.siliconCloud.name)
-                  _buildAdvancedSettings(),
+                if (isSiliconCloudPlatform) _buildAdvancedSettings(),
               ],
             ),
           ),
@@ -132,10 +167,15 @@ class _ImageGenerationSettingsDialogState
 
   Widget _buildSizeSelector() {
     final supportedSizes = _getSupportedSizes();
+    final currentSize = _initialValues['size']?.toString();
+    final validInitialSize = supportedSizes.contains(currentSize)
+        ? currentSize
+        : (supportedSizes.isNotEmpty ? supportedSizes.first : '1024x1024');
 
     return FormBuilderDropdown<String>(
       name: 'size',
-      initialValue: _initialValues['size']?.toString(),
+      // initialValue: _initialValues['size']?.toString(),
+      initialValue: validInitialSize,
       decoration: const InputDecoration(
         labelText: '图片尺寸',
         border: OutlineInputBorder(),
@@ -235,13 +275,111 @@ class _ImageGenerationSettingsDialogState
     );
   }
 
+  // 源语言选择器
+  Widget _buildSourceLanguageSelector() {
+    final supportedLanguages = _getSupportedSourceLanguages(
+      _currentTargetLanguage,
+    );
+    return FormBuilderDropdown<String>(
+      name: 'sourceLanguage',
+      // initialValue: _currentSourceLanguage,
+      // 使用 value 而不是 initialValue，确保值在选项中
+      initialValue: supportedLanguages.contains(_currentSourceLanguage)
+          ? _currentSourceLanguage
+          : supportedLanguages.first,
+      decoration: const InputDecoration(
+        labelText: '源语言',
+        border: OutlineInputBorder(),
+      ),
+      onChanged: (value) {
+        if (value != null) {
+          setState(() {
+            _currentSourceLanguage = value;
+
+            // 如果新的源语言不是auto/zh/en，且当前目标语言不是zh/en，则重置目标语言
+            if (value != 'auto' && value != 'zh' && value != 'en') {
+              if (_currentTargetLanguage != 'zh' &&
+                  _currentTargetLanguage != 'en') {
+                _currentTargetLanguage = 'zh';
+                // 更新表单字段的值
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _formKey.currentState?.fields['targetLanguage']?.didChange(
+                    'zh',
+                  );
+                });
+              }
+            }
+          });
+        }
+      },
+      items: _getSupportedSourceLanguages(_currentTargetLanguage)
+          .map(
+            (language) => DropdownMenuItem(
+              value: language,
+              child: Text(_getLanguageDisplayName(language)),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  // 目标语言选择器
+  Widget _buildTargetLanguageSelector() {
+    final supportedLanguages = _getSupportedTargetLanguages(
+      _currentSourceLanguage,
+    );
+
+    return FormBuilderDropdown<String>(
+      name: 'targetLanguage',
+      // initialValue: _currentTargetLanguage,
+      // 使用 value 而不是 initialValue，确保值在选项中
+      initialValue: supportedLanguages.contains(_currentTargetLanguage)
+          ? _currentTargetLanguage
+          : supportedLanguages.first,
+      decoration: const InputDecoration(
+        labelText: '目标语言',
+        border: OutlineInputBorder(),
+      ),
+      onChanged: (value) {
+        if (value != null) {
+          setState(() {
+            _currentTargetLanguage = value;
+
+            // 如果新的目标语言不是zh/en，且当前源语言不是auto/zh/en，则重置源语言
+            if (value != 'zh' && value != 'en') {
+              if (_currentSourceLanguage != 'auto' &&
+                  _currentSourceLanguage != 'zh' &&
+                  _currentSourceLanguage != 'en') {
+                _currentSourceLanguage = 'auto';
+                // 更新表单字段的值
+                // 使用 addPostFrameCallback 确保在下一帧更新表单
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _formKey.currentState?.fields['sourceLanguage']?.didChange(
+                    'auto',
+                  );
+                });
+              }
+            }
+          });
+        }
+      },
+      items: _getSupportedTargetLanguages(_currentSourceLanguage)
+          .map(
+            (language) => DropdownMenuItem(
+              value: language,
+              child: Text(_getLanguageDisplayName(language)),
+            ),
+          )
+          .toList(),
+    );
+  }
+
   Widget _buildAdvancedSettings() {
     return ExpansionTile(
       title: const Text('高级设置'),
       children: [
         const SizedBox(height: 10),
-        if (widget.currentPlatform?.id ==
-            UnifiedPlatformId.siliconCloud.name) ...[
+        if (isSiliconCloudPlatform) ...[
           FormBuilderTextField(
             name: 'seed',
             initialValue: _initialValues['seed']?.toString(),
@@ -391,6 +529,68 @@ class _ImageGenerationSettingsDialogState
     }
   }
 
+  // 获取支持的源语言（根据当前目标语言动态计算）
+  List<String> _getSupportedSourceLanguages(String? currentTargetLanguage) {
+    final allLanguages = [
+      // 所有支持的语言
+      'auto', 'zh', 'en', 'ko', 'ja', 'ru', 'es', 'fr', 'pt', 'it', 'de', 'vi',
+    ];
+
+    // 如果目标语言是zh或en，源语言可以是所有语言
+    if (currentTargetLanguage == 'zh' || currentTargetLanguage == 'en') {
+      return allLanguages;
+    }
+    // 如果目标语言不是zh或en，源语言只能是auto、zh、en
+    else {
+      return ['auto', 'zh', 'en'];
+    }
+  }
+
+  // (只有阿里云的qwen-mt-image支持)
+  // 获取支持的目标语言（根据当前源语言动态计算）
+  List<String> _getSupportedTargetLanguages(String? currentSourceLanguage) {
+    final allLanguages = [
+      // 所有支持的语言（比源语言多几个）
+      // 中文翻译中文不知道行不行？？？？
+      'zh', 'en', 'ko', 'ja', 'ru', 'es', 'fr', 'pt', 'it', 'de', 'vi',
+      'ms', 'th', 'id', 'ar',
+    ];
+
+    // 如果源语言是auto、zh或en，目标语言可以是所有语言
+    if (currentSourceLanguage == 'auto' ||
+        currentSourceLanguage == 'zh' ||
+        currentSourceLanguage == 'en') {
+      return allLanguages;
+    }
+    // 如果源语言不是auto、zh、en，目标语言只能是zh、en
+    else {
+      return ['zh', 'en'];
+    }
+  }
+
+  // 获取语言的显示名称
+  String _getLanguageDisplayName(String languageCode) {
+    final languageNames = {
+      'auto': '自动检测',
+      'zh': '中文',
+      'en': '英文',
+      'ko': '韩文',
+      'ja': '日文',
+      'ru': '俄文',
+      'es': '西班牙文',
+      'fr': '法文',
+      'pt': '葡萄牙文',
+      'it': '意大利文',
+      'de': '德文',
+      'vi': '越南文',
+      'ms': '马来文',
+      'th': '泰文',
+      'id': '印尼文',
+      'ar': '阿拉伯文',
+    };
+    return languageNames[languageCode] ?? languageCode;
+  }
+
   List<String> _getSupportedQualities() {
     switch (widget.currentPlatform?.id) {
       case 'zhipu':
@@ -432,7 +632,14 @@ class _ImageGenerationSettingsDialogState
       'guidanceScale': 7.5,
       'watermark': true,
       'negativePrompt': '',
+      'sourceLanguage': 'auto',
+      'targetLanguage': 'zh',
     };
+
+    setState(() {
+      _currentSourceLanguage = 'auto';
+      _currentTargetLanguage = 'zh';
+    });
 
     _formKey.currentState?.reset();
     _formKey.currentState?.patchValue(defaultSettings);

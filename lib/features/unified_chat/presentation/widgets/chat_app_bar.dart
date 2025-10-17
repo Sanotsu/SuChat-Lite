@@ -34,7 +34,7 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
               if (viewModel.currentModel != null)
                 Text(
-                  viewModel.currentModel!.displayName,
+                  viewModel.currentModel!.modelName,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(
                       context,

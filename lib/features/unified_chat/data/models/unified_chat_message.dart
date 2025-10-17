@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:json_annotation/json_annotation.dart';
+import 'package:mime/mime.dart';
 
 import 'unified_platform_spec.dart';
 
@@ -636,12 +637,6 @@ class UnifiedChatMessage {
     } else if (content != null) {
       result['content'] = content;
     }
-    // TEST: 阿里云平台传视频的参数
-    // if (role == UnifiedMessageRole.system) {
-    //   result['content'] = [
-    //     {"type": "text", "text": content},
-    //   ];
-    // }
 
     if (functionCall != null) {
       result['function_call'] = functionCall!.toJson();
@@ -692,9 +687,6 @@ class UnifiedChatMessage {
           // }
           break;
         case 'image_url':
-
-          // print("---_convertMultimodalContentToOpenAI获取的平台id $platformId");
-
           if (item.imageUrl != null) {
             result.add({
               'type': 'image_url',
@@ -706,12 +698,11 @@ class UnifiedChatMessage {
             });
           }
           break;
-
         case 'video':
-          // print("----------video 获取的平台id $platformId");
-
           if (item.videoUrl != null &&
               platformId == UnifiedPlatformId.aliyun.name) {
+            // 这个是直接传入视频文件；如果是图片列表形式的视频:
+            // {"type": "video","video": ["https://img.1.jpg","https://img.2.jpg","……"]},
             result.add({
               'type': 'video_url',
               'video_url': {
@@ -719,10 +710,25 @@ class UnifiedChatMessage {
               },
             });
           }
+        // 2025-10-15 这里暂时是cc模型发送音频和文件，语音识别传入的音频文件有单独其他地方处理
         case 'audio':
+          // 2025-10-15 暂时只有阿里百炼的qwen-omni系列模型可以传入音频文件
+          if (item.audioUrl != null &&
+              platformId == UnifiedPlatformId.aliyun.name &&
+              // omni可以合成音频，但添加到 messages 数组中的 Assistant Message 只可以包含文本数据。
+              // https://bailian.console.aliyun.com/?switchAgent=10147514&productCode=p_efm&switchUserType=3&tab=doc#/doc/?type=model&url=2867839
+              role == UnifiedMessageRole.user) {
+            result.add({
+              'type': 'input_audio',
+              'input_audio': {
+                'data': _convertToBase64(item.audioUrl!, fileType: 'audio'),
+                'format': item.audioUrl!.split('.').last,
+              },
+            });
+          }
+
         case 'file':
-          // 对于音频、视频、文件，暂时转换为文本描述
-          // TODO 不同平台可能有不同的处理方式
+          // TODO 这里应该是留着上传文档文件，解析出文档内容，喂给大模型处理(暂时转换为文本描述)
           final fileName = item.fileName ?? '未知文件';
           final fileType = item.type;
           result.add({'type': 'text', 'text': '[附件: $fileName ($fileType)]'});
@@ -738,13 +744,14 @@ class UnifiedChatMessage {
 
   /// 将图片或视频转换为base64格式
   String _convertToBase64(String fileUrl, {String fileType = 'image'}) {
-    // 如果已经是base64格式的图片，直接返回
+    // 如果已经是base64格式的图片/视频/音频，直接返回
     if (fileType == 'image' && fileUrl.startsWith('data:image/')) {
       return fileUrl;
     }
-
-    // 如果已经是base64格式的视频，直接返回
     if (fileType == 'video' && fileUrl.startsWith('data:video/')) {
+      return fileUrl;
+    }
+    if (fileType == 'audio' && fileUrl.startsWith('data:audio/')) {
       return fileUrl;
     }
 
@@ -760,34 +767,15 @@ class UnifiedChatMessage {
         final bytes = file.readAsBytesSync();
         final base64String = base64Encode(bytes);
 
-        // 如果是视频，直接返回base64字符串
-        if (fileType == 'video') {
-          return 'data:video/mp4;base64,$base64String';
-        }
+        // 获取文件类型
+        final mimeType = lookupMimeType(file.path);
 
-        // 根据文件扩展名确定MIME类型
-        String mimeType = 'image/jpeg'; // 默认
-        final extension = fileUrl.toLowerCase().split('.').last;
-        switch (extension) {
-          case 'png':
-            mimeType = 'image/png';
-            break;
-          case 'gif':
-            mimeType = 'image/gif';
-            break;
-          case 'webp':
-            mimeType = 'image/webp';
-            break;
-          case 'bmp':
-            mimeType = 'image/bmp';
-            break;
-        }
-
+        // 返回base64字符串
         return 'data:$mimeType;base64,$base64String';
       }
     } catch (e) {
       if (kDebugMode) {
-        print('转换图片到base64失败: $e');
+        print('转换文件到base64失败: $e');
       }
     }
 

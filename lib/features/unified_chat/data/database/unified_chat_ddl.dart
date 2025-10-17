@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../../../../core/storage/db_config.dart';
+import '../models/unified_platform_spec.dart';
 import 'buildin_models/index.dart';
 import 'builtin_partners.dart';
 import 'builtin_platforms.dart';
@@ -12,8 +13,8 @@ class UnifiedChatDdl {
   ///   内置的最后有个平台枚举
   /// display_name 就是显示用的字符串，值例如: 阿里云, 硅基流动, DeepSeek
   /// host_url: 类似 http://api.openai.com
-  /// api_prefix:  类似 /v1/chat/completions
-  ///   host_url+api_prefix 才是完整的API路径
+  /// cc_prefix:  类似 /v1/chat/completions
+  ///   host_url+cc_prefix 才是完整的API路径
   // 验证都是统一的请求头中添加: "Authorization: Bearer <API Key>"，所以这里不做额外参数保留
   static const tableUnifiedPlatformSpec =
       '${DBInitConfig.tablePerfix}unified_platform_spec';
@@ -24,10 +25,10 @@ class UnifiedChatDdl {
         id                            TEXT      PRIMARY KEY,
         display_name                  TEXT      NOT NULL,
         host_url                      TEXT      NOT NULL,
-        api_prefix                    TEXT      NOT NULL    DEFAULT '/v1/chat/completions',
-        image_generation_prefix       TEXT,
-        text_to_speech_prefix         TEXT,
-        speech_to_text_prefix         TEXT,
+        cc_prefix                     TEXT      NOT NULL    DEFAULT '/v1/chat/completions',
+        img_gen_prefix                TEXT,
+        tts_prefix                    TEXT,
+        asr_prefix                    TEXT,
         is_built_in                   INTEGER   NOT NULL    DEFAULT 0,
         is_active                     INTEGER   NOT NULL    DEFAULT 0,
         description                   TEXT,
@@ -194,11 +195,21 @@ class UnifiedChatDdl {
     ''';
 
   // 初始化一些内置平台和模型
-  static Future<void> initDefaultPlatforms(Database db) async {
+  static Future<void> initDefaultPlatforms(
+    Database db, {
+    UnifiedPlatformId? platformId,
+  }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
 
     final batch = db.batch();
+
+    // 如果没有传入平台编号，则全部平台都重新加载；如果有传入平台编号，则只重新加载该平台
     for (var platform in BUILD_IN_PLATFORMS) {
+      // 有传入平台编号,但是当前平台不是该平台,则跳过
+      if (platformId != null && platform['id'] != platformId.name) {
+        continue;
+      }
+      // 没有传入平台编号或者传入平台编号和当前平台编号一致,则插入该平台数据
       batch.insert(tableUnifiedPlatformSpec, {
         ...platform,
         'is_built_in': 1,
@@ -210,12 +221,24 @@ class UnifiedChatDdl {
     await batch.commit();
 
     // 插入默认模型
-    await _insertDefaultModels(db, now);
+    await _insertDefaultModels(db, now, platformId: platformId);
   }
 
-  static Future<void> _insertDefaultModels(Database db, int timestamp) async {
+  static Future<void> _insertDefaultModels(
+    Database db,
+    int timestamp, {
+    UnifiedPlatformId? platformId,
+  }) async {
     final batch = db.batch();
+
+    // 如果有传入平台编号，则只重新加载该平台内置模型;否则全部平台内置模型都重新加载
     for (final model in BUILD_IN_MODELS) {
+      // 有传入平台编号,但是当前模型不是该平台,则跳过
+      if (platformId != null && model['platform_id'] != platformId.name) {
+        continue;
+      }
+
+      // 没有传入平台编号或者传入平台编号和当前平台编号一致,则插入该模型数据
       batch.insert(tableUnifiedModelSpec, {
         ...model,
         'is_active': 1,
@@ -223,7 +246,7 @@ class UnifiedChatDdl {
         'is_favorite': 0,
         'created_at': timestamp,
         'updated_at': timestamp,
-      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
     await batch.commit();
   }

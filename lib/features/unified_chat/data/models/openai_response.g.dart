@@ -64,6 +64,7 @@ OpenAIMessage _$OpenAIMessageFromJson(Map<String, dynamic> json) =>
       role: json['role'] as String?,
       content: json['content'] as String?,
       reasoningContent: json['reasoning_content'] as String?,
+      audio: json['audio'] as Map<String, dynamic>?,
       functionCall: json['function_call'] == null
           ? null
           : OpenAIFunctionCall.fromJson(
@@ -79,8 +80,30 @@ Map<String, dynamic> _$OpenAIMessageToJson(OpenAIMessage instance) =>
       'role': instance.role,
       'content': instance.content,
       'reasoning_content': instance.reasoningContent,
+      'audio': instance.audio,
       'function_call': instance.functionCall?.toJson(),
       'tool_calls': instance.toolCalls?.map((e) => e.toJson()).toList(),
+    };
+
+OmniAudio _$OmniAudioFromJson(Map<String, dynamic> json) =>
+    OmniAudio(OmniAudioData.fromJson(json['audio'] as Map<String, dynamic>));
+
+Map<String, dynamic> _$OmniAudioToJson(OmniAudio instance) => <String, dynamic>{
+  'audio': instance.audio.toJson(),
+};
+
+OmniAudioData _$OmniAudioDataFromJson(Map<String, dynamic> json) =>
+    OmniAudioData(
+      json['data'] as String,
+      (json['expires_at'] as num).toInt(),
+      json['id'] as String,
+    );
+
+Map<String, dynamic> _$OmniAudioDataToJson(OmniAudioData instance) =>
+    <String, dynamic>{
+      'data': instance.data,
+      'expires_at': instance.expiresAt,
+      'id': instance.id,
     };
 
 OpenAIFunctionCall _$OpenAIFunctionCallFromJson(Map<String, dynamic> json) =>

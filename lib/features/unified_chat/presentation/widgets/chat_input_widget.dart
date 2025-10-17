@@ -2,10 +2,10 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/utils/file_picker_utils.dart';
+import '../../../../core/utils/image_picker_utils.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/models/unified_platform_spec.dart';
@@ -30,7 +30,6 @@ class ChatInputWidget extends StatefulWidget {
 class _ChatInputWidgetState extends State<ChatInputWidget> {
   final TextEditingController _textController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-  final ImagePicker _imagePicker = ImagePicker();
 
   // 附件状态
   final List<File> _selectedImages = [];
@@ -94,6 +93,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         _handleEditingStateChange(viewModel);
 
         return Container(
+          margin: const EdgeInsets.only(top: 4),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             border: Border(
@@ -326,7 +326,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           border: Border.all(
             color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
           ),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           children: [
@@ -385,6 +385,17 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   }
 
   Widget _buildToolsArea(UnifiedChatViewModel viewModel) {
+    final model = viewModel.currentModel;
+
+    bool isPickAudio =
+        viewModel.isSpeechRecognitionModel ||
+        viewModel.currentModel?.modelName.toLowerCase().contains("omni") ==
+            true;
+
+    if (model == null) {
+      return Container();
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
@@ -395,14 +406,26 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           // 第一行工具
           Row(
             children: [
-              if (viewModel.currentModel?.supportsVision ?? false) ...[
+              // 可选择图片(视觉模型、图生图模型)
+              if (model.supportsVision ||
+                  model.type == UnifiedModelType.iti) ...[
                 _buildToolButton(
                   icon: Icons.image_outlined,
                   label: '图片',
                   onPressed: _pickImages,
                 ),
-
                 const SizedBox(width: 16),
+
+                _buildToolButton(
+                  icon: Icons.camera_alt,
+                  label: '拍照',
+                  onPressed: _takePhoto,
+                ),
+                const SizedBox(width: 16),
+              ],
+
+              // 可选择视频(阿里云的部分视觉模型)
+              if (model.supportsVision) ...[
                 _buildToolButton(
                   icon: Icons.videocam_outlined,
                   label: '视频',
@@ -411,18 +434,27 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 const SizedBox(width: 16),
               ],
 
-              if (viewModel.currentModel?.type == UnifiedModelType.imageToImage)
+              // 可选择音频文件(语音文件识别和全模态的omni模型)
+              if (isPickAudio) ...[
                 _buildToolButton(
-                  icon: Icons.image_outlined,
-                  label: '图片',
-                  onPressed: _pickImages,
+                  icon: Icons.audio_file_outlined,
+                  label: '音频',
+                  onPressed: () => _pickAudio(viewModel),
                 ),
+                const SizedBox(width: 16),
+              ],
 
-              _buildToolButton(
-                icon: Icons.attach_file_outlined,
-                label: '文件',
-                onPressed: () => _pickFiles(viewModel),
-              ),
+              // 可选择文件(语音文件识别)
+              // 理论上cc模型可支持文档上传，解析文档内容让大模型进一步处理，目前暂无文档上传接口
+              if (model.type == UnifiedModelType.cc) ...[
+                _buildToolButton(
+                  icon: Icons.book,
+                  label: '文档',
+                  onPressed: () => _pickFiles(viewModel),
+                ),
+                const SizedBox(width: 16),
+              ],
+
               // const SizedBox(width: 16),
               // _buildToolButton(
               //   icon: Icons.audio_file_outlined,
@@ -525,7 +557,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       child: Row(
         children: [
           // 添加附件内容
-          if (viewModel.currentModel?.type != UnifiedModelType.textToSpeech)
+          if (viewModel.currentModel?.type != UnifiedModelType.tts)
             InkWell(
               onTap: () => setState(() => _isToolExpanded = !_isToolExpanded),
               borderRadius: BorderRadius.circular(20),
@@ -599,7 +631,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   }
 
   // 可启用联网搜索的条件
-  // 1 模型是阿里百炼、智谱平台
+  // 1 模型是阿里百炼、智谱平台(平台自带联网搜索)
   // 2 非百炼智谱平台时，模型支持工具调用，且第三方搜索工具API至少存在一个
   bool _canToggleWebSearch(UnifiedChatViewModel viewModel) {
     // 1 模型是阿里百炼、智谱平台
@@ -659,7 +691,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     if (viewModel.isImageGenerationModel) {
       // 如果是阿里的图生图(图像编辑)，可能必须传入图片
       if (viewModel.currentPlatform?.id == UnifiedPlatformId.aliyun.name &&
-          viewModel.currentModel?.type == UnifiedModelType.imageToImage) {
+          viewModel.currentModel?.type == UnifiedModelType.iti) {
         if (_selectedImages.isEmpty) {
           ToastUtils.showError('请上传图片');
           return;
@@ -683,7 +715,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       return;
     }
 
-    // 对于非图片生成模型，不再自动识别图片生成意图
+    // 一般的cc模型(支持视觉理解、文档解析等，就可能用得到这些多模态文件)
     if (_hasAttachments()) {
       // 发送多模态消息
       await viewModel.sendMultimodalMessage(
@@ -715,16 +747,17 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     UnifiedChatViewModel viewModel,
     String prompt,
   ) async {
-    if (prompt.isEmpty) {
+    // 获取当前平台和模型
+    final platform = viewModel.currentPlatform;
+    final model = viewModel.currentModel;
+
+    // qwen-mt-image 不需要提示词
+    if (prompt.isEmpty && model?.modelName.contains("qwen-mt-image") == false) {
       ToastUtils.showError('请输入图片描述');
       return;
     }
 
     try {
-      // 获取当前平台和模型
-      final platform = viewModel.currentPlatform;
-      final model = viewModel.currentModel;
-
       if (platform == null || model == null) {
         ToastUtils.showError('请先选择平台和模型');
         return;
@@ -733,10 +766,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       // 获取当前对话的图片生成设置 (图片生成高级设置弹窗配置的参数会放在对话的extraParams属性中)
       final conversation = viewModel.currentConversation;
       final Map<String, dynamic> currentSettings =
-          conversation?.extraParams?['imageGenParams'] ?? {};
+          conversation?.extraParams?['imageGenerationParams'] ?? {};
 
       // 先深拷贝一份输入框文本和附件文件，在发送消息之前清空输入框和附件,避免发送按钮等在发送后依旧可见
-      final String prompt = _textController.text.trim();
+      String text = _textController.text.trim();
+      if (model.modelName.contains("qwen-mt-image") == true) {
+        text = "将图片文本翻译为${currentSettings['targetLanguage']}";
+      }
       final List<File> images = List.from(_selectedImages);
 
       // 清空输入框和附件(避免耗时太久输入框等未复原)
@@ -746,7 +782,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
       // 调用专门的图片生成方法
       await viewModel.sendImageGenerationMessage(
-        prompt: prompt,
+        prompt: text,
         images: images,
         settings: currentSettings,
       );
@@ -805,9 +841,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       final Map<String, dynamic> currentSettings =
           conversation?.extraParams?['speechRecognitionParams'] ?? {};
 
-      // 先深拷贝一份输入框文本和附件文件，在发送消息之前清空输入框和附件,避免发送按钮等在发送后依旧可见
-      //  录音文件识别不需要输入框文本，只需要选择的单个文件
-      final List<File> files = List.from(_selectedFiles);
+      // 先深拷贝一份输入框文本和音频文件，在发送消息之前清空输入框和附件,避免发送按钮等在发送后依旧可见
+      // 录音文件识别不需要输入框文本，只需要选择的单个文件
+      final List<File> files = List.from([_selectedAudio]);
 
       // 清空输入框和附件(避免耗时太久输入框等未复原)
       _textController.clear();
@@ -827,36 +863,67 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   }
 
   void _pickImages() async {
-    final images = await _imagePicker.pickMultiImage();
+    final images = await ImagePickerUtils.pickMultipleImages();
+
     if (images.isNotEmpty) {
+      if (!mounted) return;
       setState(() {
         _selectedImages.addAll(images.map((xfile) => File(xfile.path)));
       });
     }
   }
 
-  void _pickFiles(UnifiedChatViewModel viewModel) async {
-    // 获取当前平台和模型
-    final platform = viewModel.currentPlatform;
-    final model = viewModel.currentModel;
+  Future<void> _takePhoto() async {
+    final pickedFile = await ImagePickerUtils.takePhotoAndSave();
 
-    if (platform == null || model == null) {
-      ToastUtils.showError('请先选择平台和模型');
-      return;
+    if (pickedFile != null) {
+      if (!mounted) return;
+      setState(() {
+        _selectedImages.add(File(pickedFile.path));
+      });
     }
+  }
 
-    final result = await FilePicker.platform.pickFiles(
-      allowMultiple: viewModel.isSpeechRecognitionModel ? false : true,
-      // type: viewModel.isSpeechRecognitionModel ? FileType.audio : FileType.any,
-      type: FileType.custom,
-      // 如果指定自定义类型：智谱只支持wav、mp3格式的音频；阿里百炼多一点；硅基流动没有明确限制
+  void _pickVideo() async {
+    final video = await ImagePickerUtils.pickVideo();
+    if (video != null) {
+      if (!mounted) return;
+      setState(() {
+        _selectedVideo = File(video.path);
+      });
+    }
+  }
+
+  void _pickAudio(UnifiedChatViewModel viewModel) async {
+    File? result = await FilePickerUtils.pickAndSaveFile(
+      overwrite: true,
+      fileType: CusFileType.custom,
+      // 录音文件识别：智谱只支持wav、mp3格式的音频；阿里百炼多一点；硅基流动没有明确限制
       allowedExtensions: viewModel.isSpeechRecognitionModel
           ? ['wav', 'mp3']
+          // omni音频格式更多
           : null,
     );
     if (result != null) {
+      if (!mounted) return;
       setState(() {
-        _selectedFiles.addAll(result.files.map((file) => File(file.path!)));
+        _selectedAudio = result;
+      });
+    }
+  }
+
+  void _pickFiles(UnifiedChatViewModel viewModel) async {
+    List<File> result = await FilePickerUtils.pickAndSaveMultipleFiles(
+      allowMultiple: true,
+      fileType: CusFileType.custom,
+      overwrite: true,
+      // TODO 根据云端解析接口支持来确定
+      allowedExtensions: ['pdf', 'docx', 'txt'],
+    );
+    if (result.isNotEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _selectedFiles.addAll(result);
       });
     }
   }
@@ -864,15 +931,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   // TODO 选择语音文件或者直接录制语音
   void _recordAudio() {
     ToastUtils.showError('语音录制功能待实现');
-  }
-
-  void _pickVideo() async {
-    final video = await _imagePicker.pickVideo(source: ImageSource.gallery);
-    if (video != null) {
-      setState(() {
-        _selectedVideo = File(video.path);
-      });
-    }
   }
 
   void _removeImage(int index) {
@@ -926,12 +984,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   void _showAdvancedSettings(UnifiedChatViewModel viewModel) {
     final currentModel = viewModel.currentModel;
     final isImageGenerationModel =
-        currentModel?.type == UnifiedModelType.textToImage ||
-        currentModel?.type == UnifiedModelType.imageToImage;
-    final isSpeechSynthesisModel =
-        currentModel?.type == UnifiedModelType.textToSpeech;
-    final isSpeechRecognitionModel =
-        currentModel?.type == UnifiedModelType.speechToText;
+        currentModel?.type == UnifiedModelType.tti ||
+        currentModel?.type == UnifiedModelType.iti;
+    final isSpeechSynthesisModel = currentModel?.type == UnifiedModelType.tts;
+    final isSpeechRecognitionModel = currentModel?.type == UnifiedModelType.asr;
 
     if (isImageGenerationModel) {
       // 显示图片生成设置对话框
@@ -959,9 +1015,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final conversation = viewModel.currentConversation;
     final effectivePartner = viewModel.effectivePartner;
 
+    final Map<String, dynamic> currentSettings =
+        conversation?.extraParams?['omniParams'] ?? {};
+
     showDialog(
       context: context,
       builder: (context) => ChatSettingsDialog(
+        viewModel: viewModel,
         title: conversation?.title ?? '新对话',
         systemPrompt: conversation?.systemPrompt ?? effectivePartner.prompt,
         contextMessageLength:
@@ -975,11 +1035,21 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         isStream: conversation?.isStream ?? effectivePartner.isStream ?? true,
         // 这个启用思考不是最初的设计，就放在extraParams里，也不放在partner里
         enableThinking: conversation?.extraParams?['enableThinking'] ?? false,
+        omniParams: currentSettings,
         selectedPartner: viewModel.currentPartner,
         onSave: (settings) {
+          List<String>? modalities = settings['modalities'];
+          var omniParams = {
+            'modalities': modalities,
+            // 如果输出模态中有音频，必须指定一个音色
+            if (modalities?.contains('audio') ?? false)
+              'audio': settings['audio'],
+          };
+
           viewModel.updateConversationSettings({
             ...settings,
             'partnerId': viewModel.currentPartner?.id,
+            'omniParams': omniParams,
           });
         },
       ),
@@ -990,7 +1060,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final conversation = viewModel.currentConversation;
     // 这里只取图片生成部分的参数
     final Map<String, dynamic> currentSettings =
-        conversation?.extraParams?['imageGenParams'] ?? {};
+        conversation?.extraParams?['imageGenerationParams'] ?? {};
 
     showDialog(
       context: context,
@@ -1000,7 +1070,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         currentSettings: currentSettings,
         onSave: (settings) {
           // 保存时也使用同样的参数
-          viewModel.updateConversationSettings({'imageGenParams': settings});
+          viewModel.updateConversationSettings({
+            'imageGenerationParams': settings,
+          });
         },
       ),
     );

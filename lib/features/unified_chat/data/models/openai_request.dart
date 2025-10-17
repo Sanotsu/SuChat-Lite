@@ -29,6 +29,10 @@ class OpenAIChatCompletionRequest {
   @JsonKey(name: 'enable_thinking')
   final bool? enableThinking;
 
+  // qwen-omni还有输出音频和音色等配置，直接简化
+  @JsonKey(name: 'omni_params')
+  final Map<String, dynamic>? omniParams;
+
   final List<String>? stop;
   final int? n;
   final String? user;
@@ -59,6 +63,7 @@ class OpenAIChatCompletionRequest {
     this.stream,
     this.streamOptions,
     this.enableThinking = false,
+    this.omniParams,
     this.stop,
     this.n,
     this.user,
@@ -93,11 +98,21 @@ class OpenAIChatCompletionRequest {
     final json = toJson();
     json.removeWhere((key, value) => value == null);
 
+    // 如果有单独omni的参数，进行构建
+    if (omniParams != null) {
+      json['modalities'] = omniParams?['modalities'];
+      if ((omniParams?['modalities'] as List?)?.contains('audio') ?? false) {
+        json['audio'] = omniParams?['audio'];
+      }
+      // 拆分了omniParams后，这里要移除这个属性
+      json.remove('omni_params');
+    }
+
     // 测试：移除不支持的参数
     json.remove('frequency_penalty');
     json.remove('presence_penalty');
 
-    // TODO TEST: 移除不支持的参数
+    // TEST: 移除不支持的参数
     // json.remove('tool_choice');
     // json.remove('stream');
     // json.remove('stream_options');
@@ -178,6 +193,7 @@ class OpenAIChatCompletionRequest {
     double? presencePenalty,
     bool stream = false,
     bool enableThinking = false,
+    Map<String, dynamic>? omniParams,
     List<String>? stop,
     String? user,
     List<OpenAIFunction>? functions,
@@ -204,6 +220,7 @@ class OpenAIChatCompletionRequest {
           ? const OpenAIStreamOptions(includeUsage: true)
           : null,
       enableThinking: enableThinking,
+      omniParams: omniParams,
       stop: stop,
       user: user,
       functions: functions,
@@ -223,6 +240,7 @@ class OpenAIChatCompletionRequest {
 
     if (platformId == null) return baseMessages;
 
+    // TODO: 20251013这些还没用到
     switch (platformId.toLowerCase()) {
       case 'claude':
       case 'anthropic':

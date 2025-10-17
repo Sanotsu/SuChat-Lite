@@ -29,7 +29,7 @@ class _AddPlatformDialogState extends State<AddPlatformDialog> {
         displayName: _nameController.text.trim(),
         // 新建平台时只需要名称，在详情页填写必要栏位
         hostUrl: 'https://',
-        apiPrefix: '/v1/chat/completions',
+        ccPrefix: '/v1/chat/completions',
         description: _descriptionController.text.trim(),
         extraParams: {},
         createdAt: DateTime.now(),

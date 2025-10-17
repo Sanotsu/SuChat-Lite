@@ -43,6 +43,9 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
   // 标记表单是否有修改
   bool _isFormModified = false;
 
+  // 是否显示请求地址和端点
+  bool _isUrlVisible = false;
+
   @override
   void initState() {
     super.initState();
@@ -55,7 +58,7 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
     _apiKeyController = TextEditingController();
     _hostUrlController = TextEditingController(text: widget.platform.hostUrl);
     _apiPerfixController = TextEditingController(
-      text: widget.platform.apiPrefix,
+      text: widget.platform.ccPrefix,
     );
     _searchController = TextEditingController();
 
@@ -128,6 +131,40 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
       // 先删除指定平台非内置模型
       await _chatDao.deleteNonBuiltInModelSpecs(widget.platform.id);
 
+      // 再重新添加内置模型（可以简单点，重新加载所有内置平台模型）
+      var platforms = UnifiedPlatformId.values
+          .where((p) => p.name == widget.platform.id)
+          .toList();
+
+      if (platforms.isEmpty) {
+        await _chatDao.reloadBuiltInPlatforms();
+      } else {
+        await _chatDao.reloadBuiltInPlatforms(platformId: platforms.first);
+      }
+
+      // 然后重新查询模型
+      final models = await _chatDao.getModelSpecsByPlatformId(
+        widget.platform.id,
+      );
+      if (!mounted) return;
+      setState(() {
+        _models = models;
+        _filteredModels = models;
+        _isLoadingModels = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingModels = false);
+      ToastUtils.showError('加载模型列表失败: $e');
+    }
+  }
+
+  // 清空所有自定义和内置模型
+  Future<void> _clearModels() async {
+    setState(() => _isLoadingModels = true);
+    try {
+      // 先删除指定平台所有模型
+      await _chatDao.deleteAllModelSpecs(widget.platform.id);
+
       // 然后重新查询模型
       final models = await _chatDao.getModelSpecsByPlatformId(
         widget.platform.id,
@@ -161,7 +198,7 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
         final platform = widget.platform.copyWith(
           displayName: _nameController.text.trim(),
           hostUrl: _hostUrlController.text.trim(),
-          apiPrefix: _apiPerfixController.text.trim(),
+          ccPrefix: _apiPerfixController.text.trim(),
         );
 
         await _chatDao.savePlatformSpec(platform);
@@ -236,7 +273,7 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
           isActive: true,
           displayName: _nameController.text.trim(),
           hostUrl: _hostUrlController.text.trim(),
-          apiPrefix: _apiPerfixController.text.trim(),
+          ccPrefix: _apiPerfixController.text.trim(),
         ),
       );
       await _saveApiKey();
@@ -334,7 +371,7 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('重置模型'),
-        content: const Text('确定要重置所有模型吗？这将删除所有自定义模型。'),
+        content: const Text('确定要重置模型吗？这将删除所有自定义模型，并重新加载内置模型。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -370,11 +407,38 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
     _loadModels();
   }
 
+  Future<void> _clearModelsDialog() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('清空模型'),
+        content: const Text('确定要清空所有模型吗？这将删除所有内置和自定义模型。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('清空', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      // 清空所有模型
+      await _clearModels();
+      ToastUtils.showSuccess('模型已清空');
+    }
+  }
+
   // 取消修改
   void _cancelChanges() {
     _nameController.text = widget.platform.displayName;
     _hostUrlController.text = widget.platform.hostUrl;
-    _apiPerfixController.text = widget.platform.apiPrefix;
+    _apiPerfixController.text = widget.platform.ccPrefix;
 
     setState(() {
       _isFormModified = false;
@@ -432,6 +496,15 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+            ),
+            IconButton(
+              onPressed: () {
+                setState(() => _isUrlVisible = !_isUrlVisible);
+              },
+              icon: Icon(
+                _isUrlVisible ? Icons.visibility_off : Icons.visibility,
+              ),
+              tooltip: _isUrlVisible ? '隐藏地址和端点' : '显示地址和端点',
             ),
             IconButton(
               onPressed: _deletePlatform,
@@ -563,6 +636,21 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
           const SizedBox(height: 16),
         ],
 
+        // 如果是内置平台，条件显示地址和端点
+        if (widget.platform.isBuiltIn && _isUrlVisible) ...[
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Text(
+              "基础请求地址: ${widget.platform.hostUrl}"
+              "\n对话完成端点: ${widget.platform.ccPrefix}"
+              "\n图片生成端点: ${(widget.platform.imgGenPrefix ?? '不支持')}"
+              "\n语音合成端点: ${(widget.platform.ttsPrefix ?? '不支持')}"
+              "\n语音识别端点: ${(widget.platform.asrPrefix ?? '不支持')}",
+              style: TextStyle(fontSize: 12),
+            ),
+          ),
+        ],
+
         // 模型管理相关
         ...buildModelList(),
       ],
@@ -581,16 +669,37 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
           const Spacer(),
           TextButton.icon(
             onPressed: _showAddModelDialog,
+            style: TextButton.styleFrom(
+              minimumSize: Size(24, 24),
+              padding: EdgeInsets.symmetric(horizontal: 8),
+            ),
             icon: const Icon(Icons.add, color: Colors.blue),
             label: const Text('新建', style: TextStyle(color: Colors.blue)),
           ),
           TextButton.icon(
             onPressed: _resetModelsDialog,
+            style: TextButton.styleFrom(
+              minimumSize: Size(24, 24),
+              padding: EdgeInsets.symmetric(horizontal: 8),
+            ),
             icon: const Icon(Icons.refresh, color: Colors.orange),
             label: const Text('重置', style: TextStyle(color: Colors.orange)),
           ),
           TextButton.icon(
+            onPressed: _clearModelsDialog,
+            style: TextButton.styleFrom(
+              minimumSize: Size(24, 24),
+              padding: EdgeInsets.symmetric(horizontal: 8),
+            ),
+            icon: const Icon(Icons.remove_circle, color: Colors.red),
+            label: const Text('清除', style: TextStyle(color: Colors.red)),
+          ),
+          TextButton.icon(
             onPressed: _fetchModelsDialog,
+            style: TextButton.styleFrom(
+              minimumSize: Size(24, 24),
+              padding: EdgeInsets.symmetric(horizontal: 8),
+            ),
             icon: const Icon(Icons.download, color: Colors.green),
             label: const Text('获取', style: TextStyle(color: Colors.green)),
           ),

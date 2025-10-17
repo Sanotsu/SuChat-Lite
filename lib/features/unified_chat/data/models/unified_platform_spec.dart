@@ -41,20 +41,20 @@ class UnifiedPlatformSpec {
   @JsonKey(name: 'host_url')
   final String hostUrl;
 
-  @JsonKey(name: 'api_prefix')
-  final String apiPrefix;
+  @JsonKey(name: 'cc_prefix')
+  final String ccPrefix;
 
   // 图片生成API端点
-  @JsonKey(name: 'image_generation_prefix')
-  final String? imageGenerationPrefix;
+  @JsonKey(name: 'img_gen_prefix')
+  final String? imgGenPrefix;
 
   // 语音合成API端点
-  @JsonKey(name: 'text_to_speech_prefix')
-  final String? textToSpeechPrefix;
+  @JsonKey(name: 'tts_prefix')
+  final String? ttsPrefix;
 
   // 语音识别API端点
-  @JsonKey(name: 'speech_to_text_prefix')
-  final String? speechToTextPrefix;
+  @JsonKey(name: 'asr_prefix')
+  final String? asrPrefix;
 
   // 是否是内置的
   @JsonKey(name: 'is_built_in')
@@ -79,10 +79,10 @@ class UnifiedPlatformSpec {
     required this.id,
     required this.displayName,
     required this.hostUrl,
-    this.apiPrefix = '/v1/chat/completions',
-    this.imageGenerationPrefix,
-    this.textToSpeechPrefix,
-    this.speechToTextPrefix,
+    this.ccPrefix = '/v1/chat/completions',
+    this.imgGenPrefix,
+    this.ttsPrefix,
+    this.asrPrefix,
     this.isBuiltIn = false,
     this.isActive = false,
     this.description,
@@ -101,10 +101,10 @@ class UnifiedPlatformSpec {
       id: map['id'] as String,
       displayName: map['display_name'] as String,
       hostUrl: map['host_url'] as String,
-      apiPrefix: map['api_prefix'] as String? ?? '/v1/chat/completions',
-      imageGenerationPrefix: map['image_generation_prefix'] as String?,
-      textToSpeechPrefix: map['text_to_speech_prefix'] as String?,
-      speechToTextPrefix: map['speech_to_text_prefix'] as String?,
+      ccPrefix: map['cc_prefix'] as String? ?? '/v1/chat/completions',
+      imgGenPrefix: map['img_gen_prefix'] as String?,
+      ttsPrefix: map['tts_prefix'] as String?,
+      asrPrefix: map['asr_prefix'] as String?,
       isBuiltIn: (map['is_built_in'] as int? ?? 0) == 1,
       isActive: (map['is_active'] as int? ?? 0) == 1,
       description: map['description'] as String?,
@@ -121,10 +121,10 @@ class UnifiedPlatformSpec {
       'id': id,
       'display_name': displayName,
       'host_url': hostUrl,
-      'api_prefix': apiPrefix,
-      'image_generation_prefix': imageGenerationPrefix,
-      'text_to_speech_prefix': textToSpeechPrefix,
-      'speech_to_text_prefix': speechToTextPrefix,
+      'cc_prefix': ccPrefix,
+      'img_gen_prefix': imgGenPrefix,
+      'tts_prefix': ttsPrefix,
+      'asr_prefix': asrPrefix,
       'is_built_in': isBuiltIn ? 1 : 0,
       'is_active': isActive ? 1 : 0,
       'description': description,
@@ -138,10 +138,10 @@ class UnifiedPlatformSpec {
     String? id,
     String? displayName,
     String? hostUrl,
-    String? apiPrefix,
-    String? imageGenerationPrefix,
-    String? textToSpeechPrefix,
-    String? speechToTextPrefix,
+    String? ccPrefix,
+    String? imgGenPrefix,
+    String? ttsPrefix,
+    String? asrPrefix,
     bool? isBuiltIn,
     bool? isActive,
     String? description,
@@ -153,11 +153,10 @@ class UnifiedPlatformSpec {
       id: id ?? this.id,
       displayName: displayName ?? this.displayName,
       hostUrl: hostUrl ?? this.hostUrl,
-      apiPrefix: apiPrefix ?? this.apiPrefix,
-      imageGenerationPrefix:
-          imageGenerationPrefix ?? this.imageGenerationPrefix,
-      textToSpeechPrefix: textToSpeechPrefix ?? this.textToSpeechPrefix,
-      speechToTextPrefix: speechToTextPrefix ?? this.speechToTextPrefix,
+      ccPrefix: ccPrefix ?? this.ccPrefix,
+      imgGenPrefix: imgGenPrefix ?? this.imgGenPrefix,
+      ttsPrefix: ttsPrefix ?? this.ttsPrefix,
+      asrPrefix: asrPrefix ?? this.asrPrefix,
       isBuiltIn: isBuiltIn ?? this.isBuiltIn,
       isActive: isActive ?? this.isActive,
       description: description ?? this.description,
@@ -186,43 +185,43 @@ class UnifiedPlatformSpec {
     final cleanBaseUrl = hostUrl.endsWith('/')
         ? hostUrl.substring(0, hostUrl.length - 1)
         : hostUrl;
-    final cleanEndpoint = apiPrefix.startsWith('/') ? apiPrefix : '/$apiPrefix';
+    final cleanEndpoint = ccPrefix.startsWith('/') ? ccPrefix : '/$ccPrefix';
     return '$cleanBaseUrl$cleanEndpoint';
   }
 
   /// 获取图片生成API URL
   String? getImageGenerationUrl() {
-    if (imageGenerationPrefix == null) return null;
+    if (imgGenPrefix == null) return null;
     final cleanBaseUrl = hostUrl.endsWith('/')
         ? hostUrl.substring(0, hostUrl.length - 1)
         : hostUrl;
-    final cleanEndpoint = imageGenerationPrefix!.startsWith('/')
-        ? imageGenerationPrefix!
-        : '/$imageGenerationPrefix!';
+    final cleanEndpoint = imgGenPrefix!.startsWith('/')
+        ? imgGenPrefix!
+        : '/$imgGenPrefix!';
     return '$cleanBaseUrl$cleanEndpoint';
   }
 
   /// 获取语音合成API URL
   String? getTextToSpeechUrl() {
-    if (textToSpeechPrefix == null) return null;
+    if (ttsPrefix == null) return null;
     final cleanBaseUrl = hostUrl.endsWith('/')
         ? hostUrl.substring(0, hostUrl.length - 1)
         : hostUrl;
-    final cleanEndpoint = textToSpeechPrefix!.startsWith('/')
-        ? textToSpeechPrefix!
-        : '/$textToSpeechPrefix!';
+    final cleanEndpoint = ttsPrefix!.startsWith('/')
+        ? ttsPrefix!
+        : '/$ttsPrefix!';
     return '$cleanBaseUrl$cleanEndpoint';
   }
 
   /// 获取语音识别API URL
   String? getSpeechToTextUrl() {
-    if (speechToTextPrefix == null) return null;
+    if (asrPrefix == null) return null;
     final cleanBaseUrl = hostUrl.endsWith('/')
         ? hostUrl.substring(0, hostUrl.length - 1)
         : hostUrl;
-    final cleanEndpoint = speechToTextPrefix!.startsWith('/')
-        ? speechToTextPrefix!
-        : '/$speechToTextPrefix!';
+    final cleanEndpoint = asrPrefix!.startsWith('/')
+        ? asrPrefix!
+        : '/$asrPrefix!';
     return '$cleanBaseUrl$cleanEndpoint';
   }
 
@@ -231,18 +230,18 @@ class UnifiedPlatformSpec {
     switch (modelType) {
       case UnifiedModelType.cc:
         return getChatCompletionsUrl();
-      case UnifiedModelType.textToImage:
-      case UnifiedModelType.imageToImage:
+      case UnifiedModelType.tti:
+      case UnifiedModelType.iti:
         return getImageGenerationUrl();
-      case UnifiedModelType.textToSpeech:
+      case UnifiedModelType.tts:
         return getTextToSpeechUrl();
-      case UnifiedModelType.speechToText:
+      case UnifiedModelType.asr:
         return getSpeechToTextUrl();
       case UnifiedModelType.embedding:
       case UnifiedModelType.reranker:
         return getChatCompletionsUrl(); // 暂时使用聊天端点
-      case UnifiedModelType.textToVideo:
-      case UnifiedModelType.imageToVideo:
+      case UnifiedModelType.ttv:
+      case UnifiedModelType.itv:
         return null; // 暂未支持
     }
   }

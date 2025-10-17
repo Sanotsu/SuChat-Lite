@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:json_annotation/json_annotation.dart';
 
 part 'openai_response.g.dart';
@@ -41,7 +43,13 @@ class OpenAIChatCompletionResponse {
     }
     // 流式的
     if (choices != null && choices.isNotEmpty && choices[0].delta != null) {
-      // TODO：2025-05-30 千问omni多模态时，请求中设置了audio属性，位置和常规不一样
+      // 2025-05-30 千问omni多模态时，请求中设置了audio属性，位置和常规不一样
+      // 2025-10-16 新的API响应看起来是一样的
+      // String? transcript = choices[0].delta?.audio?["transcript"];
+      // if (transcript != null && transcript.isNotEmpty) {
+      //   return transcript;
+      // }
+
       return choices[0].delta!.content ?? "";
     }
 
@@ -94,6 +102,10 @@ class OpenAIMessage {
   @JsonKey(name: 'reasoning_content')
   final String? reasoningContent;
 
+  // qwen-omni可能还有流式的音频数据输出
+  // final OmniAudio? audio;
+  final Map<String, dynamic>? audio;
+
   @JsonKey(name: 'function_call')
   final OpenAIFunctionCall? functionCall;
 
@@ -104,14 +116,54 @@ class OpenAIMessage {
     this.role,
     this.content,
     this.reasoningContent,
+    this.audio,
     this.functionCall,
     this.toolCalls,
   });
+
+  // 从字符串转
+  factory OpenAIMessage.fromRawJson(String str) =>
+      OpenAIMessage.fromJson(json.decode(str));
+  // 转为字符串
+  String toRawJson() => json.encode(toJson());
 
   factory OpenAIMessage.fromJson(Map<String, dynamic> json) =>
       _$OpenAIMessageFromJson(json);
 
   Map<String, dynamic> toJson() => _$OpenAIMessageToJson(this);
+}
+
+/// qwen-omni等多模态模型的音频数据
+@JsonSerializable(explicitToJson: true)
+class OmniAudio {
+  @JsonKey(name: 'audio')
+  OmniAudioData audio;
+
+  OmniAudio(this.audio);
+
+  factory OmniAudio.fromJson(Map<String, dynamic> srcJson) =>
+      _$OmniAudioFromJson(srcJson);
+
+  Map<String, dynamic> toJson() => _$OmniAudioToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class OmniAudioData {
+  @JsonKey(name: 'data')
+  String data;
+
+  @JsonKey(name: 'expires_at')
+  int expiresAt;
+
+  @JsonKey(name: 'id')
+  String id;
+
+  OmniAudioData(this.data, this.expiresAt, this.id);
+
+  factory OmniAudioData.fromJson(Map<String, dynamic> srcJson) =>
+      _$OmniAudioDataFromJson(srcJson);
+
+  Map<String, dynamic> toJson() => _$OmniAudioDataToJson(this);
 }
 
 /// 函数调用

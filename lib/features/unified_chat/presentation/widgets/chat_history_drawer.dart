@@ -202,12 +202,12 @@ class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
           ),
           child: ListTile(
             dense: true,
-            leading: conversation.isPinned
+            leading: conversation.isPinned || conversation.isArchived
                 ? CircleAvatar(
                     radius: 12,
                     backgroundColor: Theme.of(context).colorScheme.secondary,
                     child: Icon(
-                      Icons.push_pin,
+                      conversation.isPinned ? Icons.push_pin : Icons.archive,
                       size: 12,
                       color: Theme.of(context).colorScheme.onSecondary,
                     ),
@@ -228,13 +228,13 @@ class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
                   '${conversation.messageCount} 条消息 • ${conversation.lastActivityDescription}',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
-                if (conversation.totalCost > 0)
-                  Text(
-                    '费用: ${conversation.formattedCost}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
+                // if (conversation.totalCost > 0)
+                //   Text(
+                //     '费用: ${conversation.formattedCost}',
+                //     style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                //       color: Theme.of(context).colorScheme.primary,
+                //     ),
+                //   ),
               ],
             ),
             trailing: PopupMenuButton<String>(
@@ -450,12 +450,13 @@ class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
     }
   }
 
-  // TODO 这里置顶也只是修改记录栏位，没有实际逻辑
+  // 置顶
   Future<void> _togglePin(UnifiedConversation conversation) async {
     try {
       final updatedConversation = conversation.copyWith(
         isPinned: !conversation.isPinned,
-        updatedAt: DateTime.now(),
+        // 修改指定不需要修改时间
+        // updatedAt: DateTime.now(),
       );
       await _chatDao.updateConversation(updatedConversation);
       _loadConversations();
@@ -470,7 +471,8 @@ class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
     try {
       final updatedConversation = conversation.copyWith(
         isArchived: !conversation.isArchived,
-        updatedAt: DateTime.now(),
+        // 修改指定不需要修改时间
+        // updatedAt: DateTime.now(),
       );
       await _chatDao.updateConversation(updatedConversation);
       _loadConversations();

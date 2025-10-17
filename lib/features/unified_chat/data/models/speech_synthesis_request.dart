@@ -83,10 +83,22 @@ class SpeechSynthesisRequest {
     final Map<String, dynamic> data = {'model': model, 'input': input};
 
     if (voice != null) {
-      data['voice'] = voice;
+      // data['voice'] = voice;
+      // 2025-10-14  IndexTeam/IndexTTS-2 模型没有文档，从体验中心看到的几个参数
+      // 音色不是model+人名
+      if (model == 'IndexTeam/IndexTTS-2') {
+        data['voice'] = 'fishaudio/fish-speech-1.4:$voice';
+      } else {
+        data['voice'] = '$model:$voice';
+      }
     } else {
-      // 没传需要手动指定一个默认的
-      data['voice'] = '$model:diana';
+      // 2025-10-14  IndexTeam/IndexTTS-2 模型没有文档，从体验中心看到的几个参数
+      // 音色不是model+人名
+      if (model == 'IndexTeam/IndexTTS-2') {
+        data['voice'] = 'fishaudio/fish-speech-1.4:diana';
+      } else {
+        data['voice'] = '$model:diana';
+      }
     }
 
     if (responseFormat != null) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/models/unified_chat_partner.dart';
 import '../../data/database/unified_chat_dao.dart';
@@ -263,17 +264,15 @@ class _MyPartnersPageState extends State<MyPartnersPage> {
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
-        leading: CircleAvatar(
-          radius: 16,
+
+        leading: buildUserCircleAvatar(
+          partner.avatarUrl,
           backgroundColor: Colors.blue,
-          child: partner.avatarUrl != null
-              ? ClipOval(
-                  child: Image.network(partner.avatarUrl!, fit: BoxFit.cover),
-                )
-              : Text(
-                  partner.name.isNotEmpty ? partner.name[0].toUpperCase() : '?',
-                  style: const TextStyle(color: Colors.white),
-                ),
+          radius: 16,
+          defaultAvatar: Text(
+            partner.name.isNotEmpty ? partner.name[0].toUpperCase() : '?',
+            style: const TextStyle(color: Colors.white),
+          ),
         ),
         title: Text(
           partner.name,

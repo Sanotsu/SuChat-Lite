@@ -647,8 +647,11 @@ class _BranchChatInputBarState extends State<BranchChatInputBar> {
               ))
             IconButton(
               icon: Icon(
-                _enableWebSearch ? Icons.wifi : Icons.wifi_off,
+                Icons.language,
                 size: 20,
+                color: _enableWebSearch
+                    ? Theme.of(context).primaryColor
+                    : Theme.of(context).disabledColor,
               ),
               onPressed: widget.isStreaming
                   ? null

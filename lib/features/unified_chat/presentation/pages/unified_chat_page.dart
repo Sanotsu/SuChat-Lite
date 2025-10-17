@@ -103,13 +103,8 @@ class _UnifiedChatPageState extends State<UnifiedChatPage> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'SuChat',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        '选择并配置AI大模型平台和模型',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        '配置AI大模型平台和模型',
+                        style: Theme.of(context).textTheme.bodyLarge,
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
@@ -121,13 +116,14 @@ class _UnifiedChatPageState extends State<UnifiedChatPage> {
                             ),
                           ).then((value) async {
                             // print("从平台列表返回刷新可用平台和模型");
-                            viewModel.refreshPlatformsAndModels();
+                            await viewModel.refreshPlatformsAndModels();
 
                             await viewModel.initialize();
                           });
                         },
                         child: const Text('使用自己的API Key'),
                       ),
+                      const SizedBox(height: 64),
                     ],
                   ),
                 );
@@ -164,7 +160,7 @@ class _UnifiedChatPageState extends State<UnifiedChatPage> {
   Widget _buildSelectedPartnerCard(UnifiedChatViewModel viewModel) {
     final partner = viewModel.currentPartner!;
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 4),
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.primaryContainer,
@@ -177,29 +173,7 @@ class _UnifiedChatPageState extends State<UnifiedChatPage> {
       child: Row(
         children: [
           // 搭档头像
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            child: partner.avatarUrl != null && partner.avatarUrl!.isNotEmpty
-                ? ClipOval(
-                    child: Image.network(
-                      partner.avatarUrl!,
-                      width: 40,
-                      height: 40,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Icon(
-                          Icons.person,
-                          color: Theme.of(context).colorScheme.onPrimary,
-                        );
-                      },
-                    ),
-                  )
-                : Icon(
-                    Icons.person,
-                    color: Theme.of(context).colorScheme.onPrimary,
-                  ),
-          ),
+          buildUserCircleAvatar(partner.avatarUrl, radius: 20),
           const SizedBox(width: 12),
 
           // 搭档信息

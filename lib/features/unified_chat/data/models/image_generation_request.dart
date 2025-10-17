@@ -19,8 +19,7 @@ class ImageGenerationRequest {
   final double? cfg;
   final String? quality;
   final String? style;
-  final String? image; // base64 or url for image-to-image
-  final String? maskImage; // for image editing
+  final List<String>? images; // base64 or url(参考图或要被修改的图)
   final bool? watermark;
   final String? userId;
 
@@ -30,6 +29,10 @@ class ImageGenerationRequest {
   final dynamic sequentialImageGenerationOptions;
   // 返回图片格式:url(默认)、b64_json
   final String? responseFormat;
+
+  // 百炼的qwen-mt-image需要目标语言和源语言
+  final String? targetLanguage;
+  final String? sourceLanguage;
 
   const ImageGenerationRequest({
     required this.model,
@@ -43,13 +46,15 @@ class ImageGenerationRequest {
     this.cfg,
     this.quality,
     this.style,
-    this.image,
-    this.maskImage,
+    this.images,
+
     this.watermark = false,
     this.userId,
     this.sequentialImageGeneration,
     this.sequentialImageGenerationOptions,
     this.responseFormat,
+    this.targetLanguage,
+    this.sourceLanguage,
   });
 
   factory ImageGenerationRequest.fromJson(Map<String, dynamic> json) =>
@@ -71,7 +76,8 @@ class ImageGenerationRequest {
             // 正向提示词，仅支持传入一个text，不超过800字符(自动截断)。
             {'text': prompt},
             // 需要编辑的图片或参考图，需要公网在线url或base64
-            if (image != null) {'image': convertToBase64(image!)},
+            if (images != null && images!.isNotEmpty)
+              ...images!.map((image) => {'image': convertToBase64(image)}),
           ],
         },
       ],
@@ -85,7 +91,7 @@ class ImageGenerationRequest {
     }
 
     if (size != null) {
-      parameters['size'] = '1328*1328';
+      parameters['size'] = size;
     }
 
     // 2025-10-08 qwen-image 暂时只支持1张，其他参数会报错
@@ -112,7 +118,10 @@ class ImageGenerationRequest {
   /// 转换为阿里百炼API格式(异步，需要轮询得到结果)
   Map<String, dynamic> _toAliyunAsyncFormat() {
     // input 是必填的
-    final Map<String, dynamic> input = {'prompt': prompt};
+    final Map<String, dynamic> input = {
+      // qwen-mt-image 没有 prompt
+      if (!model.contains('qwen-mt-image')) 'prompt': prompt,
+    };
 
     // 文生图V2有的
     if (negativePrompt != null) {
@@ -120,13 +129,24 @@ class ImageGenerationRequest {
     }
 
     // 通用图像编辑2.5还有的(图像编辑2.1不考虑了)
-    if (image != null) {
-      // 暂时只处理单张图片的编辑或参考图
-      input['images'] = [convertToBase64(image!)];
+    if (images != null && images!.isNotEmpty) {
+      // 如果是 qwen-mt-image，图片参数为 image_url
+      if (model.contains('qwen-mt-image')) {
+        input['image_url'] = convertToBase64(images!.first);
+      } else {
+        input['images'] = images!
+            .map((image) => convertToBase64(image))
+            .toList();
+      }
     }
-    if (maskImage != null) {
-      // 暂时只处理单张图片的编辑或参考图
-      input['images'] = [convertToBase64(maskImage!)];
+
+    // 百炼的qwen-mt-image需要目标语言和源于语言
+    if (sourceLanguage != null) {
+      input['source_lang'] = sourceLanguage;
+    }
+
+    if (targetLanguage != null) {
+      input['target_lang'] = targetLanguage;
     }
 
     /// parameters 是可选的
@@ -164,7 +184,11 @@ class ImageGenerationRequest {
       parameters['watermark'] = watermark;
     }
 
-    return {'model': model, 'input': input, 'parameters': parameters};
+    return {
+      'model': model,
+      'input': input,
+      if (!model.contains('qwen-mt-image')) 'parameters': parameters,
+    };
   }
 
   /// 转换为阿里百炼API格式
@@ -209,14 +233,18 @@ class ImageGenerationRequest {
       data['cfg'] = cfg;
     }
 
-    if (image != null) {
-      data['image'] = convertToBase64(image!);
-    }
-
+    // 硅基流动只支持单张
     // 用于上传原始视频的图片可以是base64格式或URL
-    // 此字段仅适用于Qwen/Qwen-Image-Edit-2509
-    if (maskImage != null) {
-      data['image2'] = convertToBase64(maskImage!);
+    if (images != null && images!.isNotEmpty) {
+      data['image'] = convertToBase64(images!.first);
+
+      // 这两个字段仅适用于Qwen/Qwen-Image-Edit-2509
+      if (images!.length > 1) {
+        data['image2'] = convertToBase64(images![1]);
+      }
+      if (images!.length > 2) {
+        data['image3'] = convertToBase64(images![2]);
+      }
     }
 
     return data;
@@ -251,8 +279,8 @@ class ImageGenerationRequest {
   Map<String, dynamic> toVolcengineFormat() {
     final Map<String, dynamic> data = {'model': model, 'prompt': prompt};
 
-    if (image != null) {
-      data['image'] = convertToBase64(image!);
+    if (images != null && images!.isNotEmpty) {
+      data['image'] = convertToBase64(images!.first);
     }
 
     if (size != null) {
@@ -288,8 +316,8 @@ class ImageGenerationRequest {
     double? cfg,
     String? quality,
     String? style,
-    String? image,
-    String? maskImage,
+    List<String>? images,
+
     bool? watermark,
     String? userId,
   }) {
@@ -305,8 +333,7 @@ class ImageGenerationRequest {
       cfg: cfg ?? this.cfg,
       quality: quality ?? this.quality,
       style: style ?? this.style,
-      image: image ?? this.image,
-      maskImage: maskImage ?? this.maskImage,
+      images: images ?? this.images,
       watermark: watermark ?? this.watermark,
       userId: userId ?? this.userId,
     );

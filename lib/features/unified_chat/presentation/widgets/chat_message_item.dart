@@ -10,6 +10,7 @@ import '../../../../shared/widgets/toast_utils.dart';
 import '../../../branch_chat/presentation/widgets/text_edit_dialog.dart';
 import '../../../branch_chat/presentation/widgets/text_selection_dialog.dart';
 import '../../data/models/unified_chat_message.dart';
+import '../../data/models/unified_model_spec.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
 import 'multimodal_content_widget.dart';
 
@@ -17,6 +18,8 @@ import 'multimodal_content_widget.dart';
 /// 参考Chatbox简单显示全都靠右
 class ChatMessageItem extends StatefulWidget {
   final UnifiedChatMessage message;
+  // 更方便直接得到一些状态
+  final UnifiedChatViewModel viewModel;
   final VoidCallback? onRegenerate;
   final VoidCallback? onResend;
   final VoidCallback? onDelete;
@@ -27,6 +30,7 @@ class ChatMessageItem extends StatefulWidget {
   const ChatMessageItem({
     super.key,
     required this.message,
+    required this.viewModel,
     this.onRegenerate,
     this.onResend,
     this.onDelete,
@@ -411,26 +415,30 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
           value: 'select',
           child: buildMenuItemWithIcon(icon: Icons.text_fields, text: '选择文本'),
         ),
-        if (isUser)
-          PopupMenuItem<String>(
-            value: 'edit',
-            child: buildMenuItemWithIcon(icon: Icons.edit, text: '编辑消息'),
-          ),
-        if (isUser)
-          PopupMenuItem<String>(
-            value: 'resend',
-            child: buildMenuItemWithIcon(icon: Icons.send, text: '重新发送'),
-          ),
-        if (isAssistant)
-          PopupMenuItem<String>(
-            value: 'regenerate',
-            child: buildMenuItemWithIcon(icon: Icons.refresh, text: '重新生成'),
-          ),
         if (isAssistant)
           PopupMenuItem<String>(
             value: 'update_message',
             child: buildMenuItemWithIcon(icon: Icons.edit, text: '修改消息'),
           ),
+        // 只有对话模型才有的按钮选项
+        if (widget.viewModel.currentModel != null &&
+            widget.viewModel.currentModel!.type == UnifiedModelType.cc) ...[
+          if (isUser)
+            PopupMenuItem<String>(
+              value: 'edit',
+              child: buildMenuItemWithIcon(icon: Icons.edit, text: '编辑消息'),
+            ),
+          if (isUser)
+            PopupMenuItem<String>(
+              value: 'resend',
+              child: buildMenuItemWithIcon(icon: Icons.send, text: '重新发送'),
+            ),
+          if (isAssistant)
+            PopupMenuItem<String>(
+              value: 'regenerate',
+              child: buildMenuItemWithIcon(icon: Icons.refresh, text: '重新生成'),
+            ),
+        ],
         PopupMenuItem<String>(
           value: 'delete',
           child: buildMenuItemWithIcon(

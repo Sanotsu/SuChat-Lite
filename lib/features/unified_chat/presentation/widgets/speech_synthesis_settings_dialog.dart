@@ -51,7 +51,17 @@ class _SpeechSynthesisSettingsDialogState
     _initialValues = {...defaultSettings, ...widget.currentSettings};
 
     // 传入的配置时对话中的配置，有可能切换了平台和模型，那么音色也会变化，需要获取默认的音色
-    _initialValues['voice'] = _getDefaultVoice();
+    // _initialValues['voice'] = _getDefaultVoice();
+    _initialValues['voice'] =
+        _getVoiceOptions().contains(widget.currentSettings['voice'])
+        ? widget.currentSettings['voice']
+        : _getVoiceOptions().first;
+
+    _initialValues['responseFormat'] =
+        _getFormatOptions().contains(widget.currentSettings['responseFormat'])
+        ? widget.currentSettings['responseFormat']
+        : 'wav';
+
     // 同样的语速在不同平台可能不同，超过范围的需要进行调整
     if (_initialValues['speed'] > _getSpeedRange()['max']!) {
       _initialValues['speed'] = _getSpeedRange()['max']!;

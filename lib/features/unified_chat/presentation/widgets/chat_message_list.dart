@@ -162,6 +162,7 @@ class _ChatMessageListState extends State<ChatMessageList> {
 
                   return ChatMessageItem(
                     message: message,
+                    viewModel: viewModel,
                     onRegenerate: message.isAssistant
                         ? () => viewModel.regenerateMessage(
                             message,

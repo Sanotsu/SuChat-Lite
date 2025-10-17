@@ -61,7 +61,14 @@ class HttpRequest {
 
       // 1. 添加自定义日志拦截器，处理长数据截断
       CustomLogInterceptor(
-        sensitiveKeys: ['url', 'content', 'images', 'image'],
+        sensitiveKeys: [
+          'url',
+          'content',
+          'images',
+          'image',
+          'image_url',
+          'data',
+        ],
         truncateLength: 50,
         maxWidth: 150,
         // 使用自定义拦截器的请求/响应(包含header和body)、错误日志

@@ -331,9 +331,9 @@ class UnifiedChatDao {
   }
 
   // 重新加载内置平台
-  Future<void> reloadBuiltInPlatforms() async {
+  Future<void> reloadBuiltInPlatforms({UnifiedPlatformId? platformId}) async {
     final db = await dbInit.database;
-    await UnifiedChatDdl.initDefaultPlatforms(db);
+    await UnifiedChatDdl.initDefaultPlatforms(db, platformId: platformId);
     // TEST
     // await UnifiedChatDdl.initDefaultPartners(db);
   }
@@ -435,6 +435,16 @@ class UnifiedChatDao {
       UnifiedChatDdl.tableUnifiedModelSpec,
       where: 'id = ?',
       whereArgs: [id],
+    );
+  }
+
+  // 清空指定平台所有内置和自定义模型
+  Future<void> deleteAllModelSpecs(String platformId) async {
+    final db = await dbInit.database;
+    await db.delete(
+      UnifiedChatDdl.tableUnifiedModelSpec,
+      where: 'platform_id = ?',
+      whereArgs: [platformId],
     );
   }
 

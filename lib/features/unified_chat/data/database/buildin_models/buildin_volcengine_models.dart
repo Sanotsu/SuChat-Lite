@@ -1,5 +1,6 @@
 // 火山方舟
 final volcengineModels = [
+  /// 豆包的模型参数都是带日期的，主要添加1.6版本
   {
     'id': 'doubao-seed-1-6-250615',
     'platform_id': 'volcengine',
@@ -47,7 +48,6 @@ final volcengineModels = [
     'display_name': 'Doubao-1.5-pro-32k-250115',
     'model_type': 'cc',
     'supports_thinking': 1,
-    'supports_vision': 0,
     'supports_tool_calling': 1,
   },
   {
@@ -57,38 +57,29 @@ final volcengineModels = [
     'display_name': 'Doubao-1.5-pro-256k-250115',
     'model_type': 'cc',
     'supports_thinking': 1,
-    'supports_vision': 0,
     'supports_tool_calling': 1,
   },
-  // 火山方舟的图片生成大模型
+
+  /// 火山方舟的图片生成大模型
   {
     'id': 'doubao-seedream-4-0-250828',
     'platform_id': 'volcengine',
     'model_name': 'doubao-seedream-4-0-250828',
     'display_name': 'Doubao-Seedream-4.0-250828',
-    'model_type': 'imageToImage',
-    'supports_thinking': 0,
-    'supports_vision': 0,
-    'supports_tool_calling': 0,
+    'model_type': 'iti',
   },
   {
     'id': 'doubao-seedream-3-0-t2i-250415',
     'platform_id': 'volcengine',
     'model_name': 'doubao-seedream-3-0-t2i-250415',
     'display_name': 'Doubao-Seedream-3.0-t2i-250415',
-    'model_type': 'textToImage',
-    'supports_thinking': 0,
-    'supports_vision': 0,
-    'supports_tool_calling': 0,
+    'model_type': 'tti',
   },
   {
     'id': 'doubao-seededit-3-0-i2i-250628',
     'platform_id': 'volcengine',
     'model_name': 'doubao-seededit-3-0-i2i-250628',
     'display_name': 'Doubao-Seededit-3.0-i2i-250628',
-    'model_type': 'imageToImage',
-    'supports_thinking': 0,
-    'supports_vision': 0,
-    'supports_tool_calling': 0,
+    'model_type': 'iti',
   },
 ];

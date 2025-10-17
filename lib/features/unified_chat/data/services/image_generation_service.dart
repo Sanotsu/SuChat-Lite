@@ -60,14 +60,23 @@ class ImageGenerationService {
     }
 
     // 是阿里云的新同步请求版本的模型，才使用指定的地址
+    // 默认是 /api/v1/services/aigc/text2image/image-synthesis
     bool isAliyunSync =
         platform.id == UnifiedPlatformId.aliyun.name &&
         model.modelName.contains('qwen-image');
+
+    // 2025-10-14 部分图像编辑的地址和上面两者都不一样
+    bool isAliyunImage2image =
+        platform.id == UnifiedPlatformId.aliyun.name &&
+        (model.modelName.contains('wan2.5-i2i') ||
+            model.modelName.contains('qwen-mt-image'));
 
     try {
       final responseData = await HttpUtils.post(
         path: isAliyunSync
             ? "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation"
+            : isAliyunImage2image
+            ? 'https://dashscope.aliyuncs.com/api/v1/services/aigc/image2image/image-synthesis'
             : url,
         headers: headers,
         data: requestBody,
