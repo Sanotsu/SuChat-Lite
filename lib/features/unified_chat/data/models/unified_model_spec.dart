@@ -7,7 +7,16 @@ import 'package:json_annotation/json_annotation.dart';
 part 'unified_model_spec.g.dart';
 
 /// 模型类型枚举
-enum UnifiedModelType { cc, embedding, reranker, tti, iti, tts, asr, ttv, itv }
+enum UnifiedModelType {
+  cc,
+  embedding,
+  reranker,
+  tti,
+  iti,
+  tts,
+  asr,
+  // ttv, itv
+}
 
 // 模型类型对应的中文名
 final Map<UnifiedModelType, String> UMT_NAME_MAP = {
@@ -18,8 +27,8 @@ final Map<UnifiedModelType, String> UMT_NAME_MAP = {
   UnifiedModelType.iti: '图生图',
   UnifiedModelType.tts: '语音合成',
   UnifiedModelType.asr: '语音识别',
-  UnifiedModelType.ttv: '文生视频',
-  UnifiedModelType.itv: '图生视频',
+  // UnifiedModelType.ttv: '文生视频',
+  // UnifiedModelType.itv: '图生视频',
 };
 
 /// 统一模型规格模型
@@ -206,10 +215,10 @@ class UnifiedModelSpec {
         return UnifiedModelType.tts;
       case 'asr':
         return UnifiedModelType.asr;
-      case 'ttv':
-        return UnifiedModelType.ttv;
-      case 'itv':
-        return UnifiedModelType.itv;
+      // case 'ttv':
+      //   return UnifiedModelType.ttv;
+      // case 'itv':
+      //   return UnifiedModelType.itv;
       default:
         return UnifiedModelType.cc;
     }

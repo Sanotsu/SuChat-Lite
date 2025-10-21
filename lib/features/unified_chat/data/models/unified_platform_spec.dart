@@ -240,9 +240,9 @@ class UnifiedPlatformSpec {
       case UnifiedModelType.embedding:
       case UnifiedModelType.reranker:
         return getChatCompletionsUrl(); // 暂时使用聊天端点
-      case UnifiedModelType.ttv:
-      case UnifiedModelType.itv:
-        return null; // 暂未支持
+      // case UnifiedModelType.ttv:
+      // case UnifiedModelType.itv:
+      // return null; // 暂未支持
     }
   }
 

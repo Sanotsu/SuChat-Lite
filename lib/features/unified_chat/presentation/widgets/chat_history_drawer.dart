@@ -465,8 +465,7 @@ class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
     }
   }
 
-  // 归档对话
-  // TODO 2025-09-15 归档设定暂无任何额外逻辑，只是修改了该条记录的归档时间栏位
+  // 归档对话(如果当前对话已归档，在对话消息列表页面不会显示输入区域)
   Future<void> _toggleArchive(UnifiedConversation conversation) async {
     try {
       final updatedConversation = conversation.copyWith(

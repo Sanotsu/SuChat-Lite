@@ -160,3 +160,8 @@ Future<Directory> getDioDownloadDir() async {
 Future<Directory> getBackupDir() async {
   return getAppHomeDirectory(subfolder: "BAKUP/backup_files");
 }
+
+// 统一对话的备份文件
+Future<Directory> getUnifiedChatBackupDir() async {
+  return getAppHomeDirectory(subfolder: "BAKUP/backup_files/unified_chat");
+}

@@ -1,8 +1,7 @@
-// ignore_for_file: avoid_print
-
+import '../../../../core/network/dio_client/cus_http_client.dart';
+import '../../../../shared/widgets/toast_utils.dart';
 import '../models/web_search_models.dart';
 import 'unified_secure_storage.dart';
-import '../../../../core/network/dio_client/cus_http_client.dart';
 
 /// 联网搜索服务
 class WebSearchService {
@@ -93,8 +92,6 @@ class WebSearchService {
       }
     }
 
-    print("实际使用的工具》》》》》》》》》》》》》》》》》》》》》》》》》》》: $toolType");
-
     try {
       SearchResult result;
       switch (toolType) {
@@ -146,7 +143,7 @@ class WebSearchService {
         searchResult: result,
       );
     } catch (e) {
-      print('WebSearchService 的 serach 方法报错: $e');
+      ToastUtils.showError("WebSearchService 的 serach 方法报错: $e");
       return UnifiedSearchResponse.error(
         query: query,
         toolType: toolType,
@@ -260,7 +257,7 @@ class WebSearchService {
           return true;
       }
     } catch (e) {
-      print('测试连接失败: $e');
+      ToastUtils.showError("测试连接失败: $e");
       return false;
     }
   }

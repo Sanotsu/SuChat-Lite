@@ -54,7 +54,7 @@ class _ImageGenerationSettingsDialogState
 
     // 默认设置
     final defaultSettings = {
-      'size': '1024x1024',
+      'size': '',
       'quality': 'standard',
       'n': 1.0, // 滑块需要double类型
       'seed': null,
@@ -69,6 +69,7 @@ class _ImageGenerationSettingsDialogState
     _initialValues = {...defaultSettings, ...widget.currentSettings};
 
     final supportedSizes = _getSupportedSizes();
+
     // 传入的配置中尺寸可能与平台模型支持的尺寸不一致，需要进行调整
     _initialValues['size'] =
         (supportedSizes.isNotEmpty &&
@@ -76,7 +77,7 @@ class _ImageGenerationSettingsDialogState
         ? _initialValues['size']
         : supportedSizes.isNotEmpty
         ? supportedSizes.first
-        : '1024x1024';
+        : '';
 
     // 初始化状态变量
     _currentSourceLanguage = _initialValues['sourceLanguage'] as String?;
@@ -102,6 +103,14 @@ class _ImageGenerationSettingsDialogState
           const Text(
             '图片生成设置',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const Spacer(),
+          Tooltip(
+            message: '注意: 因模型不同，部分设置可能不会生效。',
+            triggerMode: TooltipTriggerMode.tap,
+            showDuration: Duration(seconds: 20),
+            margin: EdgeInsets.all(24),
+            child: Icon(Icons.info_outline, size: 24, color: Colors.grey),
           ),
         ],
       ),
@@ -170,7 +179,7 @@ class _ImageGenerationSettingsDialogState
     final currentSize = _initialValues['size']?.toString();
     final validInitialSize = supportedSizes.contains(currentSize)
         ? currentSize
-        : (supportedSizes.isNotEmpty ? supportedSizes.first : '1024x1024');
+        : (supportedSizes.isNotEmpty ? supportedSizes.first : '');
 
     return FormBuilderDropdown<String>(
       name: 'size',
@@ -474,11 +483,11 @@ class _ImageGenerationSettingsDialogState
       case 'siliconCloud':
 
         // 如果是kolor模型
-        if (modelName?.startsWith('kolor') ?? false) {
+        if (modelName?.contains('kolors') ?? false) {
           return ['1024x1024', '960x1280', '768x1024', '720x1440', '720x1280'];
         }
         // 如果是qwen-image模型
-        if (modelName?.startsWith('qwen-image') ?? false) {
+        if (modelName?.contains('qwen-image') ?? false) {
           return [
             '1328x1328',
             '1664x928',
@@ -525,7 +534,7 @@ class _ImageGenerationSettingsDialogState
         return [];
 
       default:
-        return ['1024x1024'];
+        return [];
     }
   }
 
@@ -624,7 +633,7 @@ class _ImageGenerationSettingsDialogState
   void _resetToDefaults() {
     final supportedSizes = _getSupportedSizes();
     final defaultSettings = {
-      'size': supportedSizes.isNotEmpty ? supportedSizes.first : '1024x1024',
+      'size': supportedSizes.isNotEmpty ? supportedSizes.first : '',
       'quality': 'standard',
       'n': 1.0, // 滑块需要double类型
       'seed': null,

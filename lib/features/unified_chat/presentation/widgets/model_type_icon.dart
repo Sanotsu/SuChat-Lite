@@ -26,10 +26,10 @@ class ModelTypeIcon extends StatelessWidget {
         return Colors.red.shade600; // 文本转语音使用红色
       case UnifiedModelType.asr:
         return Colors.indigo.shade600; // 语音识别使用靛蓝色
-      case UnifiedModelType.ttv:
-        return Colors.deepOrange.shade600; // 文生视频使用深橙色
-      case UnifiedModelType.itv:
-        return Colors.pink.shade600; // 图生视频使用粉色
+      // case UnifiedModelType.ttv:
+      //   return Colors.deepOrange.shade600; // 文生视频使用深橙色
+      // case UnifiedModelType.itv:
+      //   return Colors.pink.shade600; // 图生视频使用粉色
     }
   }
 
@@ -50,10 +50,10 @@ class ModelTypeIcon extends StatelessWidget {
         return Icons.record_voice_over; // 语音输出
       case UnifiedModelType.asr:
         return Icons.keyboard_voice; // 语音输入
-      case UnifiedModelType.ttv:
-        return Icons.video_camera_back; // 视频相机
-      case UnifiedModelType.itv:
-        return Icons.slideshow; // 幻灯片播放
+      // case UnifiedModelType.ttv:
+      //   return Icons.video_camera_back; // 视频相机
+      // case UnifiedModelType.itv:
+      //   return Icons.slideshow; // 幻灯片播放
     }
   }
 
@@ -94,9 +94,9 @@ String _getTooltipText(UnifiedModelType type) {
       return '文本转语音';
     case UnifiedModelType.asr:
       return '语音识别';
-    case UnifiedModelType.ttv:
-      return '文生视频';
-    case UnifiedModelType.itv:
-      return '图生视频';
+    // case UnifiedModelType.ttv:
+    //   return '文生视频';
+    // case UnifiedModelType.itv:
+    //   return '图生视频';
   }
 }

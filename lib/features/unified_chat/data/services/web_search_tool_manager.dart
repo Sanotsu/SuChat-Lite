@@ -1,5 +1,5 @@
-// ignore_for_file: avoid_print
-
+import '../../../../core/utils/simple_tools.dart';
+import '../../../../shared/widgets/toast_utils.dart';
 import '../models/openai_request.dart';
 import '../models/web_search_models.dart';
 import 'web_search_service.dart';
@@ -32,8 +32,11 @@ class WebSearchToolManager {
       _searchService.setSerperApiKey(serperKey);
     }
 
-    print(
-      '搜索工具初始化完成 - Tavily: ${_searchService.hasTavilyApiKey}, SerpApi: ${_searchService.hasSerpApiKey}, Serper: ${_searchService.hasSerperApiKey}',
+    pl.i(
+      '搜索工具初始化完成 - '
+      'Tavily: ${_searchService.hasTavilyApiKey}, '
+      'SerpApi: ${_searchService.hasSerpApiKey}, '
+      'Serper: ${_searchService.hasSerperApiKey}',
     );
   }
 
@@ -93,7 +96,7 @@ class WebSearchToolManager {
     ];
   }
 
-  /// 处理工具调用
+  /// 处理联网搜索工具调用
   Future<Map<String, dynamic>> handleToolCall({
     required String functionName,
     required Map<String, dynamic> arguments,
@@ -117,8 +120,6 @@ class WebSearchToolManager {
       final searchType = arguments['search_type'] as String? ?? 'general';
       final maxResults = arguments['max_results'] as int? ?? 10;
 
-      print('执行联网搜索: $query (类型: $searchType, 最大结果: $maxResults)');
-
       // 根据搜索类型选择合适的工具
       SearchToolType? preferredTool;
       if (searchType == 'news' && _searchService.hasTavilyApiKey) {
@@ -131,8 +132,6 @@ class WebSearchToolManager {
         maxResults: maxResults,
         includeAnswer: true,
       );
-
-      print("搜索API结果: $result");
 
       // 提取搜索结果链接
       final searchReferences = result.results
@@ -153,7 +152,7 @@ class WebSearchToolManager {
         'searchReferences': searchReferences,
       };
     } catch (e) {
-      print('工具调用处理失败: $e');
+      ToastUtils.showError("工具调用处理失败: $e");
       return {
         'content': '搜索失败: $e',
         'searchReferences': <Map<String, dynamic>>[],

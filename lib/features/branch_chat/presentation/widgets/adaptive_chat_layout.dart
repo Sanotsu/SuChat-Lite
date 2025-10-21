@@ -37,6 +37,9 @@ class AdaptiveChatLayout extends StatelessWidget {
   /// 浮动头像按钮
   final Widget? floatingAvatarButton;
 
+  /// 浮动新版本按钮
+  final Widget? floatingNewVersionButton;
+
   /// 构造函数
   const AdaptiveChatLayout({
     super.key,
@@ -51,6 +54,7 @@ class AdaptiveChatLayout extends StatelessWidget {
     this.isLoading = false,
     this.background,
     this.floatingAvatarButton,
+    this.floatingNewVersionButton,
   });
 
   @override
@@ -131,6 +135,9 @@ class AdaptiveChatLayout extends StatelessWidget {
 
           // 浮动按钮
           if (floatingAvatarButton != null) floatingAvatarButton!,
+
+          // 2025-10-17 新版本按钮
+          if (floatingNewVersionButton != null) floatingNewVersionButton!,
         ],
       ),
     );

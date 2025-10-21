@@ -1,5 +1,3 @@
-// ignore_for_file: avoid_print
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -10,6 +8,7 @@ import '../../../../core/network/dio_client/cus_http_request.dart';
 import '../../../../core/network/dio_client/interceptor_error.dart';
 import '../../../../core/network/dio_sse_transformer.dart';
 import '../../../../core/utils/simple_tools.dart';
+import '../../../../shared/widgets/toast_utils.dart';
 import '../../../branch_chat/domain/entities/input_message_data.dart';
 import '../database/unified_chat_dao.dart';
 import '../models/unified_conversation.dart';
@@ -88,7 +87,7 @@ class UnifiedChatService {
     } on CusHttpException catch (e) {
       yield _buildErrorResponse(e);
     } catch (e) {
-      print("未处理的错误类型 ${e.runtimeType}");
+      ToastUtils.showError("响应异常 ${e.toString()}");
       rethrow;
     } finally {
       _globalStreamingTokens.remove(cancelToken);
@@ -152,16 +151,8 @@ class UnifiedChatService {
           platformId != UnifiedPlatformId.zhipu.name &&
           model.supportsToolCalling == true) {
         tools = _searchToolManager.getSearchTools();
-        print("已添加联网搜索工具: ${tools.length}个");
-        print("工具定义: ${tools.map((t) => t.toJson()).toList()}");
       }
-    } else {
-      print(
-        "未添加联网搜索工具 - isWebSearch: $isWebSearch, hasAvailableTools: ${_searchToolManager.hasAvailableTools()}",
-      );
     }
-
-    print("是否启用了思考模式: ${conversation.extraParams?['enableThinking'] ?? false}");
 
     // 构建请求体
     return OpenAIChatCompletionRequest.fromMessages(
@@ -200,8 +191,6 @@ class UnifiedChatService {
       }
     }
 
-    pl.d('实际发送的消息内容>>>>>>>>>>>>>>>>>>>>>>>>>>>>: ${requestBody.length}');
-
     final responseData = await HttpUtils.post(
       path: platform.getChatCompletionsUrl(),
       data: requestBody,
@@ -219,7 +208,8 @@ class UnifiedChatService {
         final choice = response.choices.first;
         final message = choice.message;
         if (message?.toolCalls != null && message!.toolCalls!.isNotEmpty) {
-          print("非流式响应检测到工具调用，开始处理...");
+          pl.i("开始处理非流式响应中的工具调用...");
+
           yield* _handleNonStreamToolCalls(
             response,
             platform,
@@ -240,6 +230,8 @@ class UnifiedChatService {
 
     // 如果有工具调用，使用工具调用处理器
     if (request.tools != null && request.tools!.isNotEmpty) {
+      pl.i("开始处理带工具调用的流式响应...");
+
       yield* _handleStreamWithToolCalls(
         responseBody.stream,
         platform,
@@ -278,7 +270,8 @@ class UnifiedChatService {
         final streamResponse = OpenAIChatCompletionResponse.fromJson(json);
         yield streamResponse;
       } catch (e) {
-        print('解析JSON失败: $e, 数据: "$data"');
+        // 虽然解析出错，但继续处理
+        pl.i('解析JSON失败: $e, 数据: "$data"');
       }
     }
   }
@@ -291,8 +284,6 @@ class UnifiedChatService {
     OpenAIChatCompletionRequest originalRequest,
     CancelToken cancelToken,
   ) async* {
-    print('开始处理带工具调用的流式响应...');
-
     final toolCallResult = await _processToolCallStream(
       responseStream,
       cancelToken,
@@ -306,6 +297,8 @@ class UnifiedChatService {
     // 如果有完整的工具调用，执行工具并重新请求
     if (toolCallResult.hasCompleteToolCalls &&
         toolCallResult.accumulatedToolCalls.isNotEmpty) {
+      pl.i('检测到完整工具调用，开始执行: ${toolCallResult.accumulatedToolCalls.keys}');
+
       yield* _executeToolsAndContinue(
         toolCallResult,
         platform,
@@ -361,7 +354,7 @@ class UnifiedChatService {
           break;
         }
       } catch (e) {
-        print('解析JSON失败: $e, 数据: "$data"');
+        pl.e('解析JSON失败: $e, 数据: "$data"');
       }
     }
 
@@ -419,8 +412,6 @@ class UnifiedChatService {
     OpenAIChatCompletionRequest originalRequest,
     CancelToken cancelToken,
   ) async* {
-    print('检测到完整工具调用，开始执行: ${toolCallResult.accumulatedToolCalls.keys}');
-
     final toolResults = await _executeToolCalls(
       toolCallResult.accumulatedToolCalls,
     );
@@ -434,7 +425,7 @@ class UnifiedChatService {
         toolResults,
       );
 
-      print('发送包含工具结果的新请求，等待模型生成最终回答...');
+      pl.i('发送包含工具结果的新请求，等待模型生成最终回答...');
 
       // 递归调用处理新请求
       yield* _handleResponse(
@@ -505,8 +496,6 @@ class UnifiedChatService {
     OpenAIChatCompletionRequest originalRequest,
     CancelToken cancelToken,
   ) async* {
-    print('开始处理非流式响应中的工具调用...');
-
     // 先返回当前响应给UI显示
     yield response;
 
@@ -542,7 +531,7 @@ class UnifiedChatService {
           toolResults,
         );
 
-        print('发送包含工具结果的新请求，等待模型生成最终回答...');
+        pl.i('发送包含工具结果的新请求，等待模型生成最终回答...');
 
         // 递归调用处理新请求
         yield* _handleResponse(
@@ -566,8 +555,6 @@ class UnifiedChatService {
       final functionName = toolCallData['function']['name'] as String;
       final argumentsStr = toolCallData['function']['arguments'] as String;
 
-      print("参数字符串》》》》》》》》》》》》》$functionName $argumentsStr");
-
       final toolCallId = toolCallData['id'] as String;
       final actualToolCallId = toolCallId.isEmpty
           ? 'tool_call_${DateTime.now().millisecondsSinceEpoch}'
@@ -575,8 +562,6 @@ class UnifiedChatService {
 
       if (functionName == 'web_search') {
         try {
-          print('执行联网搜索工具调用: $argumentsStr');
-
           if (argumentsStr.trim().isEmpty) {
             throw FormatException('工具调用参数为空');
           }
@@ -597,11 +582,8 @@ class UnifiedChatService {
             'name': 'web_search',
             'content': result['content'] as String,
           });
-
-          print('搜索工具调用完成，结果长度: ${(result['content'] as String).length}');
-          print('搜索链接数量: ${_lastSearchReferences?.length ?? 0}');
         } catch (e) {
-          print('工具调用执行失败: $e');
+          pl.e('工具调用执行失败: $e');
           _lastSearchReferences = null;
           toolResults.add({
             'tool_call_id': actualToolCallId,
@@ -636,11 +618,11 @@ class UnifiedChatService {
           final jsonString = match.group(0);
           return jsonDecode(jsonString!);
         } catch (e) {
-          print('提取的JSON解析失败: $e');
+          pl.e('提取的JSON解析失败: $e');
         }
       }
 
-      print('未找到有效的JSON格式内容');
+      pl.e('未找到有效的JSON格式内容');
       return {};
     }
   }
@@ -748,8 +730,6 @@ class UnifiedChatService {
         showErrorMessage: false,
       );
 
-      print("================$response ${response.runtimeType}");
-
       /**
      * 结构类似:
      * {
@@ -766,10 +746,9 @@ class UnifiedChatService {
             [];
       }
 
-      print("指定平台获取的模型列表: $models");
       return models;
     } catch (e) {
-      print("查询模型列表报错 $e");
+      ToastUtils.showError("查询模型列表报错: $e");
       rethrow;
     }
   }
@@ -790,8 +769,6 @@ class UnifiedChatService {
 
   // 处理部分平台的联网搜索设置
   Map<String, dynamic>? _handleWebSearch(String platformId, String modelName) {
-    print("处理联网配置的平台-------------------: $platformId, 模型: $modelName");
-
     // 2025-09-27 看文档，好像是所有模型都支持联网搜索
     // https://docs.bigmodel.cn/cn/guide/tools/web-search
     // https://docs.bigmodel.cn/api-reference/%E5%B7%A5%E5%85%B7-api/%E7%BD%91%E7%BB%9C%E6%90%9C%E7%B4%A2

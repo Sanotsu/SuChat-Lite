@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:open_file/open_file.dart';
 
 import '../../../../shared/widgets/audio_player_widget.dart';
 import '../../../../shared/widgets/image_preview_helper.dart';
+import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../../../shared/widgets/video_player_widget.dart';
 import '../../data/models/unified_chat_message.dart';
@@ -26,6 +28,17 @@ class MultimodalContentWidget extends StatefulWidget {
 }
 
 class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
+  // 预览文件（可选）
+  Future<void> _previewFile(String filePath) async {
+    try {
+      // 如果是本地文件，直接打开
+      await OpenFile.open(filePath);
+    } catch (e) {
+      if (!mounted) return;
+      commonExceptionDialog(context, '无法打开文件', e.toString());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -185,7 +198,7 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
 
   Widget _buildVideoItem(UnifiedContentItem item) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -228,7 +241,7 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
 
   Widget _buildFileItem(UnifiedContentItem item) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -251,13 +264,14 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
                   style: TextStyle(
                     fontWeight: FontWeight.normal,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12,
                   ),
                 ),
                 if (item.fileSize != null)
                   Text(
                     _formatFileSize(item.fileSize!),
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 10,
                       color: Theme.of(
                         context,
                       ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
@@ -266,16 +280,16 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
               ],
             ),
           ),
-          IconButton(
-            onPressed: () {
-              // TODO: 实现文件下载/打开功能
-              ToastUtils.showInfo('文件操作功能待实现');
-            },
-            icon: Icon(
-              Icons.download,
-              color: Theme.of(context).colorScheme.primary,
+          if (item.fileUrl != null)
+            IconButton(
+              onPressed: () async {
+                await _previewFile(item.fileUrl!);
+              },
+              icon: Icon(
+                Icons.file_open_outlined,
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -283,7 +297,7 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
 
   Widget _buildUnknownItem(UnifiedContentItem item) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.errorContainer,
@@ -487,7 +501,7 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
   Widget _buildMetadataVideo(String videoPath) {
     final fileName = videoPath.split('/').last;
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -528,7 +542,7 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
   Widget _buildMetadataFile(String filePath) {
     final fileName = filePath.split('/').last;
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -548,18 +562,21 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
               style: TextStyle(
                 fontWeight: FontWeight.normal,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 12,
               ),
             ),
           ),
-          IconButton(
-            onPressed: () {
-              ToastUtils.showInfo('文件操作功能待实现');
-            },
-            icon: Icon(
-              Icons.download,
-              color: Theme.of(context).colorScheme.primary,
+
+          if (filePath.trim().isNotEmpty)
+            IconButton(
+              onPressed: () async {
+                await _previewFile(filePath);
+              },
+              icon: Icon(
+                Icons.file_open_outlined,
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
-          ),
         ],
       ),
     );

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/utils/simple_tools.dart';
 import '../../../../shared/widgets/toast_utils.dart';
+import '../../data/database/unified_chat_db_init.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
 import '../pages/search_tools_settings_page.dart';
 
@@ -106,22 +107,22 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
                   ),
                 ),
                 const PopupMenuItem(
-                  value: 'export',
-                  child: Row(
-                    children: [
-                      Icon(Icons.download),
-                      SizedBox(width: 8),
-                      Text('导出对话'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
                   value: 'new',
                   child: Row(
                     children: [
                       Icon(Icons.add),
                       SizedBox(width: 8),
                       Text('新建对话'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'export',
+                  child: Row(
+                    children: [
+                      Icon(Icons.download),
+                      SizedBox(width: 8),
+                      Text('导出数据'),
                     ],
                   ),
                 ),
@@ -145,11 +146,11 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
       case 'clear':
         _showClearConfirmDialog(context, viewModel);
         break;
-      case 'export':
-        _exportConversation(context, viewModel);
-        break;
       case 'new':
         _createNewConversation(context, viewModel);
+        break;
+      case 'export':
+        _exportConversation(context, viewModel);
         break;
     }
   }
@@ -191,10 +192,24 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
         return;
       }
 
-      final filePath = await viewModel.exportConversation();
-      if (filePath != null && context.mounted) {
-        ToastUtils.showSuccess('对话已导出到: $filePath');
-      }
+      final closeToast = ToastUtils.showLoading("正在导出对话数据...");
+
+      // 导出数据库
+      final UnifiedChatDBInit dbInit = UnifiedChatDBInit();
+      String filePath = await dbInit.exportDatabase();
+
+      closeToast();
+
+      ToastUtils.showSuccess(
+        // 安卓写法
+        '数据已导出到: ${filePath.split("emulated/0").last}',
+        duration: Duration(seconds: 5),
+      );
+
+      // final filePath = await viewModel.exportConversation();
+      // if (filePath != null && context.mounted) {
+      //   ToastUtils.showSuccess('对话已导出到: $filePath');
+      // }
     } catch (e) {
       ToastUtils.showError('导出失败: $e');
       rethrow;

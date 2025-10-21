@@ -133,7 +133,12 @@ class _ChatMessageListState extends State<ChatMessageList> {
         }
 
         if (viewModel.messages.isEmpty) {
-          return _buildEmptyState(context, viewModel);
+          return Stack(
+            children: [
+              _buildEmptyState(context, viewModel),
+              _buildChangeInputModeButton(viewModel),
+            ],
+          );
         }
 
         return Stack(
@@ -190,6 +195,9 @@ class _ChatMessageListState extends State<ChatMessageList> {
               ),
             ),
 
+            // 悬浮切换输入模式按钮
+            _buildChangeInputModeButton(viewModel),
+
             // 悬浮滚动按钮
             _buildScrollButtons(),
 
@@ -202,7 +210,13 @@ class _ChatMessageListState extends State<ChatMessageList> {
                 width: 32,
                 height: 32,
                 child: FloatingActionButton.small(
-                  onPressed: () => viewModel.createNewConversation(),
+                  onPressed: () {
+                    viewModel.createNewConversation();
+                    setState(() {
+                      _showScrollToTop = false;
+                      _showScrollToBottom = false;
+                    });
+                  },
                   heroTag: 'create_new_conversation',
                   backgroundColor: Theme.of(context).colorScheme.surface,
                   foregroundColor: Theme.of(context).colorScheme.onSurface,
@@ -287,13 +301,44 @@ class _ChatMessageListState extends State<ChatMessageList> {
     ToastUtils.showInfo('消息已复制到剪贴板');
   }
 
+  // 悬浮切换键盘或语音输入按钮
+  Widget _buildChangeInputModeButton(UnifiedChatViewModel viewModel) {
+    // 如果已经归档了，不显示切换输入模式按钮
+    if (viewModel.isConversationArchived) {
+      return const SizedBox.shrink();
+    }
+
+    return Positioned(
+      // 小按钮尺寸为40*40,不够小，手动32*32包裹
+      left: 16,
+      bottom: 8,
+      child: SizedBox(
+        width: 32,
+        height: 32,
+        child: FloatingActionButton.small(
+          shape: const CircleBorder(),
+          onPressed: () {
+            viewModel.toggleInputMode();
+          },
+          heroTag: 'switch_input_mode',
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          foregroundColor: Theme.of(context).colorScheme.onSurface,
+          tooltip: '切换输入模式',
+          child: Icon(
+            viewModel.isKeyboardInput ? Icons.keyboard_voice : Icons.keyboard,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildScrollButtons() {
     if (!_showScrollToTop && !_showScrollToBottom) {
       return const SizedBox.shrink();
     }
 
     return Positioned(
-      right: 8,
+      right: 16,
       bottom: 8,
       child: Column(
         mainAxisSize: MainAxisSize.min,

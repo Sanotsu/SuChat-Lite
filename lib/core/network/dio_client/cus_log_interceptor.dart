@@ -1,9 +1,10 @@
-// ignore_for_file: avoid_print
-
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:math' as math;
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+
+final logPrint = debugPrint;
 
 /// 自定义日志拦截器，支持对嵌套参数值进行长度限制
 class CustomLogInterceptor extends Interceptor {
@@ -40,6 +41,7 @@ class CustomLogInterceptor extends Interceptor {
     this.errorEnabled = true,
     this.maxWidth = 100,
     this.binaryMaxDisplayLength = 30, // 默认显示前30个字节
+    this.compact = true,
   });
 
   @override
@@ -70,27 +72,27 @@ class CustomLogInterceptor extends Interceptor {
     final uri = options.uri;
     final method = options.method.toUpperCase();
 
-    print('');
-    print('╔╣ Custom Request ║ $method ');
-    print('║  $uri');
-    print('╚${'═' * math.min(maxWidth, uri.toString().length + 10)}╝');
+    logPrint('');
+    logPrint('╔╣ Custom Request ║ $method ');
+    logPrint('║  $uri');
+    logPrint('╚${'═' * math.min(maxWidth, uri.toString().length + 10)}╝');
 
     // 打印Headers
     if (options.headers.isNotEmpty) {
-      print('╔ Headers ');
+      logPrint('╔ Headers ');
       options.headers.forEach((key, value) {
-        print('╟ $key: $value');
+        logPrint('╟ $key: $value');
       });
-      print('╚${'═' * maxWidth}╝');
+      logPrint('╚${'═' * maxWidth}╝');
     }
 
     // 打印Body（关键部分：处理嵌套数据截断）
     if (options.data != null) {
-      print('╔ Body ');
+      logPrint('╔ Body ');
       final processedData = _processDataForLog(options.data);
       final jsonString = _formatJson(processedData);
       _safePrint(jsonString);
-      print('╚${'═' * maxWidth}╝');
+      logPrint('╚${'═' * maxWidth}╝');
     }
   }
 
@@ -100,53 +102,67 @@ class CustomLogInterceptor extends Interceptor {
     final statusCode = response.statusCode;
     final statusMessage = response.statusMessage ?? '';
 
-    print('');
-    print('╔╣ Custom Response ║ $method ║ Status: $statusCode $statusMessage');
-    print('║  $uri');
-    print('╚${'═' * maxWidth}╝');
+    logPrint('');
+    logPrint(
+      '╔╣ Custom Response ║ $method ║ Status: $statusCode $statusMessage',
+    );
+    logPrint('║  $uri');
+    logPrint('╚${'═' * maxWidth}╝');
 
     // 打印Headers
     if (response.headers.map.isNotEmpty) {
-      print('╔ Headers ');
+      logPrint('╔ Headers ');
       response.headers.map.forEach((key, value) {
-        print('╟ $key: $value');
+        logPrint('╟ $key: $value');
       });
-      print('╚${'═' * maxWidth}╝');
+      logPrint('╚${'═' * maxWidth}╝');
     }
 
     // 打印Body - 关键修改：识别二进制数据
     if (response.data != null) {
-      print('╔ Body');
-      print('║');
+      logPrint('╔ Body');
+      logPrint('║');
 
       if (_isBinaryData(response.data)) {
         // 处理二进制数据
         _logBinaryData(response.data);
       } else {
         // 处理文本数据
-        final responseBody = response.data.toString();
-        if (responseBody.length > 1000) {
-          print('║ ${responseBody.substring(0, 1000)}...[响应过长，已截断]');
-        } else {
-          print('║ $responseBody');
-        }
+        // final responseBody = response.data.toString();
+        // if (responseBody.length > 1000) {
+        //   logPrint('║ ${responseBody.substring(0, 1000)}...[响应过长，已截断]');
+        // } else {
+        //   logPrint('║ $responseBody');
+        // }
+
+        // // 和自定义请求一样的处理
+        // final processedData = _processDataForLog(response.data);
+        // final jsonString = _formatJson(processedData);
+        // _safePrint(jsonString);
+
+        // logPrint(
+        //   "处理非二进制数据 ${response.runtimeType} ${response.data.runtimeType}}",
+        // );
+
+        // // 这个是pretty_dio_looger中的显示方法(直接复制的代码)
+        _printResponse(response);
       }
-      print('║');
-      print('╚${'═' * maxWidth}╝');
+      logPrint('║');
+      logPrint('╚${'═' * maxWidth}╝');
     }
   }
 
   void _logError(DioException err) {
-    print('');
-    print('╔╣ Custom Error ║ ${err.type}');
+    logPrint('');
+    logPrint('╔╣ Custom Error ║ ${err.type}');
     if (err.response != null) {
-      print('║  ${err.response!.requestOptions.uri}');
-      print(
+      logPrint('║  ${err.response!.requestOptions.uri}');
+      logPrint(
         '║  Status: ${err.response!.statusCode} ${err.response!.statusMessage}',
       );
     }
-    print('╟ Message: ${err.message}');
-    print('╚${'═' * maxWidth}╝');
+    logPrint('╟ Message: ${err.message}');
+    logPrint('╚${'═' * maxWidth}╝');
   }
 
   /// 判断是否为二进制数据
@@ -196,31 +212,31 @@ class CustomLogInterceptor extends Interceptor {
           numberStrings.where((s) => s.isNotEmpty).map(int.parse).toList(),
         );
       } catch (e) {
-        print('║ [二进制数据 - 无法解析]');
+        logPrint('║ [二进制数据 - 无法解析]');
         return;
       }
     } else {
-      print('║ [未知的二进制数据类型: ${binaryData.runtimeType}]');
+      logPrint('║ [未知的二进制数据类型: ${binaryData.runtimeType}]');
       return;
     }
 
-    print('║ [二进制数据 - ${bytes.length} 字节]');
-    print('║ 类型: ${_guessBinaryType(bytes)}');
+    logPrint('║ [二进制数据 - ${bytes.length} 字节]');
+    logPrint('║ 类型: ${_guessBinaryType(bytes)}');
 
     if (bytes.length <= binaryMaxDisplayLength) {
-      print(
+      logPrint(
         '║ 数据: ${bytes.sublist(0, math.min(bytes.length, binaryMaxDisplayLength))}',
       );
     } else {
-      print(
+      logPrint(
         '║ 数据 (前$binaryMaxDisplayLength字节): ${bytes.sublist(0, binaryMaxDisplayLength)}',
       );
-      print('║ ...[剩余 ${bytes.length - binaryMaxDisplayLength} 字节已省略]');
+      logPrint('║ ...[剩余 ${bytes.length - binaryMaxDisplayLength} 字节已省略]');
     }
 
     // 显示十六进制预览（可选）
     if (bytes.isNotEmpty) {
-      print(
+      logPrint(
         '║ 十六进制开头: ${_bytesToHex(bytes.sublist(0, math.min(16, bytes.length)))}',
       );
     }
@@ -339,7 +355,7 @@ class CustomLogInterceptor extends Interceptor {
     const int maxLength = 800; // Flutter print的安全长度限制
 
     // if (text.length <= maxLength) {
-    //   print('$prefix$text');
+    //   logPrint('$prefix$text');
     //   return;
     // }
 
@@ -347,15 +363,184 @@ class CustomLogInterceptor extends Interceptor {
     final lines = text.split('\n');
     for (final line in lines) {
       if (line.length <= maxLength) {
-        print('$prefix$line');
+        logPrint('$prefix$line');
       } else {
         // 如果单行还是太长，按字符分段
         for (int i = 0; i < line.length; i += maxLength) {
           final end = math.min(i + maxLength, line.length);
           final segment = line.substring(i, end);
-          print('$prefix$segment');
+          logPrint('$prefix$segment');
         }
       }
+    }
+  }
+
+  /// *******************************************************************
+  /// 以下 这个打印response相关辅助函数，直接复制处理pretty_dio_looger的代码
+  /// *******************************************************************
+  void _printResponse(Response response) async {
+    if (response.data != null) {
+      if (response.data is Map) {
+        _printPrettyMap(response.data as Map);
+      } else if (response.data is Uint8List) {
+        logPrint('║${_indent()}[');
+        _printUint8List(response.data as Uint8List);
+        logPrint('║${_indent()}]');
+      } else if (response.data is List) {
+        logPrint('║${_indent()}[');
+        _printList(response.data as List);
+        logPrint('║${_indent()}]');
+      } else if (response.data is ResponseBody) {
+        _printBlock(response.data.toString());
+
+        // 注意：流只能单次消费，也不能深拷贝，所以这里不处理流式响应的内容(留着可以测试时使用)
+        // await printResponseBody(response.data);
+      } else {
+        _printBlock(response.data.toString());
+      }
+    }
+  }
+
+  // InitialTab count to logPrint json response
+  static const int kInitialTab = 1;
+  // 1 tab length
+  static const String tabStep = '    ';
+  // Print compact json response
+  final bool compact;
+  // Size in which the Uint8List will be split
+  static const int chunkSize = 20;
+
+  String _indent([int tabCount = kInitialTab]) => tabStep * tabCount;
+
+  bool _canFlattenMap(Map map) {
+    return map.values
+            .where((dynamic val) => val is Map || val is List)
+            .isEmpty &&
+        map.toString().length < maxWidth;
+  }
+
+  bool _canFlattenList(List list) {
+    return list.length < 10 && list.toString().length < maxWidth;
+  }
+
+  void _printPrettyMap(
+    Map data, {
+    int initialTab = kInitialTab,
+    bool isListItem = false,
+    bool isLast = false,
+  }) {
+    var tabs = initialTab;
+    final isRoot = tabs == kInitialTab;
+    final initialIndent = _indent(tabs);
+    tabs++;
+
+    if (isRoot || isListItem) logPrint('║$initialIndent{');
+
+    for (var index = 0; index < data.length; index++) {
+      final isLast = index == data.length - 1;
+      final key = '"${data.keys.elementAt(index)}"';
+      dynamic value = data[data.keys.elementAt(index)];
+      if (value is String) {
+        value = '"${value.toString().replaceAll(RegExp(r'([\r\n])+'), " ")}"';
+      }
+      if (value is Map) {
+        if (compact && _canFlattenMap(value)) {
+          logPrint('║${_indent(tabs)} $key: $value${!isLast ? ',' : ''}');
+        } else {
+          logPrint('║${_indent(tabs)} $key: {');
+          _printPrettyMap(value, initialTab: tabs);
+        }
+      } else if (value is List) {
+        if (compact && _canFlattenList(value)) {
+          logPrint('║${_indent(tabs)} $key: ${value.toString()}');
+        } else {
+          logPrint('║${_indent(tabs)} $key: [');
+          _printList(value, tabs: tabs);
+          logPrint('║${_indent(tabs)} ]${isLast ? '' : ','}');
+        }
+      } else {
+        final msg = value.toString().replaceAll('\n', '');
+        final indent = _indent(tabs);
+        final linWidth = maxWidth - indent.length;
+        if (msg.length + indent.length > linWidth) {
+          final lines = (msg.length / linWidth).ceil();
+          for (var i = 0; i < lines; ++i) {
+            final multilineKey = i == 0 ? "$key:" : "";
+            logPrint(
+              '║${_indent(tabs)} $multilineKey ${msg.substring(i * linWidth, math.min<int>(i * linWidth + linWidth, msg.length))}',
+            );
+          }
+        } else {
+          logPrint('║${_indent(tabs)} $key: $msg${!isLast ? ',' : ''}');
+        }
+      }
+    }
+
+    logPrint('║$initialIndent}${isListItem && !isLast ? ',' : ''}');
+  }
+
+  void _printUint8List(Uint8List list, {int tabs = kInitialTab}) {
+    var chunks = [];
+    for (var i = 0; i < list.length; i += chunkSize) {
+      chunks.add(
+        list.sublist(
+          i,
+          i + chunkSize > list.length ? list.length : i + chunkSize,
+        ),
+      );
+    }
+    for (var element in chunks) {
+      logPrint('║${_indent(tabs)} ${element.join(", ")}');
+    }
+  }
+
+  void _printList(List list, {int tabs = kInitialTab}) {
+    for (var i = 0; i < list.length; i++) {
+      final element = list[i];
+      final isLast = i == list.length - 1;
+      if (element is Map) {
+        if (compact && _canFlattenMap(element)) {
+          logPrint('║${_indent(tabs)}  $element${!isLast ? ',' : ''}');
+        } else {
+          _printPrettyMap(
+            element,
+            initialTab: tabs + 1,
+            isListItem: true,
+            isLast: isLast,
+          );
+        }
+      } else {
+        logPrint('║${_indent(tabs + 2)} $element${isLast ? '' : ','}');
+      }
+    }
+  }
+
+  /// 测试保留: 从 ResponseBody 中读取字符串内容
+  Future<void> printResponseBody(ResponseBody body) async {
+    try {
+      // 将字节流转换为字符串
+      final bytesBuilder = BytesBuilder();
+      await for (final chunk in body.stream) {
+        bytesBuilder.add(chunk);
+      }
+      final bytes = bytesBuilder.toBytes();
+
+      logPrint(" ║ ${utf8.decode(bytes)}");
+    } catch (e) {
+      logPrint('读取响应体失败: $e');
+    }
+  }
+
+  void _printBlock(String msg) {
+    final lines = (msg.length / maxWidth).ceil();
+    for (var i = 0; i < lines; ++i) {
+      logPrint(
+        (i >= 0 ? '║ ' : '') +
+            msg.substring(
+              i * maxWidth,
+              math.min<int>(i * maxWidth + maxWidth, msg.length),
+            ),
+      );
     }
   }
 }

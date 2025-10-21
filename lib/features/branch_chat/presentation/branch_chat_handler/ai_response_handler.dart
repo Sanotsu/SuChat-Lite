@@ -110,7 +110,8 @@ class AIResponseHandler {
             }
           }
 
-          // // TODO 如果用户消息包含视频(没有云端存储，暂时不弄)
+          // // 如果用户消息包含视频(没有云端存储，暂时不弄)
+          // 2025-10-21 旧版本没有选择视频的逻辑，有需要使用unified chat 的视觉理解模型
           // if (tmpVideosUrl != null && tmpVideosUrl.isNotEmpty) {
           //   try {
           //     final bytes = File(tmpVideosUrl).readAsBytesSync();

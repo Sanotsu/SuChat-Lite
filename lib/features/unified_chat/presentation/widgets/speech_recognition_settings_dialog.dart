@@ -121,6 +121,14 @@ class _SpeechRecognitionSettingsDialogState
             '语音识别设置',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
+          const Spacer(),
+          Tooltip(
+            message: '注意: 因模型不同，部分设置可能不会生效。',
+            triggerMode: TooltipTriggerMode.tap,
+            showDuration: Duration(seconds: 20),
+            margin: EdgeInsets.all(24),
+            child: Icon(Icons.info_outline, size: 24, color: Colors.grey),
+          ),
         ],
       ),
       content: SizedBox(
