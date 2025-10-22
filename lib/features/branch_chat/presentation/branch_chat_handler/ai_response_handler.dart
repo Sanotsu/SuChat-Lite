@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:mime/mime.dart';
 
 import '../../../../core/utils/wav_audio_handler.dart';
 import '../../../../shared/constants/constants.dart';
@@ -73,9 +74,11 @@ class AIResponseHandler {
               try {
                 final bytes = File(url.trim()).readAsBytesSync();
                 final base64Image = base64Encode(bytes);
+                final mimeType = lookupMimeType(url.trim());
+
                 contentList.add({
                   'type': 'image_url',
-                  'image_url': {'url': 'data:image/jpeg;base64,$base64Image'},
+                  'image_url': {'url': 'data:$mimeType;base64,$base64Image'},
                 });
               } catch (e) {
                 _showErrorDialog('处理图片失败: $e');
@@ -96,7 +99,8 @@ class AIResponseHandler {
                 contentList.add({
                   'type': 'input_audio',
                   'input_audio': {
-                    'data': 'data:;base64,$base64Audio',
+                    'data':
+                        'data:${lookupMimeType(audioUrl.trim())};base64,$base64Audio',
                     "format": audioUrl.split('.').last,
                   },
                 });
@@ -106,7 +110,8 @@ class AIResponseHandler {
             }
           }
 
-          // // TODO 如果用户消息包含视频(没有云端存储，暂时不弄)
+          // // 如果用户消息包含视频(没有云端存储，暂时不弄)
+          // 2025-10-21 旧版本没有选择视频的逻辑，有需要使用unified chat 的视觉理解模型
           // if (tmpVideosUrl != null && tmpVideosUrl.isNotEmpty) {
           //   try {
           //     final bytes = File(tmpVideosUrl).readAsBytesSync();
@@ -181,14 +186,13 @@ class AIResponseHandler {
 
         if (isPrefixSame) {
           // 检查是否是由于用户编辑创建的新分支
-          final userMessages =
-              state.allMessages
-                  .where(
-                    (m) =>
-                        m.role == CusRole.user.name &&
-                        m.branchPath == state.currentBranchPath,
-                  )
-                  .toList();
+          final userMessages = state.allMessages
+              .where(
+                (m) =>
+                    m.role == CusRole.user.name &&
+                    m.branchPath == state.currentBranchPath,
+              )
+              .toList();
 
           isAfterUserEdit = userMessages.isNotEmpty;
         }
@@ -212,14 +216,13 @@ class AIResponseHandler {
 
         if (commonPrefixLength > 0) {
           // 如果有共同父路径，判断当前路径是否包含用户消息
-          final userMessagesOnCurrentPath =
-              state.allMessages
-                  .where(
-                    (m) =>
-                        m.role == CusRole.user.name &&
-                        m.branchPath == state.currentBranchPath,
-                  )
-                  .toList();
+          final userMessagesOnCurrentPath = state.allMessages
+              .where(
+                (m) =>
+                    m.role == CusRole.user.name &&
+                    m.branchPath == state.currentBranchPath,
+              )
+              .toList();
 
           isAfterUserEdit = userMessagesOnCurrentPath.isNotEmpty;
         }
@@ -241,10 +244,9 @@ class AIResponseHandler {
         newBranchIndex = 0;
       } else {
         // 常规情况下，使用当前同级分支的最大索引+1
-        newBranchIndex =
-            availableSiblings.isEmpty
-                ? 0
-                : availableSiblings.last.branchIndex + 1;
+        newBranchIndex = availableSiblings.isEmpty
+            ? 0
+            : availableSiblings.last.branchIndex + 1;
       }
 
       // 构建新的分支路径
@@ -338,6 +340,7 @@ class AIResponseHandler {
         history,
         advancedOptions: state.advancedOptions,
         stream: true,
+        enableWebSearch: state.inputMessageData?.enableWebSearch ?? false,
       );
 
       state.cancelResponse = cancelFunc;
@@ -353,24 +356,21 @@ class AIResponseHandler {
 
           // 1. 更新内容
           state.streamingContent += chunk.cusText;
-          state.streamingReasoningContent +=
-              chunk.choices.isNotEmpty
-                  ? (chunk.choices.first.delta?["reasoning_content"] ??
-                      chunk.choices.first.delta?["reasoning"] ??
-                      '')
-                  : '';
+          state.streamingReasoningContent += chunk.choices.isNotEmpty
+              ? (chunk.choices.first.delta?["reasoning_content"] ??
+                    chunk.choices.first.delta?["reasoning"] ??
+                    '')
+              : '';
           finalContent += chunk.cusText;
-          finalReasoningContent +=
-              chunk.choices.isNotEmpty
-                  ? (chunk.choices.first.delta?["reasoning_content"] ??
-                      chunk.choices.first.delta?["reasoning"] ??
-                      '')
-                  : '';
+          finalReasoningContent += chunk.choices.isNotEmpty
+              ? (chunk.choices.first.delta?["reasoning_content"] ??
+                    chunk.choices.first.delta?["reasoning"] ??
+                    '')
+              : '';
 
-          finalAudioBase64 +=
-              chunk.choices.isNotEmpty
-                  ? (chunk.choices.first.delta?["audio"]?['data'] ?? '')
-                  : '';
+          finalAudioBase64 += chunk.choices.isNotEmpty
+              ? (chunk.choices.first.delta?["audio"]?['data'] ?? '')
+              : '';
 
           // 计算思考时间(从发起调用开始，到当流式内容不为空时计算结束)
           if (endTime == null && state.streamingContent.isNotEmpty) {

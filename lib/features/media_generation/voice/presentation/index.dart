@@ -61,12 +61,11 @@ class _VoicePageState extends MediaGenerationBaseState<GenVoicePage> {
         value: selectedVoice,
         items: voiceOptions,
         hintLabel: "选择音色",
-        onChanged:
-            isGenerating
-                ? null
-                : (value) {
-                  setState(() => selectedVoice = value!);
-                },
+        onChanged: isGenerating
+            ? null
+            : (value) {
+                setState(() => selectedVoice = value!);
+              },
         itemToString: (e) => (e as AliyunVoiceType).name,
       ),
     );
@@ -83,16 +82,15 @@ class _VoicePageState extends MediaGenerationBaseState<GenVoicePage> {
     if (selectedModel?.modelType == LLModelType.tts) {
       final voices = await VoiceCloneService.getClonedVoices();
 
-      List<AliyunVoiceType> clonedList =
-          voices.map((e) {
-            // 理论上api查询结果中都有这个id的
+      List<AliyunVoiceType> clonedList = voices.map((e) {
+        // 理论上api查询结果中都有这个id的
 
-            // 作为name时不需要前面的cosyvoice-固定内容
-            // var name = e.voiceId!.substring(10);
-            var tempList = e.voiceId!.split("-");
-            var name = "${tempList[1]}-${tempList[2]}";
-            return AliyunVoiceType(name, e.voiceId!, "", "", "", "");
-          }).toList();
+        // 作为name时不需要前面的cosyvoice-固定内容
+        // var name = e.voiceId!.substring(10);
+        var tempList = e.voiceId!.split("-");
+        var name = "${tempList[1]}-${tempList[2]}";
+        return AliyunVoiceType(name, e.voiceId!, "", "", "", "");
+      }).toList();
 
       if (selectedModel?.model == "cosyvoice-v1") {
         voiceOptions =
@@ -296,127 +294,40 @@ class _VoicePageState extends MediaGenerationBaseState<GenVoicePage> {
     );
   }
 
-  // Widget _buildTaskCard(MediaGenerationHistory task) {
-  //   return Card(
-  //     margin: EdgeInsets.all(5),
-  //     child: ListTile(
-  //       dense: true,
-  //       leading: Icon(
-  //         Icons.music_note,
-  //         size: ScreenHelper.isDesktop() ? 48 : 24,
-  //       ),
-  //       title: Row(
-  //         children: [
-  //           Expanded(
-  //             child: Text(
-  //               "${CP_NAME_MAP[task.llmSpec.platform] ?? ''} ${task.llmSpec.model}",
-  //               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-  //               maxLines: 2,
-  //               overflow: TextOverflow.ellipsis,
-  //             ),
-  //           ),
-  //           buildTaskStatusIndicator(task),
-  //         ],
-  //       ),
-  //       subtitle: SizedBox(
-  //         height: 56,
-  //         child: Text(
-  //           "${task.gmtCreate}\n${task.prompt}",
-  //           maxLines: 3,
-  //           overflow: TextOverflow.ellipsis,
-  //           style: TextStyle(fontSize: 12),
-  //         ),
-  //       ),
-  //       // 点击播放
-  //       onTap: () {
-  //         if (task.isSuccess == true &&
-  //             task.audioUrls != null &&
-  //             task.audioUrls!.isNotEmpty) {
-  //           // 显示音频播放对话框
-  //           ScreenHelper.isDesktop() ? _desktopPlay(task) : _mobilePlay(task);
-  //         } else if (task.isFailed == true) {
-  //           if (task.otherParams != null) {
-  //             var otherParams = jsonDecode(task.otherParams!);
-
-  //             if (otherParams['errorMsg'] != null) {
-  //               commonExceptionDialog(
-  //                 context,
-  //                 "AI语音生成失败",
-  //                 otherParams['errorMsg'],
-  //               );
-  //             } else {
-  //               commonExceptionDialog(context, "AI语音生成失败", '具体错误未知，可删除任务后重新生成');
-  //             }
-  //           }
-  //         }
-  //       },
-  //       // 长按删除
-  //       onLongPress: () {
-  //         showDialog(
-  //           context: context,
-  //           builder:
-  //               (context) => AlertDialog(
-  //                 title: Text('删除记录'),
-  //                 content: Text('确定要删除此记录吗？'),
-  //                 actions: [
-  //                   TextButton(
-  //                     onPressed: () => Navigator.pop(context),
-  //                     child: Text('取消'),
-  //                   ),
-  //                   TextButton(
-  //                     onPressed: () async {
-  //                       await dbHelper.deleteMediaGenerationHistoryByRequestId(
-  //                         task.requestId,
-  //                       );
-  //                       setState(() {});
-  //                       if (!context.mounted) return;
-  //                       Navigator.pop(context);
-  //                     },
-  //                     child: Text('确定'),
-  //                   ),
-  //                 ],
-  //               ),
-  //         );
-  //       },
-  //     ),
-  //   );
-  // }
-
   void _desktopPlay(MediaGenerationHistory task) {
     showDialog(
       barrierDismissible: false,
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text('语音预览'),
-            content: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.4,
-                maxWidth: MediaQuery.of(context).size.width * 0.6,
+      builder: (context) => AlertDialog(
+        title: Text('语音预览'),
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.4,
+            maxWidth: MediaQuery.of(context).size.width * 0.6,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: SingleChildScrollView(child: Text(task.prompt)),
+                ),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: SingleChildScrollView(child: Text(task.prompt)),
-                    ),
-                  ),
-                  AudioPlayerWidget(
-                    audioUrl: task.audioUrls!.first,
-                    autoPlay: true,
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text('关闭'),
+              AudioPlayerWidget(
+                audioUrl: task.audioUrls!.first,
+                autoPlay: true,
               ),
             ],
           ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('关闭'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -424,51 +335,50 @@ class _VoicePageState extends MediaGenerationBaseState<GenVoicePage> {
     showModalBottomSheet(
       isDismissible: false,
       context: context,
-      builder:
-          (context) => Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(15),
-                topRight: Radius.circular(15),
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(15),
+            topRight: Radius.circular(15),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('语音预览', style: TextStyle(fontSize: 18)),
+                  Spacer(),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      unfocusHandle();
+                    },
+                    child: Text('关闭'),
+                  ),
+                ],
               ),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('语音预览', style: TextStyle(fontSize: 18)),
-                      Spacer(),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          unfocusHandle();
-                        },
-                        child: Text('关闭'),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: SingleChildScrollView(child: Text(task.prompt)),
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: 32, horizontal: 8),
-                  child: AudioPlayerWidget(
-                    audioUrl: task.audioUrls!.first,
-                    autoPlay: true,
-                  ),
-                ),
-              ],
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: SingleChildScrollView(child: Text(task.prompt)),
+              ),
             ),
-          ),
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: 32, horizontal: 8),
+              child: AudioPlayerWidget(
+                audioUrl: task.audioUrls!.first,
+                autoPlay: true,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -494,21 +404,20 @@ class _VoicePageState extends MediaGenerationBaseState<GenVoicePage> {
           );
         }
       },
-      itemBuilder:
-          (BuildContext context) => <PopupMenuItem<String>>[
-            buildCusPopupMenuItem(
-              context,
-              "trial_listening",
-              "试听音色",
-              Icons.music_note_outlined,
-            ),
-            buildCusPopupMenuItem(
-              context,
-              "voice_clone",
-              "声音复刻",
-              Icons.record_voice_over,
-            ),
-          ],
+      itemBuilder: (BuildContext context) => <PopupMenuItem<String>>[
+        buildCusPopupMenuItem(
+          context,
+          "trial_listening",
+          "试听音色",
+          Icons.music_note_outlined,
+        ),
+        buildCusPopupMenuItem(
+          context,
+          "voice_clone",
+          "声音复刻",
+          Icons.record_voice_over,
+        ),
+      ],
     );
   }
 

@@ -317,7 +317,7 @@ Widget buildNetworkOrFileImage(String imageUrl, {BoxFit? fit}) {
           child: CircularProgressIndicator(color: Colors.blue),
         ),
       ),
-      errorWidget: (_, _, _) => const Icon(Icons.error, size: 36),
+      errorWidget: (_, _, _) => const Icon(Icons.broken_image, size: 36),
     );
   } else {
     return Image(

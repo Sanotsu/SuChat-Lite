@@ -231,9 +231,7 @@ class _RandomTextPageState extends State<RandomTextPage> {
                   tooltip: '复制文案',
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: fullText));
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(const SnackBar(content: Text('文案已复制')));
+                    ToastUtils.showInfo('文案已复制到剪贴板');
                   },
                 ),
               ],

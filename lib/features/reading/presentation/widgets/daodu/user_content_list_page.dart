@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../shared/widgets/toast_utils.dart';
+
 /// 通用的用户内容列表页面组件
 /// T: 数据类型 (DaoduUserSnippetsDetail, DaoduUserThoughtsProfile, DaoduLesson)
 class DaoduUserContentListPage<T> extends StatefulWidget {
@@ -135,9 +137,7 @@ class _DaoduUserContentListPageState<T>
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('加载更多失败: $e')));
+        ToastUtils.showError('加载更多失败: $e');
       }
     }
   }

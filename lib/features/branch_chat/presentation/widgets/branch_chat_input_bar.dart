@@ -86,6 +86,9 @@ class _BranchChatInputBarState extends State<BranchChatInputBar> {
     'Chelsie',
   ];
 
+  // 2025-09-10 是否联网搜索(阿里云的部分模型支持)
+  bool _enableWebSearch = false;
+
   final GlobalKey _containerKey = GlobalKey();
 
   @override
@@ -154,18 +157,17 @@ class _BranchChatInputBarState extends State<BranchChatInputBar> {
   Future<void> _handleCloudFileUpload() async {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder:
-            (context) => FileUploadPage(
-              onFileAnalyze: (String fileContent, String fileName) {
-                // 在这里处理文件内容
-                setState(() {
-                  _selectedFile = null;
-                  _cloudFileName = fileName;
-                  _fileContent = fileContent;
-                  isLoadingDocument = false;
-                });
-              },
-            ),
+        builder: (context) => FileUploadPage(
+          onFileAnalyze: (String fileContent, String fileName) {
+            // 在这里处理文件内容
+            setState(() {
+              _selectedFile = null;
+              _cloudFileName = fileName;
+              _fileContent = fileContent;
+              isLoadingDocument = false;
+            });
+          },
+        ),
       ),
     );
   }
@@ -293,6 +295,7 @@ class _BranchChatInputBarState extends State<BranchChatInputBar> {
       cloudFileName: _cloudFileName,
       fileContent: _fileContent,
       omniAudioVoice: _selectedOmniAudioVoice,
+      enableWebSearch: _enableWebSearch,
     );
 
     // 发送消息
@@ -486,60 +489,59 @@ class _BranchChatInputBarState extends State<BranchChatInputBar> {
         // 不要边框和阴影等，方便设置背景图片好看
         customDecoration: BoxDecoration(color: Colors.transparent),
         onChanged: (status) {},
-        onSendSounds:
-            widget.isStreaming
-                ? (type, content) {
-                  commonExceptionDialog(context, '提示', '等待响应完成或终止后再输入');
+        onSendSounds: widget.isStreaming
+            ? (type, content) {
+                commonExceptionDialog(context, '提示', '等待响应完成或终止后再输入');
+              }
+            : (type, content) async {
+                if (content.isEmpty) {
+                  commonExceptionDialog(context, '提示', '请输入消息内容');
+                  return;
                 }
-                : (type, content) async {
-                  if (content.isEmpty) {
-                    commonExceptionDialog(context, '提示', '请输入消息内容');
-                    return;
-                  }
 
-                  if (type == SendContentType.text) {
-                    // 如果输入的是语音转换后的文字，直接发送文字
-                    final messageData = InputMessageData(
-                      text: content,
-                      images: _selectedImages,
-                      audios: _selectedAudio != null ? [_selectedAudio!] : null,
-                      file: _selectedFile,
-                      cloudFileName: _cloudFileName,
-                      fileContent: _fileContent,
-                      omniAudioVoice: _selectedOmniAudioVoice,
-                    );
+                if (type == SendContentType.text) {
+                  // 如果输入的是语音转换后的文字，直接发送文字
+                  final messageData = InputMessageData(
+                    text: content,
+                    images: _selectedImages,
+                    audios: _selectedAudio != null ? [_selectedAudio!] : null,
+                    file: _selectedFile,
+                    cloudFileName: _cloudFileName,
+                    fileContent: _fileContent,
+                    omniAudioVoice: _selectedOmniAudioVoice,
+                  );
 
-                    widget.onSend(messageData);
-                  } else if (type == SendContentType.voice) {
-                    // 如果直接输入的语音，要显示转换后的文本，也要保留语音文件
-                    String tempPath = path.join(
-                      path.dirname(content),
-                      path.basenameWithoutExtension(content),
-                    );
+                  widget.onSend(messageData);
+                } else if (type == SendContentType.voice) {
+                  // 如果直接输入的语音，要显示转换后的文本，也要保留语音文件
+                  String tempPath = path.join(
+                    path.dirname(content),
+                    path.basenameWithoutExtension(content),
+                  );
 
-                    var transcription = await getTextFromAudioFromXFYun(
-                      "$tempPath.pcm",
-                    );
+                  var transcription = await getTextFromAudioFromXFYun(
+                    "$tempPath.pcm",
+                  );
 
-                    final messageData = InputMessageData(
-                      text: transcription,
-                      images: _selectedImages,
-                      sttAudio: File("$tempPath.m4a"),
-                      audios: _selectedAudio != null ? [_selectedAudio!] : null,
-                      file: _selectedFile,
-                      cloudFileName: _cloudFileName,
-                      fileContent: _fileContent,
-                      omniAudioVoice: _selectedOmniAudioVoice,
-                    );
+                  final messageData = InputMessageData(
+                    text: transcription,
+                    images: _selectedImages,
+                    sttAudio: File("$tempPath.m4a"),
+                    audios: _selectedAudio != null ? [_selectedAudio!] : null,
+                    file: _selectedFile,
+                    cloudFileName: _cloudFileName,
+                    fileContent: _fileContent,
+                    omniAudioVoice: _selectedOmniAudioVoice,
+                  );
 
-                    widget.onSend(messageData);
-                  }
+                  widget.onSend(messageData);
+                }
 
-                  // 清理状态
-                  setState(() {
-                    _clearSelectedMedia();
-                  });
-                },
+                // 清理状态
+                setState(() {
+                  _clearSelectedMedia();
+                });
+              },
       ),
     );
   }
@@ -577,19 +579,18 @@ class _BranchChatInputBarState extends State<BranchChatInputBar> {
           hintText: widget.isEditing ? '编辑消息...' : '输入消息...',
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(vertical: 12),
-          prefixIcon:
-              widget.isEditing && widget.onCancel != null
-                  ? IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () {
-                      setState(() {
-                        _clearSelectedMedia();
-                      });
-                      widget.onCancel?.call();
-                    },
-                    tooltip: '取消编辑',
-                  )
-                  : null,
+          prefixIcon: widget.isEditing && widget.onCancel != null
+              ? IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () {
+                    setState(() {
+                      _clearSelectedMedia();
+                    });
+                    widget.onCancel?.call();
+                  },
+                  tooltip: '取消编辑',
+                )
+              : null,
         ),
       ),
     );
@@ -615,15 +616,14 @@ class _BranchChatInputBarState extends State<BranchChatInputBar> {
                 _isVoiceMode ? Icons.keyboard : Icons.keyboard_voice,
                 size: 20,
               ),
-              onPressed:
-                  widget.isStreaming
-                      ? null
-                      : () async {
-                        if (!_isVoiceMode && !await _checkPermissions()) {
-                          return;
-                        }
-                        setState(() => _isVoiceMode = !_isVoiceMode);
-                      },
+              onPressed: widget.isStreaming
+                  ? null
+                  : () async {
+                      if (!_isVoiceMode && !await _checkPermissions()) {
+                        return;
+                      }
+                      setState(() => _isVoiceMode = !_isVoiceMode);
+                    },
               tooltip: _isVoiceMode ? '切换到键盘' : '切换到语音',
             ),
 
@@ -633,11 +633,34 @@ class _BranchChatInputBarState extends State<BranchChatInputBar> {
               widget.model?.modelType == LLModelType.omni)
             IconButton(
               icon: Icon(Icons.image, size: 20),
-              onPressed:
-                  widget.isStreaming
-                      ? null
-                      : () => _handleImagePick(CusImageSource.gallery),
+              onPressed: widget.isStreaming
+                  ? null
+                  : () => _handleImagePick(CusImageSource.gallery),
               tooltip: '从相册选择图片',
+            ),
+
+          // 2025-09-10 是否联网搜索按钮
+          // 注意，只有阿里云平台的少量模型支持
+          if (widget.model != null &&
+              (zhipuWebSearchModels + aliyunWebSearchModels).contains(
+                widget.model!.model,
+              ))
+            IconButton(
+              icon: Icon(
+                Icons.language,
+                size: 20,
+                color: _enableWebSearch
+                    ? Theme.of(context).primaryColor
+                    : Theme.of(context).disabledColor,
+              ),
+              onPressed: widget.isStreaming
+                  ? null
+                  : () {
+                      setState(() {
+                        _enableWebSearch = !_enableWebSearch;
+                      });
+                    },
+              tooltip: _enableWebSearch ? '启用联网搜索' : '禁用联网搜索',
             ),
 
           // 拍照按钮 (移动端)
@@ -646,10 +669,9 @@ class _BranchChatInputBarState extends State<BranchChatInputBar> {
               !ScreenHelper.isDesktop())
             IconButton(
               icon: Icon(Icons.camera_alt, size: 20),
-              onPressed:
-                  widget.isStreaming
-                      ? null
-                      : () => _handleImagePick(CusImageSource.camera),
+              onPressed: widget.isStreaming
+                  ? null
+                  : () => _handleImagePick(CusImageSource.camera),
               tooltip: '拍照',
             ),
 
@@ -699,16 +721,15 @@ class _BranchChatInputBarState extends State<BranchChatInputBar> {
                 widget.isStreaming
                     ? Icons.stop
                     : (widget.isEditing
-                        ? Icons.check
-                        : Icons.arrow_upward_outlined),
+                          ? Icons.check
+                          : Icons.arrow_upward_outlined),
                 color: Colors.white,
                 size: 24,
               ),
               onPressed: widget.isStreaming ? widget.onStop : _handleSend,
-              tooltip:
-                  widget.isStreaming
-                      ? '停止生成'
-                      : (widget.isEditing ? '确认编辑' : '发送'),
+              tooltip: widget.isStreaming
+                  ? '停止生成'
+                  : (widget.isEditing ? '确认编辑' : '发送'),
               padding: EdgeInsets.zero, // 移除默认的内边距
             ),
           ),
@@ -746,10 +767,11 @@ class _BranchChatInputBarState extends State<BranchChatInputBar> {
             });
           }
         },
-        items:
-            _omniAudioVoiceList.map<DropdownMenuItem<String>>((String value) {
-              return DropdownMenuItem<String>(value: value, child: Text(value));
-            }).toList(),
+        items: _omniAudioVoiceList.map<DropdownMenuItem<String>>((
+          String value,
+        ) {
+          return DropdownMenuItem<String>(value: value, child: Text(value));
+        }).toList(),
       ),
     );
   }
@@ -783,15 +805,14 @@ class _BranchChatInputBarState extends State<BranchChatInputBar> {
               padding: EdgeInsets.all(10),
               // 2025-03-22 这里解析出来的内容可能包含非法字符，所以就算使用Text或者Text.rich，都会报错
               // 使用MarkdownBody也会报错，但能显示出来，上面是无法显示
-              child:
-                  _fileContent.length > 8000
-                      ? Text(
-                        "解析后内容过长${_fileContent.length}字符，只展示前8000字符\n\n${_fileContent.substring(0, 8000)}\n <已截断...>",
-                      )
-                      : MarkdownBody(
-                        data: String.fromCharCodes(_fileContent.runes),
-                        // selectable: true,
-                      ),
+              child: _fileContent.length > 8000
+                  ? Text(
+                      "解析后内容过长${_fileContent.length}字符，只展示前8000字符\n\n${_fileContent.substring(0, 8000)}\n <已截断...>",
+                    )
+                  : MarkdownBody(
+                      data: String.fromCharCodes(_fileContent.runes),
+                      // selectable: true,
+                    ),
             ),
           ),
         ),
@@ -800,20 +821,20 @@ class _BranchChatInputBarState extends State<BranchChatInputBar> {
 
     ScreenHelper.isDesktop()
         ? showDialog(
-          context: context,
-          builder: (context) {
-            final screenWidth = MediaQuery.of(context).size.width;
-            return AlertDialog(
-              content: SizedBox(width: screenWidth * 0.6, child: mainWidget),
-            );
-          },
-        )
+            context: context,
+            builder: (context) {
+              final screenWidth = MediaQuery.of(context).size.width;
+              return AlertDialog(
+                content: SizedBox(width: screenWidth * 0.6, child: mainWidget),
+              );
+            },
+          )
         : showModalBottomSheet<void>(
-          context: context,
-          isScrollControlled: true,
-          builder: (BuildContext context) {
-            return SizedBox(height: 0.8.sh, child: mainWidget);
-          },
-        );
+            context: context,
+            isScrollControlled: true,
+            builder: (BuildContext context) {
+              return SizedBox(height: 0.8.sh, child: mainWidget);
+            },
+          );
   }
 }

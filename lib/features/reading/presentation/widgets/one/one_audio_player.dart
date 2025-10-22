@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 
+import '../../../../../shared/widgets/toast_utils.dart';
+
 /// One音频播放器组件
 class OneAudioPlayer extends StatefulWidget {
   final String audioUrl;
@@ -82,9 +84,7 @@ class _OneAudioPlayerState extends State<OneAudioPlayer> {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('播放失败: $e')));
+        ToastUtils.showError('播放失败: $e');
       }
     }
   }

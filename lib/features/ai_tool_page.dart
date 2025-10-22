@@ -5,9 +5,9 @@ import '../shared/widgets/feature_grid_card.dart';
 import '../shared/widgets/modern_feature_card.dart';
 import 'model_management/index.dart';
 import 'translator/presentation/pages/mini_translator_page.dart';
+import 'unified_chat/presentation/pages/unified_chat_page.dart';
 import 'visual_media/presentation/pages/index.dart';
 import 'diet_diary/presentation/index.dart';
-import 'food/presentation/pages/douguo/recipe_home_page.dart';
 import 'food/presentation/pages/usda_food_data/index.dart';
 import 'funny_stuff/persentation/pages/index.dart';
 import 'media_generation/image/presentation/index.dart';
@@ -275,6 +275,17 @@ class _AIToolPageState extends State<AIToolPage> {
                 accentColor: Colors.purple,
               ),
             ),
+            SizedBox(
+              width: 150,
+              height: 150,
+              child: FeatureGridCard(
+                isNew: true,
+                targetPage: const UnifiedChatPage(),
+                title: "Chat",
+                icon: Icons.chat,
+                accentColor: Colors.indigo,
+              ),
+            ),
           ],
         ),
       ),
@@ -336,6 +347,13 @@ class _AIToolPageState extends State<AIToolPage> {
             title: "快速翻译",
             icon: Icons.translate,
             accentColor: Colors.purple,
+          ),
+          FeatureGridCard(
+            isNew: true,
+            targetPage: const UnifiedChatPage(),
+            title: "Chat",
+            icon: Icons.chat,
+            accentColor: Colors.indigo,
           ),
         ]),
       ),
@@ -516,14 +534,6 @@ class _AIToolPageState extends State<AIToolPage> {
                     accentColor: Colors.orange,
                   ),
                 ),
-              ],
-            ),
-
-            Wrap(
-              // spacing: 8,
-              // runSpacing: 8,
-              // alignment: WrapAlignment.center,
-              children: [
                 SizedBox(
                   width: ScreenHelper.isDesktop() ? 150 : 80,
                   height: ScreenHelper.isDesktop() ? 150 : 80,
@@ -537,6 +547,24 @@ class _AIToolPageState extends State<AIToolPage> {
               ],
             ),
 
+            // Wrap(
+            //   // spacing: 8,
+            //   // runSpacing: 8,
+            //   // alignment: WrapAlignment.center,
+            //   children: [
+            //     SizedBox(
+            //       width: ScreenHelper.isDesktop() ? 150 : 80,
+            //       height: ScreenHelper.isDesktop() ? 150 : 80,
+            //       child: FeatureGridCard(
+            //         targetPage: const USDAFoodDataCentral(),
+            //         title: "USDA FDC",
+            //         icon: Icons.calculate,
+            //         accentColor: Colors.orange,
+            //       ),
+            //     ),
+            //   ],
+            // ),
+
             // /// 这几个是统一使用 https://apic.netstart.cn/#/ 的API
             // Container(
             //   padding: const EdgeInsets.all(8),
@@ -549,17 +577,17 @@ class _AIToolPageState extends State<AIToolPage> {
               // runSpacing: 8,
               // alignment: WrapAlignment.center,
               children: [
-                SizedBox(
-                  width: ScreenHelper.isDesktop() ? 150 : 80,
-                  height: ScreenHelper.isDesktop() ? 150 : 80,
-                  child: FeatureGridCard(
-                    targetPage: const RecipeHomePage(),
-                    title: "豆果美食",
-                    icon: Icons.menu_book,
-                    accentColor: Colors.teal,
-                  ),
-                ),
-
+                // 2025-10-21 发现菜单详情API无法正常响应(签名验证失败)，故注释
+                // SizedBox(
+                //   width: ScreenHelper.isDesktop() ? 150 : 80,
+                //   height: ScreenHelper.isDesktop() ? 150 : 80,
+                //   child: FeatureGridCard(
+                //     targetPage: const RecipeHomePage(),
+                //     title: "豆果美食",
+                //     icon: Icons.menu_book,
+                //     accentColor: Colors.teal,
+                //   ),
+                // ),
                 SizedBox(
                   width: ScreenHelper.isDesktop() ? 150 : 80,
                   height: ScreenHelper.isDesktop() ? 150 : 80,

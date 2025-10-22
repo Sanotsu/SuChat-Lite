@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 
 // 实时语音识别相关模型
@@ -75,6 +76,26 @@ class AsrRtResult {
     this.usage,
   });
 
+  // 从字符串转
+  factory AsrRtResult.fromRawJson(String str) =>
+      AsrRtResult.fromJson(json.decode(str));
+  // 转为字符串
+  String toRawJson() => json.encode(toJson());
+
+  Map<String, dynamic> toJson() => {
+    'taskId': taskId,
+    'event': event,
+    'errorCode': errorCode,
+    'errorMessage': errorMessage,
+    'sentenceBeginTime': sentenceBeginTime,
+    'sentenceEndTime': sentenceEndTime,
+    'text': text,
+    'heartbeat': heartbeat,
+    'sentenceEnd': sentenceEnd,
+    'isSuccess': isSuccess,
+    'usage': usage,
+  };
+
   factory AsrRtResult.fromJson(Map<String, dynamic> json) {
     final header = json['header'] ?? {};
     final payload = json['payload'] ?? {};
@@ -120,7 +141,7 @@ class AsrRtResult {
   bool get isTaskFailed => event == 'task-failed';
   bool get hasError => !isSuccess;
   // 句子的中间结果时，句子的end_time 为null
-  bool get shouldSkip => sentenceEndTime == null || heartbeat == true;
+  bool get shouldSkip => sentenceEndTime == null || sentenceEnd == false;
 }
 
 /// WebSocket消息类型

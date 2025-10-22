@@ -341,24 +341,22 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
 
                               showDialog(
                                 context: context,
-                                builder:
-                                    (context) => GoalSettingDialog(
-                                      userInfo: userInfo,
-                                      isDialog: true, // 以内嵌形式显示
-                                      onSave: (goal, activityLevel) async {
-                                        // 更新用户目标和活动水平
-                                        final updatedProfile = userInfo
-                                            .copyWith(
-                                              goal: goal,
-                                              activityLevel: activityLevel,
-                                            );
-                                        await userViewModel.saveUserInfo(
-                                          updatedProfile,
-                                        );
+                                builder: (context) => GoalSettingDialog(
+                                  userInfo: userInfo,
+                                  isDialog: true, // 以内嵌形式显示
+                                  onSave: (goal, activityLevel) async {
+                                    // 更新用户目标和活动水平
+                                    final updatedProfile = userInfo.copyWith(
+                                      goal: goal,
+                                      activityLevel: activityLevel,
+                                    );
+                                    await userViewModel.saveUserInfo(
+                                      updatedProfile,
+                                    );
 
-                                        ToastUtils.showInfo('目标设置已更新');
-                                      },
-                                    ),
+                                    ToastUtils.showInfo('目标设置已更新');
+                                  },
+                                ),
                               );
                             },
                             child: const Text('目标设置'),
@@ -580,8 +578,8 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
     // 找到对应的餐次记录
     final mealRecord = viewModel.mealRecords.firstWhere(
       (meal) => meal.mealType.index == mealType.index,
-      orElse:
-          () => MealRecord(id: -1, date: DateTime.now(), mealType: mealType),
+      orElse: () =>
+          MealRecord(id: -1, date: DateTime.now(), mealType: mealType),
     );
 
     final mealId = mealRecord.id;
@@ -793,23 +791,22 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
   void _showFoodQuantityEditor(MealFoodDetail food, int mealId) {
     showDialog(
       context: context,
-      builder:
-          (context) => FoodQuantityEditor(
-            foodDetail: food,
-            onQuantityChanged: (newQuantity) async {
-              // 删除原记录
-              await _dietViewModel.removeFoodFromMeal(food.id, mealId);
-              // 添加新记录
-              await _dietViewModel.addFoodToMeal(
-                mealId,
-                food.foodItemId,
-                newQuantity,
-                food.unit,
-              );
+      builder: (context) => FoodQuantityEditor(
+        foodDetail: food,
+        onQuantityChanged: (newQuantity) async {
+          // 删除原记录
+          await _dietViewModel.removeFoodFromMeal(food.id, mealId);
+          // 添加新记录
+          await _dietViewModel.addFoodToMeal(
+            mealId,
+            food.foodItemId,
+            newQuantity,
+            food.unit,
+          );
 
-              ToastUtils.showInfo('已更新"${food.foodName}"的数量');
-            },
-          ),
+          ToastUtils.showInfo('已更新"${food.foodName}"的数量');
+        },
+      ),
     );
   }
 
@@ -821,9 +818,8 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder:
-            (context) =>
-                FoodSearchPage(mealRecordId: mealId, mealType: mealType),
+        builder: (context) =>
+            FoodSearchPage(mealRecordId: mealId, mealType: mealType),
       ),
     );
   }
@@ -836,11 +832,10 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder:
-            (context) => ChangeNotifierProvider.value(
-              value: _userViewModel,
-              child: const UserInfoPage(),
-            ),
+        builder: (context) => ChangeNotifierProvider.value(
+          value: _userViewModel,
+          child: const UserInfoPage(),
+        ),
       ),
     );
 

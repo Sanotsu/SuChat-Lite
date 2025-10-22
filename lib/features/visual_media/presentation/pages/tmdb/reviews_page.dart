@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../../core/utils/simple_tools.dart';
 import '../../../../../shared/widgets/simple_tool_widget.dart';
+import '../../../../../shared/widgets/toast_utils.dart';
 import '../../../data/models/tmdb/tmdb_mt_review_resp.dart';
 import '../../widgets/tmdb/base_widgets.dart';
 
@@ -167,7 +168,7 @@ class _TmdbReviewsPageState extends State<TmdbReviewsPage> {
         // 查看原文链接
         if (review.url?.isNotEmpty ?? false)
           TextButton.icon(
-            onPressed: () => _launchUrl(review.url!),
+            onPressed: () => launchStringUrl(review.url!),
             icon: const Icon(Icons.open_in_new, size: 16),
             label: const Text('查看原文'),
             style: TextButton.styleFrom(
@@ -180,9 +181,7 @@ class _TmdbReviewsPageState extends State<TmdbReviewsPage> {
         // 点赞按钮（占位）
         IconButton(
           onPressed: () {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('点赞功能待实现')));
+            ToastUtils.showInfo('点赞功能待实现');
           },
           icon: const Icon(Icons.thumb_up_outlined, size: 20),
           constraints: const BoxConstraints(),
@@ -252,25 +251,9 @@ class _TmdbReviewsPageState extends State<TmdbReviewsPage> {
     }
   }
 
-  /// 启动URL
-  void _launchUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('无法打开链接')));
-      }
-    }
-  }
-
   /// 分享评论
   void _shareReview(TmdbReviewItem review) {
     // 实现分享功能
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('分享功能待实现')));
+    ToastUtils.showInfo('分享功能待实现');
   }
 }

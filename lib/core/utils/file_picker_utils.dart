@@ -66,12 +66,13 @@ class FilePickerUtils {
     String? saveDir,
     CusFileType? fileType,
     bool overwrite = false,
+    bool allowMultiple = true,
   }) async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: fileType != null ? fileTypeValues[fileType] : FileType.any,
         allowedExtensions: allowedExtensions,
-        allowMultiple: true,
+        allowMultiple: allowMultiple,
       );
 
       if (result == null || result.files.isEmpty) return [];

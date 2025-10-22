@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:mime/mime.dart';
+
 import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/network/dio_client/cus_http_client.dart';
 import '../../../../core/network/dio_client/cus_http_request.dart';
@@ -31,6 +33,7 @@ class FoodNutritionRecognitionService {
     // 将图片转换为base64编码
     final bytes = await imageFile.readAsBytes();
     final base64Image = base64Encode(bytes);
+    final mimeType = lookupMimeType(imageFile.path);
 
     // 构建提示词
     // 这个是专门兼容老数据格式: https://github.com/Sanotsu/china-food-composition-data
@@ -46,7 +49,7 @@ class FoodNutritionRecognitionService {
           'content': [
             {
               "type": "image_url",
-              "image_url": {"url": 'data:image/jpeg;base64,$base64Image'},
+              "image_url": {"url": 'data:$mimeType;base64,$base64Image'},
             },
             {"type": "text", "text": prompt},
           ],

@@ -8,6 +8,7 @@ import '../../../shared/constants/constant_llm_enum.dart';
 import '../../../shared/widgets/simple_marquee_or_text.dart';
 import '../../../shared/widgets/simple_tool_widget.dart';
 import '../../ai_tool_page.dart';
+import '../../unified_chat/presentation/pages/unified_chat_page.dart';
 import '../domain/entities/branch_chat_session.dart';
 import '../domain/entities/character_card.dart';
 import '../domain/entities/message_font_color.dart';
@@ -446,6 +447,33 @@ class _BranchChatPageState extends State<BranchChatPage>
             ),
         ],
       ),
+
+      floatingNewVersionButton: ScreenHelper.isMobile()
+          ? Stack(
+              children: [
+                Positioned(
+                  top: 32 + 48 + 40 + 4,
+                  right: 4,
+                  child: FloatingActionButton.small(
+                    onPressed: () => {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => UnifiedChatPage(),
+                        ),
+                      ),
+                    },
+                    heroTag: 'cc_new_version',
+                    shape: const CircleBorder(),
+                    backgroundColor: Theme.of(context).colorScheme.surface,
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
+                    tooltip: '体验新版本\n(注意:数据不通用)',
+                    child: const Icon(Icons.new_releases),
+                  ),
+                ),
+              ],
+            )
+          : null,
     );
   }
 }

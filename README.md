@@ -213,7 +213,7 @@ SuChat 是一个以简洁 AI 聊天为核心，并集成多种生活娱乐工具
   - 想用哪个平台、哪个模型，全都自己导入
 - json 导入时，平台密钥和模型规格的**固定 json 结构**见下方
 
----
+**重要说明**:
 
 <details>
 
@@ -246,11 +246,31 @@ SuChat 是一个以简洁 AI 聊天为核心，并集成多种生活娱乐工具
   // 讯飞, 语音转写需要
   "USER_XFYUN_APP_ID": "xxx",
   "USER_XFYUN_API_KEY": "xxx",
-  "USER_XFYUN_API_SECRET": "xxx"
+  "USER_XFYUN_API_SECRET": "xxx",
+
+  /* 下面是其他服务可能需要的相关密钥，也可以在“模型配置”的“API配置”页面中一并导入*/
+
+  // newsapi 获取国际新闻的API KEY
+  // https://newsapi.org/login
+  "USER_NEWSAPI_API_KEY": "xxx",
+
+  // 美国政府数据中心的AK
+  // https://fdc.nal.usda.gov/api-key-signup
+  "USER_DATA_GOV_API_KEY": "xxx",
+
+  // TMDB
+  // https://www.themoviedb.org/settings/api
+  "USER_TMDB_API_KEY": "xxx",
+  "USER_TMDB_ACCESS_TOKEN": "xxx.xxx.xxx",
+
+  // github 仓库token (如果需要使用公开的github仓库作为云端存储)
+  "USER_GITHUB_USERNAME": "xxx",
+  "USER_GITHUB_REPO": "xxx",
+  "USER_GITHUB_TOKEN": "xxx"
 }
 ```
 
-- 密钥可以不是所有平台都填，但填写的部分 key 一定要完全一致，否则识别不到就算有导入模型也用不了
+- 密钥可以不是所有平台都填，但填写的部分 key 一定要完全一致，否则识别不到，相关的模型或者服务也用不了。
 - 讯飞那几个是语音转写需要。
 
 #### 大模型规格 json 结构
@@ -313,6 +333,26 @@ enum LLModelType {
   reasoner, // 深度思考
   vision, // 图片解读
   vision_reasoner, // 视觉推理
+
+  // 图片生成大模型分3种: 单独文生图、单独图生图、文生图生都可以
+  tti, // Text To Image
+  iti, // Image To Image
+  image,
+
+  // 视频生成大模型分3种: 单独文生视频、单独图生视频、文生图生都可以
+  ttv, // Text To Video
+  itv, // Image To Video
+  video,
+
+  // 语音大模型
+  audio, // 语音对话 (支持语音输入的，然后输出的也是文本、如果输入语音输出语音看omni)
+  asr, // 语音识别(http接口的)
+  asr_realtime, // 实时语音识别(用websocket接口的)
+  tts, // 文本合成语音合成
+
+  // 全模态，比如通义千问-Omni-Turbo
+  // 支持文本, 图像，语音，视频输入理解和混合输入理解，具备文本和语音同时流式生成能力
+  omni,
 }
 ```
 

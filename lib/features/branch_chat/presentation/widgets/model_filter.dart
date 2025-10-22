@@ -30,8 +30,9 @@ class ModelTypeFilter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayTypes =
-        supportedTypes.isEmpty ? LLModelType.values : supportedTypes;
+    final displayTypes = supportedTypes.isEmpty
+        ? LLModelType.values
+        : supportedTypes;
 
     return Container(
       height: 40,
@@ -41,18 +42,16 @@ class ModelTypeFilter extends StatelessWidget {
           Expanded(
             child: ListView(
               scrollDirection: Axis.horizontal,
-              children:
-                  displayTypes.map((type) {
-                    final count =
-                        models.where((m) => m.modelType == type).length;
+              children: displayTypes.map((type) {
+                final count = models.where((m) => m.modelType == type).length;
 
-                    if (count > 0) {
-                      return isCusChip
-                          ? Center(child: _buildCusChip(context, type, count))
-                          : _buildFilterChip(context, type, count);
-                    }
-                    return const SizedBox.shrink();
-                  }).toList(),
+                if (count > 0) {
+                  return isCusChip
+                      ? Center(child: _buildCusChip(context, type, count))
+                      : _buildFilterChip(context, type, count);
+                }
+                return const SizedBox.shrink();
+              }).toList(),
             ),
           ),
           if (!isCusChip)
@@ -97,13 +96,12 @@ class ModelTypeFilter extends StatelessWidget {
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         label: Text("${MT_NAME_MAP[type]}($count)"),
         selected: type == selectedType,
-        onSelected:
-            isStreaming
-                ? null
-                : (_) {
-                  onTypeChanged?.call(type);
-                  onModelSelect?.call();
-                },
+        onSelected: isStreaming
+            ? null
+            : (_) {
+                onTypeChanged?.call(type);
+                onModelSelect?.call();
+              },
       ),
     );
   }
@@ -112,13 +110,12 @@ class ModelTypeFilter extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.only(right: 8),
       child: InkWell(
-        onTap:
-            isStreaming
-                ? null
-                : () {
-                  onTypeChanged?.call(type);
-                  onModelSelect?.call();
-                },
+        onTap: isStreaming
+            ? null
+            : () {
+                onTypeChanged?.call(type);
+                onModelSelect?.call();
+              },
         borderRadius: BorderRadius.circular(8),
         child: Container(
           padding: EdgeInsets.all(4),
@@ -129,10 +126,9 @@ class ModelTypeFilter extends StatelessWidget {
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color:
-                  type == selectedType
-                      ? Theme.of(context).primaryColorLight
-                      : Colors.transparent,
+              color: type == selectedType
+                  ? Theme.of(context).primaryColorLight
+                  : Colors.transparent,
             ),
           ),
           child: Padding(
@@ -140,10 +136,9 @@ class ModelTypeFilter extends StatelessWidget {
             child: Text(
               "${MT_NAME_MAP[type]}($count)",
               style: TextStyle(
-                color:
-                    type == selectedType
-                        ? Theme.of(context).primaryColor
-                        : Colors.black,
+                color: type == selectedType
+                    ? Theme.of(context).primaryColor
+                    : Colors.black,
               ),
             ),
           ),

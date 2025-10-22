@@ -765,9 +765,7 @@ class _HaokanDetailPageState extends State<HaokanDetailPage> {
 
   void _startReading() {
     if (_chapters.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('暂无可阅读的章节')));
+      ToastUtils.showError('暂无可阅读的章节');
       return;
     }
 

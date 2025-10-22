@@ -44,6 +44,9 @@ class AppCatchError {
       // 又因为检查设备存储权限等是否授权需要把标记存入缓存,避免每次都弹窗显示,所以要在检查前进行缓存初始化
       await GetStorage.init(CusGetStorage.storeName);
 
+      // 初始化Logger（有这个工具，暂时未用到）
+      // await LogHelper.init();
+
       // 启动初始检查权限的界面，而不是直接进入应用
       runApp(const PermissionCheckApp());
     }, (error, stack) => catchError(error, stack));

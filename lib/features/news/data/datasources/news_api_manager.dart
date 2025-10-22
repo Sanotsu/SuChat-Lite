@@ -57,7 +57,7 @@ class NewsApiManager extends BaseApiManager<NewsApiConfig> {
   }) async {
     final params = {
       "apiKey": getStoredUserKey(
-        "USER_NEWS_API_KEY",
+        "USER_NEWSAPI_API_KEY",
         DefaultApiKeys.newsApiKey,
       ),
       // 新闻来源，可以在 https://newsapi.org/v2/top-headlines/sources 查到相关信息(结构体的id栏位)

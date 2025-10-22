@@ -48,6 +48,7 @@ Future<void> commonMarkdwonHintDialog(
   String title,
   String message, {
   double? msgFontSize,
+  EdgeInsets? insetPadding,
 }) async {
   unfocusHandle();
   // 强行停200毫秒(100还不够)，密码键盘未收起来就显示弹窗出现布局溢出的问题
@@ -65,6 +66,7 @@ Future<void> commonMarkdwonHintDialog(
 
       return AlertDialog(
         title: Text(title),
+        insetPadding: insetPadding,
         content: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: maxWidth),
           child: SingleChildScrollView(
@@ -617,6 +619,7 @@ Widget buildUserCircleAvatar(
   String? avatarUrl, {
   double radius = 16,
   Color? backgroundColor,
+  Widget? defaultAvatar,
 }) {
   return CircleAvatar(
     radius: radius,
@@ -624,7 +627,22 @@ Widget buildUserCircleAvatar(
     child: ClipOval(
       child: avatarUrl != null
           ? buildNetworkOrFileImage(avatarUrl)
-          : Icon(Icons.person, size: radius),
+          : defaultAvatar ?? Icon(Icons.person, size: radius),
     ),
   );
+}
+
+///
+/// 简单的打印对齐长度补充空格的字符串
+///
+String formatStringToLength(String input, int targetLength) {
+  if (input.length >= targetLength) {
+    return input.substring(0, targetLength);
+  }
+
+  // 计算需要添加的空格数量
+  int spacesNeeded = targetLength - input.length;
+  String fullWidthSpaces = ' ' * spacesNeeded; // 空格
+
+  return '|${input + fullWidthSpaces}|';
 }

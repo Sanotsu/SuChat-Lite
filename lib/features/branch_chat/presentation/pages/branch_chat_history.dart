@@ -182,8 +182,8 @@ class _BranchChatHistoryCoreState extends State<BranchChatHistoryCore> {
   }
 
   Future<void> getPanelColor() async {
-    int? colorValue =
-        (await CusGetStorage().getBranchChatHistoryPanelBgColor());
+    int? colorValue = (await CusGetStorage()
+        .getBranchChatHistoryPanelBgColor());
 
     // 有缓存侧边栏背景色，就使用;没有就白色
     // 侧边栏背景色在每次切换对话主页背景图时都会缓存
@@ -296,7 +296,9 @@ class _BranchChatHistoryCoreState extends State<BranchChatHistoryCore> {
             _buildHeader(),
 
             // 构建会话列表
-            Expanded(child: Container(color: _bgColor, child: buildItemList())),
+            Expanded(
+              child: Container(color: _bgColor, child: buildItemList()),
+            ),
 
             // 底部按钮
             _buildBottomButtons(),
@@ -442,93 +444,79 @@ class _BranchChatHistoryCoreState extends State<BranchChatHistoryCore> {
   Widget buildItemList() {
     return (_sessions.isEmpty)
         ? Padding(
-          padding: EdgeInsets.all(16),
-          child: Center(
-            child: Text(
-              '暂无历史对话',
-              style: TextStyle(color: Colors.grey, fontSize: 16),
+            padding: EdgeInsets.all(16),
+            child: Center(
+              child: Text(
+                '暂无历史对话',
+                style: TextStyle(color: Colors.grey, fontSize: 16),
+              ),
             ),
-          ),
-        )
+          )
         : RefreshIndicator(
-          onRefresh: _loadSessions,
-          child: SingleChildScrollView(
-            physics: AlwaysScrollableScrollPhysics(),
-            child: Column(
-              children:
-                  _sessions.map((session) {
-                    final isSelected = session.id == _currentSessionId;
-                    return _buildChatHistoryItem(session, isSelected);
-                  }).toList(),
+            onRefresh: _loadSessions,
+            child: SingleChildScrollView(
+              physics: AlwaysScrollableScrollPhysics(),
+              child: Column(
+                children: _sessions.map((session) {
+                  final isSelected = session.id == _currentSessionId;
+                  return _buildChatHistoryItem(session, isSelected);
+                }).toList(),
+              ),
             ),
-          ),
-        );
+          );
   }
 
   // 历史对话列表项
   Widget _buildChatHistoryItem(BranchChatSession session, bool isSelected) {
-    var subtitle =
-        session.character != null
-            ? session.character!.name
-            : "${CP_NAME_MAP[session.llmSpec.platform]!} > ${session.llmSpec.name}";
+    var subtitle = session.character != null
+        ? session.character!.name
+        : "${CP_NAME_MAP[session.llmSpec.platform]!} > ${session.llmSpec.name}";
 
     return GestureDetector(
       child: Builder(
-        builder:
-            (context) => GestureDetector(
-              // 移动端使用长按
-              onLongPressStart:
-                  ScreenHelper.isMobile()
-                      ? (details) {
-                        _showContextMenu(
-                          context,
-                          session,
-                          details.globalPosition,
-                        );
-                      }
-                      : null,
-              // 桌面端使用右键点击
-              onSecondaryTapDown:
-                  ScreenHelper.isDesktop()
-                      ? (details) {
-                        _showContextMenu(
-                          context,
-                          session,
-                          details.globalPosition,
-                        );
-                      }
-                      : null,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: _bgColor,
-                  border: Border(
-                    bottom: BorderSide(color: Colors.grey, width: 1.0),
-                  ),
-                ),
-                child: ListTile(
-                  title: Text(
-                    session.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
-                  subtitle: Text(
-                    "${DateFormat(formatToYMDHMS).format(session.updateTime)}\n$subtitle",
-                    style: TextStyle(fontSize: 12),
-                  ),
-                  selected: isSelected,
-                  onTap: () {
-                    if (widget.needPopContext) {
-                      Navigator.pop(context);
-                    }
-                    widget.onSessionSelected(session);
-                  },
-                ),
+        builder: (context) => GestureDetector(
+          // 移动端使用长按
+          onLongPressStart: ScreenHelper.isMobile()
+              ? (details) {
+                  _showContextMenu(context, session, details.globalPosition);
+                }
+              : null,
+          // 桌面端使用右键点击
+          onSecondaryTapDown: ScreenHelper.isDesktop()
+              ? (details) {
+                  _showContextMenu(context, session, details.globalPosition);
+                }
+              : null,
+          child: Container(
+            decoration: BoxDecoration(
+              color: _bgColor,
+              border: Border(
+                bottom: BorderSide(color: Colors.grey, width: 1.0),
               ),
             ),
+            child: ListTile(
+              title: Text(
+                session.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              subtitle: Text(
+                "${DateFormat(formatToYMDHMS).format(session.updateTime)}\n$subtitle",
+                style: TextStyle(fontSize: 12),
+              ),
+              selected: isSelected,
+              onTap: () {
+                if (widget.needPopContext) {
+                  Navigator.pop(context);
+                }
+                widget.onSessionSelected(session);
+              },
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -590,25 +578,24 @@ class _BranchChatHistoryCoreState extends State<BranchChatHistoryCore> {
     final controller = TextEditingController(text: session.title);
     final newTitle = await showDialog<String>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('修改标题'),
-            content: TextField(
-              controller: controller,
-              decoration: const InputDecoration(labelText: '对话标题'),
-              autofocus: true,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, controller.text),
-                child: const Text('确定'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('修改标题'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: '对话标题'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
     );
 
     if (newTitle != null && newTitle.isNotEmpty && newTitle != session.title) {
@@ -630,21 +617,20 @@ class _BranchChatHistoryCoreState extends State<BranchChatHistoryCore> {
   ) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('删除对话'),
-            content: const Text('确定要删除这个对话吗？'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('删除'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('删除对话'),
+        content: const Text('确定要删除这个对话吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
     );
 
     if (confirmed == true) {

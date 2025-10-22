@@ -1,7 +1,11 @@
 // ignore_for_file: avoid_print
 
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+
+import '../../../shared/widgets/simple_tool_widget.dart';
 
 /// 简单的错误拦截示例
 class ErrorInterceptor extends Interceptor {
@@ -12,18 +16,24 @@ class ErrorInterceptor extends Interceptor {
   ) async {
     print('【onError】进入了dio的错误拦截器');
 
-    print("err is :$err");
+    print("err is :$err\n\n");
+
+    // 只读取一次响应体，避免重复读取stream
+    String? responseBodyStr = await _getResponseBodyAsString(err.response);
 
     print("""-----------------------
-err 详情 
-  message: ${err.message} 
-  type: ${err.type} 
-  error: ${err.error} 
-  response: ${err.response}
-  -----------------------""");
+dio error 详情 
+  ${formatStringToLength('message', 10)} ${err.message} 
+  ${formatStringToLength('type', 10)} ${err.type} 
+  ${formatStringToLength('error', 10)} ${err.error} 
+  ${formatStringToLength('response', 10)} $responseBodyStr
+-----------------------""");
 
-    /// 根据DioError创建 CusHttpException
-    CusHttpException cusHttpException = CusHttpException.create(err);
+    /// 根据DioError创建 CusHttpException（传入已读取的响应体字符串）
+    CusHttpException cusHttpException = await CusHttpException.create(
+      err,
+      responseBodyStr,
+    );
 
     /// dio默认的错误实例，如果是没有网络，只能得到一个未知错误，无法精准的得知是否是无网络的情况
     /// 这里对于断网的情况，给一个特殊的code和msg，其他可以识别处理的错误也可以定好
@@ -90,24 +100,23 @@ class CusHttpException implements Exception {
   @override
   String toString() {
     return '''Cus Http Error: 
-    [$cusCode]:$cusMsg 
+    【$cusCode】:$cusMsg 
     $errMessage
     $errRespString
     ''';
   }
 
-  factory CusHttpException.create(DioException error) {
-    String response = error.response?.toString() ?? error.error.toString();
+  static Future<CusHttpException> create(
+    DioException error,
+    String? responseBodyStr,
+  ) async {
+    String response = responseBodyStr ?? error.error.toString();
     String message = error.message ?? defaultMessage;
-
-    // print("error.response?.toString()--$response");
-    // print("error.message?.toString()--$message");
 
     /// 自定义处理 dio 异常
     switch (error.type) {
       case DioExceptionType.badCertificate:
         return _createError(-1, '证书异常', message, response);
-
       case DioExceptionType.cancel:
         return _createError(-2, '请求被取消', message, response);
       case DioExceptionType.connectionError:
@@ -120,7 +129,7 @@ class CusHttpException implements Exception {
         return _createError(-6, '接收超时', message, response);
       case DioExceptionType.badResponse:
         // 针对错误响应再单独区分
-        return _handleBadResponse(error);
+        return _handleBadResponse(error, response);
       default:
         return _createError(-999, error.message ?? '未知错误', message, response);
     }
@@ -141,10 +150,12 @@ class CusHttpException implements Exception {
     );
   }
 
-  static CusHttpException _handleBadResponse(DioException error) {
+  static CusHttpException _handleBadResponse(
+    DioException error,
+    String respStr,
+  ) {
     int? statusCode = error.response?.statusCode;
     String statusMsg = error.response?.statusMessage ?? '未知错误';
-    String respStr = error.response?.toString() ?? error.error.toString();
 
     switch (statusCode) {
       case 400:
@@ -173,155 +184,33 @@ class CusHttpException implements Exception {
   }
 }
 
-/*
-class CusHttpException implements Exception {
-  final int code;
-  final String msg;
-  final String responseString;
+/// 从 ResponseBody 中读取字符串内容
+Future<String?> _getResponseBodyAsString(Response? response) async {
+  if (response == null) return null;
 
-  CusHttpException({
-    this.code = -1,
-    this.msg = '【未知错误】',
-    this.responseString = '【未知响应】',
-  });
+  try {
+    // 如果 response.data 是 ResponseBody 类型
+    if (response.data is ResponseBody) {
+      final responseBody = response.data as ResponseBody;
+      // 将字节流转换为字符串
+      final bytesBuilder = BytesBuilder();
+      await for (final chunk in responseBody.stream) {
+        bytesBuilder.add(chunk);
+      }
+      final bytes = bytesBuilder.toBytes();
 
-  @override
-  String toString() {
-    return 'Http Error [$code]: $msg';
-  }
-
-  factory CusHttpException.create(DioException error) {
-    /// dio异常
-    switch (error.type) {
-      case DioExceptionType.cancel:
-        {
-          return CusHttpException(code: -1, msg: 'request cancel');
-        }
-      case DioExceptionType.connectionTimeout:
-        {
-          return CusHttpException(code: -1, msg: 'connect timeout');
-        }
-      case DioExceptionType.sendTimeout:
-        {
-          return CusHttpException(code: -1, msg: 'send timeout');
-        }
-      case DioExceptionType.receiveTimeout:
-        {
-          return CusHttpException(code: -1, msg: 'receive timeout');
-        }
-      case DioExceptionType.badResponse:
-        {
-          try {
-            int statusCode = error.response?.statusCode ?? 0;
-            // String errMsg = error.response.statusMessage;
-            // return ErrorEntity(code: errCode, message: errMsg);
-            switch (statusCode) {
-              case 400:
-                {
-                  return CusHttpException(
-                    code: statusCode,
-                    msg: '输入格式错误。Request syntax error',
-                    responseString: error.response.toString(),
-                  );
-                }
-              case 401:
-                {
-                  return CusHttpException(
-                    code: statusCode,
-                    msg: '权限异常。Without permission',
-                    responseString: error.response.toString(),
-                  );
-                }
-              case 403:
-                {
-                  return CusHttpException(
-                    code: statusCode,
-                    msg: '后台拒绝执行。Server rejects execution',
-                    responseString: error.response.toString(),
-                  );
-                }
-              case 404:
-                {
-                  return CusHttpException(
-                    code: statusCode,
-                    msg: '无效的 Endpoint URL 或模型名。Unable to connect to server',
-                    responseString: error.response.toString(),
-                  );
-                }
-              case 405:
-                {
-                  return CusHttpException(
-                    code: statusCode,
-                    msg: 'The request method is disabled',
-                    responseString: error.response.toString(),
-                  );
-                }
-              case 500:
-                {
-                  return CusHttpException(
-                    code: statusCode,
-                    msg: '服务端内部错误，请稍后重试。Server internal error',
-                    responseString: error.response.toString(),
-                  );
-                }
-              case 502:
-                {
-                  return CusHttpException(
-                    code: statusCode,
-                    msg: '无效的请求。Invalid request',
-                    responseString: error.response.toString(),
-                  );
-                }
-              case 503:
-                {
-                  return CusHttpException(
-                    code: statusCode,
-                    msg: 'The server is down.',
-                    responseString: error.response.toString(),
-                  );
-                }
-              case 505:
-                {
-                  return CusHttpException(
-                    code: statusCode,
-                    msg: 'HTTP requests are not supported',
-                    responseString: error.response.toString(),
-                  );
-                }
-              case 529:
-                {
-                  return CusHttpException(
-                    code: statusCode,
-                    msg: '系统繁忙，请重试，请 1 分钟后重试。System busy',
-                    responseString: error.response.toString(),
-                  );
-                }
-              default:
-                {
-                  return CusHttpException(
-                    code: statusCode,
-                    msg: error.response?.statusMessage ?? 'unknow error',
-                    responseString: error.response.toString(),
-                  );
-                }
-            }
-          } on Exception catch (_) {
-            return CusHttpException(
-              code: -1,
-              msg: 'unknow error',
-              responseString: error.response.toString(),
-            );
-          }
-        }
-      default:
-        {
-          return CusHttpException(
-            code: -1,
-            msg: error.message ?? 'unknow error',
-            responseString: error.response.toString(),
-          );
-        }
+      return utf8.decode(bytes);
     }
+
+    // 如果已经是字符串，直接返回
+    if (response.data is String) {
+      return response.data;
+    }
+
+    // 如果是其他类型，尝试转换为字符串
+    return response.data?.toString();
+  } catch (e) {
+    print('读取响应体失败: $e');
+    return null;
   }
 }
-*/

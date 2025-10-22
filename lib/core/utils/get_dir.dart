@@ -59,6 +59,26 @@ Future<Directory> getAppHomeDirectory({String? subfolder}) async {
   }
 }
 
+/// 清理文件名，移除非法字符
+String sanitizeFileName(String fileName, {String replacement = '_'}) {
+  // 移除或替换文件名中的非法字符
+  final illegalChars = RegExp(r'[\\/:*?"<>|]');
+  var cleanName = fileName.replaceAll(illegalChars, replacement);
+
+  // 确保文件名不以点号开头或结尾（某些系统限制）
+  cleanName = cleanName.replaceAll(RegExp(r'^\.+|\.+$'), '');
+
+  // 移除连续的下划线
+  cleanName = cleanName.replaceAll(RegExp('_+'), '_');
+
+  // 确保文件名不为空
+  if (cleanName.isEmpty) {
+    cleanName = 'unnamed_file_${DateTime.now().millisecondsSinceEpoch}';
+  }
+
+  return cleanName;
+}
+
 /// 获取sqlite数据库文件保存的目录
 Future<Directory> getSqliteDbDir() async {
   return getAppHomeDirectory(subfolder: "DB/sqlite_db");
@@ -87,6 +107,11 @@ Future<Directory> getNoteVoiceRecordingDir() async {
 /// 图片生成时，图片文件保存的目录
 Future<Directory> getImageGenDir() async {
   return getAppHomeDirectory(subfolder: "AI_GEN/images");
+}
+
+/// 新版本统一对话时生成的媒体资源
+Future<Directory> getUnifiedChatMediaDir() async {
+  return getAppHomeDirectory(subfolder: "AI_GEN/unified_chat_media");
 }
 
 /// 视频生成时，视频文件保存的目录
@@ -134,4 +159,9 @@ Future<Directory> getDioDownloadDir() async {
 /// 语音输入时，录音文件保存的目录
 Future<Directory> getBackupDir() async {
   return getAppHomeDirectory(subfolder: "BAKUP/backup_files");
+}
+
+// 统一对话的备份文件
+Future<Directory> getUnifiedChatBackupDir() async {
+  return getAppHomeDirectory(subfolder: "BAKUP/backup_files/unified_chat");
 }

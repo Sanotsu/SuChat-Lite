@@ -10,6 +10,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:mime/mime.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:proste_logger/proste_logger.dart';
@@ -333,6 +334,95 @@ Future<String?> saveImageToLocal(
   }
 }
 
+// 2025-10-09 实测图片、音频等都可以下载，可以混用
+Future<String?> saveNetMediaToLocal(
+  String netMediaUrl, {
+  String? prefix,
+  String? mediaName,
+  Directory? dlDir,
+  bool showSaveHint = true,
+  bool overwriteExisting = false,
+}) async {
+  // 首先获取设备外部存储管理权限
+  if (!(await requestStoragePermission())) {
+    ToastUtils.showError("未授权访问设备外部存储，无法保存图片");
+    return null;
+  }
+
+  // 如果有指定保存的图片名称，则不用从url获取;需要过滤地址带有过期日期token信息等额外内容
+  mediaName ??= netMediaUrl.split("?").first.split('/').last;
+
+  dynamic closeToast;
+
+  // 使用直接的Dio实例下载音频内容并保存到文件
+  final dio = Dio();
+  try {
+    // 获取下载目录
+    var dir = dlDir ?? (await getDioDownloadDir());
+
+    // 确保目录存在
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+
+    // 构建文件路径 , 传入的前缀有强制带上下划线
+    final filePath = '${dir.path}/${prefix ?? ""}$mediaName';
+    final file = File(filePath);
+
+    // 检查文件是否已存在
+    final bool fileExists = await file.exists();
+
+    if (fileExists && !overwriteExisting) {
+      // 文件已存在且不覆盖，直接返回现有文件路径
+      if (showSaveHint) {
+        ToastUtils.showToast("资源已存在，无需重复下载");
+      }
+      return filePath;
+    }
+
+    if (showSaveHint) {
+      closeToast = ToastUtils.showLoading('【资源保存中...】');
+    }
+
+    // 下载资源
+    final mediaResponse = await dio.get(
+      netMediaUrl,
+      options: Options(
+        responseType: ResponseType.bytes,
+        followRedirects: true,
+        validateStatus: (status) => status != null && status < 500,
+      ),
+      onReceiveProgress: (received, total) {
+        if (total != -1) {
+          debugPrint('下载进度: ${(received / total * 100).toStringAsFixed(0)}%');
+        }
+      },
+    );
+
+    if (mediaResponse.statusCode != 200) {
+      throw Exception('下载资源失败: ${mediaResponse.statusCode}');
+    }
+
+    // 写入文件
+    await file.writeAsBytes(mediaResponse.data);
+
+    if (showSaveHint) {
+      if (closeToast != null) {
+        closeToast();
+      }
+      if (fileExists && overwriteExisting) {
+        ToastUtils.showToast("资源已覆盖保存在手机下/${file.path.split("/0/").last}");
+      } else {
+        ToastUtils.showToast("资源已保存在手机下/${file.path.split("/0/").last}");
+      }
+    }
+
+    return file.path;
+  } finally {
+    dio.close();
+  }
+}
+
 /// 保存多张图片到本地
 Future<List<String?>> saveMultipleImagesToLocal(
   List<String> netImageUrls, {
@@ -592,7 +682,7 @@ Future<void> savevgVideoToLocal(String netVideoUrl, {String? prefix}) async {
 Future<String?> getImageBase64String(File? image) async {
   if (image == null) return null;
   var tempStr = base64Encode(await image.readAsBytes());
-  return "data:image/png;base64,$tempStr";
+  return "data:${lookupMimeType(image.path)};base64,$tempStr";
 }
 
 ///
@@ -691,4 +781,104 @@ Future<void> launchStringUrl(String url) async {
   )) {
     throw Exception('无法访问 $url');
   }
+}
+
+void cusLaunchUrl(String url) async {
+  try {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  } catch (e) {
+    ToastUtils.showError('无法打开链接: $url, 错误: $e');
+  }
+}
+
+/// 根据文件路径获取MIME类型
+String? getMimeTypeByFilePath(String filePath) {
+  final extension = filePath.toLowerCase().split('.').last;
+  switch (extension) {
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg';
+    case 'png':
+      return 'image/png';
+    case 'gif':
+      return 'image/gif';
+    case 'webp':
+      return 'image/webp';
+    case 'mp3':
+      return 'audio/mpeg';
+    case 'wav':
+      return 'audio/wav';
+    case 'mp4':
+      return 'video/mp4';
+    case 'avi':
+      return 'video/avi';
+    case 'pdf':
+      return 'application/pdf';
+    case 'txt':
+      return 'text/plain';
+    case 'doc':
+    case 'docx':
+      return 'application/msword';
+    case 'xls':
+    case 'xlsx':
+      return 'application/vnd.ms-excel';
+    case 'ppt':
+    case 'pptx':
+      return 'application/vnd.ms-powerpoint';
+    default:
+      return 'application/octet-stream';
+  }
+}
+
+/// 获取文件大小
+Future<int?> getFileSize(File file) async {
+  try {
+    if (await file.exists()) {
+      return await file.length();
+    }
+  } catch (e) {
+    print('获取文件大小失败: $e');
+  }
+  return null;
+}
+
+///
+/// 将图片或视频转换为base64格式
+///
+String convertToBase64(String fileUrl, {String fileType = 'image'}) {
+  // 如果已经是base64格式的，直接返回
+  if (fileType == 'image' && fileUrl.startsWith('data:image/')) {
+    return fileUrl;
+  }
+  if (fileType == 'video' && fileUrl.startsWith('data:video/')) {
+    return fileUrl;
+  }
+  if (fileType == 'audio' && fileUrl.startsWith('data:audio/')) {
+    return fileUrl;
+  }
+
+  // 如果是网络图片/视频，直接返回URL
+  if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
+    return fileUrl;
+  }
+
+  // 如果是本地文件，转换为base64
+  try {
+    final file = File(fileUrl);
+    if (file.existsSync()) {
+      final bytes = file.readAsBytesSync();
+      final base64String = base64Encode(bytes);
+      final mimeType = lookupMimeType(file.path);
+
+      return 'data:$mimeType;base64,$base64String';
+    }
+  } catch (e) {
+    print('转换图片到base64失败: $e');
+  }
+
+  // 如果转换失败，返回原始URL
+  return fileUrl;
 }

@@ -28,15 +28,23 @@ String getTimePeriod() {
 String formatDurationToString(Duration d) =>
     d.toString().split('.').first.padLeft(8, "0");
 
-/// 格式化时间戳为带微秒的时间戳
-/// fileTs => fileNameTimestamp
-String fileTs(DateTime dateTime) {
-  final formatted = DateFormat(constDatetimeSuffix).format(dateTime);
-  final us = (dateTime.microsecondsSinceEpoch % 1000000).toString().padLeft(
-    6,
-    '0',
-  );
-  return '${formatted}_$us';
+/// 格式化时间戳为带微秒/毫秒的时间戳
+String fileTs(DateTime dateTime, {bool? isS = false, bool? isMs = false}) {
+  // 基础时间格式：年月日_时分秒
+  final baseFormat = DateFormat(constDatetimeSuffix).format(dateTime);
+
+  if (isS == true) {
+    // 秒格式：20251010_082138
+    return baseFormat;
+  } else if (isMs == true) {
+    // 毫秒格式：20251010_082138_123
+    final ms = dateTime.millisecond; // 0-999
+    return '${baseFormat}_${ms.toString().padLeft(3, '0')}';
+  } else {
+    // 微秒格式：20251010_082138_113538
+    final us = dateTime.microsecond; // 0-999999
+    return '${baseFormat}_${us.toString().padLeft(6, '0')}';
+  }
 }
 
 /// 格式化时间label中文

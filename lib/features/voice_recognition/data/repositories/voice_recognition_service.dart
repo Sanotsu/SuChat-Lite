@@ -42,6 +42,9 @@ class VoiceRecognitionService {
     return apiKey;
   }
 
+  // 用于提交前检查等外部使用
+  static Future<String> getAliyunAK() => _getApiKey();
+
   /// 提交录音识别任务
   /// [audioPath] - 音频文件路径
   /// [cloudAudioUrl] - 云端音频URL，如果提供则优先使用

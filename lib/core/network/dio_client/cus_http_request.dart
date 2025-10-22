@@ -8,6 +8,7 @@ import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 
 import '../../../shared/widgets/toast_utils.dart';
 import 'cus_http_options.dart';
+import 'cus_log_interceptor.dart';
 import 'intercepter_response.dart';
 import 'interceptor_error.dart';
 import 'interceptor_request.dart';
@@ -31,6 +32,8 @@ class HttpRequest {
       sendTimeout: HttpOptions.sendTimeout,
       baseUrl: HttpOptions.baseUrl,
       contentType: HttpOptions.contentType,
+      // 确保在错误状态时也能接收数据
+      receiveDataWhenStatusError: true,
     );
 
     dio = Dio(options);
@@ -55,15 +58,46 @@ class HttpRequest {
       const RequestInterceptor(),
       const ResponseIntercepter(),
       ErrorInterceptor(),
+
+      // 1. 添加自定义日志拦截器，处理长数据截断
+      CustomLogInterceptor(
+        sensitiveKeys: [
+          'url',
+          'content',
+          'images',
+          'image',
+          'image_url',
+          'data',
+        ],
+        truncateLength: 50,
+        maxWidth: 150,
+        // 使用自定义拦截器的请求/响应(包含header和body)、错误日志
+        requestEnabled: true,
+        responseEnabled: true,
+        errorEnabled: true,
+      ),
+      // 2. 添加 pretty_dio_logger，但禁用它的 requestBody
       PrettyDioLogger(
-        requestHeader: true,
-        responseHeader: true,
-        // requestBody: true,
-        // responseBody: true,
+        // 因为使用了自定义拦截器的请求响应日志(包含header和body)，所以这里的禁用掉
+        enabled: false,
+
+        request: false,
+        requestHeader: false,
         requestBody: false,
-        responseBody: false, // 响应太多了，不显示
+        responseHeader: false,
+        responseBody: false,
+        error: true,
         maxWidth: 150,
       ),
+
+      // PrettyDioLogger(
+      //   requestHeader: true,
+      //   requestBody: true,
+      //   responseHeader: true,
+      //   responseBody: true,
+      //   error: true,
+      //   maxWidth: 150,
+      // ),
     ]);
   }
 
@@ -116,6 +150,7 @@ class HttpRequest {
       // 2024-03-11 这里是要取得http的错误，但默认类型时Object?，所以要转一下
       CusHttpException cusHttpException = error.error as CusHttpException;
 
+      print("========================");
       print("这里是执行HttpRequest的request()方法在报错:");
       print(cusHttpException);
       print(cusHttpException.cusCode);
