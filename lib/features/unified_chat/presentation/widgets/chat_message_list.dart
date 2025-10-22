@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/utils/screen_helper.dart';
+import '../../../../core/utils/simple_tools.dart';
+import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/models/unified_chat_message.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
@@ -304,7 +307,7 @@ class _ChatMessageListState extends State<ChatMessageList> {
   // 悬浮切换键盘或语音输入按钮
   Widget _buildChangeInputModeButton(UnifiedChatViewModel viewModel) {
     // 如果已经归档了，不显示切换输入模式按钮
-    if (viewModel.isConversationArchived) {
+    if (viewModel.isConversationArchived || !ScreenHelper.isMobile()) {
       return const SizedBox.shrink();
     }
 
@@ -317,7 +320,18 @@ class _ChatMessageListState extends State<ChatMessageList> {
         height: 32,
         child: FloatingActionButton.small(
           shape: const CircleBorder(),
-          onPressed: () {
+          onPressed: () async {
+            if (!(await requestMicrophonePermission())) {
+              if (!mounted) return;
+              commonExceptionDialog(
+                context,
+                '未授权语音录制权限',
+                '未授权语音录制权限，无法语音输入。'
+                    '\n请到“设置”->“应用”中开启权限。',
+              );
+              return;
+            }
+
             viewModel.toggleInputMode();
           },
           heroTag: 'switch_input_mode',

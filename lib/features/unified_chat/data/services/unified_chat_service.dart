@@ -672,17 +672,17 @@ class UnifiedChatService {
 
   /// 测试API连接
   Future<bool> testApiConnection(String platformId, {String? type}) async {
-    // 2025-10-16 火山方舟无法获取对话模型列表，所以这里不测试
-    if (platformId == UnifiedPlatformId.volcengine.name) {
-      return true;
-    }
-
     try {
       final platform = await _chatDao.getPlatformSpec(platformId);
       if (platform == null) return false;
 
       final apiKey = await UnifiedSecureStorage.getApiKey(platformId);
-      if (apiKey == null) return false;
+      if (apiKey == null || apiKey.trim().isEmpty) return false;
+
+      // 2025-10-16 火山方舟无法获取对话模型列表，所以这里不测试
+      if (platformId == UnifiedPlatformId.volcengine.name) {
+        return true;
+      }
 
       // 有些平台支持查询模型，还支持查询模型的类型
       Map<String, dynamic>? params;
@@ -709,17 +709,17 @@ class UnifiedChatService {
 
   /// 获取平台的模型列表
   Future<List<String>> getPlatformModels(String platformId) async {
-    // 2025-10-16 火山方舟无法获取对话模型列表，所以这里不测试
-    if (platformId == UnifiedPlatformId.volcengine.name) {
-      return [];
-    }
-
     try {
       final platform = await _chatDao.getPlatformSpec(platformId);
       if (platform == null) return [];
 
       final apiKey = await UnifiedSecureStorage.getApiKey(platformId);
-      if (apiKey == null) return [];
+      if (apiKey == null || apiKey.trim().isEmpty) return [];
+
+      // 2025-10-16 火山方舟无法获取对话模型列表，所以这里不测试
+      if (platformId == UnifiedPlatformId.volcengine.name) {
+        return [];
+      }
 
       final apiPrefix = _getModelsApiPrefix(platformId);
 

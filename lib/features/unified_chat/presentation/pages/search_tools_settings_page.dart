@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/services/unified_secure_storage.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
 
@@ -520,12 +521,7 @@ class _SearchToolsSettingsPageState extends State<SearchToolsSettingsPage> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result ? '连接测试成功' : '连接测试失败'),
-            backgroundColor: result ? Colors.green : Colors.red,
-          ),
-        );
+        ToastUtils.showInfo(result ? '连接测试成功' : '连接测试失败');
       }
     } catch (e) {
       setState(() {
@@ -539,9 +535,7 @@ class _SearchToolsSettingsPageState extends State<SearchToolsSettingsPage> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('测试失败: $e'), backgroundColor: Colors.red),
-        );
+        ToastUtils.showError('测试失败: $e');
       }
     } finally {
       setState(() {
@@ -565,18 +559,11 @@ class _SearchToolsSettingsPageState extends State<SearchToolsSettingsPage> {
       await viewModel.setSearchApiKey(toolType, apiKey);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('API密钥保存成功'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        ToastUtils.showInfo('API密钥保存成功');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败: $e'), backgroundColor: Colors.red),
-        );
+        ToastUtils.showError('保存失败: $e');
       }
     }
   }
@@ -649,18 +636,11 @@ class _SearchToolsSettingsPageState extends State<SearchToolsSettingsPage> {
       await viewModel.setPreferredSearchTool(toolType);
       setState(() {});
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('已设置 $toolType 为首选搜索工具'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        ToastUtils.showInfo('已设置 $toolType 为首选搜索工具');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('设置失败: $e'), backgroundColor: Colors.red),
-        );
+        ToastUtils.showError('设置失败: $e');
       }
     }
   }
@@ -672,18 +652,11 @@ class _SearchToolsSettingsPageState extends State<SearchToolsSettingsPage> {
       await viewModel.clearPreferredSearchTool();
       setState(() {});
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('已清除首选搜索工具设置'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        ToastUtils.showInfo('已清除首选搜索工具设置');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('清除设置失败: $e'), backgroundColor: Colors.red),
-        );
+        ToastUtils.showError('清除设置失败: $e');
       }
     }
   }

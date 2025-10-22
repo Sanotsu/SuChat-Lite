@@ -275,6 +275,17 @@ class _AIToolPageState extends State<AIToolPage> {
                 accentColor: Colors.purple,
               ),
             ),
+            SizedBox(
+              width: 150,
+              height: 150,
+              child: FeatureGridCard(
+                isNew: true,
+                targetPage: const UnifiedChatPage(),
+                title: "Chat",
+                icon: Icons.chat,
+                accentColor: Colors.indigo,
+              ),
+            ),
           ],
         ),
       ),

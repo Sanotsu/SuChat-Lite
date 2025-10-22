@@ -141,14 +141,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         _selectedVideo != null;
   }
 
-  // 开始实时语音识别
+  // 开始实时语音识别(在切换输入模式按钮处申请麦克风权限)
   void _startRealtimeRecognition() async {
     try {
-      if (!(await _audioRecorder.hasPermission())) {
-        ToastUtils.showError('需要录音权限才能使用语音识别功能');
-        return;
-      }
-
       setState(() {
         _isRealtimeRecording = true;
         _inputText = '';
@@ -1377,7 +1372,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             conversation?.maxTokens ?? effectivePartner.maxTokens ?? 4096,
         isStream: conversation?.isStream ?? effectivePartner.isStream ?? true,
         // 这个启用思考不是最初的设计，就放在extraParams里，也不放在partner里
-        enableThinking: conversation?.extraParams?['enableThinking'] ?? false,
+        enableThinking: conversation?.extraParams?['enableThinking'],
         omniParams: currentSettings,
         selectedPartner: viewModel.currentPartner,
         onSave: (settings) {
