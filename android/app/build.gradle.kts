@@ -30,7 +30,7 @@ android {
     // }
 
        // Android 15(API 35)
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = "27.2.12479018"
 
     compileOptions {

@@ -256,7 +256,7 @@ class _GoalSettingDialogState extends State<GoalSettingDialog> {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<double>(
-          value: _selectedActivityLevel,
+          initialValue: _selectedActivityLevel,
           decoration: const InputDecoration(
             border: OutlineInputBorder(),
             contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),

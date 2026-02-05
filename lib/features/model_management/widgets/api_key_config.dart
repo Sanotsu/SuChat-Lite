@@ -284,7 +284,7 @@ class _ApiKeyConfigState extends State<ApiKeyConfig> {
 
   Widget _buildPlatformKeyLabelDropdown() {
     return DropdownButtonFormField<ApiPlatformAKLabel>(
-      value: _selectedPlatformKeyLabel,
+      initialValue: _selectedPlatformKeyLabel,
       decoration: InputDecoration(
         labelText: '选择平台',
         border: OutlineInputBorder(),

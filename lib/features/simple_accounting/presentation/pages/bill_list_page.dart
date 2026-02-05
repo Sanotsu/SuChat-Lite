@@ -416,21 +416,20 @@ class _BillListPageState extends State<BillListPage> {
       if (!mounted) return;
       final confirmed = await showDialog<bool>(
         context: context,
-        builder:
-            (context) => AlertDialog(
-              title: const Text('确认导入'),
-              content: const Text('导入将会添加新的账单数据，确定要继续吗？'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('取消'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('确定'),
-                ),
-              ],
+        builder: (context) => AlertDialog(
+          title: const Text('确认导入'),
+          content: const Text('导入将会添加新的账单数据，确定要继续吗？'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('取消'),
             ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('确定'),
+            ),
+          ],
+        ),
       );
 
       if (confirmed != true) {
@@ -460,6 +459,60 @@ class _BillListPageState extends State<BillListPage> {
       setState(() {
         _isProcessing = false;
       });
+    }
+  }
+
+  // 清空账单
+  Future<void> _clearAllBill() async {
+    if (_isProcessing) return;
+    setState(() {
+      _isProcessing = true;
+    });
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认清空'),
+        content: const Text('确定要清空所有账单记录吗？此操作不可撤销。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('删除', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final viewModel = Provider.of<BillViewModel>(context, listen: false);
+
+      setState(() {
+        _isProcessing = true;
+      });
+
+      try {
+        await viewModel.clearBill();
+
+        _showMessage('已经清空所有账单数据');
+
+        // 刷新当前数据
+        await viewModel.refreshCurrentMonthData(
+          _selectedTypeFilter,
+          _selectedCategoryFilter,
+          minAmount: _minAmountFilter,
+          maxAmount: _maxAmountFilter,
+        );
+      } catch (e) {
+        // 错误处理
+      } finally {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
     }
   }
 
@@ -559,8 +612,8 @@ class _BillListPageState extends State<BillListPage> {
       }
 
       // 按月份排序（降序）
-      final sortedMonths =
-          groupedByMonth.keys.toList()..sort((a, b) => b.compareTo(a));
+      final sortedMonths = groupedByMonth.keys.toList()
+        ..sort((a, b) => b.compareTo(a));
 
       // 构建列表
       for (var month in sortedMonths) {
@@ -635,8 +688,8 @@ class _BillListPageState extends State<BillListPage> {
         }
 
         // 按日期排序（降序）
-        final sortedDates =
-            groupedByDay.keys.toList()..sort((a, b) => b.compareTo(a));
+        final sortedDates = groupedByDay.keys.toList()
+          ..sort((a, b) => b.compareTo(a));
 
         // 添加每日账单
         for (var date in sortedDates) {
@@ -800,31 +853,42 @@ class _BillListPageState extends State<BillListPage> {
                     await _importBills();
                   } else if (value == 'export') {
                     await _exportBills();
+                  } else if (value == 'clear') {
+                    await _clearAllBill();
                   }
                 },
-                itemBuilder:
-                    (context) => [
-                      const PopupMenuItem<String>(
-                        value: 'import',
-                        child: Row(
-                          children: [
-                            Icon(Icons.upload_file),
-                            SizedBox(width: 8),
-                            Text('导入账单'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem<String>(
-                        value: 'export',
-                        child: Row(
-                          children: [
-                            Icon(Icons.download),
-                            SizedBox(width: 8),
-                            Text('导出账单'),
-                          ],
-                        ),
-                      ),
-                    ],
+                itemBuilder: (context) => [
+                  const PopupMenuItem<String>(
+                    value: 'import',
+                    child: Row(
+                      children: [
+                        Icon(Icons.upload_file),
+                        SizedBox(width: 8),
+                        Text('导入账单'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'export',
+                    child: Row(
+                      children: [
+                        Icon(Icons.download),
+                        SizedBox(width: 8),
+                        Text('导出账单'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'clear',
+                    child: Row(
+                      children: [
+                        Icon(Icons.download),
+                        SizedBox(width: 8),
+                        Text('清空账单', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -861,11 +925,10 @@ class _BillListPageState extends State<BillListPage> {
 
               // 账单列表
               Expanded(
-                child:
-                    _isSearchMode
-                        ? _isSearching
-                            ? const Center(child: CircularProgressIndicator())
-                            : RefreshIndicator(
+                child: _isSearchMode
+                    ? _isSearching
+                          ? const Center(child: CircularProgressIndicator())
+                          : RefreshIndicator(
                               onRefresh: () async {
                                 _searchBills(_searchKeyword);
                               },
@@ -877,61 +940,61 @@ class _BillListPageState extends State<BillListPage> {
                                 ),
                               ),
                             )
-                        : RefreshIndicator(
-                          onRefresh: () async {
-                            final viewModel = Provider.of<BillViewModel>(
-                              context,
-                              listen: false,
-                            );
-                            await viewModel.loadNextMonthData(
-                              _selectedTypeFilter,
-                              _selectedCategoryFilter,
-                              minAmount: _minAmountFilter,
-                              maxAmount: _maxAmountFilter,
-                            );
-                          },
-                          child: ListView(
-                            controller: _scrollController,
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            children: [
-                              // 显示"正在加载更新数据"的提示
-                              if (_isLoadingNewer)
-                                const Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
+                    : RefreshIndicator(
+                        onRefresh: () async {
+                          final viewModel = Provider.of<BillViewModel>(
+                            context,
+                            listen: false,
+                          );
+                          await viewModel.loadNextMonthData(
+                            _selectedTypeFilter,
+                            _selectedCategoryFilter,
+                            minAmount: _minAmountFilter,
+                            maxAmount: _maxAmountFilter,
+                          );
+                        },
+                        child: ListView(
+                          controller: _scrollController,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [
+                            // 显示"正在加载更新数据"的提示
+                            if (_isLoadingNewer)
+                              const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
                                     ),
                                   ),
                                 ),
+                              ),
 
-                              // 账单列表
-                              ...(_buildGroupedBillList(
-                                viewModel.billItems,
-                                viewModel,
-                              )),
+                            // 账单列表
+                            ...(_buildGroupedBillList(
+                              viewModel.billItems,
+                              viewModel,
+                            )),
 
-                              // 显示"正在加载更多"的提示
-                              if (_isLoadingMore)
-                                const Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
+                            // 显示"正在加载更多"的提示
+                            if (_isLoadingMore)
+                              const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
                                     ),
                                   ),
                                 ),
-                            ],
-                          ),
+                              ),
+                          ],
                         ),
+                      ),
               ),
             ],
           ),

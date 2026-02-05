@@ -65,6 +65,9 @@ class FreeStatisticsPageState extends State<FreeStatisticsPage>
 
   // 公开的刷新数据方法，供父组件调用
   void refreshData() {
+    // 防止在组件销毁后调用
+    if (!mounted) return;
+
     // 清除汇总数据缓存(其他缓存在加载数据中有清除)
     setState(() {
       _cachedMonthlySummary = null;

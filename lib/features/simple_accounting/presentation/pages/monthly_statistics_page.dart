@@ -42,6 +42,9 @@ class MonthlyStatisticsPageState extends State<MonthlyStatisticsPage>
 
   // 公开的刷新数据方法，供父组件调用
   void refreshData() {
+    // 防止在组件销毁后调用
+    if (!mounted) return;
+
     final viewModel = Provider.of<BillViewModel>(context, listen: false);
     // 重新加载当前选中的月份数据
     viewModel.loadMonthlyData(

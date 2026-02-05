@@ -531,7 +531,7 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
         // 如果是内置平台，不需要修改
         if (!widget.platform.isBuiltIn) ...[
           DropdownButtonFormField<String>(
-            value: _selectedApiMode,
+            initialValue: _selectedApiMode,
             decoration: const InputDecoration(
               labelText: 'API模式',
               border: OutlineInputBorder(),

@@ -320,7 +320,7 @@ class _FoodEditPageState extends State<FoodEditPage> {
                                 ),
                               ),
                               value: _isFavorite,
-                              activeColor: Colors.red,
+                              activeThumbColor: Colors.red,
                               onChanged: (value) {
                                 setState(() {
                                   _isFavorite = value;

@@ -139,7 +139,7 @@ class _EditModelDialogState extends State<EditModelDialog> {
 
                 // 模型类型下拉框
                 DropdownButtonFormField<String>(
-                  value: _selectedModelType,
+                  initialValue: _selectedModelType,
                   decoration: const InputDecoration(
                     labelText: '模型类型',
                     border: OutlineInputBorder(),

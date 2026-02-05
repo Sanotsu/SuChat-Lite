@@ -581,11 +581,19 @@ class _SearchToolsSettingsPageState extends State<SearchToolsSettingsPage> {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        leading: Radio<bool>(
-          value: true,
-          groupValue: isSelected,
-          onChanged: isAvailable ? (_) => onSelected() : null,
-        ),
+        leading:
+            // Radio<bool>(
+            //   value: true,
+            //   groupValue: isSelected,
+            //   onChanged: isAvailable ? (_) => onSelected() : null,
+            // ),
+            RadioGroup<bool>(
+              groupValue: isSelected,
+              onChanged: (value) {
+                if (value == true) onSelected();
+              },
+              child: Radio<bool>(value: true, enabled: isAvailable),
+            ),
         title: Row(
           children: [
             Text(title),

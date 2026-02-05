@@ -350,7 +350,7 @@ class _AdvancedOptionsPanelState extends State<AdvancedOptionsPanel> {
             Expanded(child: _buildOptionLabel(option, isMobile: false)),
             Switch(
               value: isEnabled,
-              activeColor: Colors.blue[600],
+              activeThumbColor: Colors.blue[600],
               onChanged: (value) => _updateOption(option.key, value),
             ),
           ],

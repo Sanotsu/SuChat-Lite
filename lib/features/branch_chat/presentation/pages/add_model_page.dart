@@ -161,7 +161,7 @@ class _AddModelPageState extends State<AddModelPage> {
   // 平台选择下拉框
   Widget _buildPlatformDropdown() {
     return DropdownButtonFormField<ApiPlatform>(
-      value: _selectedPlatform,
+      initialValue: _selectedPlatform,
       decoration: InputDecoration(
         labelText: '选择平台',
         border: OutlineInputBorder(),
@@ -197,7 +197,7 @@ class _AddModelPageState extends State<AddModelPage> {
   // 模型类型下拉框
   Widget _buildModelTypeDropdown() {
     return DropdownButtonFormField<LLModelType>(
-      value: _selectedModelType,
+      initialValue: _selectedModelType,
       decoration: InputDecoration(
         labelText: '选择模型类型',
         border: OutlineInputBorder(),
