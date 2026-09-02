@@ -83,8 +83,9 @@ class _DietRecipePageState extends State<DietRecipePage> {
 
       setState(() {
         _modelList = availableModels;
-        _selectedModel =
-            availableModels.isNotEmpty ? availableModels.first : null;
+        _selectedModel = availableModels.isNotEmpty
+            ? availableModels.first
+            : null;
       });
     } catch (e) {
       if (mounted) {
@@ -582,12 +583,11 @@ class _DietRecipePageState extends State<DietRecipePage> {
                           vertical: 8.0,
                         ),
                         decoration: BoxDecoration(
-                          color:
-                              isSelected
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(
-                                    context,
-                                  ).colorScheme.surfaceContainerHighest,
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Column(
@@ -605,16 +605,18 @@ class _DietRecipePageState extends State<DietRecipePage> {
                               DateFormat(formatToHMS).format(recipe.gmtCreate),
                               style: TextStyle(
                                 fontSize: 12,
-                                color:
-                                    isSelected ? Colors.white70 : Colors.grey,
+                                color: isSelected
+                                    ? Colors.white70
+                                    : Colors.grey,
                               ),
                             ),
                             Text(
                               recipe.modelName,
                               style: TextStyle(
                                 fontSize: 12,
-                                color:
-                                    isSelected ? Colors.white70 : Colors.grey,
+                                color: isSelected
+                                    ? Colors.white70
+                                    : Colors.grey,
                               ),
                             ),
                           ],
@@ -748,9 +750,8 @@ class _DietRecipePageState extends State<DietRecipePage> {
               hintLabel: "选择大模型",
               alignment: Alignment.centerLeft,
               onChanged: (value) => setState(() => _selectedModel = value!),
-              itemToString:
-                  (e) =>
-                      "${CP_NAME_MAP[(e as CusLLMSpec).platform]} - ${e.name}",
+              itemToString: (e) =>
+                  "${CP_NAME_MAP[(e as CusLLMSpec).platform]} - ${e.name}",
             ),
           ],
         ),
@@ -819,22 +820,22 @@ class _DietRecipePageState extends State<DietRecipePage> {
   Widget generateButton() {
     return ElevatedButton.icon(
       onPressed: _isGenerating ? _cancelGenerationProcess : _generateRecipe,
-      icon:
-          _isGenerating
-              ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-              : const Icon(Icons.restaurant_menu),
+      icon: _isGenerating
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : const Icon(Icons.restaurant_menu),
       label: Text(_isGenerating ? '取消生成' : '生成定制食谱'),
       style: ElevatedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 8),
-        backgroundColor:
-            _isGenerating ? Colors.red : Theme.of(context).colorScheme.primary,
+        backgroundColor: _isGenerating
+            ? Colors.red
+            : Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
       ),
     );

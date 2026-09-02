@@ -121,10 +121,9 @@ class _CustomMonthCalendarState extends State<CustomMonthCalendar> {
           }
 
           // 格式化金额显示
-          final formattedValue =
-              value >= 10000
-                  ? '${(value / 10000).toStringAsFixed(1)}万'
-                  : value.toStringAsFixed(0);
+          final formattedValue = value >= 10000
+              ? '${(value / 10000).toStringAsFixed(1)}万'
+              : value.toStringAsFixed(0);
 
           // 收入红色，支出绿色
           final color = widget.selectedType == 0 ? Colors.red : Colors.green;
@@ -157,9 +156,9 @@ class _CustomMonthCalendarState extends State<CustomMonthCalendar> {
               style: TextStyle(
                 color:
                     day.weekday == DateTime.sunday ||
-                            day.weekday == DateTime.saturday
-                        ? Colors.red
-                        : null,
+                        day.weekday == DateTime.saturday
+                    ? Colors.red
+                    : null,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -299,12 +298,11 @@ class _CustomWeekCalendarState extends State<CustomWeekCalendar> {
           }
 
           // 格式化金额显示
-          final formattedValue =
-              ScreenHelper.isDesktop()
-                  ? value.toStringAsFixed(2)
-                  : (value >= 10000
-                      ? '${(value / 10000).toStringAsFixed(1)}万'
-                      : value.toStringAsFixed(0));
+          final formattedValue = ScreenHelper.isDesktop()
+              ? value.toStringAsFixed(2)
+              : (value >= 10000
+                    ? '${(value / 10000).toStringAsFixed(1)}万'
+                    : value.toStringAsFixed(0));
 
           // 收入红色，支出绿色
           final color = widget.selectedType == 0 ? Colors.red : Colors.green;
@@ -345,9 +343,9 @@ class _CustomWeekCalendarState extends State<CustomWeekCalendar> {
               style: TextStyle(
                 color:
                     day.weekday == DateTime.sunday ||
-                            day.weekday == DateTime.saturday
-                        ? Colors.red
-                        : null,
+                        day.weekday == DateTime.saturday
+                    ? Colors.red
+                    : null,
                 fontWeight: FontWeight.bold,
               ),
             ),

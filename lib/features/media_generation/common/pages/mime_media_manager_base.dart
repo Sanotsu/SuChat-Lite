@@ -107,21 +107,20 @@ abstract class MimeMediaManagerBaseState<T extends MimeMediaManagerBase>
   Future<void> _deleteSelectedMedia() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('确认删除'),
-            content: Text('确定要删除选中的${selectedMedia.length}个文件吗？'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('删除'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('确认删除'),
+        content: Text('确定要删除选中的${selectedMedia.length}个文件吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
     );
 
     if (confirmed != true) return;
@@ -179,10 +178,9 @@ abstract class MimeMediaManagerBaseState<T extends MimeMediaManagerBase>
           ],
         ],
       ),
-      body:
-          isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : buildMediaGrid(),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : buildMediaGrid(),
     );
   }
 
@@ -299,12 +297,11 @@ Future<Map<CusMimeCls, List<File>>> classifyFilesByMimeType(
   }
 
   // 获取指定目录下的所有文件
-  final files =
-      await directory
-          .list()
-          .where((entity) => entity is File)
-          .map((entity) => entity as File)
-          .toList();
+  final files = await directory
+      .list()
+      .where((entity) => entity is File)
+      .map((entity) => entity as File)
+      .toList();
 
   // 按照文件的创建时间排序
   files.sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));

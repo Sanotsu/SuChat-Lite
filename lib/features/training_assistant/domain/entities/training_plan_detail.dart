@@ -44,8 +44,9 @@ class TrainingPlanDetail {
       restTime: map['restTime'],
       instructions: map['instructions'],
       imageUrl: map['imageUrl'],
-      gmtCreate:
-          map['gmtCreate'] != null ? DateTime.parse(map['gmtCreate']) : null,
+      gmtCreate: map['gmtCreate'] != null
+          ? DateTime.parse(map['gmtCreate'])
+          : null,
     );
   }
 

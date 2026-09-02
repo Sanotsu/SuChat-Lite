@@ -51,13 +51,13 @@ class FoodListView extends StatelessWidget {
       });
     }
 
-    final foodItems =
-        searchQuery.isEmpty ? viewModel.foodItems : viewModel.searchResults;
+    final foodItems = searchQuery.isEmpty
+        ? viewModel.foodItems
+        : viewModel.searchResults;
 
-    final filteredItems =
-        showOnlyFavorites
-            ? foodItems.where((item) => item.isFavorite).toList()
-            : foodItems;
+    final filteredItems = showOnlyFavorites
+        ? foodItems.where((item) => item.isFavorite).toList()
+        : foodItems;
 
     if (filteredItems.isEmpty) {
       return _buildEmptyState(context);
@@ -76,10 +76,9 @@ class FoodListView extends StatelessWidget {
           onFavoriteToggle: () => onFavoriteToggle(food),
           onEdit: onFoodEdit != null ? () => onFoodEdit!(food) : null,
           onDelete: onFoodDelete != null ? () => onFoodDelete!(food) : null,
-          onAddToMeal:
-              onAddToMeal != null && showAddToMealAction
-                  ? () => onAddToMeal!(food)
-                  : null,
+          onAddToMeal: onAddToMeal != null && showAddToMealAction
+              ? () => onAddToMeal!(food)
+              : null,
           showManagementActions: showManagementActions,
           showAddToMealAction: showAddToMealAction,
           isExistingInMeal: isExistingFood,

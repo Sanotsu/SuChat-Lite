@@ -426,8 +426,9 @@ class NoteCategoryViewModel extends _$NoteCategoryViewModel {
 
       // 更新状态
       if (state.hasValue) {
-        final categories =
-            state.value!.where((category) => category.id != id).toList();
+        final categories = state.value!
+            .where((category) => category.id != id)
+            .toList();
         state = AsyncValue.data(categories);
       }
     } catch (e) {

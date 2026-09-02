@@ -29,14 +29,12 @@ class ClonedVoice {
       voiceId: json['voice_id'] ?? '',
       resourceLink: json['resource_link'] ?? '',
       targetModel: json['target_model'] ?? '',
-      gmtCreate:
-          json['gmt_create'] != null
-              ? DateTime.parse(json['gmt_create'])
-              : null,
-      gmtModified:
-          json['gmt_modified'] != null
-              ? DateTime.parse(json['gmt_modified'])
-              : null,
+      gmtCreate: json['gmt_create'] != null
+          ? DateTime.parse(json['gmt_create'])
+          : null,
+      gmtModified: json['gmt_modified'] != null
+          ? DateTime.parse(json['gmt_modified'])
+          : null,
       status: json['status'] ?? '',
     );
   }

@@ -360,7 +360,7 @@ class _BillListPageState extends State<BillListPage> {
       final fileName =
           '极简记账数据_${DateFormat(formatToYMD).format(DateTime.now())}.json';
 
-      String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+      String? selectedDirectory = await FilePicker.getDirectoryPath();
       // 如果有选中文件夹，执行导出数据库的json文件，并添加到压缩档。
       if (selectedDirectory != null) {
         // 写入文件
@@ -385,12 +385,12 @@ class _BillListPageState extends State<BillListPage> {
   Future<void> _importBills() async {
     try {
       // 选择文件
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['json'],
       );
 
-      if (result == null || result.files.isEmpty) {
+      if (result.isEmpty) {
         return;
       }
 
@@ -398,7 +398,7 @@ class _BillListPageState extends State<BillListPage> {
         _isProcessing = true;
       });
 
-      final file = File(result.files.single.path!);
+      final file = File(result.single.path!);
       final jsonString = await file.readAsString();
 
       // 检查JSON格式

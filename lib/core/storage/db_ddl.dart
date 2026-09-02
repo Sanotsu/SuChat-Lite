@@ -12,7 +12,8 @@ class DBDdl {
   static const tableMediaGenerationHistory =
       '${DBInitConfig.tablePerfix}brief_media_generation_history';
 
-  static const ddlForMediaGenerationHistory = """
+  static const ddlForMediaGenerationHistory =
+      """
     CREATE TABLE $tableMediaGenerationHistory (
       requestId           TEXT    NOT NULL,
       prompt              TEXT    NOT NULL,
@@ -39,7 +40,8 @@ class DBDdl {
   static const tableCusLlmSpec =
       '${DBInitConfig.tablePerfix}brief_cus_llm_spec';
 
-  static const ddlForCusLlmSpec = """
+  static const ddlForCusLlmSpec =
+      """
     CREATE TABLE $tableCusLlmSpec (
       cusLlmSpecId   TEXT    NOT NULL,
       platform       TEXT    NOT NULL,
@@ -62,7 +64,8 @@ class DBDdl {
   static const tableVoiceRecognitionTask =
       '${DBInitConfig.tablePerfix}voice_recognition_task';
 
-  static const ddlForVoiceRecognitionTask = """
+  static const ddlForVoiceRecognitionTask =
+      """
     CREATE TABLE $tableVoiceRecognitionTask (
       taskId              TEXT    NOT NULL,
       localAudioPath      TEXT,
@@ -82,7 +85,8 @@ class DBDdl {
   static const tableUserInfo = '${DBInitConfig.tablePerfix}user_info';
 
   // gender 和 goal 使用枚举的index，所以是INTEGER类型
-  static const ddlForUserInfo = """
+  static const ddlForUserInfo =
+      """
     CREATE TABLE $tableUserInfo (
       userId              TEXT    NOT NULL,
       name                TEXT    NOT NULL,

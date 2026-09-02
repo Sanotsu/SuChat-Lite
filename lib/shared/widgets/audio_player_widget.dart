@@ -276,10 +276,9 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
         // 如果是密集型，则只显示播放/暂停按钮，不显示单独按钮行
         if (widget.dense)
           _buildIconButton(
-            icon:
-                _isPlaying
-                    ? Icons.pause_circle_filled
-                    : Icons.play_circle_filled,
+            icon: _isPlaying
+                ? Icons.pause_circle_filled
+                : Icons.play_circle_filled,
             onPressed: _togglePlayPause,
             sizeFactor: ScreenHelper.isDesktop() ? 1.5 : 2.4,
           ),
@@ -293,8 +292,9 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       children: [
         // 静音控制(后续可以修改滚动条控制音频)
         _buildIconButton(
-          icon:
-              _controller.value.volume > 0 ? Icons.volume_up : Icons.volume_off,
+          icon: _controller.value.volume > 0
+              ? Icons.volume_up
+              : Icons.volume_off,
           onPressed: () {
             _controller.setVolume(_controller.value.volume > 0 ? 0 : 1.0);
             setState(() {});
@@ -311,8 +311,9 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
         ),
         // 播放/暂停
         _buildIconButton(
-          icon:
-              _isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+          icon: _isPlaying
+              ? Icons.pause_circle_filled
+              : Icons.play_circle_filled,
           onPressed: _togglePlayPause,
           sizeFactor: widget.dense ? 1.5 : 2.0,
         ),

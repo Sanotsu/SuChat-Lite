@@ -159,8 +159,8 @@ class _VoiceRecognitionDetailPageState
                       '创建时间',
                       widget.task.gmtCreate != null
                           ? DateFormat(
-                            formatToYMDHMS,
-                          ).format(widget.task.gmtCreate!)
+                              formatToYMDHMS,
+                            ).format(widget.task.gmtCreate!)
                           : '未知',
                     ),
                     if (widget.task.audioDurationMs != null)
@@ -221,8 +221,8 @@ class _VoiceRecognitionDetailPageState
                           isDesktop: false,
                           recordingPath: _audioUrl!,
                           isPlaying: _audioRecordManager.isPlaying,
-                          onPlayToggle:
-                              () => _audioRecordManager.togglePlayback(),
+                          onPlayToggle: () =>
+                              _audioRecordManager.togglePlayback(),
                           // 详情页面不需要关闭功能
                           onClose: () {},
                         ),

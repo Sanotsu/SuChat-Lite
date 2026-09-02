@@ -7,7 +7,8 @@ class NotebookDdl {
   /// 笔记表
   static const String tableNote = '${DBInitConfig.tablePerfix}note';
 
-  static const ddlForNote = """
+  static const ddlForNote =
+      """
     CREATE TABLE IF NOT EXISTS $tableNote (
       note_id             INTEGER   PRIMARY KEY AUTOINCREMENT,
       title               TEXT      NOT NULL,
@@ -30,7 +31,8 @@ class NotebookDdl {
   static const String tableNoteCategory =
       '${DBInitConfig.tablePerfix}note_category';
 
-  static const ddlForNoteCategory = """
+  static const ddlForNoteCategory =
+      """
     CREATE TABLE IF NOT EXISTS $tableNoteCategory (
       category_id         INTEGER   PRIMARY KEY AUTOINCREMENT,
       name                TEXT      NOT NULL,
@@ -43,7 +45,8 @@ class NotebookDdl {
   /// 笔记标签表
   static const String tableNoteTag = '${DBInitConfig.tablePerfix}note_tag';
 
-  static const ddlForNoteTag = """
+  static const ddlForNoteTag =
+      """
     CREATE TABLE IF NOT EXISTS $tableNoteTag (
       tag_id              INTEGER   PRIMARY KEY AUTOINCREMENT,
       name                TEXT      NOT NULL UNIQUE,
@@ -55,7 +58,8 @@ class NotebookDdl {
   static const String tableNoteTagRelation =
       '${DBInitConfig.tablePerfix}note_tag_relation';
 
-  static const ddlForNoteTagRelation = """
+  static const ddlForNoteTagRelation =
+      """
     CREATE TABLE IF NOT EXISTS $tableNoteTagRelation (
       note_id             INTEGER   NOT NULL,
       tag_id              INTEGER   NOT NULL,
@@ -68,7 +72,8 @@ class NotebookDdl {
   /// 笔记媒体附件表
   static const String tableNoteMedia = '${DBInitConfig.tablePerfix}note_media';
 
-  static const ddlForNoteMedia = """
+  static const ddlForNoteMedia =
+      """
     CREATE TABLE IF NOT EXISTS $tableNoteMedia (
       media_id            INTEGER   PRIMARY KEY AUTOINCREMENT,
       note_id             INTEGER   NOT NULL,

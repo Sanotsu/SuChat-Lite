@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/utils/screen_helper.dart';
@@ -146,55 +145,73 @@ class _ChatMessageListState extends State<ChatMessageList> {
 
         return Stack(
           children: [
-            NotificationListener<ScrollStartNotification>(
-              onNotification: (notification) {
-                _onUserScrollStart();
-                return false;
-              },
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                itemCount: viewModel.messages.length,
-                itemBuilder: (context, index) {
-                  final message = viewModel.messages[index];
-
-                  // 只有在对话开始后才隐藏系统消息，新对话时显示系统消息
-                  // if (message.role == UnifiedMessageRole.system &&
-                  //     viewModel.messages.length > 1) {
-                  //   return const SizedBox.shrink();
-                  // }
-                  //   // 跳过系统消息的显示
-                  // if (message.role == UnifiedMessageRole.system) {
-                  //   return const SizedBox.shrink();
-                  // }
-
-                  return ChatMessageItem(
-                    message: message,
-                    viewModel: viewModel,
-                    onRegenerate: message.isAssistant
-                        ? () => viewModel.regenerateMessage(
-                            message,
-                            isWebSearch: viewModel.isWebSearchEnabled,
-                          )
-                        : null,
-                    onResend: message.isUser
-                        ? () => viewModel.resendUserMessage(
-                            message,
-                            isWebSearch: viewModel.isWebSearchEnabled,
-                          )
-                        : null,
-                    onDelete: () =>
-                        _showDeleteConfirmDialog(context, viewModel, message),
-                    onCopy: () => _copyMessageContent(context, message),
-                    // 修改完消息vm中已经更新了消息列表，这里应该就直接看到新的消息内容了
-                    onUpdateMessage: message.isAssistant
-                        ? (msg) => viewModel.updateMessage(msg)
-                        : null,
-                    onEditMessage: message.isUser
-                        ? (msg) => viewModel.startEditingUserMessage(msg)
-                        : null,
-                  );
+            // 消息文字缩放(从旧版移植)：包裹整个消息列表，
+            // 元信息区域(头像/时间戳/分支切换器)在气泡内反向固定不缩放
+            MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: TextScaler.linear(viewModel.textScaleFactor),
+              ),
+              child: NotificationListener<ScrollStartNotification>(
+                onNotification: (notification) {
+                  _onUserScrollStart();
+                  return false;
                 },
+                // 桌面常显滚动条，提供滚动位置反馈与拖拽定位
+                child: Scrollbar(
+                  controller: _scrollController,
+                  thumbVisibility: ScreenHelper.isDesktop(),
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
+                    itemCount: viewModel.messages.length,
+                    itemBuilder: (context, index) {
+                      final message = viewModel.messages[index];
+
+                      // 只有在对话开始后才隐藏系统消息，新对话时显示系统消息
+                      // if (message.role == UnifiedMessageRole.system &&
+                      //     viewModel.messages.length > 1) {
+                      //   return const SizedBox.shrink();
+                      // }
+                      //   // 跳过系统消息的显示
+                      // if (message.role == UnifiedMessageRole.system) {
+                      //   return const SizedBox.shrink();
+                      // }
+
+                      return ChatMessageItem(
+                        message: message,
+                        viewModel: viewModel,
+                        onRegenerate: message.isAssistant
+                            ? () => viewModel.regenerateMessage(
+                                message,
+                                isWebSearch: viewModel.isWebSearchEnabled,
+                              )
+                            : null,
+                        onResend: message.isUser
+                            ? () => viewModel.resendUserMessage(
+                                message,
+                                isWebSearch: viewModel.isWebSearchEnabled,
+                              )
+                            : null,
+                        onDelete: () => _showDeleteConfirmDialog(
+                          context,
+                          viewModel,
+                          message,
+                        ),
+                        onCopy: () => _copyMessageContent(context, message),
+                        // 修改完消息vm中已经更新了消息列表，这里应该就直接看到新的消息内容了
+                        onUpdateMessage: message.isAssistant
+                            ? (msg) => viewModel.updateMessage(msg)
+                            : null,
+                        onEditMessage: message.isUser
+                            ? (msg) => viewModel.startEditingUserMessage(msg)
+                            : null,
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
 
@@ -205,26 +222,30 @@ class _ChatMessageListState extends State<ChatMessageList> {
             _buildScrollButtons(),
 
             // 悬浮新建对话按钮
-            Positioned(
-              // 小按钮尺寸为40*40,不够小，手动32*32包裹
-              left: 0.5.sw - 16,
-              bottom: 8,
-              child: SizedBox(
-                width: 32,
-                height: 32,
-                child: FloatingActionButton.small(
-                  onPressed: () {
-                    viewModel.createNewConversation();
-                    setState(() {
-                      _showScrollToTop = false;
-                      _showScrollToBottom = false;
-                    });
-                  },
-                  heroTag: 'create_new_conversation',
-                  backgroundColor: Theme.of(context).colorScheme.surface,
-                  foregroundColor: Theme.of(context).colorScheme.onSurface,
-                  tooltip: '新建对话',
-                  child: const Icon(Icons.add),
+            // 用 Align 相对消息列表区域居中(之前用 0.5.sw 按全屏宽计算，
+            // 桌面有侧栏+内容列限宽时不在消息区中心)
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: SizedBox(
+                  // 小按钮尺寸为40*40,不够小，手动32*32包裹
+                  width: 32,
+                  height: 32,
+                  child: FloatingActionButton.small(
+                    onPressed: () {
+                      viewModel.createNewConversation();
+                      setState(() {
+                        _showScrollToTop = false;
+                        _showScrollToBottom = false;
+                      });
+                    },
+                    heroTag: 'create_new_conversation',
+                    backgroundColor: Theme.of(context).colorScheme.surface,
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
+                    tooltip: '新建对话',
+                    child: const Icon(Icons.add),
+                  ),
                 ),
               ),
             ),
@@ -280,7 +301,7 @@ class _ChatMessageListState extends State<ChatMessageList> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('删除消息'),
-        content: const Text('确定要删除这条消息吗？此操作不可撤销。'),
+        content: const Text('确定要删除这条消息吗？\n该消息之后的所有分支回复也会一并删除，此操作不可撤销。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -304,10 +325,10 @@ class _ChatMessageListState extends State<ChatMessageList> {
     ToastUtils.showInfo('消息已复制到剪贴板');
   }
 
-  // 悬浮切换键盘或语音输入按钮
+  // 悬浮切换键盘或语音输入按钮(桌面同样可用，语音输入不再仅限移动端)
   Widget _buildChangeInputModeButton(UnifiedChatViewModel viewModel) {
     // 如果已经归档了，不显示切换输入模式按钮
-    if (viewModel.isConversationArchived || !ScreenHelper.isMobile()) {
+    if (viewModel.isConversationArchived) {
       return const SizedBox.shrink();
     }
 
@@ -321,7 +342,9 @@ class _ChatMessageListState extends State<ChatMessageList> {
         child: FloatingActionButton.small(
           shape: const CircleBorder(),
           onPressed: () async {
-            if (!(await requestMicrophonePermission())) {
+            // 运行时麦克风权限仅移动端需要；桌面由系统层面管理
+            if (ScreenHelper.isMobile() &&
+                !(await requestMicrophonePermission())) {
               if (!mounted) return;
               commonExceptionDialog(
                 context,

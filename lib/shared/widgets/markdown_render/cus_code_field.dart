@@ -31,15 +31,14 @@ class _CusCodeFieldState extends State<CusCodeField> {
 
   // 选择了一个flutter_highlight 中的主题，然后修改了root的背景颜色为透明
   // 这样可以同时保留了其他的代码高亮
-  final modifiedTheme = Map<String, TextStyle>.from(
-      themeMap['xcode'] ?? githubTheme,
-    )
-    ..['root'] = TextStyle(
-      backgroundColor: Colors.transparent,
-      color: Colors.black,
-      fontFamily: 'FiraCode', // 使用等宽字体
-      fontSize: 14,
-    );
+  final modifiedTheme =
+      Map<String, TextStyle>.from(themeMap['xcode'] ?? githubTheme)
+        ..['root'] = TextStyle(
+          backgroundColor: Colors.transparent,
+          color: Colors.black,
+          fontFamily: 'FiraCode', // 使用等宽字体
+          fontSize: 14,
+        );
 
   @override
   Widget build(BuildContext context) {

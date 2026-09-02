@@ -57,16 +57,15 @@ class _FoodManagementPageState extends State<FoodManagementPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder:
-            (context) => FoodEditPage(
-              initialName: initialName,
-              onSave: (foodItem) {
-                _viewModel.addFood(foodItem).then((_) {
-                  _loadFoodItems();
-                  _loadFoodCount();
-                });
-              },
-            ),
+        builder: (context) => FoodEditPage(
+          initialName: initialName,
+          onSave: (foodItem) {
+            _viewModel.addFood(foodItem).then((_) {
+              _loadFoodItems();
+              _loadFoodCount();
+            });
+          },
+        ),
       ),
     );
   }
@@ -75,15 +74,14 @@ class _FoodManagementPageState extends State<FoodManagementPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder:
-            (context) => FoodEditPage(
-              foodItem: food,
-              onSave: (foodItem) {
-                _viewModel.updateFood(foodItem).then((_) {
-                  _loadFoodItems();
-                });
-              },
-            ),
+        builder: (context) => FoodEditPage(
+          foodItem: food,
+          onSave: (foodItem) {
+            _viewModel.updateFood(foodItem).then((_) {
+              _loadFoodItems();
+            });
+          },
+        ),
       ),
     );
   }
@@ -205,8 +203,8 @@ class _FoodManagementPageState extends State<FoodManagementPage> {
                   onFavoriteToggle: _toggleFavorite,
                   onFoodEdit: _navigateToEditFood,
                   onFoodDelete: _showDeleteConfirmation,
-                  onAddNewFood:
-                      (query) => _navigateToAddFood(initialName: query),
+                  onAddNewFood: (query) =>
+                      _navigateToAddFood(initialName: query),
                   showManagementActions: true,
                 );
               },
@@ -226,35 +224,34 @@ class _FoodManagementPageState extends State<FoodManagementPage> {
   void _showDeleteConfirmation(FoodItem food) {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('确认删除'),
-            content: Text('确定要删除"${food.name}"吗？如果该食品已被使用，将无法删除。'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  Navigator.pop(context);
-                  try {
-                    if (food.id != null) {
-                      await _viewModel.deleteFood(food.id!);
-                      _loadFoodItems();
-                      _loadFoodCount();
-
-                      ToastUtils.showInfo('食品已删除');
-                    }
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    commonExceptionDialog(context, '删除失败', e.toString());
-                  }
-                },
-                child: const Text('删除'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('确认删除'),
+        content: Text('确定要删除"${food.name}"吗？如果该食品已被使用，将无法删除。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
           ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                if (food.id != null) {
+                  await _viewModel.deleteFood(food.id!);
+                  _loadFoodItems();
+                  _loadFoodCount();
+
+                  ToastUtils.showInfo('食品已删除');
+                }
+              } catch (e) {
+                if (!context.mounted) return;
+                commonExceptionDialog(context, '删除失败', e.toString());
+              }
+            },
+            child: const Text('删除'),
+          ),
+        ],
+      ),
     );
   }
 

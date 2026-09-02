@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../../core/utils/screen_helper.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../data/models/unified_chat_partner.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
@@ -177,8 +178,9 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
       ),
       content: ConstrainedBox(
         constraints: BoxConstraints(
-          minWidth: double.maxFinite,
-          maxHeight: 0.6.sh,
+          // 桌面限宽为紧凑弹窗，避免超宽横条(移动端满宽)
+          maxWidth: ScreenHelper.isDesktop() ? 520.0 : double.maxFinite,
+          maxHeight: ScreenHelper.isDesktop() ? 560.0 : 0.6.sh,
         ),
         child: SingleChildScrollView(
           child: Column(

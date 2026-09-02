@@ -118,14 +118,13 @@ class ImageGenerationRequest {
           // 阿里云的输入参数是单独的
           'model': model,
           "input": AliyunWanxV2Input(prompt: prompt).toJson(),
-          "parameters":
-              AliyunWanxV2Parameter(
-                size: size,
-                n: n,
-                seed: seed,
-                promptExtend: true,
-                watermark: false,
-              ).toJson(),
+          "parameters": AliyunWanxV2Parameter(
+            size: size,
+            n: n,
+            seed: seed,
+            promptExtend: true,
+            watermark: false,
+          ).toJson(),
 
           if (input != null) 'input': input?.toJson(),
           if (parameters != null) 'parameters': parameters?.toJson(),

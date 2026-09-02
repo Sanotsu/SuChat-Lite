@@ -131,6 +131,10 @@ UnifiedChatMessage _$UnifiedChatMessageFromJson(Map<String, dynamic> json) =>
           ?.map((e) => SearchReference.fromJson(e as Map<String, dynamic>))
           .toList(),
       metadata: json['metadata'] as Map<String, dynamic>?,
+      parentId: json['parent_id'] as String?,
+      branchIndex: (json['branch_index'] as num?)?.toInt() ?? 0,
+      depth: (json['depth'] as num?)?.toInt() ?? 0,
+      branchPath: json['branch_path'] as String? ?? '',
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -164,6 +168,10 @@ Map<String, dynamic> _$UnifiedChatMessageToJson(UnifiedChatMessage instance) =>
           ?.map((e) => e.toJson())
           .toList(),
       'metadata': instance.metadata,
+      'parent_id': instance.parentId,
+      'branch_index': instance.branchIndex,
+      'depth': instance.depth,
+      'branch_path': instance.branchPath,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
     };

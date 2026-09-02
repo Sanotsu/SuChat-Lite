@@ -17,12 +17,11 @@ class ModelManagerService {
     }
 
     // 如果是业务中手动初始化基础模型，则直接重置
-    final models =
-        defaultModels.map((model) {
-          model.gmtCreate = DateTime.now();
-          model.isBuiltin = true;
-          return model;
-        }).toList();
+    final models = defaultModels.map((model) {
+      model.gmtCreate = DateTime.now();
+      model.isBuiltin = true;
+      return model;
+    }).toList();
 
     // 删除全部内置模型
     for (final model in exists) {
@@ -62,10 +61,6 @@ class ModelManagerService {
           return userKeys[ApiPlatformAKLabel.USER_DEEPSEEK_API_KEY.name]
                   ?.isNotEmpty ??
               false;
-        case ApiPlatform.lingyiwanwu:
-          return userKeys[ApiPlatformAKLabel.USER_LINGYIWANWU_API_KEY.name]
-                  ?.isNotEmpty ??
-              false;
         case ApiPlatform.zhipu:
           return userKeys[ApiPlatformAKLabel.USER_ZHIPU_API_KEY.name]
                   ?.isNotEmpty ??
@@ -73,12 +68,6 @@ class ModelManagerService {
 
         case ApiPlatform.siliconCloud:
           return userKeys[ApiPlatformAKLabel.USER_SILICONCLOUD_API_KEY.name]
-                  ?.isNotEmpty ??
-              false;
-        case ApiPlatform.infini:
-          return userKeys[ApiPlatformAKLabel
-                      .USER_INFINI_GEN_STUDIO_API_KEY
-                      .name]
                   ?.isNotEmpty ??
               false;
         case ApiPlatform.volcengine:
@@ -103,10 +92,9 @@ class ModelManagerService {
     final allModels = await getAvailableModels();
 
     // 然后过滤出指定类型的模型
-    List<CusLLMSpec> list =
-        allModels
-            .where((model) => modelTypes.contains(model.modelType))
-            .toList();
+    List<CusLLMSpec> list = allModels
+        .where((model) => modelTypes.contains(model.modelType))
+        .toList();
 
     // 固定平台排序后模型名排序
     list.sort((a, b) {

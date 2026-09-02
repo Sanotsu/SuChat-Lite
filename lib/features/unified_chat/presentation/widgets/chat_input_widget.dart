@@ -10,6 +10,7 @@ import 'package:record/record.dart';
 import '../../../../core/theme/style/app_colors.dart';
 import '../../../../core/utils/file_picker_utils.dart';
 import '../../../../core/utils/image_picker_utils.dart';
+import '../../../../core/utils/screen_helper.dart';
 import '../../../../shared/services/aliyun_paraformer_realtime_service.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../shared/widgets/toast_utils.dart';
@@ -657,15 +658,22 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         // 监听编辑状态变化
         _handleEditingStateChange(viewModel);
 
+        // 背景图模式下输入栏透明，背景图透出(对齐旧版)
+        final hasBg = viewModel.hasBackgroundImage;
+
         return Container(
           margin: const EdgeInsets.only(top: 4),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
+            color: hasBg
+                ? Colors.transparent
+                : Theme.of(context).colorScheme.surface,
             border: Border(
               top: BorderSide(
-                color: Theme.of(
-                  context,
-                ).colorScheme.outline.withValues(alpha: 0.2),
+                color: hasBg
+                    ? Colors.transparent
+                    : Theme.of(
+                        context,
+                      ).colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
           ),
@@ -933,30 +941,69 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
               tooltip: '取消编辑',
             ),
           Expanded(
-            child: TextField(
-              controller: _textController,
-              focusNode: _focusNode,
-              maxLines: 5,
-              minLines: 1,
-              decoration: InputDecoration(
-                hintText: viewModel.isUserEditingMode ? '编辑消息...' : '输入消息...',
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-              ),
-              onChanged: (text) {
-                setState(() {
-                  _inputText = text;
-                });
-              },
-              onSubmitted: (text) => _sendMessage(viewModel),
-            ),
+            child: ScreenHelper.isDesktop()
+                ? _buildDesktopTextField(viewModel)
+                : TextField(
+                    controller: _textController,
+                    focusNode: _focusNode,
+                    maxLines: 5,
+                    minLines: 1,
+                    decoration: InputDecoration(
+                      hintText: viewModel.isUserEditingMode
+                          ? '编辑消息...'
+                          : '输入消息...',
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    onChanged: (text) {
+                      setState(() {
+                        _inputText = text;
+                      });
+                    },
+                    onSubmitted: (text) => _sendMessage(viewModel),
+                  ),
           ),
         ],
       ),
     );
   }
 
+  /// 桌面端输入框：Enter / Ctrl+Enter 发送，Shift+Enter 换行
+  Widget _buildDesktopTextField(UnifiedChatViewModel viewModel) {
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.enter): () =>
+            _sendMessage(viewModel),
+        const SingleActivator(LogicalKeyboardKey.enter, control: true): () =>
+            _sendMessage(viewModel),
+      },
+      child: TextField(
+        controller: _textController,
+        focusNode: _focusNode,
+        keyboardType: TextInputType.multiline,
+        maxLines: 5,
+        minLines: 1,
+        decoration: InputDecoration(
+          hintText: viewModel.isUserEditingMode
+              ? '编辑消息...'
+              : '输入消息... (Shift+Enter 换行)',
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.zero,
+        ),
+        onChanged: (text) {
+          setState(() {
+            _inputText = text;
+          });
+        },
+      ),
+    );
+  }
+
   Widget _buildVoiceInputButton(UnifiedChatViewModel viewModel) {
+    // 桌面：点击开始/点击结束(长按+上滑取消是触屏手势，不符合鼠标习惯)
+    if (ScreenHelper.isDesktop()) {
+      return _buildDesktopVoiceInputButton();
+    }
     return GestureDetector(
       onLongPressStart: (details) {
         _initialPanY = details.globalPosition.dy;
@@ -1038,6 +1085,57 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                     fontSize: 12,
                   ),
                 ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 桌面端语音输入按钮：点击开始录音、再次点击结束并发送
+  Widget _buildDesktopVoiceInputButton() {
+    return GestureDetector(
+      onTap: () {
+        if (_isRealtimeRecording) {
+          _stopRealtimeRecognition();
+        } else {
+          _startRealtimeRecognition();
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.all(8),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: double.infinity,
+          height: 48,
+          decoration: BoxDecoration(
+            color: _isRealtimeRecording ? Colors.red : AppColors.success,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                _isRealtimeRecording ? Icons.stop : Icons.mic_none,
+                size: 24,
+                color: Colors.white,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                _isRealtimeRecording ? '点击结束并发送' : '点击开始录音',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ],
           ),
         ),
@@ -1297,7 +1395,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           child: Text(
             "1 智谱平台使用自带的联网搜索工具\n\n"
             "2 阿里百炼部分模型支持联网搜索\n\n"
-            "3 硅基流动、无问芯穹等不支持联网搜索的平台，使用tools调用外部搜索工具来实现联网搜索，"
+            "3 硅基流动等不支持联网搜索的平台，使用tools调用外部搜索工具来实现联网搜索，"
             "需要右上角‘搜索工具设置’中进行设置，且模型支持工具调用\n\n"
             "4 非百炼、智谱等自带联网搜索的平台的Qwen3、GLM4.5、DeepSeek3.1等模型，"
             "对话时最好不要同时开启联网搜索和思考模式，因为可能出现同时使用工具调用和思考模式冲突异常问题\n\n",

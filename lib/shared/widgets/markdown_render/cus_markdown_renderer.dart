@@ -133,9 +133,8 @@ class CusMarkdownRenderer {
           highlightBuilder: _buildHighlight,
           latexWorkaround: _processLatexText,
           imageBuilder: _buildImage,
-          latexBuilder:
-              (context, tex, textStyle, inline) =>
-                  _buildLatex(context, tex, textStyle, inline),
+          latexBuilder: (context, tex, textStyle, inline) =>
+              _buildLatex(context, tex, textStyle, inline),
           sourceTagBuilder: _buildSourceTag,
           linkBuilder: _buildLink,
           codeBuilder: _buildCode,
@@ -232,12 +231,11 @@ class CusMarkdownRenderer {
       url,
       width: 100,
       height: 100,
-      errorBuilder:
-          (context, error, stackTrace) => Icon(
-            Icons.error,
-            size: 24,
-            color: Theme.of(context).colorScheme.error,
-          ),
+      errorBuilder: (context, error, stackTrace) => Icon(
+        Icons.error,
+        size: 24,
+        color: Theme.of(context).colorScheme.error,
+      ),
     );
   }
 
@@ -254,20 +252,19 @@ class CusMarkdownRenderer {
 
     final controller = ScrollController();
 
-    final child =
-        inline
-            ? Math.tex(tex, textStyle: textStyle)
-            : Padding(
-              padding: EdgeInsets.all(8),
-              child: Scrollbar(
+    final child = inline
+        ? Math.tex(tex, textStyle: textStyle)
+        : Padding(
+            padding: EdgeInsets.all(8),
+            child: Scrollbar(
+              controller: controller,
+              child: SingleChildScrollView(
                 controller: controller,
-                child: SingleChildScrollView(
-                  controller: controller,
-                  scrollDirection: Axis.horizontal,
-                  child: Math.tex(tex, textStyle: textStyle),
-                ),
+                scrollDirection: Axis.horizontal,
+                child: Math.tex(tex, textStyle: textStyle),
               ),
-            );
+            ),
+          );
 
     return InkWell(
       onTap: () => debugPrint("LaTeX content: $tex"),

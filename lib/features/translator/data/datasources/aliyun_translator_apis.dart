@@ -5,12 +5,13 @@ import 'package:path/path.dart' as path;
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:flutter/foundation.dart';
+import '../../../../core/services/media_save_service.dart';
 
 import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/utils/datetime_formatter.dart';
 import '../../../../core/utils/get_dir.dart';
 import '../../../../shared/services/translation_service.dart';
-import '../../../branch_chat/data/services/chat_service.dart';
+import '../../../../shared/services/chat_service.dart';
 import '../../../media_generation/voice/data/repositories/qwen_tts_service.dart';
 import '../../../media_generation/voice/data/repositories/voice_generation_service.dart';
 import '../models/aliyun_asr_realtime_models.dart';
@@ -246,6 +247,9 @@ class AliyunTranslatorApiClient {
 
       // 复制到目标目录
       await File(voicePath).copy(outputPath);
+
+      // AI生成语音：异步写公共区副本(MediaStore/相册)
+      MediaSaveService.onFileSaved(outputPath);
 
       return outputPath;
     } catch (e) {

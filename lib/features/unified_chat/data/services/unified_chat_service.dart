@@ -9,7 +9,7 @@ import '../../../../core/network/dio_client/interceptor_error.dart';
 import '../../../../core/network/dio_sse_transformer.dart';
 import '../../../../core/utils/simple_tools.dart';
 import '../../../../shared/widgets/toast_utils.dart';
-import '../../../branch_chat/domain/entities/input_message_data.dart';
+import '../../../../shared/services/input_message_data.dart';
 import '../database/unified_chat_dao.dart';
 import '../models/unified_conversation.dart';
 import '../models/unified_model_spec.dart';

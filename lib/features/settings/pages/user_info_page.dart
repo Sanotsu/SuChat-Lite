@@ -80,17 +80,17 @@ class _UserInfoPageState extends State<UserInfoPage> {
           gender: formValues['gender'],
           age:
               formValues['age'] != null &&
-                      formValues['age'].toString().isNotEmpty
-                  ? int.parse(formValues['age'].toString())
-                  : null,
+                  formValues['age'].toString().isNotEmpty
+              ? int.parse(formValues['age'].toString())
+              : null,
           height: double.parse(formValues['height'].toString()),
           weight: double.parse(formValues['weight'].toString()),
           fitnessLevel: formValues['fitnessLevel'],
           healthConditions:
               formValues['healthConditions'] != null &&
-                      formValues['healthConditions'].toString().isNotEmpty
-                  ? formValues['healthConditions'].toString()
-                  : null,
+                  formValues['healthConditions'].toString().isNotEmpty
+              ? formValues['healthConditions'].toString()
+              : null,
           goal: formValues['goal'] ?? _currentGoal,
           activityLevel: formValues['activityLevel'] ?? _currentActivityLevel,
           // targetCalories:
@@ -584,14 +584,13 @@ class _UserInfoPageState extends State<UserInfoPage> {
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 16),
           ),
-          child:
-              _isLoading
-                  ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2.0),
-                  )
-                  : const Text('保存'),
+          child: _isLoading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2.0),
+                )
+              : const Text('保存'),
         ),
       ),
     );

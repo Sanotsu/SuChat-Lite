@@ -3,10 +3,14 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/storage/cus_get_storage.dart';
+import '../../../../core/services/media_save_service.dart';
 import '../../../../core/utils/get_dir.dart';
 import '../../../../core/utils/simple_tools.dart';
 import '../../../../core/utils/wav_audio_handler.dart';
 import '../../../../shared/widgets/toast_utils.dart';
+import '../../../../shared/widgets/markdown_render/cus_markdown_renderer.dart';
+import '../../../../core/entities/message_font_color.dart';
 import '../../data/database/unified_chat_dao.dart';
 import '../../data/models/openai_response.dart';
 import '../../data/models/unified_chat_message.dart';
@@ -15,6 +19,7 @@ import '../../data/models/unified_conversation.dart';
 import '../../data/models/unified_model_spec.dart';
 import '../../data/models/unified_platform_spec.dart';
 import '../../data/services/unified_chat_service.dart';
+import '../../data/services/unified_branch_utils.dart';
 import '../../data/services/image_generation_service.dart';
 import '../../data/models/image_generation_request.dart';
 import '../../data/services/speech_synthesis_service.dart';
@@ -32,7 +37,20 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
   /// 当前状态
   UnifiedConversation? _currentConversation;
+
+  /// 当前分支视图的消息列表(对外暴露，UI和上下文构建都只消费它)
   List<UnifiedChatMessage> _messages = [];
+
+  /// 会话的全部消息(包含所有分支)
+  List<UnifiedChatMessage> _allMessages = [];
+
+  /// 当前查看的分支路径；null表示默认最新链
+  String? _currentBranchPath;
+
+  /// 显示列表截断标记：非null时，显示列表截断到该消息(含)为止
+  /// 用于"重新生成/编辑/重发"场景：视图回退到父消息，新回复作为新分支挂载
+  String? _displayTruncateId;
+
   List<UnifiedModelSpec> _availableModels = [];
   List<UnifiedPlatformSpec> _availablePlatforms = [];
   UnifiedModelSpec? _currentModel;
@@ -59,15 +77,71 @@ class UnifiedChatViewModel extends ChangeNotifier {
   /// 是否是键盘输入模式(2025-10-18 暂定不是键盘输入就是语音输入)
   bool _isKeyboardInput = true;
 
+  // ============ 外观设置(2026-08-31 从旧版branch_chat移植) ============
+  // 存储key与旧版共用(文字大小/背景/字体颜色)，新旧版外观设置互通
+
+  /// 消息文字缩放比例(0.6~2.0)
+  double _textScaleFactor = 1.0;
+
+  /// 全局聊天背景图路径(assets/本地文件路径/网络URL)
+  String? _globalBackgroundImage;
+
+  /// 全局背景图不透明度(0.1~1.0)
+  double _globalBackgroundOpacity = 0.2;
+
+  /// 消息字体颜色配置(背景模式下生效)
+  MessageFontColor _messageFontColor = MessageFontColor.defaultConfig();
+
+  /// 简洁显示(隐藏头像/元信息/分支切换器，只保留正文)
+  bool _isBriefDisplay = false;
+
+  /// 上次加载的外观指纹(背景+字体颜色)，变化时需清Markdown渲染缓存
+  String? _lastAppearanceSignature;
+
   /// Getters
   UnifiedConversation? get currentConversation => _currentConversation;
   List<UnifiedChatMessage> get messages => _messages;
+
+  /// 会话全部消息(含所有分支，供分支树/兄弟查询用)
+  List<UnifiedChatMessage> get allMessages => _allMessages;
+
+  /// 当前分支路径
+  String? get currentBranchPath => _currentBranchPath;
+
   List<UnifiedModelSpec> get availableModels => _availableModels;
   List<UnifiedPlatformSpec> get availablePlatforms => _availablePlatforms;
   UnifiedModelSpec? get currentModel => _currentModel;
   UnifiedPlatformSpec? get currentPlatform => _currentPlatform;
   UnifiedChatPartner? get currentPartner => _currentPartner;
   bool get isWebSearchEnabled => _isWebSearchEnabled;
+
+  double get textScaleFactor => _textScaleFactor;
+
+  /// 背景优先级(对齐旧版角色背景)：搭档专属背景 > 全局聊天背景
+  String? get backgroundImage {
+    final partner = _currentPartner;
+    if (partner != null && partner.hasBackground) {
+      return partner.background;
+    }
+    return _globalBackgroundImage;
+  }
+
+  double get backgroundOpacity {
+    final partner = _currentPartner;
+    if (partner != null && partner.hasBackground) {
+      return partner.backgroundOpacity ?? 0.35;
+    }
+    return _globalBackgroundOpacity;
+  }
+
+  MessageFontColor get messageFontColor => _messageFontColor;
+  bool get isBriefDisplay => _isBriefDisplay;
+
+  /// 是否启用了背景图(气泡透明化/字体颜色配置生效的开关)
+  bool get hasBackgroundImage {
+    final img = backgroundImage;
+    return img != null && img.trim().isNotEmpty;
+  }
 
   bool get isImageGenerationModel =>
       _currentModel?.type == UnifiedModelType.tti ||
@@ -125,6 +199,9 @@ class UnifiedChatViewModel extends ChangeNotifier {
     // 首先加载用户偏好设置
     await _loadUserPreferences();
 
+    // 加载外观设置(文字大小/背景/字体颜色/简洁显示)
+    await loadAppearanceSettings();
+
     // 加载可用的平台和模型
     await _loadAvailablePlatforms();
     await _loadAvailableModels();
@@ -141,6 +218,59 @@ class UnifiedChatViewModel extends ChangeNotifier {
     }
 
     _setLoading(false);
+  }
+
+  /// ******************************************
+  /// 外观设置(文字大小/背景/字体颜色/简洁显示)
+  /// 从旧版branch_chat移植，存储key与旧版共用
+  /// ******************************************
+
+  /// 加载外观设置(GetStorage同步读，失败不影响主流程)
+  Future<void> loadAppearanceSettings() async {
+    try {
+      final storage = CusGetStorage();
+      _textScaleFactor = storage.getChatMessageTextScale();
+      _globalBackgroundImage = await storage.getBranchChatBackground();
+      _globalBackgroundOpacity =
+          await storage.getBranchChatBackgroundOpacity() ?? 0.2;
+      _messageFontColor = await storage.loadMessageFontColor();
+      _isBriefDisplay = storage.getUnifiedChatBriefDisplay();
+      _checkAppearanceCache();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('加载聊天外观设置失败: $e');
+    }
+  }
+
+  /// 外观指纹变化检查(背景含搭档专属背景优先级/字体颜色)：
+  /// Markdown渲染器按"文本内容"缓存Widget(不含颜色)，
+  /// 生效背景或颜色变化后必须清缓存，否则仍渲染旧颜色的缓存Widget
+  void _checkAppearanceCache() {
+    final signature = '${backgroundImage ?? ''}|${_messageFontColor.hashCode}';
+    if (_lastAppearanceSignature != null &&
+        _lastAppearanceSignature != signature) {
+      CusMarkdownRenderer.instance.clearCache();
+    }
+    _lastAppearanceSignature = signature;
+  }
+
+  /// 设置消息文字缩放比例并持久化
+  Future<void> setTextScale(double value) async {
+    _textScaleFactor = value;
+    notifyListeners();
+    await CusGetStorage().setChatMessageTextScale(value);
+  }
+
+  /// 切换简洁显示并持久化(旧版仅内存态不持久化，新版修复)
+  Future<void> toggleBriefDisplay([bool? value]) async {
+    _isBriefDisplay = value ?? !_isBriefDisplay;
+    notifyListeners();
+    await CusGetStorage().setUnifiedChatBriefDisplay(_isBriefDisplay);
+  }
+
+  /// 从背景选择页返回后重载背景与字体颜色配置
+  Future<void> refreshBackgroundSettings() async {
+    await loadAppearanceSettings();
   }
 
   /// ******************************************
@@ -247,6 +377,9 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
       // 初始化空的消息列表，不添加任何消息
       _messages = [];
+      _allMessages = [];
+      _currentBranchPath = null;
+      _displayTruncateId = null;
       // 重置搭档选择状态，以便在新对话时重新显示搭档工具组件
       _currentPartner = null;
       _isPartnerSelected = false;
@@ -314,42 +447,46 @@ class UnifiedChatViewModel extends ChangeNotifier {
     _setLoading(true);
 
     try {
-      // 如果没有可用的平台和模型，则忽略该对话
-      if (_availablePlatforms.isEmpty || _availableModels.isEmpty) {
-        _setLoading(false);
-        ToastUtils.showToast("该对话没有可用的平台和模型，无法加载");
-        return;
-      }
-
       _currentConversation = await _chatDao.getConversation(conversationId);
       if (_currentConversation != null) {
-        _messages = await _chatDao.getMessagesByConversationId(
+        // 加载会话全部消息(含所有分支)
+        _allMessages = await _chatDao.getMessagesByConversationId(
           _currentConversation!.id,
         );
 
-        // 确保系统消息始终在第一位
-        _messages.sort((a, b) {
-          if (a.role == UnifiedMessageRole.system &&
-              b.role != UnifiedMessageRole.system) {
-            return -1;
-          } else if (a.role != UnifiedMessageRole.system &&
-              b.role == UnifiedMessageRole.system) {
-            return 1;
-          } else {
-            return a.createdAt.compareTo(b.createdAt);
-          }
-        });
+        // 确定当前分支路径：优先使用会话保存的路径，无效则回退默认最新链
+        _currentBranchPath = _currentConversation!.currentBranchPath;
+        _displayTruncateId = null;
+        _rebuildDisplayMessages();
 
-        // 更新当前模型
-        final modelId = _currentConversation!.modelId;
-        _currentModel = _availableModels.firstWhere(
-          (m) => m.id == modelId,
-          orElse: () => _availableModels.first,
-        );
-        _currentPlatform = _availablePlatforms.firstWhere(
-          (p) => p.id == _currentModel!.platformId,
-          orElse: () => _availablePlatforms.first,
-        );
+        // 更新当前模型(没有可用模型时跳过，比如恢复数据后尚未配置AK，仍可只读查看历史)
+        if (_availableModels.isNotEmpty) {
+          final modelId = _currentConversation!.modelId;
+          _currentModel = _availableModels.firstWhere(
+            (m) => m.id == modelId,
+            orElse: () => _availableModels.first,
+          );
+          if (_availablePlatforms.isNotEmpty) {
+            _currentPlatform = _availablePlatforms.firstWhere(
+              (p) => p.id == _currentModel!.platformId,
+              orElse: () => _availablePlatforms.first,
+            );
+          }
+        }
+
+        // 恢复会话关联的搭档(2026-08-31 搭档专属背景/选中态；不存在则忽略)
+        final partnerId = _currentConversation!.partnerId;
+        if (partnerId != null && partnerId.isNotEmpty) {
+          final partner = await _chatDao.getChatPartner(partnerId);
+          _currentPartner = partner;
+          _isPartnerSelected = partner != null;
+        } else {
+          _currentPartner = null;
+          _isPartnerSelected = false;
+        }
+
+        // 搭档专属背景可能生效，检查外观缓存
+        _checkAppearanceCache();
       }
       _clearError();
     } catch (e) {
@@ -360,15 +497,124 @@ class UnifiedChatViewModel extends ChangeNotifier {
     }
   }
 
+  /// 根据当前分支路径重建显示消息列表
+  /// _messages = system消息置顶 + 当前分支视图
+  void _rebuildDisplayMessages() {
+    final systemMessages =
+        _allMessages.where((m) => m.role == UnifiedMessageRole.system).toList()
+          ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+    var branchView = UnifiedBranchUtils.computeDisplayMessages(
+      _allMessages,
+      _currentBranchPath,
+    );
+
+    // 截断处理：重新生成/编辑场景下，视图只显示到指定消息为止
+    if (_displayTruncateId != null) {
+      final idx = branchView.indexWhere((m) => m.id == _displayTruncateId);
+      if (idx != -1) {
+        branchView = branchView.sublist(0, idx + 1);
+      }
+    }
+
+    _messages = [...systemMessages, ...branchView];
+  }
+
+  /// ******************************************
+  /// 分支管理
+  /// ******************************************
+
+  /// 切换分支(切到指定分支路径)
+  Future<void> switchBranch(String targetPath) async {
+    if (_currentConversation == null) return;
+    if (_isStreaming) {
+      ToastUtils.showToast('正在生成中，无法切换分支');
+      return;
+    }
+
+    _currentBranchPath = targetPath;
+    _displayTruncateId = null;
+    _rebuildDisplayMessages();
+
+    // 持久化当前分支路径，下次进入会话时恢复
+    try {
+      await _chatDao.updateConversationBranchPath(
+        _currentConversation!.id,
+        targetPath,
+      );
+    } catch (e) {
+      // 持久化失败不影响本次切换
+      debugPrint('保存当前分支路径失败: $e');
+    }
+
+    notifyListeners();
+  }
+
+  /// 获取指定消息的分支切换信息：兄弟列表 + 当前位置
+  /// 供UI的分支切换器使用；返回null表示无分支信息
+  ({List<UnifiedChatMessage> siblings, int currentIndex})? getBranchSwitchInfo(
+    UnifiedChatMessage message,
+  ) {
+    final siblings = UnifiedBranchUtils.siblingsOf(_allMessages, message);
+    final index = siblings.indexWhere((m) => m.id == message.id);
+    if (index == -1 || siblings.length <= 1) return null;
+    return (siblings: siblings, currentIndex: index);
+  }
+
+  /// 切换到指定消息的相邻分支(offset为-1或1)
+  Future<void> switchToSiblingBranch(
+    UnifiedChatMessage message,
+    int offset,
+  ) async {
+    final info = getBranchSwitchInfo(message);
+    if (info == null) return;
+
+    final targetIndex = info.currentIndex + offset;
+    if (targetIndex < 0 || targetIndex >= info.siblings.length) return;
+
+    await switchBranch(info.siblings[targetIndex].branchPath);
+  }
+
+  /// 计算新子消息的分支信息
+  /// [parent] 父消息(为null表示根级)；[role] 新消息角色
+  /// 返回(branchIndex, depth, branchPath)
+  ({int branchIndex, int depth, String branchPath}) _branchInfoForNewChild(
+    UnifiedChatMessage? parent,
+    UnifiedMessageRole role,
+  ) {
+    final parentId = parent?.id;
+    final siblings = _allMessages
+        .where((m) => !m.isSystem && m.parentId == parentId && m.role == role)
+        .toList();
+    final newIndex = siblings.isEmpty
+        ? 0
+        : siblings.map((m) => m.branchIndex).reduce((a, b) => a > b ? a : b) +
+              1;
+
+    final depth = parent == null ? 0 : parent.depth + 1;
+    final path = parent == null
+        ? '$newIndex'
+        : '${parent.branchPath}/$newIndex';
+
+    return (branchIndex: newIndex, depth: depth, branchPath: path);
+  }
+
+  /// 获取当前显示列表中最后一条非system消息(即当前分支的叶子，作为新消息的父节点)
+  UnifiedChatMessage? get _lastNonSystemMessage {
+    final list = _messages.where((m) => !m.isSystem).toList();
+    return list.isEmpty ? null : list.last;
+  }
+
   /// 清空对话
   Future<void> clearConversation() async {
     if (_currentConversation == null) return;
 
     try {
-      for (final message in _messages) {
-        await _chatDao.deleteMessage(message.id);
-      }
-      _messages.clear();
+      // 直接删除该会话全部消息(分支化后一个会话可能有很多分支消息，逐条删除太慢)
+      await _chatDao.deleteMessagesByConversationId(_currentConversation!.id);
+      _allMessages = [];
+      _currentBranchPath = null;
+      _messages = [];
       await _updateConversationStats();
       notifyListeners();
     } catch (e) {
@@ -482,6 +728,10 @@ class UnifiedChatViewModel extends ChangeNotifier {
   /// 发送文本消息
   Future<void> sendMessage(String content, {bool isWebSearch = false}) async {
     if (content.trim().isEmpty || _currentConversation == null) return;
+    if (_currentModel == null || _currentPlatform == null) {
+      ToastUtils.showToast('没有可用的平台和模型，请先配置API Key');
+      return;
+    }
 
     try {
       // 如果是第一条用户消息，先创建并保存系统消息
@@ -494,8 +744,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
       // 添加用户消息
       final userMessage = _createUserPlaceholder(content.trim());
 
-      _messages.add(userMessage);
-      await _chatDao.saveMessage(userMessage);
+      await _addAndSaveMessage(userMessage);
       notifyListeners();
 
       // 发送消息并处理响应回复
@@ -518,6 +767,10 @@ class UnifiedChatViewModel extends ChangeNotifier {
     bool isWebSearch = false,
   }) async {
     if (_currentConversation == null) return;
+    if (_currentModel == null || _currentPlatform == null) {
+      ToastUtils.showToast('没有可用的平台和模型，请先配置API Key');
+      return;
+    }
 
     // print("发送多模态消息");
     // print("文本: $text");
@@ -562,6 +815,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
       );
 
       _messages.add(userMessage);
+      _allMessages.add(userMessage);
       await _chatDao.saveMessage(userMessage);
       notifyListeners();
 
@@ -653,7 +907,10 @@ class UnifiedChatViewModel extends ChangeNotifier {
       final messagesToSend = _prepareMessagesForSending(messages);
       final assistantMessage = _createAssistantPlaceholder();
 
+      _allMessages.add(assistantMessage);
       _messages.add(assistantMessage);
+      // 占位已挂载到截断视图末端，之后恢复正常分支视图(不再截断)
+      _displayTruncateId = null;
       notifyListeners();
 
       final stream = _chatService.sendMessage(
@@ -717,9 +974,15 @@ class UnifiedChatViewModel extends ChangeNotifier {
     UnifiedContentType? contentType,
     List<UnifiedContentItem>? multimodalContent,
     Map<String, dynamic>? metadata,
+    UnifiedChatMessage? parent,
   }) {
+    // 计算分支信息：默认父节点为当前分支视图的最后一条非system消息
+    final parentNode = parent ?? _lastNonSystemMessage;
+    final branch = _branchInfoForNewChild(parentNode, UnifiedMessageRole.user);
+
     return UnifiedChatMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      // 2026-08-31 改用UUID，避免毫秒时间戳id可能出现的同毫秒冲突
+      id: const Uuid().v4(),
       conversationId: _currentConversation!.id,
       role: UnifiedMessageRole.user,
       content: content.trim(),
@@ -731,13 +994,24 @@ class UnifiedChatViewModel extends ChangeNotifier {
       platformIdUsed: _currentPlatform!.id,
       metadata:
           metadata ?? {'model': _currentModel, 'platform': _currentPlatform},
+      parentId: parentNode?.id,
+      branchIndex: branch.branchIndex,
+      depth: branch.depth,
+      branchPath: branch.branchPath,
     );
   }
 
   /// 创建助手消息占位符
   UnifiedChatMessage _createAssistantPlaceholder({String? content}) {
+    // 父节点为当前分支视图的最后一条非system消息(即刚发送的用户消息)
+    final parentNode = _lastNonSystemMessage;
+    final branch = _branchInfoForNewChild(
+      parentNode,
+      UnifiedMessageRole.assistant,
+    );
+
     return UnifiedChatMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: const Uuid().v4(),
       conversationId: _currentConversation!.id,
       role: UnifiedMessageRole.assistant,
       content: content,
@@ -749,10 +1023,14 @@ class UnifiedChatViewModel extends ChangeNotifier {
       modelNameUsed: _currentModel?.modelName,
       platformIdUsed: _currentPlatform?.id,
       metadata: {'model': _currentModel, 'platform': _currentPlatform},
+      parentId: parentNode?.id,
+      branchIndex: branch.branchIndex,
+      depth: branch.depth,
+      branchPath: branch.branchPath,
     );
   }
 
-  /// 创建系统消息占位符
+  /// 创建系统消息占位符(系统消息不入分支树)
   UnifiedChatMessage _createSystemPlaceholder(String content) {
     return UnifiedChatMessage(
       id: 'system_${DateTime.now().millisecondsSinceEpoch}',
@@ -766,7 +1044,25 @@ class UnifiedChatViewModel extends ChangeNotifier {
       modelNameUsed: _currentModel?.modelName,
       platformIdUsed: _currentPlatform?.id,
       metadata: {'model': _currentModel, 'platform': _currentPlatform},
+      depth: -1,
+      branchPath: '',
     );
+  }
+
+  /// 添加消息到内存列表并保存到数据库
+  /// 用户/助手消息同时加入全量列表，并刷新当前分支视图
+  Future<void> _addAndSaveMessage(UnifiedChatMessage message) async {
+    _allMessages.add(message);
+    _rebuildDisplayMessages();
+    await _chatDao.saveMessage(message);
+  }
+
+  /// 在内存两个列表中按id原位替换消息(流式更新/手动修改消息用)
+  void _updateMessageInLists(UnifiedChatMessage message) {
+    final idxMsg = _messages.indexWhere((m) => m.id == message.id);
+    if (idxMsg != -1) _messages[idxMsg] = message;
+    final idxAll = _allMessages.indexWhere((m) => m.id == message.id);
+    if (idxAll != -1) _allMessages[idxAll] = message;
   }
 
   /// 处理流式响应
@@ -981,7 +1277,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
       }
 
       /// 实时追加更新助手消息
-      _messages[index] = _messages[index].copyWith(
+      final updatedStreaming = _messages[index].copyWith(
         content: accumulatedContent,
         thinkingContent: accumulatedThinking.isNotEmpty
             ? accumulatedThinking
@@ -1003,6 +1299,8 @@ class UnifiedChatViewModel extends ChangeNotifier {
             : _messages[index].searchReferences,
         updatedAt: DateTime.now(),
       );
+
+      _updateMessageInLists(updatedStreaming);
 
       notifyListeners();
     }
@@ -1059,7 +1357,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
         errorMessage: error.toString(),
         updatedAt: DateTime.now(),
       );
-      _messages[index] = errorMessage;
+      _updateMessageInLists(errorMessage);
       _chatDao.saveMessage(errorMessage);
       notifyListeners();
     }
@@ -1090,6 +1388,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
       _messages[assistantIndex] = errorMessage;
     } else {
       _messages.add(errorMessage);
+      _allMessages.add(errorMessage);
     }
 
     // 保存发送错误消息并清空搜索参考
@@ -1103,10 +1402,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
     // 被更新的助手消息
     UnifiedChatMessage assistantMessage,
   ) async {
-    final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
-    if (index != -1) {
-      _messages[index] = assistantMessage;
-    }
+    _updateMessageInLists(assistantMessage);
 
     // 保存错误消息到数据库
     await _chatDao.saveMessage(assistantMessage);
@@ -1159,6 +1455,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
     // 添加用户消息到列表
     _messages.add(userMessage);
+    _allMessages.add(userMessage);
     notifyListeners();
 
     // 保存用户消息到数据库
@@ -1179,6 +1476,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
     );
 
     _messages.add(assistantMessage);
+    _allMessages.add(assistantMessage);
     notifyListeners();
 
     try {
@@ -1279,6 +1577,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
     // 添加用户消息到列表
     _messages.add(userMessage);
+    _allMessages.add(userMessage);
     notifyListeners();
 
     // 保存用户消息到数据库
@@ -1290,6 +1589,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
     );
 
     _messages.add(assistantMessage);
+    _allMessages.add(assistantMessage);
     notifyListeners();
 
     try {
@@ -1333,6 +1633,8 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
         if (localPath != null) {
           newUrl = localPath;
+          // AI生成语音：异步写公共区副本(MediaStore/相册)
+          MediaSaveService.onFileSaved(localPath);
         }
       }
 
@@ -1399,6 +1701,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
     // 添加用户消息到列表
     _messages.add(userMessage);
+    _allMessages.add(userMessage);
     notifyListeners();
 
     // 保存用户消息到数据库
@@ -1410,6 +1713,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
     );
 
     _messages.add(assistantMessage);
+    _allMessages.add(assistantMessage);
     notifyListeners();
 
     try {
@@ -1476,6 +1780,8 @@ class UnifiedChatViewModel extends ChangeNotifier {
   }
 
   /// 重新生成响应消息
+  /// 2026-08-31 分支化改造：不再删除原消息，而是创建同父节点的新兄弟分支，
+  /// 原有内容保留，可随时通过分支切换器切回
   Future<void> regenerateMessage(
     UnifiedChatMessage message, {
     bool isWebSearch = false,
@@ -1485,36 +1791,96 @@ class UnifiedChatViewModel extends ChangeNotifier {
       return;
     }
 
+    if (_isStreaming) {
+      ToastUtils.showToast('正在生成中，请稍候');
+      return;
+    }
+
+    if (_currentModel == null || _currentPlatform == null) {
+      ToastUtils.showToast('没有可用的平台和模型，请先配置API Key');
+      return;
+    }
+
     try {
-      // 移除当前消息及其后的所有消息
-      final messageIndex = _messages.indexWhere((m) => m.id == message.id);
+      // 从全量列表找原消息(用户可能在其他分支视图上操作)
+      final source = _allMessages.firstWhere(
+        (m) => m.id == message.id,
+        orElse: () => message,
+      );
 
-      if (messageIndex != -1) {
-        // 从数据库中删除该条及其之后的消息(注意，如果后续有实现分支对话逻辑，这里就不是删除而是创建新分支了)
-        await _chatDao.deleteMessageAndAfter(
-          _currentConversation!.id,
-          _messages[messageIndex],
+      // 视图回退到父消息：切到父路径并截断到父消息
+      if (source.parentId == null) {
+        _currentBranchPath = null;
+        _displayTruncateId = null;
+        // 根级消息重新生成：直接以根路径视图截断到根消息
+        _rebuildDisplayMessages();
+        final rootIdx = _messages.indexWhere((m) => m.id == message.id);
+        if (rootIdx == -1) return;
+        _messages = _messages.sublist(0, rootIdx);
+      } else {
+        final parentPath = source.branchPath.substring(
+          0,
+          source.branchPath.lastIndexOf('/'),
         );
-
-        _messages.removeRange(messageIndex, _messages.length);
-
-        notifyListeners();
-
-        // 重新发送请求
-        await _sendMessageToAI(_messages, isWebSearch: isWebSearch);
+        _currentBranchPath = parentPath;
+        _displayTruncateId = source.parentId;
+        _rebuildDisplayMessages();
       }
+
+      notifyListeners();
+
+      // 重新发送请求：新的AI回复作为同父节点的新兄弟分支挂载(不删除原消息)
+      await _sendMessageToAI(_messages, isWebSearch: isWebSearch);
     } catch (e) {
       _setError('重新生成失败: $e');
     }
   }
 
   /// 删除消息
+  /// 分支化改造：删除该消息及其整个子树(所有后代分支)
   Future<void> deleteMessage(UnifiedChatMessage message) async {
-    try {
-      await _chatDao.deleteMessage(message.id);
-      _messages.removeWhere((m) => m.id == message.id);
-      await _updateConversationStats();
+    if (_currentConversation == null) return;
 
+    try {
+      // system消息单独删除
+      if (message.isSystem) {
+        await _chatDao.deleteMessage(message.id);
+        _allMessages.removeWhere((m) => m.id == message.id);
+        _rebuildDisplayMessages();
+        await _updateConversationStats();
+        notifyListeners();
+        return;
+      }
+
+      // 删除整个子树
+      await _chatDao.deleteBranchSubtree(
+        _currentConversation!.id,
+        message.branchPath,
+      );
+
+      // 从全量列表中移除子树消息(精确前缀匹配，避免'0/1'误删'0/10')
+      _allMessages.removeWhere(
+        (m) =>
+            m.branchPath == message.branchPath ||
+            m.branchPath.startsWith('${message.branchPath}/'),
+      );
+
+      // 如果当前分支路径在被删子树内，回退到父路径或默认最新链
+      if (_currentBranchPath != null &&
+          UnifiedBranchUtils.isOnBranch(
+            _currentBranchPath!,
+            message.branchPath,
+          )) {
+        _currentBranchPath = message.branchPath.contains('/')
+            ? message.branchPath.substring(
+                0,
+                message.branchPath.lastIndexOf('/'),
+              )
+            : null;
+      }
+
+      _rebuildDisplayMessages();
+      await _updateConversationStats();
       notifyListeners();
     } catch (e) {
       _setError('删除消息失败: $e');
@@ -1525,8 +1891,8 @@ class UnifiedChatViewModel extends ChangeNotifier {
   Future<void> updateMessage(UnifiedChatMessage message) async {
     try {
       await _chatDao.updateMessage(message);
-      _messages.removeWhere((m) => m.id == message.id);
-      _messages.add(message);
+      // 2026-08-31 修复：原实现先移除再添加会导致消息挪到列表尾部，改为原位替换
+      _updateMessageInLists(message);
       notifyListeners();
     } catch (e) {
       _setError('更新消息失败: $e');
@@ -1546,6 +1912,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
     if (systemPrompt.isNotEmpty) {
       final systemMessage = _createSystemPlaceholder(systemPrompt);
 
+      _allMessages.insert(0, systemMessage);
       _messages.insert(0, systemMessage);
       await _chatDao.saveMessage(systemMessage);
     }
@@ -1609,6 +1976,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
       if (newSystemPrompt == null || newSystemPrompt.isEmpty) {
         final systemMessage = _messages[systemMessageIndex];
         await _chatDao.deleteMessage(systemMessage.id);
+        _allMessages.removeWhere((m) => m.id == systemMessage.id);
         _messages.removeAt(systemMessageIndex);
       } else {
         // 更新现有系统消息
@@ -1619,18 +1987,21 @@ class UnifiedChatViewModel extends ChangeNotifier {
         );
 
         await _chatDao.updateMessage(updatedSystemMessage);
-        _messages[systemMessageIndex] = updatedSystemMessage;
+        _updateMessageInLists(updatedSystemMessage);
       }
     } else if (newSystemPrompt != null && newSystemPrompt.isNotEmpty) {
       // 如果没有系统消息但新提示词不为空，创建新的系统消息
       final systemMessage = _createSystemPlaceholder(newSystemPrompt);
 
       await _chatDao.saveMessage(systemMessage);
+      _allMessages.insert(0, systemMessage);
       _messages.insert(0, systemMessage);
     }
   }
 
   /// 用户重新发送消息
+  /// 2026-08-31 分支化改造：不再删除该消息之后的回复，
+  /// 而是以该用户消息为终点重新请求，新AI回复作为其新的子分支
   Future<void> resendUserMessage(
     UnifiedChatMessage message, {
     bool isWebSearch = false,
@@ -1640,25 +2011,35 @@ class UnifiedChatViewModel extends ChangeNotifier {
       return;
     }
 
+    if (_isStreaming) {
+      ToastUtils.showToast('正在生成中，请稍候');
+      return;
+    }
+
+    if (_currentModel == null || _currentPlatform == null) {
+      ToastUtils.showToast('没有可用的平台和模型，请先配置API Key');
+      return;
+    }
+
     try {
-      // 移除当前用户消息之后的所有消息(但保留当前用户消息)
-      final messageIndex = _messages.indexWhere((m) => m.id == message.id);
-      if (messageIndex != -1) {
-        // 注意，如果删除的是重新生成消息后面的所有消息，让重新发送的这一条为最大索引的消息，那么就不能删除了
-        if (messageIndex + 1 < _messages.length) {
-          // 移除当前用户消息之后的所有消息(但保留当前用户消息)
-          await _chatDao.deleteMessageAndAfter(
-            _currentConversation!.id,
-            _messages[messageIndex + 1],
-          );
+      // 从全量列表找原消息
+      final source = _allMessages.firstWhere(
+        (m) => m.id == message.id,
+        orElse: () => message,
+      );
 
-          _messages.removeRange(messageIndex + 1, _messages.length);
-        }
+      // 视图切换到该用户消息所在分支并截断到该消息为止
+      _currentBranchPath = source.branchPath;
+      _displayTruncateId = source.id;
+      _rebuildDisplayMessages();
 
-        notifyListeners();
-        // 重新发送请求
-        await _sendMessageToAI(_messages, isWebSearch: isWebSearch);
-      }
+      final messageIndex = _messages.indexWhere((m) => m.id == source.id);
+      if (messageIndex == -1) return;
+
+      notifyListeners();
+
+      // 重新发送请求：新AI回复作为该用户消息的新子分支(不删除原有回复)
+      await _sendMessageToAI(_messages, isWebSearch: isWebSearch);
     } catch (e) {
       _setError('重新发送失败: $e');
       rethrow;
@@ -1692,29 +2073,36 @@ class UnifiedChatViewModel extends ChangeNotifier {
   }
 
   /// 完成编辑消息并发送
+  /// 2026-08-31 分支化改造：不再删除原消息及后续，
+  /// 编辑后的内容作为原消息的兄弟分支(同一父节点)，原对话完整保留
   Future<void> finishEditingUserMessage(
     String newContent, {
     bool isWebSearch = false,
   }) async {
     if (_editingUserMessage == null || _currentConversation == null) return;
+    if (_currentModel == null || _currentPlatform == null) {
+      ToastUtils.showToast('没有可用的平台和模型，请先配置API Key');
+      cancelEditingUserMessage();
+      return;
+    }
 
     try {
-      // 找到要编辑的消息在列表中的位置
-      final editingIndex = _messages.indexWhere(
+      // 从全量列表找原消息(确保分支信息最新)
+      final source = _allMessages.firstWhere(
         (m) => m.id == _editingUserMessage!.id,
+        orElse: () => _editingUserMessage!,
       );
-      if (editingIndex == -1) return;
 
-      // 删除该消息及之后的所有消息
-      final messagesToDelete = _messages.sublist(editingIndex);
-      for (final msg in messagesToDelete) {
-        await _chatDao.deleteMessage(msg.id);
-      }
-      _messages.removeRange(editingIndex, _messages.length);
+      // 找到原消息的父消息
+      final parentMsg = source.parentId == null
+          ? null
+          : _allMessages.where((m) => m.id == source.parentId).firstOrNull;
 
-      // 注意，如果之前发送的是多模态消息，编辑用户消息之后，也应该发送多模态消息
-      if (_editingUserMessage!.contentType == UnifiedContentType.multimodal) {
-        var bultiCont = _editingUserMessage!.multimodalContent;
+      UnifiedChatMessage newUserMessage;
+
+      // 注意，如果之前发送的是多模态消息，编辑之后也应该发送多模态消息
+      if (source.contentType == UnifiedContentType.multimodal) {
+        var bultiCont = source.multimodalContent;
 
         // 从多模态消息中提取出文件，如果各个没有文件，则返回null
         final images = bultiCont
@@ -1735,16 +2123,42 @@ class UnifiedChatViewModel extends ChangeNotifier {
             .whereType<File>()
             .toList();
 
-        await sendMultimodalMessage(
-          newContent,
-          images: images,
-          audio: audio,
-          video: video,
-          files: files,
-          isWebSearch: isWebSearch,
+        // 复用多模态内容(文本部分替换为编辑后的内容)
+        final multimodalContent = <UnifiedContentItem>[];
+        if (newContent.trim().isNotEmpty) {
+          multimodalContent.add(UnifiedContentItem.text(newContent.trim()));
+        }
+        multimodalContent.addAll(
+          bultiCont?.where((e) => e.type != 'text').toList() ?? [],
         );
-        return;
+
+        newUserMessage = _createUserPlaceholder(
+          newContent.trim().isNotEmpty ? newContent.trim() : '多模态消息',
+          contentType: UnifiedContentType.multimodal,
+          multimodalContent: multimodalContent,
+          parent: parentMsg,
+          metadata: {
+            'model': _currentModel,
+            'platform': _currentPlatform,
+            if (images != null && images.isNotEmpty)
+              'images': images.map((f) => f.path).toList(),
+            if (audio != null) 'audio': audio.path,
+            if (video != null) 'video': video.path,
+            if (files != null && files.isNotEmpty)
+              'files': files.map((f) => f.path).toList(),
+          },
+        );
+      } else {
+        // 文本消息
+        newUserMessage = _createUserPlaceholder(newContent, parent: parentMsg);
       }
+
+      // 保存新用户消息并切换分支到新消息
+      _allMessages.add(newUserMessage);
+      _currentBranchPath = newUserMessage.branchPath;
+      _displayTruncateId = null;
+      _rebuildDisplayMessages();
+      await _chatDao.saveMessage(newUserMessage);
 
       // 清除编辑状态
       _editingUserMessage = null;
@@ -1752,8 +2166,11 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
       notifyListeners();
 
-      // 发送新的用户消息
-      await sendMessage(newContent, isWebSearch: isWebSearch);
+      // 请求AI回复(新回复作为新用户消息的子分支)
+      await _sendMessageToAI(
+        _messages.where((m) => !m.isStreaming).toList(),
+        isWebSearch: isWebSearch,
+      );
     } catch (e) {
       _setError('编辑消息失败: $e');
       cancelEditingUserMessage();
@@ -1849,7 +2266,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
           content: '${_messages[i].content} [手动终止]',
           updatedAt: DateTime.now(),
         );
-        _messages[i] = stoppedMessage;
+        _updateMessageInLists(stoppedMessage);
         // 保存被停止的消息
         await _chatDao.saveMessage(stoppedMessage);
       }
@@ -1906,12 +2323,16 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
   /// 选择搭档
   Future<void> selectPartner(UnifiedChatPartner partner) async {
+    // 换搭档场景：若对话尚无用户消息，先移除旧搭档的开场白(换搭档=换开场白)
+    await _removeFirstMessagesIfNoUser();
+
     _currentPartner = partner;
     _isPartnerSelected = true;
 
     // 如果当前对话为空，应用搭档的配置到对话设置
     if (_currentConversation != null && _messages.isEmpty) {
       _currentConversation = _currentConversation!.copyWith(
+        partnerId: partner.id,
         systemPrompt: partner.prompt,
         temperature: partner.temperature,
         topP: partner.topP,
@@ -1925,17 +2346,41 @@ class UnifiedChatViewModel extends ChangeNotifier {
       await _chatDao.updateConversation(_currentConversation!);
     }
 
+    // 偏好模型：搭档配置了偏好模型且当前可用时自动切换(2026-08-31 从旧版角色卡合并)
+    final preferredModelId = partner.preferredModelId;
+    if (preferredModelId != null && _availableModels.isNotEmpty) {
+      UnifiedModelSpec? preferred;
+      for (final m in _availableModels) {
+        if (m.id == preferredModelId) {
+          preferred = m;
+          break;
+        }
+      }
+      if (preferred != null && preferred.id != _currentModel?.id) {
+        await switchModel(preferred);
+      }
+    }
+
+    // 开场白：有开场白且对话尚无用户消息时，以assistant身份落一条本地消息(不调用模型)
+    await _addFirstMessageIfApplicable(partner);
+
+    // 搭档专属背景可能生效，检查外观缓存
+    _checkAppearanceCache();
+
     notifyListeners();
   }
 
   /// 清除搭档选择，切换到默认搭档
   Future<void> clearPartnerSelection() async {
+    // 若对话尚无用户消息，移除开场白并清除搭档关联
+    await _removeFirstMessagesIfNoUser();
+
     _currentPartner = null;
     _isPartnerSelected = false;
 
     // 如果对话为空，应用默认搭档的配置
     if (_currentConversation != null && _messages.isEmpty) {
-      _currentConversation = _currentConversation!.copyWith(
+      var updated = _currentConversation!.copyWith(
         systemPrompt: defaultPartner.prompt,
         temperature: defaultPartner.temperature ?? 0.7,
         topP: defaultPartner.topP ?? 1.0,
@@ -1945,11 +2390,67 @@ class UnifiedChatViewModel extends ChangeNotifier {
         updatedAt: DateTime.now(),
       );
 
+      // copyWith无法把partnerId置null，通过Map方式清除搭档关联
+      final convMap = updated.toMap();
+      convMap['partner_id'] = null;
+      _currentConversation = UnifiedConversation.fromMap(convMap);
+
       // 保存对话配置更新
       await _chatDao.updateConversation(_currentConversation!);
     }
 
+    // 搭档专属背景失效，检查外观缓存
+    _checkAppearanceCache();
+
     notifyListeners();
+  }
+
+  /// 添加搭档开场白(2026-08-31 从旧版角色卡合并)：
+  /// 搭档配置了开场白，且当前会话尚无任何用户/助手树消息时，
+  /// 以assistant身份写入一条本地消息(不调用模型)，作为分支树根节点
+  Future<void> _addFirstMessageIfApplicable(UnifiedChatPartner partner) async {
+    if (_currentConversation == null || !partner.hasFirstMessage) return;
+    // 已有树消息(用户或助手)则不插入，避免重复
+    final hasTreeMessages = _allMessages.any(
+      (m) => m.role != UnifiedMessageRole.system,
+    );
+    if (hasTreeMessages) return;
+
+    final now = DateTime.now();
+    final openingMessage = UnifiedChatMessage(
+      id: const Uuid().v4(),
+      conversationId: _currentConversation!.id,
+      role: UnifiedMessageRole.assistant,
+      content: partner.firstMessage!.trim(),
+      contentType: UnifiedContentType.text,
+      createdAt: now,
+      updatedAt: now,
+      // 会话首条树消息：根节点
+      parentId: null,
+      branchIndex: 0,
+      depth: 0,
+      branchPath: '0',
+    );
+    await _addAndSaveMessage(openingMessage);
+  }
+
+  /// 对话尚无用户消息时，移除全部开场白性质的assistant本地消息
+  /// (换搭档/取消搭档时清理，恢复"空对话"语义)
+  Future<void> _removeFirstMessagesIfNoUser() async {
+    if (_currentConversation == null) return;
+    final hasUser = _allMessages.any((m) => m.role == UnifiedMessageRole.user);
+    if (hasUser) return;
+
+    final openers = _allMessages
+        .where((m) => m.role == UnifiedMessageRole.assistant)
+        .toList();
+    if (openers.isEmpty) return;
+
+    for (final m in openers) {
+      await _chatDao.deleteMessage(m.id);
+    }
+    _allMessages.removeWhere((m) => m.role == UnifiedMessageRole.assistant);
+    _messages.removeWhere((m) => m.role == UnifiedMessageRole.assistant);
   }
 
   /// 更新搭档显示设置

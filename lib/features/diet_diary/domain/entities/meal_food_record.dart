@@ -37,12 +37,12 @@ class MealFoodRecord {
       foodItemId: map['foodItemId'],
       quantity: map['quantity'],
       unit: map['unit'],
-      gmtCreate:
-          map['gmtCreate'] != null ? DateTime.parse(map['gmtCreate']) : null,
-      gmtModified:
-          map['gmtModified'] != null
-              ? DateTime.parse(map['gmtModified'])
-              : null,
+      gmtCreate: map['gmtCreate'] != null
+          ? DateTime.parse(map['gmtCreate'])
+          : null,
+      gmtModified: map['gmtModified'] != null
+          ? DateTime.parse(map['gmtModified'])
+          : null,
     );
   }
 

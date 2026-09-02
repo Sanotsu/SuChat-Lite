@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:open_file/open_file.dart';
 
+import '../../../../core/utils/screen_helper.dart';
 import '../../../../shared/widgets/audio_player_widget.dart';
 import '../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
@@ -16,10 +17,14 @@ class MultimodalContentWidget extends StatefulWidget {
   final UnifiedChatMessage message;
   final TextStyle? textStyle;
 
+  /// 推理内容字体颜色(聊天背景模式下由外部传入配置色)
+  final Color? thinkingColor;
+
   const MultimodalContentWidget({
     super.key,
     required this.message,
     this.textStyle,
+    this.thinkingColor,
   });
 
   @override
@@ -95,6 +100,8 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
     return CusMarkdownRenderer.instance.render(
       content,
       textStyle: widget.textStyle,
+      // 桌面直接选中文本，不再依赖右键→"选择文本"全屏弹窗
+      selectable: ScreenHelper.isDesktop(),
     );
   }
 
@@ -103,6 +110,7 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
     return CusMarkdownRenderer.instance.render(
       text,
       textStyle: widget.textStyle,
+      selectable: ScreenHelper.isDesktop(),
     );
   }
 
@@ -350,33 +358,39 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
   Widget _buildThinkingContent() {
     return Container(
       padding: EdgeInsets.only(bottom: 8),
-      child: ExpansionTile(
-        title: Text(
-          widget.message.content!.isEmpty
-              ? '思考中'
-              : '已深度思考(用时${(widget.message.thinkingTime ?? 0) / 1000}秒)',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.black54,
+      child: Material(
+        type: MaterialType.transparency,
+        child: ExpansionTile(
+          title: Text(
+            widget.message.content!.isEmpty
+                ? '思考中'
+                : '已深度思考(用时${(widget.message.thinkingTime ?? 0) / 1000}秒)',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: widget.thinkingColor ?? Colors.black54,
+            ),
           ),
-        ),
-        initiallyExpanded: true,
-        children: [
-          Padding(
-            padding: EdgeInsets.only(left: 24),
-            // 使用高性能MarkdownRenderer来渲染深度思考内容，可以利用缓存机制
-            child: RepaintBoundary(
-              child: CusMarkdownRenderer.instance.render(
-                widget.message.thinkingContent ?? '',
-                textStyle: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
+          initiallyExpanded: true,
+          children: [
+            Padding(
+              padding: EdgeInsets.only(left: 24),
+              // 使用高性能MarkdownRenderer来渲染深度思考内容，可以利用缓存机制
+              child: RepaintBoundary(
+                child: CusMarkdownRenderer.instance.render(
+                  widget.message.thinkingContent ?? '',
+                  textStyle: TextStyle(
+                    color:
+                        widget.thinkingColor ??
+                        Theme.of(context).colorScheme.primary,
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                  ),
+                  selectable: ScreenHelper.isDesktop(),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

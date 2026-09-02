@@ -25,16 +25,13 @@ class FilePickerUtils {
     bool overwrite = false,
   }) async {
     try {
-      // 选择文件
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
+      // 选择文件(file_picker 12: pickFile() 返回单个 PlatformFile?)
+      PlatformFile? platformFile = await FilePicker.pickFile(
         type: fileType != null ? fileTypeValues[fileType] : FileType.any,
         allowedExtensions: allowedExtensions,
       );
 
-      if (result == null || result.files.isEmpty) return null;
-
-      PlatformFile platformFile = result.files.first;
-      if (platformFile.path == null) return null;
+      if (platformFile == null || platformFile.path == null) return null;
 
       // 确定保存目录
       Directory targetDir = await _getTargetDirectory(saveDir);
@@ -69,18 +66,27 @@ class FilePickerUtils {
     bool allowMultiple = true,
   }) async {
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: fileType != null ? fileTypeValues[fileType] : FileType.any,
-        allowedExtensions: allowedExtensions,
-        allowMultiple: allowMultiple,
-      );
+      // file_picker 12: pickFiles() 直接返回文件列表，空选返回空列表
+      List<PlatformFile> result;
+      if (allowMultiple) {
+        result = await FilePicker.pickFiles(
+          type: fileType != null ? fileTypeValues[fileType] : FileType.any,
+          allowedExtensions: allowedExtensions,
+        );
+      } else {
+        final single = await FilePicker.pickFile(
+          type: fileType != null ? fileTypeValues[fileType] : FileType.any,
+          allowedExtensions: allowedExtensions,
+        );
+        result = [if (single != null) single];
+      }
 
-      if (result == null || result.files.isEmpty) return [];
+      if (result.isEmpty) return [];
 
       Directory targetDir = await _getTargetDirectory(saveDir);
       List<File> savedFiles = [];
 
-      for (PlatformFile platformFile in result.files) {
+      for (PlatformFile platformFile in result) {
         if (platformFile.path == null) continue;
 
         String filePath = path.join(targetDir.path, platformFile.name);

@@ -14,7 +14,7 @@ import '../../../core/utils/file_picker_utils.dart';
 import '../../../core/utils/screen_helper.dart';
 import '../../../core/utils/simple_tools.dart';
 import '../../../shared/services/model_manager_service.dart';
-import '../../branch_chat/presentation/pages/add_model_page.dart';
+import './add_model_page.dart';
 
 class ModelList extends StatefulWidget {
   const ModelList({super.key});
@@ -80,21 +80,20 @@ class _ModelListState extends State<ModelList> {
     if (!mounted) return;
     final confirm = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('确认删除'),
-            content: Text('确定要删除模型 ${model.name} 吗？'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('确定'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('确认删除'),
+        content: Text('确定要删除模型 ${model.name} 吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
     );
 
     if (confirm == true) {
@@ -109,21 +108,20 @@ class _ModelListState extends State<ModelList> {
   Future<void> _clearAllModels(BuildContext context) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('确认清除'),
-            content: const Text('确定要清除所有自行导入的模型吗？'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('确定'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('确认清除'),
+        content: const Text('确定要清除所有自行导入的模型吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
     );
 
     if (confirm == true) {
@@ -168,18 +166,17 @@ class _ModelListState extends State<ModelList> {
       var models = jsonList.map((json) => CusLLMSpec.fromJson(json)).toList();
 
       // 设置ID和时间
-      models =
-          models.map((e) {
-            // e.name =
-            //     !(e.isFree ?? false)
-            //         ? '【收费】${e.name ?? capitalizeWords(e.model)}'
-            //         : (e.name ?? capitalizeWords(e.model));
-            // 2025-04-26 感觉这个是否收费栏位没什么必要
-            e.name = e.name ?? capitalizeWords(e.model);
-            e.gmtCreate = DateTime.now();
-            e.isBuiltin = false; // 用户导入的模型
-            return e;
-          }).toList();
+      models = models.map((e) {
+        // e.name =
+        //     !(e.isFree ?? false)
+        //         ? '【收费】${e.name ?? capitalizeWords(e.model)}'
+        //         : (e.name ?? capitalizeWords(e.model));
+        // 2025-04-26 感觉这个是否收费栏位没什么必要
+        e.name = e.name ?? capitalizeWords(e.model);
+        e.gmtCreate = DateTime.now();
+        e.isBuiltin = false; // 用户导入的模型
+        return e;
+      }).toList();
 
       // 查询是否存在同名模型
       List<CusLLMSpec> duplicateModels = [];
@@ -287,7 +284,10 @@ class _ModelListState extends State<ModelList> {
   // 移动端布局
   Widget _buildMobileLayout() {
     return Column(
-      children: [_buildHeader(), Expanded(child: _buildSimpleTable())],
+      children: [
+        _buildHeader(),
+        Expanded(child: _buildSimpleTable()),
+      ],
     );
   }
 
@@ -318,10 +318,9 @@ class _ModelListState extends State<ModelList> {
                       ),
                     ),
                     TextSpan(
-                      text:
-                          _searchKeyword.isNotEmpty
-                              ? "(${_filteredModels.length})"
-                              : "",
+                      text: _searchKeyword.isNotEmpty
+                          ? "(${_filteredModels.length})"
+                          : "",
                       style: TextStyle(color: Colors.green, fontSize: 16),
                     ),
                   ],
@@ -375,16 +374,15 @@ class _ModelListState extends State<ModelList> {
             decoration: InputDecoration(
               hintText: '搜索模型（名称、平台、类型）',
               prefixIcon: Icon(Icons.search),
-              suffixIcon:
-                  _searchKeyword.isNotEmpty
-                      ? IconButton(
-                        icon: Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          _searchFocusNode.unfocus();
-                        },
-                      )
-                      : null,
+              suffixIcon: _searchKeyword.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        _searchFocusNode.unfocus();
+                      },
+                    )
+                  : null,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide(
@@ -543,63 +541,56 @@ class _ModelListState extends State<ModelList> {
 
         // 表格内容，使用ListView可以垂直滚动
         Expanded(
-          child:
-              filteredModels.isEmpty
-                  ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.search_off, size: 48, color: Colors.grey),
-                        SizedBox(height: 16),
-                        Text(
-                          '没有找到匹配的模型',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                  : ListView.builder(
-                    itemCount: filteredModels.length,
-                    itemBuilder: (context, index) {
-                      final model = filteredModels[index];
-                      final isEven = index.isEven;
+          child: filteredModels.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.search_off, size: 48, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text(
+                        '没有找到匹配的模型',
+                        style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  itemCount: filteredModels.length,
+                  itemBuilder: (context, index) {
+                    final model = filteredModels[index];
+                    final isEven = index.isEven;
 
-                      return GestureDetector(
-                        // 移动端长按显示详情，桌面端右键显示菜单
-                        onLongPress:
-                            ScreenHelper.isMobile()
-                                ? () => showModelInfo(context, model)
-                                : null,
-                        onSecondaryTapDown:
-                            ScreenHelper.isDesktop()
-                                ? (details) => _showContextMenu(
-                                  context,
-                                  model,
-                                  details.globalPosition,
-                                )
-                                : null,
-                        child: Container(
-                          height: 60,
-                          decoration: BoxDecoration(
-                            color:
-                                isEven
-                                    ? Colors.grey.withValues(alpha: 0.05)
-                                    : Colors.white,
-                            border: Border(
-                              bottom: BorderSide(
-                                color: Colors.grey.withValues(alpha: 0.1),
-                              ),
+                    return GestureDetector(
+                      // 移动端长按显示详情，桌面端右键显示菜单
+                      onLongPress: ScreenHelper.isMobile()
+                          ? () => showModelInfo(context, model)
+                          : null,
+                      onSecondaryTapDown: ScreenHelper.isDesktop()
+                          ? (details) => _showContextMenu(
+                              context,
+                              model,
+                              details.globalPosition,
+                            )
+                          : null,
+                      child: Container(
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: isEven
+                              ? Colors.grey.withValues(alpha: 0.05)
+                              : Colors.white,
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Colors.grey.withValues(alpha: 0.1),
                             ),
                           ),
-                          padding: EdgeInsets.all(8),
-                          child: _buildItemRow(model),
                         ),
-                      );
-                    },
-                  ),
+                        padding: EdgeInsets.all(8),
+                        child: _buildItemRow(model),
+                      ),
+                    );
+                  },
+                ),
         ),
       ],
     );
@@ -624,30 +615,25 @@ class _ModelListState extends State<ModelList> {
         Expanded(
           flex: 1,
           child: Center(
-            child:
-                model.isBuiltin
-                    // ? const Text('内置', style: TextStyle(color: Colors.grey))
-                    ? TextButton(
-                      onPressed: () => _deleteModel(model),
-                      style: TextButton.styleFrom(
-                        // 将最小尺寸设置为零
-                        minimumSize: Size.zero,
-                        // 将内边距设置为零
-                        padding: EdgeInsets.zero,
-                        // 缩小点击目标区域
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: Text('内置', style: TextStyle(color: Colors.grey)),
-                    )
-                    : IconButton(
-                      icon: const Icon(
-                        Icons.delete,
-                        color: Colors.red,
-                        size: 20,
-                      ),
-                      onPressed: () => _deleteModel(model),
-                      tooltip: '删除模型',
+            child: model.isBuiltin
+                // ? const Text('内置', style: TextStyle(color: Colors.grey))
+                ? TextButton(
+                    onPressed: () => _deleteModel(model),
+                    style: TextButton.styleFrom(
+                      // 将最小尺寸设置为零
+                      minimumSize: Size.zero,
+                      // 将内边距设置为零
+                      padding: EdgeInsets.zero,
+                      // 缩小点击目标区域
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
+                    child: Text('内置', style: TextStyle(color: Colors.grey)),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                    onPressed: () => _deleteModel(model),
+                    tooltip: '删除模型',
+                  ),
           ),
         ),
       ],
@@ -675,8 +661,8 @@ class _ModelListState extends State<ModelList> {
               Icon(
                 _sortColumnIndex == _getColumnIndex(text)
                     ? (_sortAscending
-                        ? Icons.arrow_upward
-                        : Icons.arrow_downward)
+                          ? Icons.arrow_upward
+                          : Icons.arrow_downward)
                     : Icons.unfold_more,
                 size: 16,
                 color: Colors.grey,
@@ -768,43 +754,37 @@ class _ModelListState extends State<ModelList> {
   void _showModelInfoDialog(CusLLMSpec model) {
     showDialog(
       context: context,
-      builder:
-          (context) => Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Container(
-              width: 600,
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.8,
-              ),
-              padding: EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Container(
+          width: 600,
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
+          ),
+          padding: EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        model.name ?? model.model,
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
+                  Text(
+                    model.name ?? model.model,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
-                  Divider(height: 24, thickness: 1),
-                  Expanded(child: _infoRows(model)),
+                  IconButton(
+                    icon: Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
                 ],
               ),
-            ),
+              Divider(height: 24, thickness: 1),
+              Expanded(child: _infoRows(model)),
+            ],
           ),
+        ),
+      ),
     );
   }
 

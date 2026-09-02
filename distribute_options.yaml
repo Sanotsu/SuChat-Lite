@@ -1,0 +1,44 @@
+# Fastforge 打包总配置
+# 文档: https://fastforge.dev/getting-started
+#
+# 常用命令(在项目根目录):
+#   Windows 安装包:  fastforge package --platform windows --targets exe
+#   Windows 绿色zip: fastforge package --platform windows --targets zip
+#   Linux AppImage:  fastforge package --platform linux --targets appimage (仅限 Linux 环境)
+#   一次全出(当前平台): fastforge release --name release
+#
+# 前置条件:
+#   Windows: Inno Setup(exe target 需要，已在 PATH)、7-Zip(zip target 需要 7z 在 PATH)
+#   Linux:   locate / p7zip-full / appimagetool，以及 flutter linux 构建依赖
+output: dist/
+
+releases:
+  - name: release
+    jobs:
+      # Windows 安装包(Inno Setup 封装，带安装向导/桌面快捷方式/卸载器)
+      - name: release-windows-exe
+        package:
+          platform: windows
+          target: exe
+          build_args:
+            release: true
+
+      # Windows 绿色版 zip(解压即用)
+      - name: release-windows-zip
+        package:
+          platform: windows
+          target: zip
+          build_args:
+            release: true
+
+      # Linux AppImage(免安装单文件，在 Ubuntu 24 上执行)
+      - name: release-linux-appimage
+        package:
+          platform: linux
+          target: appimage
+          build_args:
+            release: true
+
+      # Android APK 未纳入: fastforge 的 apk target 只是封装 flutter build apk，
+      # 与手动构建产物完全一致，无额外收益(签名/混淆仍在 android 配置与
+      # build_args 中控制)，保持手动 flutter build apk 更直观

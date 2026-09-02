@@ -62,10 +62,9 @@ class Note {
       color: map['color'],
       isPinned: map['is_pinned'] == 1,
       isArchived: map['is_archived'] == 1,
-      reminderTime:
-          map['reminder_time'] != null
-              ? DateTime.parse(map['reminder_time'])
-              : null,
+      reminderTime: map['reminder_time'] != null
+          ? DateTime.parse(map['reminder_time'])
+          : null,
     );
   }
 

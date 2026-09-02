@@ -3,7 +3,8 @@ import 'db_config.dart';
 class DietDiaryDdl {
   // 创建食品表
   static const tableFoodItem = '${DBInitConfig.tablePerfix}food_item';
-  static const ddlForFoodItem = """
+  static const ddlForFoodItem =
+      """
     CREATE TABLE $tableFoodItem (
       id                  INTEGER PRIMARY KEY AUTOINCREMENT,
       name                TEXT NOT NULL,
@@ -30,7 +31,8 @@ class DietDiaryDdl {
 
   // 创建餐次记录表
   static const tableMealRecord = '${DBInitConfig.tablePerfix}meal_record';
-  static const ddlForMealRecord = """
+  static const ddlForMealRecord =
+      """
     CREATE TABLE $tableMealRecord (
       id                  INTEGER PRIMARY KEY AUTOINCREMENT,
       date                TEXT NOT NULL,
@@ -45,7 +47,8 @@ class DietDiaryDdl {
   // 创建餐次食品记录表
   static const tableMealFoodRecord =
       '${DBInitConfig.tablePerfix}meal_food_record';
-  static const ddlForMealFoodRecord = """
+  static const ddlForMealFoodRecord =
+      """
     CREATE TABLE $tableMealFoodRecord (
       id                  INTEGER PRIMARY KEY AUTOINCREMENT,
       mealRecordId        INTEGER NOT NULL,
@@ -61,7 +64,8 @@ class DietDiaryDdl {
 
   // 创建体重记录表
   static const tableWeightRecord = '${DBInitConfig.tablePerfix}weight_record';
-  static const ddlForWeightRecord = """
+  static const ddlForWeightRecord =
+      """
     CREATE TABLE $tableWeightRecord (
       id                  INTEGER PRIMARY KEY AUTOINCREMENT,
       userId              TEXT NOT NULL,
@@ -76,7 +80,8 @@ class DietDiaryDdl {
 
   // 创建饮食分析表
   static const tableDietAnalysis = '${DBInitConfig.tablePerfix}diet_analysis';
-  static const ddlForDietAnalysis = """
+  static const ddlForDietAnalysis =
+      """
     CREATE TABLE $tableDietAnalysis (
       id                  INTEGER PRIMARY KEY AUTOINCREMENT,
       date                TEXT NOT NULL,
@@ -89,7 +94,8 @@ class DietDiaryDdl {
 
   // 创建食谱表
   static const tableDietRecipe = '${DBInitConfig.tablePerfix}diet_recipe';
-  static const ddlForDietRecipe = """
+  static const ddlForDietRecipe =
+      """
     CREATE TABLE $tableDietRecipe (
       id                  INTEGER PRIMARY KEY AUTOINCREMENT,
       date                TEXT NOT NULL,

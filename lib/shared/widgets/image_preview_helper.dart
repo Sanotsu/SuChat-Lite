@@ -7,6 +7,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 
+import '../../core/utils/screen_helper.dart';
 import '../../core/utils/simple_tools.dart';
 import '../constants/constants.dart';
 import 'simple_tool_widget.dart';
@@ -32,7 +33,8 @@ Widget buildImageViewCarouselSlider(
 }) {
   return CarouselSlider(
     options: CarouselOptions(
-      autoPlay: true, // 自动播放
+      // 桌面不自动播放(单张图自动轮播干扰阅读，桌面场景均关闭)
+      autoPlay: !ScreenHelper.isDesktop(), // 自动播放
       enlargeCenterPage: true, // 居中图片放大
       aspectRatio: aspectRatio ?? 16 / 9, // 图片宽高比
       viewportFraction: 1, // 图片占屏幕宽度的比例
@@ -75,7 +77,8 @@ Widget buildImageCarouselSlider(
 
   return CarouselSlider(
     options: CarouselOptions(
-      autoPlay: true, // 自动播放
+      // 桌面不自动播放(单张图自动轮播干扰阅读，桌面场景均关闭)
+      autoPlay: !ScreenHelper.isDesktop(), // 自动播放
       enlargeCenterPage: true, // 居中图片放大
       aspectRatio: aspectRatio ?? 16 / 9, // 图片宽高比
       viewportFraction: 1, // 图片占屏幕宽度的比例

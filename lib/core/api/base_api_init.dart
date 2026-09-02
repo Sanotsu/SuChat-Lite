@@ -60,7 +60,7 @@ class BaseApiInit {
       try {
         final cacheStorage = GetStorage("suchat_${moduleName}_cache");
         final logStorage = GetStorage("suchat_${moduleName}_request_log");
-        
+
         await cacheStorage.erase();
         await logStorage.erase();
       } catch (e) {
@@ -69,7 +69,7 @@ class BaseApiInit {
         }
       }
     }
-    
+
     _initializedModules.clear();
     if (kDebugMode) {
       print('✅ 所有API存储清理完成');

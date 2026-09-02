@@ -304,18 +304,17 @@ class TrainingViewModel extends ChangeNotifier {
       await _trainingDao.insertTrainingRecords([record]);
 
       // 保存训练记录详情
-      final detailsWithRecordId =
-          recordDetails.map((detail) {
-            return TrainingRecordDetail(
-              recordId: record.recordId,
-              detailId: detail.detailId,
-              exerciseName: detail.exerciseName,
-              completed: detail.completed,
-              actualSets: detail.actualSets,
-              actualReps: detail.actualReps,
-              notes: detail.notes,
-            );
-          }).toList();
+      final detailsWithRecordId = recordDetails.map((detail) {
+        return TrainingRecordDetail(
+          recordId: record.recordId,
+          detailId: detail.detailId,
+          exerciseName: detail.exerciseName,
+          completed: detail.completed,
+          actualSets: detail.actualSets,
+          actualReps: detail.actualReps,
+          notes: detail.notes,
+        );
+      }).toList();
 
       await _trainingDao.insertTrainingRecordDetails(detailsWithRecordId);
 
@@ -425,12 +424,9 @@ class TrainingViewModel extends ChangeNotifier {
       }
 
       // 获取当天的训练计划详情
-      final todayPlanDetails =
-          trainingDay > 0
-              ? planDetails
-                  .where((detail) => detail.day == trainingDay)
-                  .toList()
-              : planDetails;
+      final todayPlanDetails = trainingDay > 0
+          ? planDetails.where((detail) => detail.day == trainingDay).toList()
+          : planDetails;
 
       _isLoading = false;
       notifyListeners();

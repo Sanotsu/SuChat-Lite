@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:get_storage/get_storage.dart';
 
-import '../../features/branch_chat/domain/entities/message_font_color.dart';
+import '../entities/message_font_color.dart';
 import '../../shared/constants/constant_llm_enum.dart';
 import '../entities/cus_llm_model.dart';
 
@@ -107,6 +107,20 @@ class CusGetStorage {
     );
     return data != null ? Map<String, dynamic>.from(data) : null;
   }
+
+  ///
+  /// 统一聊天模块的简洁显示开关
+  /// 2026-08-31 旧版branch_chat的简洁显示仅内存态(每次进页面重置)，新版持久化
+  ///
+  static const String _unifiedChatBriefDisplayKey =
+      'unified_chat_brief_display';
+
+  Future<void> setUnifiedChatBriefDisplay(bool value) async {
+    await box.write(_unifiedChatBriefDisplayKey, value);
+  }
+
+  bool getUnifiedChatBriefDisplay() =>
+      box.read(_unifiedChatBriefDisplayKey) ?? false;
 
   ///
   /// 分支对话背景相关方法

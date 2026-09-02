@@ -132,18 +132,16 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
     }
 
     // 获取选中的肌肉群组
-    final selectedMuscleGroups =
-        _muscleGroups.entries
-            .where((entry) => entry.value)
-            .map((entry) => entry.key)
-            .toList();
+    final selectedMuscleGroups = _muscleGroups.entries
+        .where((entry) => entry.value)
+        .map((entry) => entry.key)
+        .toList();
 
     // 获取选中的训练天数
-    final selectedDays =
-        _trainingDays.entries
-            .where((entry) => entry.value)
-            .map((e) => e.key)
-            .toList();
+    final selectedDays = _trainingDays.entries
+        .where((entry) => entry.value)
+        .map((e) => e.key)
+        .toList();
 
     // 将选中的天数转换为字符串，如 "周一、周三、周五"
     final frequency = selectedDays.join('、');
@@ -242,12 +240,11 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
                           // const SizedBox(width: 12),
                           Text(
                             '创建个性化训练计划',
-                            style: Theme.of(
-                              context,
-                            ).textTheme.headlineSmall?.copyWith(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
                           ),
                         ],
                       ),
@@ -291,12 +288,9 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
                 Container(
                   height: 4,
                   decoration: BoxDecoration(
-                    color:
-                        isActive
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(
-                              context,
-                            ).colorScheme.surfaceContainerHighest,
+                    color: isActive
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -305,10 +299,9 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
                   _getStepTitle(index),
                   style: TextStyle(
                     fontSize: 12,
-                    color:
-                        isActive
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                    color: isActive
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                     fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
                   ),
                   textAlign: TextAlign.center,
@@ -562,8 +555,8 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
             hintLabel: "选择模型",
             alignment: Alignment.centerLeft,
             onChanged: (value) => setState(() => selectedModel = value!),
-            itemToString:
-                (e) => "${CP_NAME_MAP[(e as CusLLMSpec).platform]} - ${e.name}",
+            itemToString: (e) =>
+                "${CP_NAME_MAP[(e as CusLLMSpec).platform]} - ${e.name}",
           ),
         ),
 
@@ -615,10 +608,9 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
       borderRadius: BorderRadius.circular(8),
       child: Container(
         decoration: BoxDecoration(
-          color:
-              isSelected
-                  ? color.withValues(alpha: 0.2)
-                  : Theme.of(context).colorScheme.surface,
+          color: isSelected
+              ? color.withValues(alpha: 0.2)
+              : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected ? color : Theme.of(context).colorScheme.outline,
@@ -631,10 +623,9 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
           children: [
             Icon(
               isSelected && isMultiSelect ? Icons.check_circle : icon,
-              color:
-                  isSelected
-                      ? color
-                      : Theme.of(context).colorScheme.onSurfaceVariant,
+              color: isSelected
+                  ? color
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
               size: 20,
             ),
             const SizedBox(width: 8),
@@ -642,10 +633,9 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
               child: Text(
                 text,
                 style: TextStyle(
-                  color:
-                      isSelected
-                          ? color
-                          : Theme.of(context).colorScheme.onSurface,
+                  color: isSelected
+                      ? color
+                      : Theme.of(context).colorScheme.onSurface,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -736,10 +726,9 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         // crossAxisCount: crossAxisCount,
-        crossAxisCount:
-            ScreenHelper.isMobile()
-                ? 2
-                : (screenWidth < 840 ? 2 : (screenWidth > 1024 ? 5 : 4)),
+        crossAxisCount: ScreenHelper.isMobile()
+            ? 2
+            : (screenWidth < 840 ? 2 : (screenWidth > 1024 ? 5 : 4)),
         childAspectRatio: childAspectRatio,
         crossAxisSpacing: crossAxisSpacing,
         mainAxisSpacing: mainAxisSpacing,
@@ -748,8 +737,9 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
       itemBuilder: (context, index) {
         final item = items[index];
         final selected = isSelected(item);
-        final displayText =
-            itemTextBuilder != null ? itemTextBuilder(item) : item.toString();
+        final displayText = itemTextBuilder != null
+            ? itemTextBuilder(item)
+            : item.toString();
 
         return _buildSelectionButton(
           text: displayText,
@@ -789,11 +779,10 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
         .join('、');
 
     // 获取选中的训练天数
-    final selectedDays =
-        _trainingDays.entries
-            .where((entry) => entry.value)
-            .map((e) => e.key)
-            .toList();
+    final selectedDays = _trainingDays.entries
+        .where((entry) => entry.value)
+        .map((e) => e.key)
+        .toList();
 
     // 将选中的天数转换为字符串，如 "周一、周三、周五"
     final frequency = selectedDays.join('、');

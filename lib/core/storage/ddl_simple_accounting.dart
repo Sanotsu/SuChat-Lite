@@ -7,7 +7,8 @@ class SimpleAccountingDdl {
   /// 账单条目表
   static const String tableBillItem = '${DBInitConfig.tablePerfix}bill_item';
 
-  static const ddlForBillItem = """
+  static const ddlForBillItem =
+      """
     CREATE TABLE IF NOT EXISTS $tableBillItem (
       bill_item_id        INTEGER   PRIMARY KEY AUTOINCREMENT,
       category            TEXT      NOT NULL,
@@ -27,7 +28,8 @@ class SimpleAccountingDdl {
 
   // 2025-06-30 icon好像没办法直接匹配到Icons的枚举值，这里设置了也没用
   // 同理，颜色也没什么实际作用
-  static const ddlForBillCategory = """
+  static const ddlForBillCategory =
+      """
     CREATE TABLE IF NOT EXISTS $tableBillCategory (
       id                  INTEGER     PRIMARY KEY AUTOINCREMENT,
       name                TEXT        NOT NULL,

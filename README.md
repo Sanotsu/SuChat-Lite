@@ -160,8 +160,6 @@ SuChat 是一个以简洁 AI 聊天为核心，并集成多种生活娱乐工具
   - [智谱](https://open.bigmodel.cn/dev/api/normal-model/glm-4)
   - [深度求索(DeepSeek)](https://api-docs.deepseek.com/zh-cn/)
   - [火山引擎(火山方舟)](https://www.volcengine.com/docs/82379/1330310)
-  - [零一万物](https://platform.lingyiwanwu.com/docs/api-reference)
-  - [无问芯穹](https://docs.infini-ai.com/gen-studio/api/maas.html#/operations/chatCompletions)
   - [硅基流动](https://docs.siliconflow.cn/cn/api-reference/chat-completions/chat-completions)
 - 其他兼容 openAI API 结构的云平台和 HTTP API，可使用自定义模式添加
   - 此时需要模型管理中平台选择自定义后，添加其请求地址、模型代号、平台密钥
@@ -312,11 +310,9 @@ enum ApiPlatform {
   tencent, // 腾讯混元
 
   deepseek, // 深度求索
-  lingyiwanwu, // 零一万物
   zhipu, // 智谱 AI
 
   siliconCloud, // 硅基流动
-  infini, // 无问芯穹的 genStudio
 
   // 2025-03-24 火山引擎默认调用和关联应用(比如配置了联网搜索)使用的url不一样
   // 避免出现冲突，分成两个且互不包含
@@ -406,6 +402,51 @@ enum LLModelType {
 </details>
 
 ---
+
+## 打包与分发
+
+项目使用 [Fastforge](https://fastforge.dev)（原 flutter_distributor）统一打包，配置已入库：
+
+- `distribute_options.yaml` —— 打包总配置（exe / zip / appimage 三个 job）
+- `windows/packaging/exe/make_config.yaml` —— Windows Inno Setup 安装包配置
+- `linux/packaging/appimage/make_config.yaml` —— Linux AppImage 配置
+
+### 前置工具
+
+```sh
+# 通用
+dart pub global activate fastforge
+
+# Windows 额外需要（并加入 PATH）：
+#   Inno Setup 6+   —— exe 安装包（若非默认安装路径，设置环境变量 INNO_SETUP_PATH 指向安装目录）
+#   7-Zip           —— zip 绿色版（7z 需在 PATH 中）
+#   flutter build windows 的构建环境（Visual Studio 含 C++ ATL 组件）
+
+# Linux(Ubuntu 24) 额外需要：
+sudo apt install locate p7zip-full
+#   appimagetool 安装方式见 linux/packaging/appimage/make_config.yaml 注释
+#   以及 flutter build linux 的构建依赖(ninja-build libgtk-3-dev 等)
+```
+
+### 打包命令
+
+```sh
+# Windows 安装包(Inno Setup 封装，带安装向导/桌面快捷方式/卸载器)
+fastforge package --platform windows --targets exe
+
+# Windows 绿色版 zip(解压即用)
+fastforge package --platform windows --targets zip
+
+# Linux AppImage(免安装单文件，在 Linux 环境执行)
+fastforge package --platform linux --targets appimage
+
+# 产物统一输出在 dist/<版本号>/ 下；已构建过时加 --skip-clean 跳过全量重建
+```
+
+说明：
+
+- Android APK 未纳入 fastforge：其 apk target 只是 `flutter build apk` 的封装，产物完全一致，保持手动构建即可。
+- **AppImage 中文输入法**：fastforge 生成的 AppRun 默认只设置 `LD_LIBRARY_PATH`，不带 fcitx 输入法环境变量。若打包后无法切换中文输入法，改用根目录保留的 `build_appimage_script.sh`（其 AppRun 含 fcitx 环境变量配置，背景与排查见 `build_appimage_note.md`）。
 
 ## 开发环境
 

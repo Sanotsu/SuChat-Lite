@@ -6,7 +6,7 @@
 /// 定义云平台
 /// 2024-07-08 这里的AI助手，估计只需要这个付费的就好了
 ///
-/// 因为零一万物的API兼容openAI的api，后续付费的应该都是这样的，而不是之前免费的三大平台乱七八糟的
+/// 因为主流平台的API都兼容openAI的api，后续付费的应该都是这样的，而不是之前免费的三大平台乱七八糟的
 ///
 enum ApiPlatform {
   // 2025-04-11 用户使用的模型不属于预设平台(比如谷歌等)
@@ -19,11 +19,9 @@ enum ApiPlatform {
   tencent,
 
   deepseek,
-  lingyiwanwu,
   zhipu,
 
   siliconCloud,
-  infini,
 
   // 2025-03-24 火山引擎默认调用和关联应用(比如配置了联网搜索)使用的url不一样
   // 避免出现冲突，分成两个且互不包含
@@ -37,10 +35,8 @@ final Map<ApiPlatform, String> CP_NAME_MAP = {
   ApiPlatform.baidu: '百度',
   ApiPlatform.tencent: '腾讯',
   ApiPlatform.deepseek: '深度求索',
-  ApiPlatform.lingyiwanwu: '零一万物',
   ApiPlatform.zhipu: '智谱',
   ApiPlatform.siliconCloud: '硅基流动',
-  ApiPlatform.infini: '无问芯穹',
   ApiPlatform.volcengine: '火山引擎',
   ApiPlatform.volcesBot: '火山Bot',
   ApiPlatform.custom: '[自定义]',
@@ -57,11 +53,9 @@ enum ApiPlatformAKLabel {
 
   // 自平台(只有自研)
   USER_DEEPSEEK_API_KEY, // 深度求索
-  USER_LINGYIWANWU_API_KEY, // 零一万物
   USER_ZHIPU_API_KEY, // 智谱AI
   // 第三方多模型平台(只有第三方)
   USER_SILICONCLOUD_API_KEY, // 硅基流动
-  USER_INFINI_GEN_STUDIO_API_KEY, // 无问芯穹的genStudio
   USER_VOLCENGINE_API_KEY, // 火山引擎
   USER_VOLCESBOT_API_KEY, // 火山引擎的bot
   // 讯飞, 语音转写需要
@@ -76,10 +70,8 @@ final Map<ApiPlatformAKLabel, String> CP_LABLE_NAME_MAP = {
   ApiPlatformAKLabel.USER_BAIDU_API_KEY_V2: '百度 API KEY',
   ApiPlatformAKLabel.USER_TENCENT_API_KEY: '腾讯 API KEY',
   ApiPlatformAKLabel.USER_DEEPSEEK_API_KEY: '深度求索 API KEY',
-  ApiPlatformAKLabel.USER_LINGYIWANWU_API_KEY: '零一万物 API KEY',
   ApiPlatformAKLabel.USER_ZHIPU_API_KEY: '智谱 API KEY',
   ApiPlatformAKLabel.USER_SILICONCLOUD_API_KEY: '硅基流动 API KEY',
-  ApiPlatformAKLabel.USER_INFINI_GEN_STUDIO_API_KEY: '无问芯穹 API KEY',
   ApiPlatformAKLabel.USER_VOLCENGINE_API_KEY: '火山引擎 API KEY',
   ApiPlatformAKLabel.USER_VOLCESBOT_API_KEY: '火山Bot API KEY',
   ApiPlatformAKLabel.USER_XFYUN_APP_ID: '讯飞 APP ID',

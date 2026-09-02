@@ -4,9 +4,9 @@ import 'dart:async';
 import 'dart:ui';
 
 import '../../core/entities/cus_llm_model.dart';
-import '../../features/branch_chat/data/datasources/openai_compatible_apis.dart';
-import '../../features/branch_chat/data/models/chat_completion_response.dart';
-import '../../features/branch_chat/data/services/chat_service.dart';
+import './openai_compatible_apis.dart';
+import './chat_completion_response.dart';
+import './chat_service.dart';
 import '../../shared/constants/constant_llm_enum.dart';
 import '../../shared/widgets/toast_utils.dart';
 

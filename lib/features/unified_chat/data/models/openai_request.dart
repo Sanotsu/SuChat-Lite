@@ -24,7 +24,7 @@ class OpenAIChatCompletionRequest {
   final OpenAIStreamOptions? streamOptions;
 
   // 是否启用思考模式
-  // 阿里百炼、硅基流动、无问芯穹 等平台的Qwen3等模型，可以控制是否启动思考模式
+  // 阿里百炼、硅基流动 等平台的Qwen3等模型，可以控制是否启动思考模式
   // 智谱 等平台的GLM4.5 新模型，参数是thinking，值为 enabled, disabled
   @JsonKey(name: 'enable_thinking')
   final bool? enableThinking;

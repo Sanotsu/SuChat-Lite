@@ -49,8 +49,9 @@ class BillItem {
       gmtModified: map['gmt_modified'] ?? DateTime.now().toIso8601String(),
       item: map['item'],
       itemType: map['item_type'],
-      value:
-          map['value'] is int ? (map['value'] as int).toDouble() : map['value'],
+      value: map['value'] is int
+          ? (map['value'] as int).toDouble()
+          : map['value'],
       remark: map['remark'],
     );
   }

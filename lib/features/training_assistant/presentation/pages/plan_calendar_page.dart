@@ -89,31 +89,28 @@ class _PlanCalendarPageState extends State<PlanCalendarPage> {
           ),
         ),
       ),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _error != null
-              ? Center(child: Text(_error!))
-              : TrainingCalendar(
-                plan: widget.plan,
-                planDetails: widget.planDetails,
-                records: _records,
-                onDaySelected: (date) {
-                  // 可以在这里处理日期选择事件
-                },
-                onRecordTap: (record) {
-                  // 点击训练记录时导航到详情页
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (context) => TrainingRecordDetailPage(
-                            recordId: record.recordId,
-                          ),
-                    ),
-                  );
-                },
-              ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+          ? Center(child: Text(_error!))
+          : TrainingCalendar(
+              plan: widget.plan,
+              planDetails: widget.planDetails,
+              records: _records,
+              onDaySelected: (date) {
+                // 可以在这里处理日期选择事件
+              },
+              onRecordTap: (record) {
+                // 点击训练记录时导航到详情页
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        TrainingRecordDetailPage(recordId: record.recordId),
+                  ),
+                );
+              },
+            ),
     );
   }
 }

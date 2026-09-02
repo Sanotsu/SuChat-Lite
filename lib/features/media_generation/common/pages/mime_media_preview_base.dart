@@ -37,21 +37,20 @@ abstract class MimeMediaPreviewBase extends StatelessWidget {
   Future<void> _deleteMedia(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('确认删除'),
-            content: const Text('确定要删除这个文件吗？'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('删除'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('确认删除'),
+        content: const Text('确定要删除这个文件吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
     );
 
     if (confirmed != true) return;
@@ -103,47 +102,42 @@ abstract class MimeMediaPreviewBase extends StatelessWidget {
 void showFileSimpleInfoDialog(File asset, BuildContext context) {
   showDialog<void>(
     context: context,
-    builder:
-        (BuildContext context) => AlertDialog(
-          title: const Text('详情'),
-          content: SizedBox(
-            width: double.maxFinite, // 添加宽度约束
-            height: 250, // 明确高度
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min, // 使用Column替代ListView
-                children: <Widget>[
-                  _buildListTile(
-                    "文件名称",
-                    asset.path.split('/').last,
-                    maxLines: 2,
-                  ),
-                  _buildListTile("文件类型", lookupMimeType(asset.path) ?? '未知'),
-                  _buildListTile("文件大小", formatFileSize(asset.lengthSync())),
-                  _buildListTile(
-                    "文件路径",
-                    asset.path.replaceAll("/storage/emulated/0", "内部存储"),
-                    maxLines: 4,
-                  ),
-                  _buildListTile(
-                    "最后修改时间",
-                    asset.lastModifiedSync().toString().substring(0, 19),
-                  ),
-                  _buildListTile(
-                    "最后访问时间",
-                    asset.lastAccessedSync().toString().substring(0, 19),
-                  ),
-                ],
+    builder: (BuildContext context) => AlertDialog(
+      title: const Text('详情'),
+      content: SizedBox(
+        width: double.maxFinite, // 添加宽度约束
+        height: 250, // 明确高度
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // 使用Column替代ListView
+            children: <Widget>[
+              _buildListTile("文件名称", asset.path.split('/').last, maxLines: 2),
+              _buildListTile("文件类型", lookupMimeType(asset.path) ?? '未知'),
+              _buildListTile("文件大小", formatFileSize(asset.lengthSync())),
+              _buildListTile(
+                "文件路径",
+                asset.path.replaceAll("/storage/emulated/0", "内部存储"),
+                maxLines: 4,
               ),
-            ),
+              _buildListTile(
+                "最后修改时间",
+                asset.lastModifiedSync().toString().substring(0, 19),
+              ),
+              _buildListTile(
+                "最后访问时间",
+                asset.lastAccessedSync().toString().substring(0, 19),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('确定'),
-            ),
-          ],
         ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('确定'),
+        ),
+      ],
+    ),
   );
 }
 

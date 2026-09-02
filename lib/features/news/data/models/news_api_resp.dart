@@ -100,10 +100,7 @@ class NewsApiSource {
   @JsonKey(name: 'name')
   String? name;
 
-  NewsApiSource({
-    this.id,
-    this.name,
-  });
+  NewsApiSource({this.id, this.name});
 
   factory NewsApiSource.fromRawJson(String str) =>
       NewsApiSource.fromJson(json.decode(str));

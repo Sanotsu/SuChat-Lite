@@ -4,7 +4,8 @@ import 'dart:convert';
 /// 统一AI聊天安全存储工具类
 class UnifiedSecureStorage {
   static const _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    // v10+ Android 已默认使用加密实现，EncryptedSharedPreferences 选项已移除
+    aOptions: AndroidOptions(),
     iOptions: IOSOptions(),
     lOptions: LinuxOptions(),
     wOptions: WindowsOptions(),

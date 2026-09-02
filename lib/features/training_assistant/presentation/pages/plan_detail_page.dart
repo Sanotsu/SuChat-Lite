@@ -67,10 +67,9 @@ class PlanDetailPage extends StatelessWidget {
             final currentWeekday = day ?? DateTime.now().weekday;
 
             // 检查当天是否有训练内容
-            final todayDetails =
-                viewModel.planDetails
-                    .where((detail) => detail.day == currentWeekday)
-                    .toList();
+            final todayDetails = viewModel.planDetails
+                .where((detail) => detail.day == currentWeekday)
+                .toList();
 
             if (todayDetails.isEmpty) {
               // 如果当天没有训练内容，显示提示
@@ -82,12 +81,11 @@ class PlanDetailPage extends StatelessWidget {
             final result = await Navigator.push(
               context,
               MaterialPageRoute(
-                builder:
-                    (context) => WorkoutSessionPage(
-                      plan: plan,
-                      details: viewModel.planDetails,
-                      day: currentWeekday,
-                    ),
+                builder: (context) => WorkoutSessionPage(
+                  plan: plan,
+                  details: viewModel.planDetails,
+                  day: currentWeekday,
+                ),
               ),
             );
 
@@ -108,9 +106,9 @@ class PlanDetailPage extends StatelessWidget {
         // 根据是否显示AppBar返回不同的布局
         return showAppBar
             ? Scaffold(
-              appBar: AppBar(title: Text(viewModel.selectedPlan!.planName)),
-              body: content,
-            )
+                appBar: AppBar(title: Text(viewModel.selectedPlan!.planName)),
+                body: content,
+              )
             : content;
       },
     );

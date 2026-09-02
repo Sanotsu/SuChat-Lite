@@ -63,6 +63,10 @@ class UnifiedConversation {
   @JsonKey(name: 'is_archived')
   final bool isArchived;
 
+  /// 当前查看的分支路径(消息branch_path)；null表示默认显示最新链
+  @JsonKey(name: 'current_branch_path')
+  final String? currentBranchPath;
+
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
 
@@ -89,6 +93,7 @@ class UnifiedConversation {
     this.totalCost = 0.0,
     this.isPinned = false,
     this.isArchived = false,
+    this.currentBranchPath,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -121,6 +126,7 @@ class UnifiedConversation {
       totalCost: (map['total_cost'] as num?)?.toDouble() ?? 0.0,
       isPinned: (map['is_pinned'] as int? ?? 0) == 1,
       isArchived: (map['is_archived'] as int? ?? 0) == 1,
+      currentBranchPath: map['current_branch_path'] as String?,
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(map['updated_at'] as int),
     );
@@ -147,6 +153,7 @@ class UnifiedConversation {
       'total_cost': totalCost,
       'is_pinned': isPinned ? 1 : 0,
       'is_archived': isArchived ? 1 : 0,
+      'current_branch_path': currentBranchPath,
       'created_at': createdAt.millisecondsSinceEpoch,
       'updated_at': updatedAt.millisecondsSinceEpoch,
     };
@@ -172,6 +179,7 @@ class UnifiedConversation {
     double? totalCost,
     bool? isPinned,
     bool? isArchived,
+    String? currentBranchPath,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -195,6 +203,7 @@ class UnifiedConversation {
       totalCost: totalCost ?? this.totalCost,
       isPinned: isPinned ?? this.isPinned,
       isArchived: isArchived ?? this.isArchived,
+      currentBranchPath: currentBranchPath ?? this.currentBranchPath,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

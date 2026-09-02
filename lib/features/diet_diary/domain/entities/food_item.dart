@@ -65,8 +65,7 @@ class FoodItem {
       'vitaminAPer100g': vitaminAPer100g,
       'vitaminCPer100g': vitaminCPer100g,
       'vitaminEPer100g': vitaminEPer100g,
-      'otherParams':
-          otherParams.isNotEmpty ? _encodeOtherParams() : null,
+      'otherParams': otherParams.isNotEmpty ? _encodeOtherParams() : null,
       'isFavorite': isFavorite ? 1 : 0,
       'gmtCreate': gmtCreate.toIso8601String(),
       'gmtModified': gmtModified.toIso8601String(),
@@ -77,8 +76,8 @@ class FoodItem {
   String _encodeOtherParams() {
     return otherParams.isNotEmpty
         ? otherParams
-            .map((key, value) => MapEntry(key, value.toString()))
-            .toString()
+              .map((key, value) => MapEntry(key, value.toString()))
+              .toString()
         : '{}';
   }
 
@@ -128,19 +127,16 @@ class FoodItem {
       vitaminAPer100g: map['vitaminAPer100g'],
       vitaminCPer100g: map['vitaminCPer100g'],
       vitaminEPer100g: map['vitaminEPer100g'],
-      otherParams:
-          map['otherParams'] != null
-              ? _decodeOtherParams(map['otherParams'])
-              : {},
+      otherParams: map['otherParams'] != null
+          ? _decodeOtherParams(map['otherParams'])
+          : {},
       isFavorite: map['isFavorite'] == 1,
-      gmtCreate:
-          map['gmtCreate'] != null
-              ? DateTime.parse(map['gmtCreate'])
-              : DateTime.now(),
-      gmtModified:
-          map['gmtModified'] != null
-              ? DateTime.parse(map['gmtModified'])
-              : DateTime.now(),
+      gmtCreate: map['gmtCreate'] != null
+          ? DateTime.parse(map['gmtCreate'])
+          : DateTime.now(),
+      gmtModified: map['gmtModified'] != null
+          ? DateTime.parse(map['gmtModified'])
+          : DateTime.now(),
     );
   }
 

@@ -5,7 +5,7 @@ import '../../../../core/network/dio_client/cus_http_client.dart';
 import '../../../../core/network/dio_client/cus_http_request.dart';
 import '../../../../shared/constants/constant_llm_enum.dart';
 import '../../../../shared/constants/constants.dart';
-import '../../../branch_chat/data/services/chat_service.dart';
+import '../../../../shared/services/chat_service.dart';
 import '../../domain/entities/training_plan.dart';
 import '../../domain/entities/training_plan_detail.dart';
 
@@ -340,10 +340,9 @@ class TrainingAssistantService {
             final daySchedule = schedule[i];
 
             // 确定对应的训练日
-            final int mappedDay =
-                i < selectedDaysLength
-                    ? selectedDays[i] // 使用用户选择的训练日
-                    : (i % 7) + 1; // 如果超出选择的训练日数量，则循环使用1-7
+            final int mappedDay = i < selectedDaysLength
+                ? selectedDays[i] // 使用用户选择的训练日
+                : (i % 7) + 1; // 如果超出选择的训练日数量，则循环使用1-7
 
             if (daySchedule['exercises'] != null) {
               for (var exercise in daySchedule['exercises']) {
@@ -357,12 +356,11 @@ class TrainingAssistantService {
                     reps: exercise['reps'] ?? '8-12',
                     countdown: exercise['countdown'] ?? 60,
                     restTime: exercise['restTime'] ?? 30,
-                    instructions:
-                        exercise['instructions'] is List
-                            ? (exercise['instructions'] as List)
-                                .map((e) => e.toString())
-                                .join('\n\n')
-                            : exercise['instructions']?.toString() ?? '',
+                    instructions: exercise['instructions'] is List
+                        ? (exercise['instructions'] as List)
+                              .map((e) => e.toString())
+                              .join('\n\n')
+                        : exercise['instructions']?.toString() ?? '',
                   ),
                 );
               }

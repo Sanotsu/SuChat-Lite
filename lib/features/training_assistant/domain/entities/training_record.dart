@@ -35,8 +35,9 @@ class TrainingRecord {
       caloriesBurned: map['caloriesBurned'],
       completionRate: map['completionRate'],
       feedback: map['feedback'],
-      gmtCreate:
-          map['gmtCreate'] != null ? DateTime.parse(map['gmtCreate']) : null,
+      gmtCreate: map['gmtCreate'] != null
+          ? DateTime.parse(map['gmtCreate'])
+          : null,
     );
   }
 

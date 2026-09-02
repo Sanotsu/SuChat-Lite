@@ -70,8 +70,9 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
 
       setState(() {
         _modelList = availableModels;
-        _selectedModel =
-            availableModels.isNotEmpty ? availableModels.first : null;
+        _selectedModel = availableModels.isNotEmpty
+            ? availableModels.first
+            : null;
       });
     } catch (e) {
       if (mounted) {
@@ -148,11 +149,10 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
 
     try {
       // 准备餐次ID和类型的映射
-      final mealRecordIds =
-          viewModel.mealRecords
-              .where((meal) => meal.id != null)
-              .map((meal) => meal.id!)
-              .toList();
+      final mealRecordIds = viewModel.mealRecords
+          .where((meal) => meal.id != null)
+          .map((meal) => meal.id!)
+          .toList();
 
       final mealTypes = {
         for (var meal in viewModel.mealRecords)
@@ -253,9 +253,8 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder:
-                      (context) =>
-                          DietRecipePage(analysisId: _displayedAnalysis?.id),
+                  builder: (context) =>
+                      DietRecipePage(analysisId: _displayedAnalysis?.id),
                 ),
               );
             },
@@ -418,12 +417,11 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
                           vertical: 8.0,
                         ),
                         decoration: BoxDecoration(
-                          color:
-                              isSelected
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(
-                                    context,
-                                  ).colorScheme.surfaceContainerHighest,
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Column(
@@ -443,8 +441,9 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
                               analysis.modelName,
                               style: TextStyle(
                                 fontSize: 12,
-                                color:
-                                    isSelected ? Colors.white70 : Colors.grey,
+                                color: isSelected
+                                    ? Colors.white70
+                                    : Colors.grey,
                               ),
                             ),
                           ],
@@ -624,9 +623,8 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
               hintLabel: "选择大模型",
               alignment: Alignment.centerLeft,
               onChanged: (value) => setState(() => _selectedModel = value!),
-              itemToString:
-                  (e) =>
-                      "${CP_NAME_MAP[(e as CusLLMSpec).platform]} - ${e.name}",
+              itemToString: (e) =>
+                  "${CP_NAME_MAP[(e as CusLLMSpec).platform]} - ${e.name}",
             ),
           ],
         ),
@@ -653,11 +651,10 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
     }
 
     // 准备餐次ID和类型的映射
-    final mealRecordIds =
-        viewModel.mealRecords
-            .where((meal) => meal.id != null)
-            .map((meal) => meal.id!)
-            .toList();
+    final mealRecordIds = viewModel.mealRecords
+        .where((meal) => meal.id != null)
+        .map((meal) => meal.id!)
+        .toList();
 
     final mealTypes = {
       for (var meal in viewModel.mealRecords)
@@ -712,21 +709,21 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
   Widget analysisButton() {
     return ElevatedButton.icon(
       onPressed: _isAnalyzing ? _cancelAnalysisProcess : _analyzeDiet,
-      icon:
-          _isAnalyzing
-              ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-              : const Icon(Icons.analytics),
+      icon: _isAnalyzing
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : const Icon(Icons.analytics),
       label: Text(_isAnalyzing ? '取消分析' : '分析饮食'),
       style: ElevatedButton.styleFrom(
-        backgroundColor:
-            _isAnalyzing ? Colors.red : Theme.of(context).colorScheme.primary,
+        backgroundColor: _isAnalyzing
+            ? Colors.red
+            : Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 8),
       ),
@@ -789,10 +786,9 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder:
-                              (context) => DietRecipePage(
-                                analysisId: _displayedAnalysis!.id,
-                              ),
+                          builder: (context) => DietRecipePage(
+                            analysisId: _displayedAnalysis!.id,
+                          ),
                         ),
                       );
                     },

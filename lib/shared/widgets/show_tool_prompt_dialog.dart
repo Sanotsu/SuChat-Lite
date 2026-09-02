@@ -90,37 +90,37 @@ Future<PromptDialogResult?> showToolPromptDialog({
 
           return ScreenHelper.isMobile()
               ? _buildMobilePromptDialog(
-                context,
-                promptController,
-                isEditMode,
-                toggleEditMode,
-                copyToClipboard,
-                onConfirm,
-                previewTitle: previewTitle,
-                editTitle: editTitle,
-                confirmButtonText: confirmButtonText,
-                cancelButtonText: cancelButtonText,
-                editButtonTooltip: editButtonTooltip,
-                previewButtonTooltip: previewButtonTooltip,
-                copyTooltip: copyTooltip,
-              )
+                  context,
+                  promptController,
+                  isEditMode,
+                  toggleEditMode,
+                  copyToClipboard,
+                  onConfirm,
+                  previewTitle: previewTitle,
+                  editTitle: editTitle,
+                  confirmButtonText: confirmButtonText,
+                  cancelButtonText: cancelButtonText,
+                  editButtonTooltip: editButtonTooltip,
+                  previewButtonTooltip: previewButtonTooltip,
+                  copyTooltip: copyTooltip,
+                )
               : _buildDesktopPromptDialog(
-                context,
-                promptController,
-                isEditMode,
-                toggleEditMode,
-                copyToClipboard,
-                onConfirm,
-                previewTitle: previewTitle,
-                editTitle: editTitle,
-                confirmButtonText: confirmButtonText,
-                cancelButtonText: cancelButtonText,
-                editButtonTooltip: editButtonTooltip,
-                previewButtonTooltip: previewButtonTooltip,
-                copyTooltip: copyTooltip,
-                previewHint: previewHint,
-                editHint: editHint,
-              );
+                  context,
+                  promptController,
+                  isEditMode,
+                  toggleEditMode,
+                  copyToClipboard,
+                  onConfirm,
+                  previewTitle: previewTitle,
+                  editTitle: editTitle,
+                  confirmButtonText: confirmButtonText,
+                  cancelButtonText: cancelButtonText,
+                  editButtonTooltip: editButtonTooltip,
+                  previewButtonTooltip: previewButtonTooltip,
+                  copyTooltip: copyTooltip,
+                  previewHint: previewHint,
+                  editHint: editHint,
+                );
         },
       );
     },
@@ -171,25 +171,24 @@ Widget _buildMobilePromptDialog(
         child: Column(
           children: [
             Expanded(
-              child:
-                  isEditMode
-                      ? TextField(
-                        controller: promptController,
-                        maxLines: null,
-                        expands: true,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          hintText: '请输入自定义提示词...',
-                        ),
-                      )
-                      : RepaintBoundary(
-                        child: SingleChildScrollView(
-                          child: CusMarkdownRenderer.instance.render(
-                            promptController.text,
-                            textStyle: TextStyle(fontSize: 14),
-                          ),
+              child: isEditMode
+                  ? TextField(
+                      controller: promptController,
+                      maxLines: null,
+                      expands: true,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: '请输入自定义提示词...',
+                      ),
+                    )
+                  : RepaintBoundary(
+                      child: SingleChildScrollView(
+                        child: CusMarkdownRenderer.instance.render(
+                          promptController.text,
+                          textStyle: TextStyle(fontSize: 14),
                         ),
                       ),
+                    ),
             ),
             const SizedBox(height: 16),
             Row(
@@ -274,25 +273,24 @@ Widget _buildDesktopPromptDialog(
           ),
           const SizedBox(height: 16),
           Expanded(
-            child:
-                isEditMode
-                    ? TextField(
-                      controller: promptController,
-                      maxLines: null,
-                      expands: true,
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        hintText: '请输入自定义提示词...',
-                      ),
-                    )
-                    : RepaintBoundary(
-                      child: SingleChildScrollView(
-                        child: CusMarkdownRenderer.instance.render(
-                          promptController.text,
-                          textStyle: TextStyle(fontSize: 14),
-                        ),
+            child: isEditMode
+                ? TextField(
+                    controller: promptController,
+                    maxLines: null,
+                    expands: true,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: '请输入自定义提示词...',
+                    ),
+                  )
+                : RepaintBoundary(
+                    child: SingleChildScrollView(
+                      child: CusMarkdownRenderer.instance.render(
+                        promptController.text,
+                        textStyle: TextStyle(fontSize: 14),
                       ),
                     ),
+                  ),
           ),
         ],
       ),

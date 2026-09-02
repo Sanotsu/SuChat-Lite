@@ -206,10 +206,9 @@ class TrainingStatistics extends StatelessWidget {
                     ),
                     backgroundColor: _getCompletionColor(record.completionRate),
                     labelStyle: TextStyle(
-                      color:
-                          record.completionRate > 0.5
-                              ? Colors.white
-                              : Theme.of(context).colorScheme.onSurface,
+                      color: record.completionRate > 0.5
+                          ? Colors.white
+                          : Theme.of(context).colorScheme.onSurface,
                     ),
                     padding: EdgeInsets.zero,
                   ),
@@ -318,8 +317,9 @@ class TrainingStatistics extends StatelessWidget {
       }
     }
 
-    double avgCompletionRate =
-        totalSessions > 0 ? totalCompletionRate / totalSessions : 0.0;
+    double avgCompletionRate = totalSessions > 0
+        ? totalCompletionRate / totalSessions
+        : 0.0;
 
     return {
       'totalSessions': totalSessions,

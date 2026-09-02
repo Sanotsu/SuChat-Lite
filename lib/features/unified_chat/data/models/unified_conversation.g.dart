@@ -28,6 +28,7 @@ UnifiedConversation _$UnifiedConversationFromJson(Map<String, dynamic> json) =>
       totalCost: (json['total_cost'] as num?)?.toDouble() ?? 0.0,
       isPinned: json['is_pinned'] as bool? ?? false,
       isArchived: json['is_archived'] as bool? ?? false,
+      currentBranchPath: json['current_branch_path'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -54,6 +55,7 @@ Map<String, dynamic> _$UnifiedConversationToJson(
   'total_cost': instance.totalCost,
   'is_pinned': instance.isPinned,
   'is_archived': instance.isArchived,
+  'current_branch_path': instance.currentBranchPath,
   'created_at': instance.createdAt.toIso8601String(),
   'updated_at': instance.updatedAt.toIso8601String(),
 };

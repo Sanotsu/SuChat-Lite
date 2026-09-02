@@ -74,8 +74,9 @@ class _ExerciseTimerCardState extends State<ExerciseTimerCard> {
 
   void _initializeTimer() {
     // 如果是休息状态，使用休息时间；否则使用默认的锻炼时间
-    _countdown =
-        widget.isResting ? widget.exercise.restTime : widget.exercise.countdown;
+    _countdown = widget.isResting
+        ? widget.exercise.restTime
+        : widget.exercise.countdown;
     _isPaused = false;
 
     _startTimer();
@@ -270,19 +271,16 @@ class _ExerciseTimerCardState extends State<ExerciseTimerCard> {
                           onPressed: () {
                             showDialog(
                               context: context,
-                              builder:
-                                  (context) => AlertDialog(
-                                    title: const Text('动作说明'),
-                                    content: Text(
-                                      widget.exercise.instructions!,
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context),
-                                        child: const Text('关闭'),
-                                      ),
-                                    ],
+                              builder: (context) => AlertDialog(
+                                title: const Text('动作说明'),
+                                content: Text(widget.exercise.instructions!),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('关闭'),
                                   ),
+                                ],
+                              ),
                             );
                           },
                         ),
@@ -294,10 +292,9 @@ class _ExerciseTimerCardState extends State<ExerciseTimerCard> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color:
-                          widget.isResting
-                              ? Colors.green.withValues(alpha: 0.2)
-                              : Colors.blue.withValues(alpha: 0.2),
+                      color: widget.isResting
+                          ? Colors.green.withValues(alpha: 0.2)
+                          : Colors.blue.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -361,10 +358,9 @@ class _ExerciseTimerCardState extends State<ExerciseTimerCard> {
                     style: TextStyle(
                       fontSize: 48,
                       fontWeight: FontWeight.bold,
-                      color:
-                          _countdown < 5
-                              ? Colors.red
-                              : Theme.of(context).primaryColor,
+                      color: _countdown < 5
+                          ? Colors.red
+                          : Theme.of(context).primaryColor,
                     ),
                   ),
                 ],

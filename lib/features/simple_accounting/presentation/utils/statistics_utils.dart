@@ -26,8 +26,9 @@ class StatisticsUtils {
     double height,
   ) {
     // 根据选择的类型获取分类数据
-    final Map<String, double> categoryData =
-        selectedType == 0 ? stats.incomeByCategory : stats.expenseByCategory;
+    final Map<String, double> categoryData = selectedType == 0
+        ? stats.incomeByCategory
+        : stats.expenseByCategory;
 
     if (categoryData.isEmpty) {
       return SizedBox(
@@ -40,25 +41,24 @@ class StatisticsUtils {
     final total = selectedType == 0 ? stats.totalIncome : stats.totalExpense;
 
     // 构建饼图数据
-    final List<PieChartData> pieData =
-        categoryData.entries.map((entry) {
-          final percentage = total > 0 ? (entry.value / total) * 100 : 0;
+    final List<PieChartData> pieData = categoryData.entries.map((entry) {
+      final percentage = total > 0 ? (entry.value / total) * 100 : 0;
 
-          // 生成随机颜色（实际应用中可以使用预定义的颜色列表）
-          final color = Color.fromARGB(
-            255,
-            100 + (entry.key.hashCode % 155),
-            100 + ((entry.key.hashCode * 2) % 155),
-            100 + ((entry.key.hashCode * 3) % 155),
-          );
+      // 生成随机颜色（实际应用中可以使用预定义的颜色列表）
+      final color = Color.fromARGB(
+        255,
+        100 + (entry.key.hashCode % 155),
+        100 + ((entry.key.hashCode * 2) % 155),
+        100 + ((entry.key.hashCode * 3) % 155),
+      );
 
-          return PieChartData(
-            category: entry.key,
-            value: entry.value,
-            percentage: percentage.toDouble(),
-            color: color,
-          );
-        }).toList();
+      return PieChartData(
+        category: entry.key,
+        value: entry.value,
+        percentage: percentage.toDouble(),
+        color: color,
+      );
+    }).toList();
 
     // 按金额排序
     pieData.sort((a, b) => b.value.compareTo(a.value));
@@ -122,85 +122,84 @@ class StatisticsUtils {
   ) {
     showDialog(
       context: context,
-      builder:
-          (context) => Center(
-            // 使用Center包裹使弹窗居中
-            child: Container(
-              // 设置宽度为屏幕宽度的80%
-              width:
-                  MediaQuery.of(context).size.width *
-                  (ScreenHelper.isDesktop() ? 0.5 : 0.9),
-              height: MediaQuery.of(context).size.height * 0.5,
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(12), // 圆角
-              ),
-              child: FutureBuilder<List<BillRankingItem>>(
-                future: StatisticsUtils.getRankingData(
-                  viewModel: viewModel,
-                  startDate: date,
-                  endDate: date,
-                  maxItems: 0,
-                ),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(child: Text('暂无排行数据'));
-                  }
-
-                  return Column(
-                    mainAxisSize: MainAxisSize.min, // 使Column尽可能小
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Text(
-                          '${DateFormat(formatToYMDzh).format(date)}账单列表',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ),
-                      Expanded(
-                        // 使用Expanded使列表可滚动
-                        child: SingleChildScrollView(
-                          // 添加滚动
-                          child: Material(
-                            child: BillRankingWidget(
-                              items: snapshot.data!,
-                              maxItems: 10,
-                              showTitle: false,
-                              showBorder: false,
-                              // 因为弹窗包含了整个账单列表，所以要显示+/-符号
-                              showSymbol: true,
-                              // onItemTap: (item) {
-                              //   if (item.id != null) {
-                              //     StatisticsUtils.navigateToBillDetail(
-                              //       context,
-                              //       item.id!,
-                              //     );
-                              //   }
-                              // },
-                            ),
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: TextButton(
-                          child: const Text('确定'),
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
+      builder: (context) => Center(
+        // 使用Center包裹使弹窗居中
+        child: Container(
+          // 设置宽度为屏幕宽度的80%
+          width:
+              MediaQuery.of(context).size.width *
+              (ScreenHelper.isDesktop() ? 0.5 : 0.9),
+          height: MediaQuery.of(context).size.height * 0.5,
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(12), // 圆角
           ),
+          child: FutureBuilder<List<BillRankingItem>>(
+            future: StatisticsUtils.getRankingData(
+              viewModel: viewModel,
+              startDate: date,
+              endDate: date,
+              maxItems: 0,
+            ),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Center(child: Text('暂无排行数据'));
+              }
+
+              return Column(
+                mainAxisSize: MainAxisSize.min, // 使Column尽可能小
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      '${DateFormat(formatToYMDzh).format(date)}账单列表',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  Expanded(
+                    // 使用Expanded使列表可滚动
+                    child: SingleChildScrollView(
+                      // 添加滚动
+                      child: Material(
+                        child: BillRankingWidget(
+                          items: snapshot.data!,
+                          maxItems: 10,
+                          showTitle: false,
+                          showBorder: false,
+                          // 因为弹窗包含了整个账单列表，所以要显示+/-符号
+                          showSymbol: true,
+                          // onItemTap: (item) {
+                          //   if (item.id != null) {
+                          //     StatisticsUtils.navigateToBillDetail(
+                          //       context,
+                          //       item.id!,
+                          //     );
+                          //   }
+                          // },
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: TextButton(
+                      child: const Text('确定'),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
     );
   }
 

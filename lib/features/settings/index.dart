@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/services/upgrade_migrator.dart';
+import '../../core/utils/screen_helper.dart';
 import '../../core/utils/simple_tools.dart';
 import '../../core/viewmodels/user_info_viewmodel.dart';
 import '../../shared/widgets/toast_utils.dart';
@@ -64,17 +66,22 @@ class _UserAndSettingsState extends State<UserAndSettings> {
                 icon: Icons.backup_outlined,
                 title: "备份恢复",
                 description: "导出或恢复您的聊天数据",
-                onTap:
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder:
-                            (context) => BackupAndRestorePage(
-                              packageVersion: _packageInfo.version,
-                            ),
-                      ),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => BackupAndRestorePage(
+                      packageVersion: _packageInfo.version,
                     ),
+                  ),
+                ),
                 accentColor: Colors.blue,
+              ),
+              CusSettingCard(
+                icon: Icons.move_up,
+                title: "旧版数据迁移",
+                description: "从 0.1.4 旧版迁移数据到当前版本",
+                onTap: () => _showLegacyMigrationSheet(context),
+                accentColor: Colors.teal,
               ),
               const SizedBox(height: 24),
               _buildSectionTitle('支持', theme),
@@ -124,61 +131,159 @@ class _UserAndSettingsState extends State<UserAndSettings> {
     );
   }
 
+  /// 旧版数据迁移入口(0.1.5)：
+  /// - 0.1.4 → 0.1.5 的库/媒体/配置由升级迁移器自动完成，此处可手动重跑
+  /// - 旧聊天对话/角色只能经 0.1.4 全量备份 zip 中转导入
+  /// 桌面端用居中弹窗(与其他弹窗风格一致)，移动端保持底部弹窗
+  void _showLegacyMigrationSheet(BuildContext context) {
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(0, 0, 0, 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '升级到 0.1.5 时，旧版本的数据库、媒体与配置会自动迁移。\n'
+              '旧版聊天对话与角色需通过旧版本的"全量备份"zip 导入。',
+            ),
+          ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.refresh, color: Colors.teal),
+          title: const Text('重新扫描本机旧版数据'),
+          subtitle: const Text('手动执行一次 0.1.4 数据自动迁移'),
+          onTap: () async {
+            Navigator.pop(context);
+            // withLoading 保证结束(含异常)必关遮罩；
+            // 之前直接 showLoading 不持有 CancelFunc，遮罩永不关闭锁死界面
+            try {
+              final result = await ToastUtils.withLoading(
+                () => UpgradeMigrator.runIfNeeded(force: true),
+                '正在扫描迁移旧版数据...',
+              );
+              ToastUtils.showSuccess(
+                result.migrated ? '旧版数据迁移完成' : '未发现可迁移的旧版数据',
+              );
+            } catch (e) {
+              ToastUtils.showError('旧版数据迁移失败: $e');
+            }
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.restore, color: Colors.blue),
+          title: const Text('从备份包导入旧聊天'),
+          subtitle: const Text('选择 0.1.4 导出的全量备份 zip 恢复'),
+          onTap: () {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    BackupAndRestorePage(packageVersion: _packageInfo.version),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+
+    if (ScreenHelper.isDesktop()) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('旧版数据迁移'),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: content,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('关闭'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '旧版数据迁移',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+              child: content,
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showAboutDialog() {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('关于 SuChat'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 16),
-                Text(
-                  _packageInfo.appName,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  '版本: ${_packageInfo.version} (${_packageInfo.buildNumber})',
-                ),
-                const SizedBox(height: 16),
-                _buildLinkButton(
-                  icon: Icons.code,
-                  label: "GitHub 项目",
-                  url: "https://github.com/Sanotsu/SuChat-Lite",
-                ),
-
-                // _buildLinkButton(
-                //   icon: Icons.contact_support,
-                //   label: "联系开发者",
-                //   url: "callmedavidsu@gmail.com",
-                // ),
-                TextButton.icon(
-                  icon: Icon(Icons.contact_support, size: 18),
-                  label: Text('联系开发者'),
-                  onPressed: () {
-                    Clipboard.setData(
-                      ClipboardData(text: 'callmedavidsu@gmail.com'),
-                    );
-                    ToastUtils.showSuccess(
-                      '已复制开发者邮箱地址',
-                      align: Alignment.center,
-                    );
-                  },
-                  style: TextButton.styleFrom(
-                    alignment: Alignment.centerLeft,
-                    minimumSize: const Size(double.infinity, 36),
-                  ),
-                ),
-              ],
+      builder: (context) => AlertDialog(
+        title: const Text('关于 SuChat'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 16),
+            Text(
+              _packageInfo.appName,
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('关闭'),
+            Text('版本: ${_packageInfo.version} (${_packageInfo.buildNumber})'),
+            const SizedBox(height: 16),
+            _buildLinkButton(
+              icon: Icons.code,
+              label: "GitHub 项目",
+              url: "https://github.com/Sanotsu/SuChat-Lite",
+            ),
+            // _buildLinkButton(
+            //   icon: Icons.contact_support,
+            //   label: "联系开发者",
+            //   url: "callmedavidsu@gmail.com",
+            // ),
+            TextButton.icon(
+              icon: Icon(Icons.contact_support, size: 18),
+              label: Text('联系开发者'),
+              onPressed: () {
+                Clipboard.setData(
+                  ClipboardData(text: 'callmedavidsu@gmail.com'),
+                );
+                ToastUtils.showSuccess('已复制开发者邮箱地址', align: Alignment.center);
+              },
+              style: TextButton.styleFrom(
+                alignment: Alignment.centerLeft,
+                minimumSize: const Size(double.infinity, 36),
               ),
-            ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('关闭'),
           ),
+        ],
+      ),
     );
   }
 
@@ -210,11 +315,10 @@ class _UserAndSettingsState extends State<UserAndSettings> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder:
-                        (context) => ChangeNotifierProvider.value(
-                          value: viewModel,
-                          child: const UserInfoPage(),
-                        ),
+                    builder: (context) => ChangeNotifierProvider.value(
+                      value: viewModel,
+                      child: const UserInfoPage(),
+                    ),
                   ),
                 );
               },

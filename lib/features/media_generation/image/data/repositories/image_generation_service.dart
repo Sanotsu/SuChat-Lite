@@ -206,8 +206,9 @@ class ImageGenerationService {
         'taskId': taskId,
         'isSuccess': tempStatus == 'SUCCEEDED' ? 1 : 0,
         'isFailed': tempStatus == 'FAILED' ? 1 : 0,
-        'isProcessing':
-            tempStatus == 'RUNNING' || tempStatus == 'PENDING' ? 1 : 0,
+        'isProcessing': tempStatus == 'RUNNING' || tempStatus == 'PENDING'
+            ? 1
+            : 0,
         'taskStatus': tempStatus,
         'imageUrls': newUrls.join(';'),
         "otherParams": jsonEncode(otherParamsMap),

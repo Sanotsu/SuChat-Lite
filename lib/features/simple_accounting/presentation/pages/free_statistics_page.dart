@@ -652,8 +652,9 @@ class FreeStatisticsPageState extends State<FreeStatisticsPage>
   // 获取按天的统计数据
   List<BarChartData> _getDailyChartData(BillStatistics stats) {
     final List<BarChartData> result = [];
-    final Map<String, double> dateData =
-        _selectedType == 0 ? stats.incomeByDate : stats.expenseByDate;
+    final Map<String, double> dateData = _selectedType == 0
+        ? stats.incomeByDate
+        : stats.expenseByDate;
 
     if (dateData.isEmpty) return [];
 
@@ -689,8 +690,9 @@ class FreeStatisticsPageState extends State<FreeStatisticsPage>
   // 获取按周的统计数据
   List<BarChartData> _getWeeklyChartData(BillStatistics stats) {
     final List<BarChartData> result = [];
-    final Map<String, double> dateData =
-        _selectedType == 0 ? stats.incomeByDate : stats.expenseByDate;
+    final Map<String, double> dateData = _selectedType == 0
+        ? stats.incomeByDate
+        : stats.expenseByDate;
 
     if (dateData.isEmpty) return [];
 
@@ -743,8 +745,9 @@ class FreeStatisticsPageState extends State<FreeStatisticsPage>
   // 获取按月的统计数据
   List<BarChartData> _getMonthlyChartData(BillStatistics stats) {
     final List<BarChartData> result = [];
-    final Map<String, double> dateData =
-        _selectedType == 0 ? stats.incomeByDate : stats.expenseByDate;
+    final Map<String, double> dateData = _selectedType == 0
+        ? stats.incomeByDate
+        : stats.expenseByDate;
 
     if (dateData.isEmpty) return [];
 
@@ -809,8 +812,9 @@ class FreeStatisticsPageState extends State<FreeStatisticsPage>
   // 获取按年的统计数据
   List<BarChartData> _getYearlyChartData(BillStatistics stats) {
     final List<BarChartData> result = [];
-    final Map<String, double> dateData =
-        _selectedType == 0 ? stats.incomeByDate : stats.expenseByDate;
+    final Map<String, double> dateData = _selectedType == 0
+        ? stats.incomeByDate
+        : stats.expenseByDate;
 
     if (dateData.isEmpty) return [];
 

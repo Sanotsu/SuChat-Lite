@@ -326,6 +326,21 @@ class UnifiedChatMessage {
   // 元数据可以存放平台和模型信息？
   final Map<String, dynamic>? metadata;
 
+  /// 父消息id(树形结构指针)；根消息和系统消息为null
+  @JsonKey(name: 'parent_id')
+  final String? parentId;
+
+  /// 同父节点下兄弟消息的序号(从0开始)
+  @JsonKey(name: 'branch_index')
+  final int branchIndex;
+
+  /// 树深度(根为0)；系统消息不入树，固定为-1
+  final int depth;
+
+  /// 根到当前消息的路径字符串，比如 "0/1/0"；系统消息为空字符串
+  @JsonKey(name: 'branch_path')
+  final String branchPath;
+
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
 
@@ -360,6 +375,10 @@ class UnifiedChatMessage {
     this.errorMessage,
     this.searchReferences,
     this.metadata,
+    this.parentId,
+    this.branchIndex = 0,
+    this.depth = 0,
+    this.branchPath = '',
     required this.createdAt,
     required this.updatedAt,
   });
@@ -425,6 +444,10 @@ class UnifiedChatMessage {
       metadata: map['metadata'] != null
           ? Map<String, dynamic>.from(json.decode(map['metadata']))
           : null,
+      parentId: map['parent_id'] as String?,
+      branchIndex: map['branch_index'] as int? ?? 0,
+      depth: map['depth'] as int? ?? (map['role'] == 'system' ? -1 : 0),
+      branchPath: map['branch_path'] as String? ?? '',
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(map['updated_at'] as int),
     );
@@ -461,6 +484,10 @@ class UnifiedChatMessage {
           ? json.encode(searchReferences?.map((e) => e.toJson()).toList())
           : null,
       'metadata': metadata != null ? json.encode(metadata) : null,
+      'parent_id': parentId,
+      'branch_index': branchIndex,
+      'depth': depth,
+      'branch_path': branchPath,
       'created_at': createdAt.millisecondsSinceEpoch,
       'updated_at': updatedAt.millisecondsSinceEpoch,
     };
@@ -490,6 +517,10 @@ class UnifiedChatMessage {
     String? errorMessage,
     List<SearchReference>? searchReferences,
     Map<String, dynamic>? metadata,
+    String? parentId,
+    int? branchIndex,
+    int? depth,
+    String? branchPath,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -517,6 +548,10 @@ class UnifiedChatMessage {
       errorMessage: errorMessage ?? this.errorMessage,
       searchReferences: searchReferences ?? this.searchReferences,
       metadata: metadata ?? this.metadata,
+      parentId: parentId ?? this.parentId,
+      branchIndex: branchIndex ?? this.branchIndex,
+      depth: depth ?? this.depth,
+      branchPath: branchPath ?? this.branchPath,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

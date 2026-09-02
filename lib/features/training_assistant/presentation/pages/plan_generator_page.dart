@@ -70,9 +70,9 @@ class _PlanGeneratorPageState extends State<PlanGeneratorPage> {
         // 根据是否显示AppBar返回不同的布局
         return widget.showAppBar
             ? Scaffold(
-              appBar: AppBar(title: const Text('创建训练计划')),
-              body: content,
-            )
+                appBar: AppBar(title: const Text('创建训练计划')),
+                body: content,
+              )
             : content;
       },
     );

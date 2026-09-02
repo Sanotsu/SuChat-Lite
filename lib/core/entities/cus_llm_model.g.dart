@@ -43,10 +43,8 @@ const _$ApiPlatformEnumMap = {
   ApiPlatform.baidu: 'baidu',
   ApiPlatform.tencent: 'tencent',
   ApiPlatform.deepseek: 'deepseek',
-  ApiPlatform.lingyiwanwu: 'lingyiwanwu',
   ApiPlatform.zhipu: 'zhipu',
   ApiPlatform.siliconCloud: 'siliconCloud',
-  ApiPlatform.infini: 'infini',
   ApiPlatform.volcengine: 'volcengine',
   ApiPlatform.volcesBot: 'volcesBot',
 };

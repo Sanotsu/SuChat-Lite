@@ -42,12 +42,16 @@ class PieChartWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (data.isEmpty) {
-      return SizedBox(height: height, child: const Center(child: Text('暂无数据')));
+      return SizedBox(
+        height: height,
+        child: const Center(child: Text('暂无数据')),
+      );
     }
 
     return Column(
-      crossAxisAlignment:
-          centerTitle ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+      crossAxisAlignment: centerTitle
+          ? CrossAxisAlignment.center
+          : CrossAxisAlignment.start,
       children: [
         if (showTitle && title.isNotEmpty)
           Padding(

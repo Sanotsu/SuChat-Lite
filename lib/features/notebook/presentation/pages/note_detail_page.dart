@@ -898,8 +898,12 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
           showLineHeightButton: true,
           showAlignmentButtons: true,
           showDirection: true,
+          // flutter_quill 11.x 中这三个按钮仍是实验性 API，无稳定替代，暂时忽略告警
+          // ignore: experimental_member_use
           showClipboardCut: true,
+          // ignore: experimental_member_use
           showClipboardCopy: true,
+          // ignore: experimental_member_use
           showClipboardPaste: true,
         ),
       ),

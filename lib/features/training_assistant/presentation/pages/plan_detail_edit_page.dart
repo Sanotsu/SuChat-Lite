@@ -38,43 +38,39 @@ class _PlanDetailEditPageState extends State<PlanDetailEditPage> {
         title: Text('编辑${dayWeekMapping[widget.day]}训练'),
         actions: [TextButton(onPressed: _saveChanges, child: const Text('保存'))],
       ),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : Form(
-                key: _formKey,
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    // 训练动作列表
-                    ..._details.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final detail = entry.value;
-                      return _buildExerciseEditCard(index, detail);
-                    }),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // 训练动作列表
+                  ..._details.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final detail = entry.value;
+                    return _buildExerciseEditCard(index, detail);
+                  }),
 
-                    const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                    // 添加新动作按钮
-                    ElevatedButton.icon(
-                      onPressed: _addNewExercise,
-                      icon: const Icon(Icons.add),
-                      label: const Text('添加动作'),
-                      style:
-                          ScreenHelper.isDesktop()
-                              ? ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 24,
-                                ),
-                              )
-                              : null,
-                    ),
+                  // 添加新动作按钮
+                  ElevatedButton.icon(
+                    onPressed: _addNewExercise,
+                    icon: const Icon(Icons.add),
+                    label: const Text('添加动作'),
+                    style: ScreenHelper.isDesktop()
+                        ? ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 24),
+                          )
+                        : null,
+                  ),
 
-                    // 底部留白，确保滚动时最后一项可以完全显示
-                    // const SizedBox(height: 80),
-                  ],
-                ),
+                  // 底部留白，确保滚动时最后一项可以完全显示
+                  // const SizedBox(height: 80),
+                ],
               ),
+            ),
     );
   }
 
@@ -124,8 +120,8 @@ class _PlanDetailEditPageState extends State<PlanDetailEditPage> {
             TextFormField(
               controller: exerciseNameController,
               decoration: const InputDecoration(labelText: '动作名称'),
-              validator:
-                  (value) => value == null || value.isEmpty ? '请输入动作名称' : null,
+              validator: (value) =>
+                  value == null || value.isEmpty ? '请输入动作名称' : null,
               onChanged: (value) {
                 _details[index] = _details[index].copyWith(exerciseName: value);
               },
@@ -135,8 +131,8 @@ class _PlanDetailEditPageState extends State<PlanDetailEditPage> {
             TextFormField(
               controller: muscleGroupController,
               decoration: const InputDecoration(labelText: '肌肉群组'),
-              validator:
-                  (value) => value == null || value.isEmpty ? '请输入肌肉群组' : null,
+              validator: (value) =>
+                  value == null || value.isEmpty ? '请输入肌肉群组' : null,
               onChanged: (value) {
                 _details[index] = _details[index].copyWith(muscleGroup: value);
               },
@@ -150,9 +146,8 @@ class _PlanDetailEditPageState extends State<PlanDetailEditPage> {
                     controller: setsController,
                     decoration: const InputDecoration(labelText: '组数'),
                     keyboardType: TextInputType.number,
-                    validator:
-                        (value) =>
-                            value == null || value.isEmpty ? '请输入组数' : null,
+                    validator: (value) =>
+                        value == null || value.isEmpty ? '请输入组数' : null,
                     onChanged: (value) {
                       _details[index] = _details[index].copyWith(
                         sets: int.tryParse(value) ?? 3,
@@ -167,9 +162,8 @@ class _PlanDetailEditPageState extends State<PlanDetailEditPage> {
                     decoration: const InputDecoration(
                       labelText: '次数 (如: 8-12)',
                     ),
-                    validator:
-                        (value) =>
-                            value == null || value.isEmpty ? '请输入次数' : null,
+                    validator: (value) =>
+                        value == null || value.isEmpty ? '请输入次数' : null,
                     onChanged: (value) {
                       _details[index] = _details[index].copyWith(reps: value);
                     },
@@ -186,9 +180,8 @@ class _PlanDetailEditPageState extends State<PlanDetailEditPage> {
                     controller: countdownController,
                     decoration: const InputDecoration(labelText: '单组完成耗时 (秒)'),
                     keyboardType: TextInputType.number,
-                    validator:
-                        (value) =>
-                            value == null || value.isEmpty ? '请输入单组完成耗时' : null,
+                    validator: (value) =>
+                        value == null || value.isEmpty ? '请输入单组完成耗时' : null,
                     onChanged: (value) {
                       _details[index] = _details[index].copyWith(
                         countdown: int.tryParse(value) ?? 60,
@@ -202,9 +195,8 @@ class _PlanDetailEditPageState extends State<PlanDetailEditPage> {
                     controller: restTimeController,
                     decoration: const InputDecoration(labelText: '组间休息时间 (秒)'),
                     keyboardType: TextInputType.number,
-                    validator:
-                        (value) =>
-                            value == null || value.isEmpty ? '请输入组间休息时间' : null,
+                    validator: (value) =>
+                        value == null || value.isEmpty ? '请输入组间休息时间' : null,
                     onChanged: (value) {
                       _details[index] = _details[index].copyWith(
                         restTime: int.tryParse(value) ?? 30,

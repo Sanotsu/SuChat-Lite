@@ -3,61 +3,22 @@
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
-import '../../shared/widgets/toast_utils.dart';
-import 'simple_tools.dart';
+import 'storage_paths.dart';
 
-/// 获取应用主目录
-/// [subfolder] 可选的子目录名称
-///
-/// 返回的目录结构：
-/// - Android (有权限): /storage/emulated/0/SuChatFiles[/subfolder]
-/// - Android (无权限): /data/data/《packageName》/app_flutter/SuChatFiles[/subfolder]
-/// - iOS: ~/Documents/SuChatFiles[/subfolder]
-/// - 其他平台: 文档目录/SuChatFiles[/subfolder]
-Future<Directory> getAppHomeDirectory({String? subfolder}) async {
-  try {
-    Directory baseDir;
+export 'storage_paths.dart'
+    show
+        getAppPrivateDir,
+        getLegacyHomeCandidatesAsync,
+        getDesktopMediaDir,
+        getDesktopHomePath;
 
-    if (Platform.isAndroid) {
-      // 尝试获取外部存储权限
-      final hasPermission = await requestStoragePermission();
-
-      if (hasPermission) {
-        // 注意：直接使用硬编码路径在Android 10+可能不可靠
-        baseDir = Directory('/storage/emulated/0/SuChatFiles');
-      } else {
-        ToastUtils.showError("未授权访问设备外部存储，数据将保存到应用文档目录");
-
-        baseDir = await getApplicationDocumentsDirectory();
-        baseDir = Directory(p.join(baseDir.path, 'SuChatFiles'));
-      }
-    } else {
-      // 其他平台使用文档目录
-      baseDir = await getApplicationDocumentsDirectory();
-      baseDir = Directory(p.join(baseDir.path, 'SuChatFiles'));
-    }
-
-    // 处理子目录
-    if (subfolder != null && subfolder.trim().isNotEmpty) {
-      baseDir = Directory(p.join(baseDir.path, subfolder));
-    }
-
-    // 确保目录存在
-    if (!await baseDir.exists()) {
-      await baseDir.create(recursive: true);
-    }
-
-    print('getAppHomeDirectory 获取的目录: ${baseDir.path}');
-    return baseDir;
-  } catch (e) {
-    print('获取应用目录失败: $e');
-    // 回退方案：使用临时目录
-    final tempDir = await getTemporaryDirectory();
-    return Directory(p.join(tempDir.path, 'SuChatFallback'));
-  }
-}
+/// ========================================================================
+/// 0.1.5 目录体系：核心数据全部位于应用私有区 `<documents>/SuChatApp`/，
+/// 不请求任何存储权限；AI 生成媒体在桌面端直达公共目录（卸载不清），
+/// 移动端主存储在私有区、由 MediaSaveService 异步双写公共副本。
+/// 旧版 0.1.4 数据根（SuChatFiles）仅供升级迁移读取，见 storage_paths.dart。
+/// ========================================================================
 
 /// 清理文件名，移除非法字符
 String sanitizeFileName(String fileName, {String replacement = '_'}) {
@@ -79,89 +40,103 @@ String sanitizeFileName(String fileName, {String replacement = '_'}) {
   return cleanName;
 }
 
-/// 获取sqlite数据库文件保存的目录
+/// 生成媒体目录的公共解析：
+/// - 桌面：`~/<kind>/SuChat/<sub>`（公共区，主存储，卸载不清）
+/// - 移动端：私有区 `AI_GEN/<sub>`（公共副本由 MediaSaveService 双写）
+Future<Directory> _generatedMediaDir(String kind, String sub) async {
+  final desktop = getDesktopMediaDir(kind, subfolder: sub);
+  if (desktop != null) return desktop;
+  return getAppPrivateDir(subfolder: 'AI_GEN/$sub');
+}
+
+/// 获取sqlite数据库文件保存的目录（私有区）
 Future<Directory> getSqliteDbDir() async {
-  return getAppHomeDirectory(subfolder: "DB/sqlite_db");
+  return getAppPrivateDir(subfolder: "DB/sqlite_db");
 }
 
 /// 获取objectbox数据库文件保存的目录
-Future<Directory> getObjectBoxDir() async {
-  return getAppHomeDirectory(subfolder: "DB/objectbox");
+///
+/// 0.1.5：ObjectBox 仅剩旧聊天模块读取旧数据（P5 整体移除），
+/// 固定指向 0.1.4 旧根，不再随新架构移动。
+/// @Deprecated('0.1.5 移除旧聊天模块时删除')
+Future<Directory?> getObjectBoxDir() async {
+  final candidates = await getLegacyHomeCandidatesAsync();
+  for (final dir in candidates) {
+    final target = Directory(p.join(dir.path, 'DB/objectbox'));
+    try {
+      if (target.existsSync()) return target;
+    } catch (_) {}
+  }
+  return null;
 }
 
-/// 语音输入时，录音文件保存的目录
+/// 语音输入时，录音文件保存的目录（私有区）
 Future<Directory> getChatAudioDir() async {
-  return getAppHomeDirectory(subfolder: "VOICE_REC/chat_audio");
+  return getAppPrivateDir(subfolder: "VOICE_REC/chat_audio");
 }
 
-/// 用于声音复制、录音识别时录制的声音存放
+/// 用于声音复制、录音识别时录制的声音存放（私有区）
 Future<Directory> getVoiceRecordingDir() async {
-  return getAppHomeDirectory(subfolder: "VOICE_REC/voice_recordings");
-}
-
-/// 笔记语音录音文件保存的目录
-Future<Directory> getNoteVoiceRecordingDir() async {
-  return getAppHomeDirectory(subfolder: "VOICE_REC/note_voice_recordings");
+  return getAppPrivateDir(subfolder: "VOICE_REC/voice_recordings");
 }
 
 /// 图片生成时，图片文件保存的目录
 Future<Directory> getImageGenDir() async {
-  return getAppHomeDirectory(subfolder: "AI_GEN/images");
+  return _generatedMediaDir('Pictures', 'images');
 }
 
 /// 新版本统一对话时生成的媒体资源
 Future<Directory> getUnifiedChatMediaDir() async {
-  return getAppHomeDirectory(subfolder: "AI_GEN/unified_chat_media");
+  return _generatedMediaDir('Pictures', 'unified_chat_media');
 }
 
 /// 视频生成时，视频文件保存的目录
 Future<Directory> getVideoGenDir() async {
-  return getAppHomeDirectory(subfolder: "AI_GEN/videos");
+  return _generatedMediaDir('Movies', 'videos');
 }
 
 /// 语音生成时，语音文件保存的目录
 Future<Directory> getVoiceGenDir() async {
-  return getAppHomeDirectory(subfolder: "AI_GEN/voices");
+  return _generatedMediaDir('Music', 'voices');
 }
 
 // 翻译时语言合成单独一个文件夹
 Future<Directory> getTranslatorVoiceGenDir() async {
-  return getAppHomeDirectory(subfolder: "AI_GEN/voices/translator");
+  return _generatedMediaDir('Music', 'voices/translator');
 }
 
 // 单独的多模态语音合成时文件保存的目录
 Future<Directory> getOmniChatVoiceGenDir() async {
-  return getAppHomeDirectory(subfolder: "AI_GEN/voices/omni_chat");
+  return _generatedMediaDir('Music', 'voices/omni_chat');
 }
 
-/// 使用file_picker选择文件时，保存文件的目录
+/// 使用file_picker选择文件时，保存文件的目录（私有区）
 /// 所有文件选择都放在同一个位置，重复时直接返回已存在的内容
 Future<Directory> getFilePickerSaveDir() async {
-  return getAppHomeDirectory(subfolder: "FILE_PICK/file_picker_files");
+  return getAppPrivateDir(subfolder: "FILE_PICK/file_picker_files");
 }
 
-/// 使用image_picker选择文件时，保存文件的目录
-/// 所有文件选择都放在同一个位置，重复时直接返回已存在的内容
+/// 使用image_picker选择文件时，保存文件的目录（私有区）
 Future<Directory> getImagePickerSaveDir() async {
-  return getAppHomeDirectory(subfolder: "FILE_PICK/image_picker_files");
+  return getAppPrivateDir(subfolder: "FILE_PICK/image_picker_files");
 }
 
-/// 获取角色背景图头像的目录
+/// 获取角色背景图头像的目录（私有区）
 Future<Directory> getCharacterDir() async {
-  return getAppHomeDirectory(subfolder: "FILE_PICK/character_images");
+  return getAppPrivateDir(subfolder: "FILE_PICK/character_images");
 }
 
-/// 使用dio下载文件时，保存文件的目录
+/// 使用dio下载文件时，保存文件的目录（私有区，浏览缓存性质，不双写公共区）
 Future<Directory> getDioDownloadDir() async {
-  return getAppHomeDirectory(subfolder: "NET_DL/dio_download_files");
+  return getAppPrivateDir(subfolder: "NET_DL/dio_download_files");
 }
 
-/// 语音输入时，录音文件保存的目录
+/// 日志与备份工作目录（私有区；最终备份 zip 由用户经系统保存器自选位置）
 Future<Directory> getBackupDir() async {
-  return getAppHomeDirectory(subfolder: "BAKUP/backup_files");
+  return getAppPrivateDir(subfolder: "BAKUP/backup_files");
 }
 
 // 统一对话的备份文件
 Future<Directory> getUnifiedChatBackupDir() async {
-  return getAppHomeDirectory(subfolder: "BAKUP/backup_files/unified_chat");
+  return getAppPrivateDir(subfolder: "BAKUP/backup_files/unified_chat");
 }

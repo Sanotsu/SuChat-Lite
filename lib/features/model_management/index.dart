@@ -92,7 +92,12 @@ class _ModelConfigState extends State<ModelConfig>
       child: Scaffold(
         appBar: AppBar(
           title: const Text('模型配置'),
-          bottom: const TabBar(tabs: [Tab(text: '模型列表'), Tab(text: 'API配置')]),
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: '模型列表'),
+              Tab(text: 'API配置'),
+            ],
+          ),
           elevation: 1,
         ),
         body: const TabBarView(children: [ModelList(), ApiKeyConfig()]),
@@ -119,10 +124,9 @@ class _ModelConfigState extends State<ModelConfig>
         margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
-          color:
-              isSelected
-                  ? primaryColor.withValues(alpha: 0.1)
-                  : Colors.transparent,
+          color: isSelected
+              ? primaryColor.withValues(alpha: 0.1)
+              : Colors.transparent,
         ),
         child: Row(
           children: [

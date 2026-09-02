@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../../core/utils/screen_helper.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 
 import '../../data/models/unified_platform_spec.dart';
@@ -211,7 +213,10 @@ class _SpeechSynthesisSettingsDialogState
         ],
       ),
       content: SizedBox(
-        width: MediaQuery.of(context).size.width * 0.8,
+        // 桌面限宽避免超宽横条(移动端保持 0.8 屏宽)
+        width: ScreenHelper.isDesktop()
+            ? 640.0
+            : MediaQuery.of(context).size.width * 0.8,
         child: FormBuilder(
           key: _formKey,
           initialValue: _initialValues,

@@ -56,13 +56,12 @@ class NoteAudioList extends ConsumerWidget {
                 return ListTile(
                   dense: true,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  leading:
-                      !isReadOnly
-                          ? IconButton(
-                            icon: const Icon(Icons.delete, size: 20),
-                            onPressed: () => onDelete(audio),
-                          )
-                          : null,
+                  leading: !isReadOnly
+                      ? IconButton(
+                          icon: const Icon(Icons.delete, size: 20),
+                          onPressed: () => onDelete(audio),
+                        )
+                      : null,
                   title: Text(
                     DateFormat(formatToYMDHMSzh).format(audio.createdAt),
                     style: Theme.of(context).textTheme.bodySmall,

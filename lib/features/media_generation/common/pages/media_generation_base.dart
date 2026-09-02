@@ -138,17 +138,16 @@ abstract class MediaGenerationBaseState<T extends MediaGenerationBase>
               backgroundColor: Colors.blue,
               foregroundColor: Colors.white,
             ),
-            child:
-                isGenerating
-                    ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                    : const Text('生成'),
+            child: isGenerating
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Text('生成'),
           ),
         ),
       ],
@@ -186,10 +185,9 @@ abstract class MediaGenerationBaseState<T extends MediaGenerationBase>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(title), actions: buildAppBarActions()),
-      body:
-          ScreenHelper.isDesktop()
-              ? _buildDesktopLayout(context)
-              : _buildMobileLayout(context),
+      body: ScreenHelper.isDesktop()
+          ? _buildDesktopLayout(context)
+          : _buildMobileLayout(context),
     );
   }
 
@@ -338,8 +336,8 @@ abstract class MediaGenerationBaseState<T extends MediaGenerationBase>
         hintLabel: "选择模型",
         alignment: Alignment.centerLeft,
         onChanged: isGenerating ? null : modelChanged,
-        itemToString:
-            (e) => "${CP_NAME_MAP[(e as CusLLMSpec).platform]} - ${e.name}",
+        itemToString: (e) =>
+            "${CP_NAME_MAP[(e as CusLLMSpec).platform]} - ${e.name}",
       ),
     );
   }
@@ -497,24 +495,23 @@ abstract class MediaGenerationBaseState<T extends MediaGenerationBase>
   ) {
     return showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text('删除$mediaType生成任务', style: TextStyle(fontSize: 16)),
-            content: Text(
-              '删除后，$mediaType生成任务记录将不再显示，但不会影响已保存的$mediaType文件。',
-              style: TextStyle(fontSize: 14),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text('取消', style: TextStyle(fontSize: 14)),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text('确定', style: TextStyle(fontSize: 14)),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: Text('删除$mediaType生成任务', style: TextStyle(fontSize: 16)),
+        content: Text(
+          '删除后，$mediaType生成任务记录将不再显示，但不会影响已保存的$mediaType文件。',
+          style: TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('取消', style: TextStyle(fontSize: 14)),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('确定', style: TextStyle(fontSize: 14)),
+          ),
+        ],
+      ),
     );
   }
 }

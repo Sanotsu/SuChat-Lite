@@ -50,7 +50,7 @@ class UnifiedChatDBInit {
     // 在给定路径上打开/创建数据库
     var db = await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDb,
       onUpgrade: _upgradeDb,
     );
@@ -85,7 +85,145 @@ class UnifiedChatDBInit {
   void _upgradeDb(Database db, int oldVersion, int newVersion) async {
     print("Chat 数据库升级 _upgradeDb 从 $oldVersion 到 $newVersion");
 
-    if (oldVersion < 2) {}
+    if (oldVersion < 2) {
+      await _upgradeToV2(db);
+    }
+  }
+
+  /// v1 -> v2: 消息表增加分支字段、会话表增加当前分支路径，并回填存量数据
+  /// 2026-09-02 v2尚未发布，移除已停服内置平台(零一万物lingyiwanwu、无问芯穹infini)
+  /// 的残留数据也并入本次升级：删除其内置平台行、内置模型行和API密钥行
+  /// (会话/消息历史保留不动，其中记录的模型名/平台名是文本快照，仅不可再续聊)
+  Future<void> _upgradeToV2(Database db) async {
+    // 0. 清理已停服的内置平台残留数据
+    const deadPlatforms = ['lingyiwanwu', 'infini'];
+    final placeholders = List.filled(deadPlatforms.length, '?').join(',');
+
+    await db.delete(
+      UnifiedChatDdl.tableUnifiedApiKey,
+      where: 'platform_id IN ($placeholders)',
+      whereArgs: deadPlatforms,
+    );
+    await db.delete(
+      UnifiedChatDdl.tableUnifiedModelSpec,
+      where: 'platform_id IN ($placeholders)',
+      whereArgs: deadPlatforms,
+    );
+    await db.delete(
+      UnifiedChatDdl.tableUnifiedPlatformSpec,
+      where: 'id IN ($placeholders)',
+      whereArgs: deadPlatforms,
+    );
+
+    // 1. 加列(SQLite的ALTER TABLE加列必须一条一条执行)
+    await db.execute(
+      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedChatMessage} ADD COLUMN parent_id TEXT',
+    );
+    await db.execute(
+      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedChatMessage} '
+      'ADD COLUMN branch_index INTEGER NOT NULL DEFAULT 0',
+    );
+    await db.execute(
+      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedChatMessage} '
+      'ADD COLUMN depth INTEGER NOT NULL DEFAULT 0',
+    );
+    await db.execute(
+      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedChatMessage} '
+      "ADD COLUMN branch_path TEXT NOT NULL DEFAULT ''",
+    );
+    await db.execute(
+      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedConversation} '
+      'ADD COLUMN current_branch_path TEXT',
+    );
+
+    // 2026-08-31 搭档表合并角色卡系统(仍在v2内：v2尚未发布，partner加列一并放入本次升级)
+    // 这些列在v2的onCreate DDL中也已存在
+    const partnerColumns = [
+      'description TEXT',
+      'personality TEXT',
+      'scenario TEXT',
+      'first_message TEXT',
+      'example_dialogue TEXT',
+      'tags TEXT',
+      'preferred_model_id TEXT',
+      'background TEXT',
+      'background_opacity REAL',
+    ];
+    for (final col in partnerColumns) {
+      await db.execute(
+        'ALTER TABLE ${UnifiedChatDdl.tableUnifiedChatPartner} ADD COLUMN $col',
+      );
+    }
+
+    // 2. 加索引
+    await db.execute(
+      'CREATE INDEX idx_messages_parent_id ON '
+      '${UnifiedChatDdl.tableUnifiedChatMessage} (conversation_id, parent_id)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_messages_branch_path ON '
+      '${UnifiedChatDdl.tableUnifiedChatMessage} (conversation_id, branch_path)',
+    );
+
+    // 3. 回填存量消息：每个会话内按时间顺序把非系统消息串成单链分支
+    await _backfillBranchColumns(db);
+  }
+
+  /// 存量数据回填：v1的消息是线性序列，按会话分组、创建时间排序，
+  /// 把非system消息串成一条单链(每条消息是前一条的子节点)，system消息不入树
+  Future<void> _backfillBranchColumns(Database db) async {
+    final maps = await db.query(
+      UnifiedChatDdl.tableUnifiedChatMessage,
+      orderBy: 'created_at ASC',
+    );
+
+    // 按会话分组
+    final byConversation = <String, List<Map<String, dynamic>>>{};
+    for (final row in maps) {
+      final convId = row['conversation_id'] as String;
+      byConversation.putIfAbsent(convId, () => []).add(row);
+    }
+
+    final batch = db.batch();
+    for (final entry in byConversation.entries) {
+      String? lastParentId;
+      String lastPath = '';
+      int chainDepth = -1;
+
+      for (final row in entry.value) {
+        final id = row['id'] as String;
+        final role = row['role'] as String;
+
+        // system消息不入树：depth=-1、branch_path=''
+        if (role == 'system') {
+          batch.update(
+            UnifiedChatDdl.tableUnifiedChatMessage,
+            {'depth': -1, 'branch_path': ''},
+            where: 'id = ?',
+            whereArgs: [id],
+          );
+          continue;
+        }
+
+        chainDepth++;
+        final path = chainDepth == 0 ? '0' : '$lastPath/0';
+        batch.update(
+          UnifiedChatDdl.tableUnifiedChatMessage,
+          {
+            'parent_id': lastParentId,
+            'branch_index': 0,
+            'depth': chainDepth,
+            'branch_path': path,
+          },
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+        lastParentId = id;
+        lastPath = path;
+      }
+    }
+
+    await batch.commit(noResult: true);
   }
 
   // 对话相关表索引
@@ -96,6 +234,8 @@ class UnifiedChatDBInit {
       'CREATE INDEX idx_messages_conversation_id ON ${UnifiedChatDdl.tableUnifiedChatMessage} (conversation_id)',
       'CREATE INDEX idx_messages_created_at ON ${UnifiedChatDdl.tableUnifiedChatMessage} (created_at)',
       'CREATE INDEX idx_models_platform_id ON ${UnifiedChatDdl.tableUnifiedModelSpec} (platform_id)',
+      'CREATE INDEX idx_messages_parent_id ON ${UnifiedChatDdl.tableUnifiedChatMessage} (conversation_id, parent_id)',
+      'CREATE INDEX idx_messages_branch_path ON ${UnifiedChatDdl.tableUnifiedChatMessage} (conversation_id, branch_path)',
     ];
 
     for (var index in indexList) {
@@ -147,13 +287,20 @@ class UnifiedChatDBInit {
   }
 
   // 导出所有数据
-  Future<String> exportDatabase() async {
+  // targetDir: 指定导出目录(比如全量备份时直接导出到主库的临时导出目录，一起打进zip包)；
+  //   不传时默认导出到本库自己的备份目录
+  Future<String> exportDatabase({Directory? targetDir}) async {
     // 2025-10-21 简单点，直接从db这里就导出到指定文件夹（因为创建db时就已经获取存取权限了，这里不重复）
     Directory appDocDir = await getUnifiedChatBackupDir();
     // 创建或检索 db_export 文件夹
     var tempDir = await Directory(
       p.join(appDocDir.path, DBInitConfig.exportDir),
     ).create();
+
+    // 如果有指定目标目录，则导出到指定目录
+    if (targetDir != null) {
+      tempDir = await targetDir.create();
+    }
 
     // 打开数据库
     Database db = await database;

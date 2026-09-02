@@ -65,21 +65,20 @@ class _ApiKeyConfigState extends State<ApiKeyConfig> {
   Future<void> _clearAllKeys() async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('确认清除'),
-            content: const Text('确定要清除所有 API Key 吗？这将影响使用自定义模型的功能。'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('确定'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('确认清除'),
+        content: const Text('确定要清除所有 API Key 吗？这将影响使用自定义模型的功能。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
     );
 
     if (confirm == true) {
@@ -110,38 +109,37 @@ class _ApiKeyConfigState extends State<ApiKeyConfig> {
               elevation: 2,
               color: Colors.white,
               shadowColor: Colors.black.withValues(alpha: 0.05),
-              child:
-                  _apiKeys.isEmpty
-                      ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.vpn_key_outlined,
-                              size: 64,
-                              color: Colors.grey.withValues(alpha: 0.5),
+              child: _apiKeys.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.vpn_key_outlined,
+                            size: 64,
+                            color: Colors.grey.withValues(alpha: 0.5),
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            '暂无配置的 API Key',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
                             ),
-                            SizedBox(height: 16),
-                            Text(
-                              '暂无配置的 API Key',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            SizedBox(height: 24),
-                            ElevatedButton.icon(
-                              icon: Icon(Icons.upload_file),
-                              label: Text('导入配置json'),
-                              onPressed: _importFromJson,
-                            ),
-                          ],
-                        ),
-                      )
-                      : ListView(
-                        padding: EdgeInsets.all(12),
-                        children: _buildApiKeyList(),
+                          ),
+                          SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            icon: Icon(Icons.upload_file),
+                            label: Text('导入配置json'),
+                            onPressed: _importFromJson,
+                          ),
+                        ],
                       ),
+                    )
+                  : ListView(
+                      padding: EdgeInsets.all(12),
+                      children: _buildApiKeyList(),
+                    ),
             ),
           ),
         ],
@@ -257,12 +255,11 @@ class _ApiKeyConfigState extends State<ApiKeyConfig> {
             children: [
               IconButton(
                 icon: Icon(Icons.edit, color: Colors.blue.shade300, size: 20),
-                onPressed:
-                    () => _showAddEditKeyDialog(
-                      context,
-                      existingPlatform: entry.key,
-                      existingKey: entry.value,
-                    ),
+                onPressed: () => _showAddEditKeyDialog(
+                  context,
+                  existingPlatform: entry.key,
+                  existingKey: entry.value,
+                ),
                 tooltip: '编辑此密钥',
               ),
               IconButton(
@@ -292,20 +289,19 @@ class _ApiKeyConfigState extends State<ApiKeyConfig> {
       ),
 
       menuMaxHeight: 0.5.sh,
-      items:
-          ApiPlatformAKLabel.values.map((platform) {
-            return DropdownMenuItem(
-              value: platform,
-              child: Row(
-                children: [
-                  Text(
-                    CP_LABLE_NAME_MAP[platform] ?? platform.name,
-                    style: TextStyle(fontSize: 14),
-                  ),
-                ],
+      items: ApiPlatformAKLabel.values.map((platform) {
+        return DropdownMenuItem(
+          value: platform,
+          child: Row(
+            children: [
+              Text(
+                CP_LABLE_NAME_MAP[platform] ?? platform.name,
+                style: TextStyle(fontSize: 14),
               ),
-            );
-          }).toList(),
+            ],
+          ),
+        );
+      }).toList(),
       onChanged: (value) {
         setState(() => _selectedPlatformKeyLabel = value);
       },
@@ -326,10 +322,9 @@ class _ApiKeyConfigState extends State<ApiKeyConfig> {
     final isDesktop = ScreenHelper.isDesktop();
     final isEditing = existingPlatform != null;
 
-    _selectedPlatformKeyLabel =
-        ApiPlatformAKLabel.values
-            .where((e) => e.name == existingPlatform)
-            .firstOrNull;
+    _selectedPlatformKeyLabel = ApiPlatformAKLabel.values
+        .where((e) => e.name == existingPlatform)
+        .firstOrNull;
 
     final keyController = TextEditingController(text: existingKey ?? '');
     bool showKey = false;

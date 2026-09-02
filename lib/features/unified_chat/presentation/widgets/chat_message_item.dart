@@ -7,12 +7,14 @@ import '../../../../core/utils/datetime_formatter.dart';
 import '../../../../core/utils/screen_helper.dart';
 import '../../../../core/utils/simple_tools.dart';
 import '../../../../shared/widgets/toast_utils.dart';
-import '../../../branch_chat/presentation/widgets/text_edit_dialog.dart';
-import '../../../branch_chat/presentation/widgets/text_selection_dialog.dart';
+import './text_edit_dialog.dart';
+import './text_selection_dialog.dart';
 import '../../data/models/unified_chat_message.dart';
 import '../../data/models/unified_model_spec.dart';
+import '../../data/services/unified_branch_utils.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
 import 'multimodal_content_widget.dart';
+import 'unified_branch_tree_dialog.dart';
 
 /// 聊天消息项组件
 /// 参考Chatbox简单显示全都靠右
@@ -44,6 +46,40 @@ class ChatMessageItem extends StatefulWidget {
 }
 
 class _ChatMessageItemState extends State<ChatMessageItem> {
+  // 是否启用背景图(气泡透明化+字体颜色配置生效)
+  bool get _hasBg => widget.viewModel.hasBackgroundImage;
+
+  // 是否简洁显示(隐藏头像/元信息/分支切换器)
+  bool get _isBrief => widget.viewModel.isBriefDisplay;
+
+  // 消息正文颜色(背景模式下使用用户配置的字体颜色)
+  Color get _contentColor {
+    if (_hasBg) {
+      final fc = widget.viewModel.messageFontColor;
+      return widget.message.isUser ? fc.userTextColor : fc.aiNormalTextColor;
+    }
+    return widget.message.isUser
+        ? Theme.of(context).colorScheme.onPrimary
+        : Theme.of(context).colorScheme.onSurfaceVariant;
+  }
+
+  // 气泡内次要元素颜色(流式指示/参考链接等)
+  Color _secondaryColor({double alpha = 0.7}) {
+    if (_hasBg) {
+      return _contentColor.withValues(alpha: alpha);
+    }
+    return widget.message.isUser
+        ? Theme.of(context).colorScheme.onPrimary.withValues(alpha: alpha)
+        : Theme.of(
+            context,
+          ).colorScheme.onSurfaceVariant.withValues(alpha: alpha);
+  }
+
+  // 推理内容颜色(背景模式下使用配置的思考字体颜色)
+  Color get _thinkingColor => _hasBg
+      ? widget.viewModel.messageFontColor.aiThinkingTextColor
+      : Theme.of(context).colorScheme.primary;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -51,13 +87,33 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // AI头像
-          _buildAvatar(context),
+          // AI头像(简洁显示时隐藏，保留缩进占位；区域不随文字缩放)
+          _buildAvatarArea(context),
 
           SizedBox(width: 4),
-          _buildMessageBubble(),
+          // Flexible(loose)约束：内容窄时气泡按内容收缩，内容宽时钳制到
+          // 剩余空间换行。Row 直接给子项的横向约束是无限宽，不包 Flexible
+          // 会导致气泡无法换行而溢出
+          Flexible(child: _buildMessageBubble()),
         ],
       ),
+    );
+  }
+
+  // 头像区域反向固定不缩放(避免文字放大时头像行溢出，对齐旧版处理)
+  Widget _buildAvatarArea(BuildContext context) {
+    Widget child;
+    if (_isBrief) {
+      // 简洁显示：隐藏头像，保留与头像等宽的缩进占位
+      child = const SizedBox(width: 32, height: 32);
+    } else {
+      child = _buildAvatar(context);
+    }
+    return MediaQuery(
+      data: MediaQuery.of(
+        context,
+      ).copyWith(textScaler: const TextScaler.linear(1)),
+      child: child,
     );
   }
 
@@ -100,47 +156,197 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 消息气泡
-          Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width - 56,
-            ),
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: isUser
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 搜索结果参考链接
-                _buildSearchReferences(),
+          // 消息气泡(背景图模式下透明底色+描边，对齐旧版)
+          // 气泡宽度取父级真实约束(桌面内容列已限宽，不能再用全屏宽计算)
+          LayoutBuilder(
+            builder: (context, constraints) => Container(
+              constraints: BoxConstraints(maxWidth: constraints.maxWidth - 16),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: _hasBg
+                    ? Colors.transparent
+                    : isUser
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(16),
+                border: _hasBg ? Border.all(color: _contentColor) : null,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 搜索结果参考链接
+                  _buildSearchReferences(),
 
-                // 多模态内容渲染
-                MultimodalContentWidget(
-                  message: widget.message,
-                  textStyle: TextStyle(
-                    color: isUser
-                        ? Theme.of(context).colorScheme.onPrimary
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                  // 多模态内容渲染
+                  MultimodalContentWidget(
+                    message: widget.message,
+                    textStyle: TextStyle(color: _contentColor),
+                    thinkingColor: _thinkingColor,
                   ),
-                ),
 
-                // 流式生成指示器
-                _buildStreaminigInfo(),
+                  // 流式生成指示器
+                  _buildStreaminigInfo(),
 
-                // 错误状态
-                _buildErrorInfo(),
-              ],
+                  // 错误状态
+                  _buildErrorInfo(),
+                ],
+              ),
             ),
           ),
 
-          // 显示模型标签、消息信息
+          // 显示模型标签、消息信息(简洁显示时仅保留相对时间；区域不随文字缩放)
           const SizedBox(height: 4),
-          _buildNote(),
+          _buildNoteArea(),
+
+          // 分支切换器(有多个兄弟分支时显示；简洁显示时隐藏；区域不随文字缩放)
+          _buildBranchSwitcherArea(),
         ],
+      ),
+    );
+  }
+
+  // 元信息区域反向固定不缩放
+  Widget _buildNoteArea() {
+    return MediaQuery(
+      data: MediaQuery.of(
+        context,
+      ).copyWith(textScaler: const TextScaler.linear(1)),
+      child: _buildNote(),
+    );
+  }
+
+  // 分支切换器区域反向固定不缩放；简洁显示时隐藏
+  Widget _buildBranchSwitcherArea() {
+    if (_isBrief) return const SizedBox.shrink();
+    return MediaQuery(
+      data: MediaQuery.of(
+        context,
+      ).copyWith(textScaler: const TextScaler.linear(1)),
+      child: _buildBranchSwitcher(),
+    );
+  }
+
+  /// 分支切换器：‹ 当前分支号/最大分支号(实际剩余分支数) ›
+  /// 显示格式与旧版 branch_chat 对齐：
+  ///   使用存储时的分支编号(branch_index+1)，删除某个分支后编号不复位，
+  ///   括号内为当前实际存在的分支数。
+  ///   例如有分支1、2、3，删除分支2后，分支1下方显示"1/3(2)"，分支3下方显示"3/3(2)"。
+  /// 非流式生成时、且该消息存在兄弟分支时显示
+  Widget _buildBranchSwitcher() {
+    // 流式生成中的消息不显示
+    if (widget.message.isStreaming) return const SizedBox.shrink();
+    // system消息无分支
+    if (widget.message.isSystem) return const SizedBox.shrink();
+
+    final info = widget.viewModel.getBranchSwitchInfo(widget.message);
+    if (info == null) return const SizedBox.shrink();
+
+    final siblings = info.siblings;
+    final currentIndex = info.currentIndex;
+    final total = siblings.length;
+
+    // 兄弟中最大的存储分支索引(删除分支后索引不复位，最大编号保留)
+    final maxBranchIndex = siblings
+        .map((s) => s.branchIndex)
+        .reduce((a, b) => a > b ? a : b);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildBranchArrowButton(
+            icon: Icons.arrow_back_ios,
+            enabled: currentIndex > 0,
+            tooltip: '上一个分支',
+            onTap: () =>
+                widget.viewModel.switchToSiblingBranch(widget.message, -1),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              '${widget.message.branchIndex + 1}/${maxBranchIndex + 1}($total)',
+              style: TextStyle(
+                color: Theme.of(context).disabledColor,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          _buildBranchArrowButton(
+            icon: Icons.arrow_forward_ios,
+            enabled: currentIndex < total - 1,
+            tooltip: '下一个分支',
+            onTap: () =>
+                widget.viewModel.switchToSiblingBranch(widget.message, 1),
+          ),
+          const SizedBox(width: 4),
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _showBranchTreeDialog(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.account_tree,
+                    size: 14,
+                    color: Theme.of(context).disabledColor,
+                  ),
+                  const SizedBox(width: 2),
+                  Text(
+                    '分支树',
+                    style: TextStyle(
+                      color: Theme.of(context).disabledColor,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBranchArrowButton({
+    required IconData icon,
+    required bool enabled,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return SizedBox(
+      width: 24,
+      height: 24,
+      child: IconButton(
+        icon: Icon(icon, size: 14),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+        tooltip: tooltip,
+        color: Theme.of(context).disabledColor,
+        onPressed: enabled ? onTap : null,
+      ),
+    );
+  }
+
+  // 打开分支树对话框
+  void _showBranchTreeDialog() {
+    final viewModel = widget.viewModel;
+    final currentPath =
+        viewModel.currentBranchPath ??
+        UnifiedBranchUtils.defaultLatestPath(viewModel.allMessages);
+    if (currentPath == null) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => UnifiedBranchTreeDialog(
+        messages: viewModel.allMessages,
+        currentPath: currentPath,
+        onPathSelected: (path) {
+          Navigator.pop(context);
+          viewModel.switchBranch(path);
+        },
       ),
     );
   }
@@ -156,25 +362,14 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
             child: CircularProgressIndicator(
               strokeWidth: 2,
               valueColor: AlwaysStoppedAnimation<Color>(
-                widget.message.isUser
-                    ? Theme.of(context).colorScheme.onPrimary
-                    : Theme.of(context).colorScheme.primary,
+                _hasBg ? _contentColor : Theme.of(context).colorScheme.primary,
               ),
             ),
           ),
           const SizedBox(width: 8),
           Text(
             '生成中...',
-            style: TextStyle(
-              fontSize: 12,
-              color: widget.message.isUser
-                  ? Theme.of(
-                      context,
-                    ).colorScheme.onPrimary.withValues(alpha: 0.7)
-                  : Theme.of(
-                      context,
-                    ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-            ),
+            style: TextStyle(fontSize: 12, color: _secondaryColor()),
           ),
         ],
       );
@@ -213,45 +408,34 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
     }
 
     // 放在可折叠的容器中
-    return ExpansionTile(
-      title: Row(
-        children: [
-          Icon(
-            Icons.link,
-            // size: 14,
-            color: widget.message.isUser
-                ? Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)
-                : Theme.of(
-                    context,
-                  ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            '参考链接',
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              color: widget.message.isUser
-                  ? Theme.of(
-                      context,
-                    ).colorScheme.onPrimary.withValues(alpha: 0.8)
-                  : Theme.of(
-                      context,
-                    ).colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
-            ),
-          ),
-        ],
-      ),
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Material(
+      type: MaterialType.transparency,
+      child: ExpansionTile(
+        title: Row(
           children: [
-            // const SizedBox(height: 8),
-            ...widget.message.searchReferences!.map(
-              (ref) => _buildSearchReferenceItem(ref),
+            Icon(Icons.link, color: _secondaryColor()),
+            const SizedBox(width: 4),
+            Text(
+              '参考链接',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: _secondaryColor(alpha: 0.8),
+              ),
             ),
           ],
         ),
-      ],
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // const SizedBox(height: 8),
+              ...widget.message.searchReferences!.map(
+                (ref) => _buildSearchReferenceItem(ref),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -299,7 +483,7 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
                   child: Text(
                     ref.description!,
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: ScreenHelper.metaFontSize(11),
                       color: widget.message.isUser
                           ? Theme.of(
                               context,
@@ -316,7 +500,7 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
                 child: Text(
                   ref.url,
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: ScreenHelper.metaFontSize(10),
                     color: widget.message.isUser
                         ? Theme.of(
                             context,
@@ -337,6 +521,22 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
   }
 
   Widget _buildNote() {
+    // 简洁显示：只保留相对时间，隐藏tokens/耗时/模型等元信息
+    if (_isBrief) {
+      return Row(
+        children: [
+          const SizedBox(width: 8),
+          Text(
+            formatRelativeDate(widget.message.createdAt),
+            style: TextStyle(
+              fontSize: ScreenHelper.metaFontSize(12),
+              color: Theme.of(context).disabledColor,
+            ),
+          ),
+        ],
+      );
+    }
+
     String note = '';
     if (widget.message.tokenCount > 0) {
       note += 'tokens used: ${widget.message.tokenCount}; ';
@@ -367,12 +567,14 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
                     text: formatRelativeDate(widget.message.createdAt),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).primaryColor,
+                      fontSize: ScreenHelper.metaFontSize(14),
                     ),
                   ),
                   TextSpan(
                     text: "    $note",
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).disabledColor,
+                      fontSize: ScreenHelper.metaFontSize(12),
                     ),
                   ),
                 ],
@@ -388,22 +590,25 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
   /// 长按消息，显示消息选项
   ///=============================================
   void showMessageOptions(UnifiedChatMessage message, Offset overlayPosition) {
-    // 添加振动反馈
-    HapticFeedback.mediumImpact();
+    // 振动反馈仅移动端(桌面无效调用)
+    if (ScreenHelper.isMobile()) {
+      HapticFeedback.mediumImpact();
+    }
 
     // 只有用户消息可以编辑
     final bool isUser = message.isUser;
     // 只有AI消息可以重新生成
     final bool isAssistant = message.isAssistant;
 
+    // 菜单弹出坐标钳制在屏幕安全范围内(约 200x440 菜单尺寸)，
+    // 避免宽窗口边缘右键时菜单被挤出屏幕
+    final screenSize = MediaQuery.of(context).size;
+    final dx = overlayPosition.dx.clamp(8.0, screenSize.width - 216);
+    final dy = overlayPosition.dy.clamp(8.0, screenSize.height - 456);
+
     showMenu<String>(
       context: context,
-      position: RelativeRect.fromLTRB(
-        overlayPosition.dx,
-        overlayPosition.dy,
-        overlayPosition.dx + 200,
-        overlayPosition.dy + 100,
-      ),
+      position: RelativeRect.fromLTRB(dx, dy, dx, dy),
       items: [
         // 复制按钮
         PopupMenuItem<String>(
@@ -439,6 +644,15 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
               child: buildMenuItemWithIcon(icon: Icons.refresh, text: '重新生成'),
             ),
         ],
+        // 分支树查看(非system消息可用)
+        if (!message.isSystem)
+          PopupMenuItem<String>(
+            value: 'branch_tree',
+            child: buildMenuItemWithIcon(
+              icon: Icons.account_tree,
+              text: '查看分支树',
+            ),
+          ),
         PopupMenuItem<String>(
           value: 'delete',
           child: buildMenuItemWithIcon(
@@ -463,6 +677,8 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
         widget.onResend?.call();
       } else if (value == 'regenerate') {
         widget.onRegenerate?.call();
+      } else if (value == 'branch_tree') {
+        _showBranchTreeDialog();
       } else if (value == 'delete') {
         widget.onDelete?.call();
       }

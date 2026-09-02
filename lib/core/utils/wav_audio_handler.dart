@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import '../services/media_save_service.dart';
 
 import 'datetime_formatter.dart';
 import 'get_dir.dart';
@@ -39,10 +40,9 @@ class WavAudioHandler {
     byteData.setUint32(40, pcmData.length, Endian.little); // 数据大小
 
     // 合并头和PCM数据
-    final wavFile =
-        Uint8List(44 + pcmData.length)
-          ..setRange(0, 44, byteData.buffer.asUint8List())
-          ..setRange(44, 44 + pcmData.length, pcmData);
+    final wavFile = Uint8List(44 + pcmData.length)
+      ..setRange(0, 44, byteData.buffer.asUint8List())
+      ..setRange(44, 44 + pcmData.length, pcmData);
 
     return wavFile;
   }
@@ -68,6 +68,9 @@ class WavAudioHandler {
         '${directory.path}/${model ?? 'omni_audio'}_${fileTs(DateTime.now())}.wav';
 
     await saveWavFile(wavData, filePath);
+
+    // AI生成语音：异步写公共区副本(MediaStore/相册)
+    MediaSaveService.onFileSaved(filePath);
 
     return filePath;
   }

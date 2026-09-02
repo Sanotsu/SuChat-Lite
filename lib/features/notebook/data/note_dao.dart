@@ -31,7 +31,8 @@ class NoteDao {
   }) async {
     final db = await dbInit.database;
 
-    String query = '''
+    String query =
+        '''
       SELECT n.*, c.name as category_name, c.color as category_color, c.icon as category_icon 
       FROM ${NotebookDdl.tableNote} n
       LEFT JOIN ${NotebookDdl.tableNoteCategory} c ON n.category_id = c.category_id

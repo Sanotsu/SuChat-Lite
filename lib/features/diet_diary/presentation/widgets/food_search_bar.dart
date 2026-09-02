@@ -29,13 +29,12 @@ class FoodSearchBar extends StatelessWidget {
         decoration: InputDecoration(
           hintText: hintText,
           prefixIcon: const Icon(Icons.search),
-          suffixIcon:
-              searchQuery.isNotEmpty
-                  ? IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: onClearSearch,
-                  )
-                  : null,
+          suffixIcon: searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: onClearSearch,
+                )
+              : null,
           filled: filled,
           fillColor: fillColor ?? Colors.grey[100],
           border: OutlineInputBorder(

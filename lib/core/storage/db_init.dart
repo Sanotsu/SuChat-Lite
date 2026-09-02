@@ -305,10 +305,9 @@ class DBInit {
     // 这个获取缓存目录即可
     Directory appDocDir = await getApplicationCacheDirectory();
     // 创建或检索 db_export 文件夹
-    var tempDir =
-        await Directory(
-          p.join(appDocDir.path, DBInitConfig.exportDir),
-        ).create();
+    var tempDir = await Directory(
+      p.join(appDocDir.path, DBInitConfig.exportDir),
+    ).create();
 
     // 打开数据库
     Database db = await database;

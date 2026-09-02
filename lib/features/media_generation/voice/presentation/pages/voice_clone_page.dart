@@ -224,14 +224,13 @@ class _VoiceClonePageState extends State<VoiceClonePage> {
           ),
         ],
       ),
-      body:
-          _isLoading
-              ? const Center(child: CusLoadingIndicator(text: '加载中...'))
-              : isDesktop
-              // 桌面端布局 - 左右两栏
-              ? _buildDesktopLayout()
-              // 移动端布局 - 保持原有的垂直布局
-              : _buildMobileLayout(),
+      body: _isLoading
+          ? const Center(child: CusLoadingIndicator(text: '加载中...'))
+          : isDesktop
+          // 桌面端布局 - 左右两栏
+          ? _buildDesktopLayout()
+          // 移动端布局 - 保持原有的垂直布局
+          : _buildMobileLayout(),
     );
   }
 
@@ -349,12 +348,11 @@ class _VoiceClonePageState extends State<VoiceClonePage> {
             onChanged: (value) {
               setState(() {});
             },
-            onTryListen:
-                () => _remoteAudioPlayer.playRemoteAudio(
-                  _cloudAudioUrlController.text,
-                  _audioRecordManager,
-                  context: context,
-                ),
+            onTryListen: () => _remoteAudioPlayer.playRemoteAudio(
+              _cloudAudioUrlController.text,
+              _audioRecordManager,
+              context: context,
+            ),
             isDownloading: _isDownloading,
           ),
 
@@ -464,10 +462,9 @@ class _VoiceClonePageState extends State<VoiceClonePage> {
           ListView.builder(
             shrinkWrap: true,
             // 在桌面端使用滚动物理效果，让长列表可以独立滚动
-            physics:
-                ScreenHelper.isDesktop()
-                    ? const AlwaysScrollableScrollPhysics()
-                    : const NeverScrollableScrollPhysics(),
+            physics: ScreenHelper.isDesktop()
+                ? const AlwaysScrollableScrollPhysics()
+                : const NeverScrollableScrollPhysics(),
             itemCount: _clonedVoices.length,
             itemBuilder: (context, index) {
               final voice = _clonedVoices[index];

@@ -127,21 +127,20 @@ class _PlanListPageState extends State<PlanListPage> {
             onPlanDeleted: (plan) async {
               final confirmed = await showDialog<bool>(
                 context: context,
-                builder:
-                    (context) => AlertDialog(
-                      title: const Text('删除计划'),
-                      content: const Text('确定要删除此训练计划吗？此操作不可撤销。'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          child: const Text('取消'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          child: const Text('删除'),
-                        ),
-                      ],
+                builder: (context) => AlertDialog(
+                  title: const Text('删除计划'),
+                  content: const Text('确定要删除此训练计划吗？此操作不可撤销。'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('取消'),
                     ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('删除'),
+                    ),
+                  ],
+                ),
               );
 
               if (confirmed == true) {
@@ -175,9 +174,9 @@ class _PlanListPageState extends State<PlanListPage> {
         // 根据是否显示AppBar返回不同的布局
         return widget.showAppBar
             ? Scaffold(
-              appBar: AppBar(title: const Text('训练计划列表')),
-              body: content,
-            )
+                appBar: AppBar(title: const Text('训练计划列表')),
+                body: content,
+              )
             : content;
       },
     );

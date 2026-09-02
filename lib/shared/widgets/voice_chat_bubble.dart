@@ -102,17 +102,14 @@ class _VoiceWaveBubbleState extends State<VoiceWaveBubble> {
                 // 减少最小宽度和高度，使点击区域更紧凑
                 constraints: BoxConstraints(minWidth: 24, minHeight: 24),
                 padding: EdgeInsets.zero,
-                onPressed:
-                    controller.playerState.isPlaying
-                        ? () async {
-                          await controller.pausePlayer();
-                        }
-                        : () async {
-                          await controller.startPlayer();
-                          controller.setFinishMode(
-                            finishMode: FinishMode.pause,
-                          );
-                        },
+                onPressed: controller.playerState.isPlaying
+                    ? () async {
+                        await controller.pausePlayer();
+                      }
+                    : () async {
+                        await controller.startPlayer();
+                        controller.setFinishMode(finishMode: FinishMode.pause);
+                      },
                 icon: Icon(
                   controller.playerState.isPlaying
                       ? Icons.stop
@@ -144,17 +141,14 @@ class _VoiceWaveBubbleState extends State<VoiceWaveBubble> {
                 // 减少最小宽度和高度，使点击区域更紧凑
                 constraints: BoxConstraints(minWidth: 24, minHeight: 24),
                 padding: EdgeInsets.zero,
-                onPressed:
-                    controller.playerState.isPlaying
-                        ? () async {
-                          await controller.pausePlayer();
-                        }
-                        : () async {
-                          await controller.startPlayer();
-                          controller.setFinishMode(
-                            finishMode: FinishMode.pause,
-                          );
-                        },
+                onPressed: controller.playerState.isPlaying
+                    ? () async {
+                        await controller.pausePlayer();
+                      }
+                    : () async {
+                        await controller.startPlayer();
+                        controller.setFinishMode(finishMode: FinishMode.pause);
+                      },
                 icon: Icon(
                   controller.playerState.isPlaying
                       ? Icons.stop

@@ -86,10 +86,9 @@ class _BillRankingWidgetState extends State<BillRankingWidget> {
           ),
         Container(
           decoration: BoxDecoration(
-            border:
-                widget.showBorder
-                    ? Border.all(color: Theme.of(context).colorScheme.outline)
-                    : null,
+            border: widget.showBorder
+                ? Border.all(color: Theme.of(context).colorScheme.outline)
+                : null,
             borderRadius: BorderRadius.circular(8),
           ),
           // 使用Scrollbar包装SingleChildScrollView，显示滚动条
@@ -105,24 +104,23 @@ class _BillRankingWidgetState extends State<BillRankingWidget> {
               interactive: true,
               child: SingleChildScrollView(
                 controller: _scrollController,
-                child:
-                    displayItems.isEmpty
-                        ? const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: Text('暂无数据'),
-                          ),
-                        )
-                        : Column(
-                          children: List.generate(
-                            displayItems.length,
-                            (index) => _buildRankingItem(
-                              context,
-                              displayItems[index],
-                              index + 1,
-                            ),
+                child: displayItems.isEmpty
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Text('暂无数据'),
+                        ),
+                      )
+                    : Column(
+                        children: List.generate(
+                          displayItems.length,
+                          (index) => _buildRankingItem(
+                            context,
+                            displayItems[index],
+                            index + 1,
                           ),
                         ),
+                      ),
               ),
             ),
           ),

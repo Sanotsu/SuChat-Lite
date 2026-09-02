@@ -369,8 +369,9 @@ class YearlyStatisticsPageState extends State<YearlyStatisticsPage>
         final stats = yearsData[key]!;
 
         // 根据选择的类型获取数据
-        double value =
-            _selectedType == 0 ? stats.totalIncome : stats.totalExpense;
+        double value = _selectedType == 0
+            ? stats.totalIncome
+            : stats.totalExpense;
 
         // 添加到结果中，并标记当前选中的年份
         result.add(
@@ -411,8 +412,9 @@ class YearlyStatisticsPageState extends State<YearlyStatisticsPage>
         final stats = monthsData[key]!;
 
         // 根据选择的类型获取数据
-        double value =
-            _selectedType == 0 ? stats.totalIncome : stats.totalExpense;
+        double value = _selectedType == 0
+            ? stats.totalIncome
+            : stats.totalExpense;
 
         // 月份显示
         final month = int.parse(key);

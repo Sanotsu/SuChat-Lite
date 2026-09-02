@@ -8,13 +8,13 @@ import 'package:flutter/services.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:video_player_media_kit/video_player_media_kit.dart';
 
+import '../core/services/desktop_window_service.dart';
+import '../core/services/upgrade_migrator.dart';
 import '../core/storage/cus_get_storage.dart';
 import '../core/utils/simple_tools.dart';
-import '../features/branch_chat/presentation/viewmodels/branch_store.dart';
 import '../shared/services/model_manager_service.dart';
 import '../shared/services/network_service.dart';
 import '../shared/widgets/toast_utils.dart';
-import 'permission_check_app.dart';
 import 'suchat_app.dart';
 
 class AppCatchError {
@@ -40,19 +40,18 @@ class AppCatchError {
         SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
       }
 
-      // 默认使用path_provider 的 getTemporaryDirectory()作为存储路径,且无法修改
-      // 又因为检查设备存储权限等是否授权需要把标记存入缓存,避免每次都弹窗显示,所以要在检查前进行缓存初始化
       await GetStorage.init(CusGetStorage.storeName);
 
-      // 初始化Logger（有这个工具，暂时未用到）
-      // await LogHelper.init();
-
-      // 启动初始检查权限的界面，而不是直接进入应用
-      runApp(const PermissionCheckApp());
+      // 0.1.5 起零存储权限启动：核心数据在应用私有区，直接初始化应用
+      await initApp();
     }, (error, stack) => catchError(error, stack));
   }
 
-  void initApp() async {
+  Future<void> initApp() async {
+    // 0.1.4 → 0.1.5 升级迁移：sqlite 库文件复制必须先于任何数据库打开；
+    // 媒体移动/路径重写在后台续跑，旧聊天 ObjectBox 走备份 zip 中转
+    await UpgradeMigrator.runIfNeeded(quickOnly: true);
+
     /// 只在首次启动时初始化内置模型
     /// 2025-07-04 理论上要加上这个if判断，
     /// 这里注释掉是担心直接删除了应用下DB文件夹后，再打开APP时会没有默认模型
@@ -62,19 +61,11 @@ class AppCatchError {
     // await CusGetStorage().markLaunched();
     // }
 
-    // 初始化 ObjectBox
-    final store = await BranchStore.create();
-
-    // 在应用退出时关闭 Store
-    WidgetsBinding.instance.addObserver(
-      LifecycleEventHandler(
-        detached: () async {
-          store.store.close();
-        },
-      ),
-    );
-
     NetworkStatusService().initialize();
+
+    // 桌面端窗口管理：最小尺寸约束 + 窗口大小/位置记忆
+    // （必须在 runApp 前完成 waitUntilReadyToShow，否则首帧会闪默认窗口）
+    await DesktopWindowService.instance.init();
 
     // 单行初始化后，您可以正常在多个平台使用 video_player
     VideoPlayerMediaKit.ensureInitialized(
@@ -122,26 +113,6 @@ class AppCatchError {
       if (kDebugMode) {
         print(error);
       }
-    }
-  }
-}
-
-/// 生命周期事件处理器
-class LifecycleEventHandler extends WidgetsBindingObserver {
-  final AsyncCallback? detached;
-
-  LifecycleEventHandler({this.detached});
-
-  @override
-  Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
-    switch (state) {
-      case AppLifecycleState.detached:
-        if (detached != null) {
-          await detached!();
-        }
-        break;
-      default:
-        break;
     }
   }
 }

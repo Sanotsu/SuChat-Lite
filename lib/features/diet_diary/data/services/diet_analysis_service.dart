@@ -5,8 +5,8 @@ import '../../../../core/dao/user_info_dao.dart';
 import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/entities/user_info.dart';
 import '../../../../shared/constants/constant_llm_enum.dart';
-import '../../../branch_chat/data/datasources/openai_compatible_apis.dart';
-import '../../../branch_chat/data/services/chat_service.dart';
+import '../../../../shared/services/openai_compatible_apis.dart';
+import '../../../../shared/services/chat_service.dart';
 import '../../domain/entities/meal_food_detail.dart';
 import '../../domain/entities/meal_type.dart';
 
@@ -106,7 +106,8 @@ class DietAnalysisService {
 """;
 
     // 用户信息部分
-    final userBaseInfo = """
+    final userBaseInfo =
+        """
 ## 用户信息
 - 性别: ${userInfo.gender == Gender.male ? '男' : '女'}
 - 年龄: ${userInfo.age}岁
@@ -120,16 +121,15 @@ class DietAnalysisService {
 """;
 
     // 营养摄入总结
-    final nutritionSummary =
-        dailyNutrition != null && dailyRecommended != null
-            ? """
+    final nutritionSummary = dailyNutrition != null && dailyRecommended != null
+        ? """
 ## 营养摄入总结
 - 总热量: ${dailyNutrition.calories.toInt()}千卡 / ${dailyRecommended.calories.toInt()}千卡 (推荐)
 - 碳水化合物: ${dailyNutrition.carbs.toInt()}克 / ${dailyRecommended.carbs.toInt()}克 (推荐)
 - 蛋白质: ${dailyNutrition.protein.toInt()}克 / ${dailyRecommended.protein.toInt()}克 (推荐)
 - 脂肪: ${dailyNutrition.fat.toInt()}克 / ${dailyRecommended.fat.toInt()}克 (推荐)
 """
-            : '';
+        : '';
 
     // 一日四餐详情
     final mealsDetail = StringBuffer();
@@ -173,7 +173,8 @@ class DietAnalysisService {
     }
 
     // 用户请求
-    final userRequest = """
+    final userRequest =
+        """
 请根据以上信息，分析我的一日饮食情况，并给出专业的建议。
 请从以下几个方面进行分析：
 1. 总体评价：我的饮食结构是否合理，热量摄入是否符合我的目标

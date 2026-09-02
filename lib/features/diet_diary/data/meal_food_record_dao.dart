@@ -91,7 +91,8 @@ class MealFoodRecordDao {
   Future<List<MealFoodDetail>> getMealFoodDetails(int mealRecordId) async {
     final db = await dbInit.database;
 
-    const query = '''
+    const query =
+        '''
     SELECT 
       mfr.id, 
       mfr.mealRecordId, 
@@ -160,7 +161,8 @@ class MealFoodRecordDao {
     final db = await dbInit.database;
     final dateString = date.toIso8601String().split('T')[0];
 
-    const query = '''
+    const query =
+        '''
     SELECT 
       SUM(f.caloriesPer100g * mfr.quantity / 100) as totalCalories,
       SUM(f.carbsPer100g * mfr.quantity / 100) as totalCarbs,
@@ -199,7 +201,8 @@ class MealFoodRecordDao {
     final startDateString = startDate.toIso8601String().split('T')[0];
     final endDateString = endDate.toIso8601String().split('T')[0];
 
-    const query = '''
+    const query =
+        '''
     SELECT 
       mr.date,
       SUM(f.caloriesPer100g * mfr.quantity / 100) as totalCalories,

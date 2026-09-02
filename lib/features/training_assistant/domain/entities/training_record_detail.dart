@@ -35,8 +35,9 @@ class TrainingRecordDetail {
       actualSets: map['actualSets'],
       actualReps: map['actualReps'],
       notes: map['notes'],
-      gmtCreate:
-          map['gmtCreate'] != null ? DateTime.parse(map['gmtCreate']) : null,
+      gmtCreate: map['gmtCreate'] != null
+          ? DateTime.parse(map['gmtCreate'])
+          : null,
     );
   }
 

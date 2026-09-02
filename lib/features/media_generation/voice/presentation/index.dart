@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
+import '../../../../core/services/media_save_service.dart';
 
 import '../../../../core/utils/get_dir.dart';
 import '../../../../shared/widgets/audio_player_widget.dart';
@@ -212,6 +213,9 @@ class _VoicePageState extends MediaGenerationBaseState<GenVoicePage> {
 
       // 复制到目标目录(？？？生成时是放在TemporaryDir，这里可以考虑保存db成功之后删除)
       await File(voicePath).copy(outputPath);
+
+      // AI生成语音：异步写公共区副本(MediaStore/相册)
+      MediaSaveService.onFileSaved(outputPath);
 
       // 2025-05-10 目前语音合成是直接得到结果，所以到这里就成功了，要创建历史记录
       history.audioUrls = [outputPath];

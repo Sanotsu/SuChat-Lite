@@ -82,12 +82,9 @@ class _NotebookPageState extends ConsumerState<NotebookPage> {
     if (_selectedNoteIds.isEmpty) return;
 
     // 获取选中的笔记
-    final selectedNotes =
-        allNotes
-            .where(
-              (note) => note.id != null && _selectedNoteIds.contains(note.id),
-            )
-            .toList();
+    final selectedNotes = allNotes
+        .where((note) => note.id != null && _selectedNoteIds.contains(note.id))
+        .toList();
 
     if (selectedNotes.isEmpty) return;
 
@@ -95,25 +92,24 @@ class _NotebookPageState extends ConsumerState<NotebookPage> {
     final bool confirm =
         await showDialog<bool>(
           context: context,
-          builder:
-              (context) => AlertDialog(
-                title: Text(
-                  '批量${_filterType == NoteFilterType.archived ? '取消归档' : '归档'}',
-                ),
-                content: Text(
-                  '确定要${_filterType == NoteFilterType.archived ? '取消归档' : '归档'}选中的 ${selectedNotes.length} 个笔记吗？',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('取消'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: const Text('确定'),
-                  ),
-                ],
+          builder: (context) => AlertDialog(
+            title: Text(
+              '批量${_filterType == NoteFilterType.archived ? '取消归档' : '归档'}',
+            ),
+            content: Text(
+              '确定要${_filterType == NoteFilterType.archived ? '取消归档' : '归档'}选中的 ${selectedNotes.length} 个笔记吗？',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('取消'),
               ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('确定'),
+              ),
+            ],
+          ),
         ) ??
         false;
 
@@ -158,12 +154,11 @@ class _NotebookPageState extends ConsumerState<NotebookPage> {
 
         leading: buildAppBarLading(),
 
-        actions:
-            _isSelectMode
-                // 选择模式下的操作按钮
-                ? buildMultiSelectActions()
-                // 非选择模式下的操作按钮
-                : buildNonMultiSelectActions(),
+        actions: _isSelectMode
+            // 选择模式下的操作按钮
+            ? buildMultiSelectActions()
+            // 非选择模式下的操作按钮
+            : buildNonMultiSelectActions(),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -176,15 +171,14 @@ class _NotebookPageState extends ConsumerState<NotebookPage> {
         ],
       ),
       // 非选择模式才显示悬浮按钮
-      floatingActionButton:
-          !_isSelectMode
-              ? buildFloatingActionButton(
-                _createNewNote,
-                context,
-                icon: Icons.add,
-                tooltip: '添加笔记',
-              )
-              : null,
+      floatingActionButton: !_isSelectMode
+          ? buildFloatingActionButton(
+              _createNewNote,
+              context,
+              icon: Icons.add,
+              tooltip: '添加笔记',
+            )
+          : null,
     );
   }
 
@@ -196,37 +190,37 @@ class _NotebookPageState extends ConsumerState<NotebookPage> {
     return _isSelectMode
         ? Text('已选择 ${_selectedNoteIds.length} 项')
         : Row(
-          children: [
-            const Text('记事本'),
-            if (_filterType != NoteFilterType.all)
-              Padding(
-                padding: const EdgeInsets.only(left: 8.0),
-                child: Chip(
-                  label: Text(
-                    _filterType == NoteFilterType.todo ? '待办事项' : '已归档',
-                    style: const TextStyle(fontSize: 12),
+            children: [
+              const Text('记事本'),
+              if (_filterType != NoteFilterType.all)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: Chip(
+                    label: Text(
+                      _filterType == NoteFilterType.todo ? '待办事项' : '已归档',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    backgroundColor: Colors.blue.withValues(alpha: 0.2),
+                    visualDensity: VisualDensity.compact,
+                    onDeleted: () {
+                      setState(() {
+                        _filterType = NoteFilterType.all;
+                        _refreshNotes();
+                      });
+                    },
                   ),
-                  backgroundColor: Colors.blue.withValues(alpha: 0.2),
-                  visualDensity: VisualDensity.compact,
-                  onDeleted: () {
-                    setState(() {
-                      _filterType = NoteFilterType.all;
-                      _refreshNotes();
-                    });
-                  },
                 ),
-              ),
-          ],
-        );
+            ],
+          );
   }
 
   IconButton? buildAppBarLading() {
     return _isSelectMode
         ? IconButton(
-          icon: const Icon(Icons.close),
-          tooltip: '取消选择',
-          onPressed: _exitSelectMode,
-        )
+            icon: const Icon(Icons.close),
+            tooltip: '取消选择',
+            onPressed: _exitSelectMode,
+          )
         : null;
   }
 
@@ -237,16 +231,15 @@ class _NotebookPageState extends ConsumerState<NotebookPage> {
     // 全选/取消全选按钮
     return [
       notesAsyncValue.when(
-        data:
-            (notes) => IconButton(
-              icon: Icon(
-                _selectedNoteIds.length == notes.length
-                    ? Icons.deselect
-                    : Icons.select_all,
-              ),
-              tooltip: _selectedNoteIds.length == notes.length ? '取消全选' : '全选',
-              onPressed: () => _toggleSelectAll(notes),
-            ),
+        data: (notes) => IconButton(
+          icon: Icon(
+            _selectedNoteIds.length == notes.length
+                ? Icons.deselect
+                : Icons.select_all,
+          ),
+          tooltip: _selectedNoteIds.length == notes.length ? '取消全选' : '全选',
+          onPressed: () => _toggleSelectAll(notes),
+        ),
         loading: () => const SizedBox(),
         error: (_, _) => const SizedBox(),
       ),
@@ -258,12 +251,11 @@ class _NotebookPageState extends ConsumerState<NotebookPage> {
               : Icons.archive,
         ),
         tooltip: _filterType == NoteFilterType.archived ? '取消归档' : '归档',
-        onPressed:
-            () => notesAsyncValue.when(
-              data: (notes) => _batchArchiveNotes(notes),
-              loading: () {},
-              error: (_, _) {},
-            ),
+        onPressed: () => notesAsyncValue.when(
+          data: (notes) => _batchArchiveNotes(notes),
+          loading: () {},
+          error: (_, _) {},
+        ),
       ),
     ];
   }
@@ -291,10 +283,9 @@ class _NotebookPageState extends ConsumerState<NotebookPage> {
         ),
         onPressed: () {
           setState(() {
-            _viewType =
-                _viewType == NoteViewType.grid
-                    ? NoteViewType.list
-                    : NoteViewType.grid;
+            _viewType = _viewType == NoteViewType.grid
+                ? NoteViewType.list
+                : NoteViewType.grid;
           });
         },
       ),
@@ -308,42 +299,41 @@ class _NotebookPageState extends ConsumerState<NotebookPage> {
             _refreshNotes();
           });
         },
-        itemBuilder:
-            (BuildContext context) => [
-              PopupMenuItem<NoteFilterType>(
-                value: NoteFilterType.all,
-                child: Row(
-                  children: [
-                    const Text('全部笔记'),
-                    const Spacer(),
-                    if (_filterType == NoteFilterType.all)
-                      const Icon(Icons.check, color: Colors.blue),
-                  ],
-                ),
-              ),
-              PopupMenuItem<NoteFilterType>(
-                value: NoteFilterType.todo,
-                child: Row(
-                  children: [
-                    const Text('待办事项'),
-                    const Spacer(),
-                    if (_filterType == NoteFilterType.todo)
-                      const Icon(Icons.check, color: Colors.blue),
-                  ],
-                ),
-              ),
-              PopupMenuItem<NoteFilterType>(
-                value: NoteFilterType.archived,
-                child: Row(
-                  children: [
-                    const Text('已归档'),
-                    const Spacer(),
-                    if (_filterType == NoteFilterType.archived)
-                      const Icon(Icons.check, color: Colors.blue),
-                  ],
-                ),
-              ),
-            ],
+        itemBuilder: (BuildContext context) => [
+          PopupMenuItem<NoteFilterType>(
+            value: NoteFilterType.all,
+            child: Row(
+              children: [
+                const Text('全部笔记'),
+                const Spacer(),
+                if (_filterType == NoteFilterType.all)
+                  const Icon(Icons.check, color: Colors.blue),
+              ],
+            ),
+          ),
+          PopupMenuItem<NoteFilterType>(
+            value: NoteFilterType.todo,
+            child: Row(
+              children: [
+                const Text('待办事项'),
+                const Spacer(),
+                if (_filterType == NoteFilterType.todo)
+                  const Icon(Icons.check, color: Colors.blue),
+              ],
+            ),
+          ),
+          PopupMenuItem<NoteFilterType>(
+            value: NoteFilterType.archived,
+            child: Row(
+              children: [
+                const Text('已归档'),
+                const Spacer(),
+                if (_filterType == NoteFilterType.archived)
+                  const Icon(Icons.check, color: Colors.blue),
+              ],
+            ),
+          ),
+        ],
       ),
     ];
   }
@@ -410,16 +400,12 @@ class _NotebookPageState extends ConsumerState<NotebookPage> {
           ),
         );
       },
-      loading:
-          () => const SizedBox(
-            height: 50,
-            child: Center(child: CircularProgressIndicator()),
-          ),
-      error:
-          (error, stack) => SizedBox(
-            height: 50,
-            child: Center(child: Text('加载笔记分类失败: $error')),
-          ),
+      loading: () => const SizedBox(
+        height: 50,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, stack) =>
+          SizedBox(height: 50, child: Center(child: Text('加载笔记分类失败: $error'))),
     );
   }
 
@@ -441,31 +427,27 @@ class _NotebookPageState extends ConsumerState<NotebookPage> {
             return SingleChildScrollView(
               child: Wrap(
                 alignment: WrapAlignment.start,
-                children:
-                    notes
-                        .map(
-                          (note) => Container(
-                            margin: const EdgeInsets.only(left: 8, bottom: 8),
-                            width: 250,
-                            height: 250,
-                            child: NoteCard(
-                              note: note,
-                              onTap: () => _openNoteDetail(note),
-                              isSelectable: _isSelectMode,
-                              isSelected:
-                                  note.id != null &&
-                                  _selectedNoteIds.contains(note.id),
-                              onSelected:
-                                  note.id != null
-                                      ? (selected) => _toggleNoteSelection(
-                                        note.id!,
-                                        selected,
-                                      )
-                                      : null,
-                            ),
-                          ),
-                        )
-                        .toList(),
+                children: notes
+                    .map(
+                      (note) => Container(
+                        margin: const EdgeInsets.only(left: 8, bottom: 8),
+                        width: 250,
+                        height: 250,
+                        child: NoteCard(
+                          note: note,
+                          onTap: () => _openNoteDetail(note),
+                          isSelectable: _isSelectMode,
+                          isSelected:
+                              note.id != null &&
+                              _selectedNoteIds.contains(note.id),
+                          onSelected: note.id != null
+                              ? (selected) =>
+                                    _toggleNoteSelection(note.id!, selected)
+                              : null,
+                        ),
+                      ),
+                    )
+                    .toList(),
               ),
             );
           }
@@ -488,10 +470,9 @@ class _NotebookPageState extends ConsumerState<NotebookPage> {
                 isSelectable: _isSelectMode,
                 isSelected:
                     note.id != null && _selectedNoteIds.contains(note.id),
-                onSelected:
-                    note.id != null
-                        ? (selected) => _toggleNoteSelection(note.id!, selected)
-                        : null,
+                onSelected: note.id != null
+                    ? (selected) => _toggleNoteSelection(note.id!, selected)
+                    : null,
               );
             },
           );
@@ -513,10 +494,9 @@ class _NotebookPageState extends ConsumerState<NotebookPage> {
                 isSelectable: _isSelectMode,
                 isSelected:
                     note.id != null && _selectedNoteIds.contains(note.id),
-                onSelected:
-                    note.id != null
-                        ? (selected) => _toggleNoteSelection(note.id!, selected)
-                        : null,
+                onSelected: note.id != null
+                    ? (selected) => _toggleNoteSelection(note.id!, selected)
+                    : null,
               ),
             );
           },

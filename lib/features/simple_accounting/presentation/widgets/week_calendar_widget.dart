@@ -119,14 +119,13 @@ class WeekCalendarWidget extends StatelessWidget {
       amountColor = Colors.green;
     }
 
-    final formattedValue =
-        amount <= 0
-            ? '-'
-            : ScreenHelper.isDesktop()
-            ? amount.toStringAsFixed(1)
-            : amount >= 10000
-            ? '${(amount / 10000).toStringAsFixed(1)}万'
-            : amount.toStringAsFixed(1);
+    final formattedValue = amount <= 0
+        ? '-'
+        : ScreenHelper.isDesktop()
+        ? amount.toStringAsFixed(1)
+        : amount >= 10000
+        ? '${(amount / 10000).toStringAsFixed(1)}万'
+        : amount.toStringAsFixed(1);
 
     // 当天高亮显示
     final isToday = _isToday(date);
@@ -141,10 +140,9 @@ class WeekCalendarWidget extends StatelessWidget {
         margin: EdgeInsets.all(ScreenHelper.isMobile() ? 2 : 4),
         padding: EdgeInsets.all(ScreenHelper.isMobile() ? 2 : 4),
         decoration: BoxDecoration(
-          color:
-              isToday
-                  ? Colors.blue.withValues(alpha: 0.3)
-                  : Colors.blue.withValues(alpha: 0.05),
+          color: isToday
+              ? Colors.blue.withValues(alpha: 0.3)
+              : Colors.blue.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(4),
           border: isToday ? Border.all(color: Colors.blue, width: 1) : null,
         ),

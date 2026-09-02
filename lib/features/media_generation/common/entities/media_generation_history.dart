@@ -142,10 +142,9 @@ class MediaGenerationHistory {
       'voice': voice,
       'otherParams': otherParams,
       'gmtCreate': DateFormat(formatToYMDHMS).format(gmtCreate),
-      'gmtModified':
-          gmtModified != null
-              ? DateFormat(formatToYMDHMS).format(gmtModified!)
-              : null,
+      'gmtModified': gmtModified != null
+          ? DateFormat(formatToYMDHMS).format(gmtModified!)
+          : null,
     };
   }
 }

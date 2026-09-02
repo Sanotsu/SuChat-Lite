@@ -35,22 +35,20 @@ class VoiceRecognitionTaskInfo {
       githubAudioUrl: json['githubAudioUrl'],
       languageHint: json['languageHint'],
       taskStatus: json['taskStatus'],
-      gmtCreate:
-          json['gmtCreate'] != null ? DateTime.parse(json['gmtCreate']) : null,
-      llmSpec:
-          json['llmSpec'] != null
-              ? CusLLMSpec.fromJson(jsonDecode(json['llmSpec']))
-              : null,
-      jobResponse:
-          json['jobResponse'] != null
-              ? SenseVoiceJobResp.fromJson(jsonDecode(json['jobResponse']))
-              : null,
-      recognitionResponse:
-          json['recognitionResponse'] != null
-              ? SenseVoiceRecogResp.fromJson(
-                jsonDecode(json['recognitionResponse']),
-              )
-              : null,
+      gmtCreate: json['gmtCreate'] != null
+          ? DateTime.parse(json['gmtCreate'])
+          : null,
+      llmSpec: json['llmSpec'] != null
+          ? CusLLMSpec.fromJson(jsonDecode(json['llmSpec']))
+          : null,
+      jobResponse: json['jobResponse'] != null
+          ? SenseVoiceJobResp.fromJson(jsonDecode(json['jobResponse']))
+          : null,
+      recognitionResponse: json['recognitionResponse'] != null
+          ? SenseVoiceRecogResp.fromJson(
+              jsonDecode(json['recognitionResponse']),
+            )
+          : null,
     );
   }
 
@@ -64,12 +62,12 @@ class VoiceRecognitionTaskInfo {
       'taskStatus': taskStatus,
       'gmtCreate': gmtCreate?.toIso8601String(),
       'llmSpec': llmSpec != null ? jsonEncode(llmSpec!.toJson()) : null,
-      'jobResponse':
-          jobResponse != null ? jsonEncode(jobResponse!.toJson()) : null,
-      'recognitionResponse':
-          recognitionResponse != null
-              ? jsonEncode(recognitionResponse!.toJson())
-              : null,
+      'jobResponse': jobResponse != null
+          ? jsonEncode(jobResponse!.toJson())
+          : null,
+      'recognitionResponse': recognitionResponse != null
+          ? jsonEncode(recognitionResponse!.toJson())
+          : null,
     };
   }
 
@@ -81,22 +79,18 @@ class VoiceRecognitionTaskInfo {
       githubAudioUrl: map['githubAudioUrl'],
       languageHint: map['languageHint'],
       taskStatus: map['taskStatus'],
-      gmtCreate:
-          map['gmtCreate'] != null ? DateTime.parse(map['gmtCreate']) : null,
-      jobResponse:
-          map['jobResponse'] != null
-              ? SenseVoiceJobResp.fromJson(jsonDecode(map['jobResponse']))
-              : null,
-      llmSpec:
-          map['llmSpec'] != null
-              ? CusLLMSpec.fromJson(jsonDecode(map['llmSpec']))
-              : null,
-      recognitionResponse:
-          map['recognitionResponse'] != null
-              ? SenseVoiceRecogResp.fromJson(
-                jsonDecode(map['recognitionResponse']),
-              )
-              : null,
+      gmtCreate: map['gmtCreate'] != null
+          ? DateTime.parse(map['gmtCreate'])
+          : null,
+      jobResponse: map['jobResponse'] != null
+          ? SenseVoiceJobResp.fromJson(jsonDecode(map['jobResponse']))
+          : null,
+      llmSpec: map['llmSpec'] != null
+          ? CusLLMSpec.fromJson(jsonDecode(map['llmSpec']))
+          : null,
+      recognitionResponse: map['recognitionResponse'] != null
+          ? SenseVoiceRecogResp.fromJson(jsonDecode(map['recognitionResponse']))
+          : null,
     );
   }
 

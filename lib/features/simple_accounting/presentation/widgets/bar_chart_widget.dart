@@ -56,12 +56,16 @@ class BarChartWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (data.isEmpty) {
-      return SizedBox(height: height, child: const Center(child: Text('暂无柱状图数据')));
+      return SizedBox(
+        height: height,
+        child: const Center(child: Text('暂无柱状图数据')),
+      );
     }
 
     return Column(
-      crossAxisAlignment:
-          centerTitle ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+      crossAxisAlignment: centerTitle
+          ? CrossAxisAlignment.center
+          : CrossAxisAlignment.start,
       children: [
         if (showTitle && title.isNotEmpty)
           Padding(
@@ -111,11 +115,8 @@ class BarChartWidget extends StatelessWidget {
           xValueMapper: (BarChartData data, _) => data.category,
           yValueMapper: (BarChartData data, _) => data.value,
           //  pointColorMapper: (BarChartData data, _) => data.color,
-          pointColorMapper:
-              (BarChartData data, _) =>
-                  data.isSelected
-                      ? data.color
-                      : data.color.withValues(alpha: 0.5),
+          pointColorMapper: (BarChartData data, _) =>
+              data.isSelected ? data.color : data.color.withValues(alpha: 0.5),
           dataLabelSettings: DataLabelSettings(
             isVisible: showValue,
             labelAlignment: ChartDataLabelAlignment.outer,
@@ -124,42 +125,42 @@ class BarChartWidget extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
             // 为选中项添加不同的标签样式
-            builder: (
-              dynamic data,
-              dynamic point,
-              dynamic series,
-              int pointIndex,
-              int seriesIndex,
-            ) {
-              final item = data as BarChartData;
-              final formatter = NumberFormat.currency(
-                locale: 'zh_CN',
-                symbol: '¥',
-                decimalDigits: 0,
-              );
-              return Container(
-                // padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                decoration:
-                    item.isSelected
+            builder:
+                (
+                  dynamic data,
+                  dynamic point,
+                  dynamic series,
+                  int pointIndex,
+                  int seriesIndex,
+                ) {
+                  final item = data as BarChartData;
+                  final formatter = NumberFormat.currency(
+                    locale: 'zh_CN',
+                    symbol: '¥',
+                    decimalDigits: 0,
+                  );
+                  return Container(
+                    // padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    decoration: item.isSelected
                         ? BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(4),
-                        )
+                            color: Colors.black.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(4),
+                          )
                         : null,
-                child: Text(
-                  formatter.format(item.value),
-                  style: TextStyle(
-                    color:
-                        item.isSelected
+                    child: Text(
+                      formatter.format(item.value),
+                      style: TextStyle(
+                        color: item.isSelected
                             ? Colors.black
                             : Colors.black.withValues(alpha: 0.7),
-                    fontSize: ScreenHelper.isDesktop() ? 12 : 10,
-                    fontWeight:
-                        item.isSelected ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-              );
-            },
+                        fontSize: ScreenHelper.isDesktop() ? 12 : 10,
+                        fontWeight: item.isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  );
+                },
           ),
           width: 0.8,
           spacing: 0.2,
@@ -241,11 +242,8 @@ class BarChartWidget extends StatelessWidget {
           dataSource: data,
           xValueMapper: (BarChartData data, _) => data.category,
           yValueMapper: (BarChartData data, _) => data.value,
-          pointColorMapper:
-              (BarChartData data, _) =>
-                  data.isSelected
-                      ? data.color
-                      : data.color.withValues(alpha: 0.3),
+          pointColorMapper: (BarChartData data, _) =>
+              data.isSelected ? data.color : data.color.withValues(alpha: 0.3),
           dataLabelSettings: DataLabelSettings(
             isVisible: showValue,
             labelAlignment: ChartDataLabelAlignment.outer,
@@ -255,42 +253,45 @@ class BarChartWidget extends StatelessWidget {
             textStyle: const TextStyle(fontSize: 10),
             overflowMode: OverflowMode.shift,
             // 为选中项添加不同的标签样式
-            builder: (
-              dynamic data,
-              dynamic point,
-              dynamic series,
-              int pointIndex,
-              int seriesIndex,
-            ) {
-              final item = data as BarChartData;
-              final formatter = NumberFormat.currency(
-                locale: 'zh_CN',
-                symbol: '¥',
-                decimalDigits: 0,
-              );
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                decoration:
-                    item.isSelected
+            builder:
+                (
+                  dynamic data,
+                  dynamic point,
+                  dynamic series,
+                  int pointIndex,
+                  int seriesIndex,
+                ) {
+                  final item = data as BarChartData;
+                  final formatter = NumberFormat.currency(
+                    locale: 'zh_CN',
+                    symbol: '¥',
+                    decimalDigits: 0,
+                  );
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 2,
+                    ),
+                    decoration: item.isSelected
                         ? BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(4),
-                        )
+                            color: Colors.black.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(4),
+                          )
                         : null,
-                child: Text(
-                  formatter.format(item.value),
-                  style: TextStyle(
-                    color:
-                        item.isSelected
+                    child: Text(
+                      formatter.format(item.value),
+                      style: TextStyle(
+                        color: item.isSelected
                             ? Colors.black
                             : Colors.black.withValues(alpha: 0.7),
-                    fontSize: 10,
-                    fontWeight:
-                        item.isSelected ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-              );
-            },
+                        fontSize: 10,
+                        fontWeight: item.isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  );
+                },
           ),
           width: 0.8,
           spacing: 0.2,

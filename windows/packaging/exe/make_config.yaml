@@ -1,0 +1,18 @@
+# Fastforge exe maker 配置(Inno Setup 安装包)
+# 文档: https://fastforge.dev/makers/exe
+# 生成命令: fastforge package --platform windows --targets exe
+#
+# AppId 唯一标识本应用的安装包，一经发布不可更改(否则会被系统视为不同应用)
+app_id: a53df732-71ab-443f-9742-cc1eac2e787c
+publisher: SuChat
+publisher_url: https://github.com/SuChat/suchat_lite
+display_name: SuChat
+create_desktop_icon: true
+# ico 格式，相对项目根目录
+setup_icon_file: windows\runner\resources\app_icon.ico
+# 安装器界面语言
+locales:
+  - en
+  - zh
+# 默认 x64compatible(原生 x64 + ARM64 转译)，无需修改
+# architectures_allowed: x64compatible

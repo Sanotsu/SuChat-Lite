@@ -107,40 +107,39 @@ class _WeightTrendPageState extends State<WeightTrendPage> {
 
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('记录体重'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: _weightController,
-                    decoration: const InputDecoration(labelText: '体重 (公斤)'),
-                    keyboardType: TextInputType.number,
-                  ),
-                  TextField(
-                    controller: _notesController,
-                    decoration: const InputDecoration(labelText: '备注 (可选)'),
-                    maxLines: 2,
-                  ),
-                ],
+      builder: (context) => AlertDialog(
+        title: const Text('记录体重'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _weightController,
+                decoration: const InputDecoration(labelText: '体重 (公斤)'),
+                keyboardType: TextInputType.number,
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () {
-                  _addWeightRecord();
-                  Navigator.pop(context);
-                },
-                child: const Text('保存'),
+              TextField(
+                controller: _notesController,
+                decoration: const InputDecoration(labelText: '备注 (可选)'),
+                maxLines: 2,
               ),
             ],
           ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              _addWeightRecord();
+              Navigator.pop(context);
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -189,21 +188,20 @@ class _WeightTrendPageState extends State<WeightTrendPage> {
   Future<void> _deleteWeightRecord(int id) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('确认删除'),
-            content: const Text('确定要删除这个记录吗？'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('删除'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('确认删除'),
+        content: const Text('确定要删除这个记录吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
     );
 
     if (confirmed != true) return;
@@ -255,35 +253,34 @@ class _WeightTrendPageState extends State<WeightTrendPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('体重趋势')),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _error != null
-              ? Center(child: Text(_error!))
-              : SingleChildScrollView(
-                child: Column(
-                  children: [
-                    // BMI 卡片
-                    if (userInfo != null)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
-                        child: _buildBmiCard(userInfo),
-                      ),
-
-                    // 体重趋势图
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+          ? Center(child: Text(_error!))
+          : SingleChildScrollView(
+              child: Column(
+                children: [
+                  // BMI 卡片
+                  if (userInfo != null)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
-                      child: _buildWeightChart(),
+                      child: _buildBmiCard(userInfo),
                     ),
 
-                    // 体重记录列表
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
-                      child: _buildWeightRecordsList(),
-                    ),
-                  ],
-                ),
+                  // 体重趋势图
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
+                    child: _buildWeightChart(),
+                  ),
+
+                  // 体重记录列表
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
+                    child: _buildWeightRecordsList(),
+                  ),
+                ],
               ),
+            ),
       floatingActionButton: buildFloatingActionButton(
         _showAddWeightDialog,
         context,
@@ -295,10 +292,9 @@ class _WeightTrendPageState extends State<WeightTrendPage> {
 
   Widget _buildBmiCard(UserInfo userInfo) {
     // 使用最新体重记录的体重计算BMI，如果没有记录则使用用户资料中的体重
-    final weight =
-        _weightRecords.isNotEmpty
-            ? _weightRecords.first.weight
-            : userInfo.weight;
+    final weight = _weightRecords.isNotEmpty
+        ? _weightRecords.first.weight
+        : userInfo.weight;
 
     final height = userInfo.height / 100; // 转换为米
     final bmi = weight / (height * height);
@@ -406,8 +402,9 @@ class _WeightTrendPageState extends State<WeightTrendPage> {
 
     // 设置y轴范围，增加一些边距
     final yPadding = (maxWeight - minWeight) * 0.2;
-    final double minY =
-        (minWeight - yPadding) > 0 ? (minWeight - yPadding) : 0.0;
+    final double minY = (minWeight - yPadding) > 0
+        ? (minWeight - yPadding)
+        : 0.0;
     final double maxY = maxWeight + yPadding;
 
     return ScrollableChart(

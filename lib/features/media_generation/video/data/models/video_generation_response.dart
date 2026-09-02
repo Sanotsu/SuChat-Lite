@@ -121,12 +121,11 @@ class VideoGenerationSubmitResponse {
       case ApiPlatform.aliyun:
         return VideoGenerationSubmitResponse(
           requestId: json['request_id'] as String?,
-          output:
-              json['output'] != null
-                  ? AliyunVideoOutput.fromJson(
-                    json['output'] as Map<String, dynamic>,
-                  )
-                  : null,
+          output: json['output'] != null
+              ? AliyunVideoOutput.fromJson(
+                  json['output'] as Map<String, dynamic>,
+                )
+              : null,
           code: json['code'] as String?,
           message: json['message'] as String?,
         );
@@ -204,29 +203,24 @@ class VideoGenerationTaskResponse {
         return VideoGenerationTaskResponse(
           status: json['status'] as String?,
           reason: json['reason'] as String?,
-          results:
-              json['results'] != null
-                  ? SiliconflowVideoStatusResult.fromJson(
-                    json['results'] as Map<String, dynamic>,
-                  )
-                  : null,
+          results: json['results'] != null
+              ? SiliconflowVideoStatusResult.fromJson(
+                  json['results'] as Map<String, dynamic>,
+                )
+              : null,
         );
 
       case ApiPlatform.aliyun:
         return VideoGenerationTaskResponse(
           requestId: json['request_id'] as String?,
-          output:
-              json['output'] != null
-                  ? AliyunVideoOutput.fromJson(
-                    json['output'] as Map<String, dynamic>,
-                  )
-                  : null,
-          usage:
-              json['usage'] != null
-                  ? AliyunVideoUsage.fromJson(
-                    json['usage'] as Map<String, dynamic>,
-                  )
-                  : null,
+          output: json['output'] != null
+              ? AliyunVideoOutput.fromJson(
+                  json['output'] as Map<String, dynamic>,
+                )
+              : null,
+          usage: json['usage'] != null
+              ? AliyunVideoUsage.fromJson(json['usage'] as Map<String, dynamic>)
+              : null,
         );
 
       case ApiPlatform.zhipu:
@@ -234,14 +228,11 @@ class VideoGenerationTaskResponse {
           requestId: json['request_id'] as String?,
           model: json['model'] as String?,
           taskStatus: json['task_status'] as String?,
-          videoResult:
-              json['video_result'] != null
-                  ? (json['video_result'] as List)
-                      .map(
-                        (e) => VideoResult.fromJson(e as Map<String, dynamic>),
-                      )
-                      .toList()
-                  : null,
+          videoResult: json['video_result'] != null
+              ? (json['video_result'] as List)
+                    .map((e) => VideoResult.fromJson(e as Map<String, dynamic>))
+                    .toList()
+              : null,
         );
 
       default:

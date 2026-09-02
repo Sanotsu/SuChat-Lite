@@ -80,6 +80,8 @@ class UnifiedChatDdl {
       '${DBInitConfig.tablePerfix}unified_chat_partner';
 
   /// 聊天搭档表创建语句
+  /// 2026-08-31 合并旧版角色卡系统：搭档=轻量人格(仅prompt)或角色卡
+  /// (结构化人设+开场白+专属背景+偏好模型)，结构化字段均可空，存量搭档行为不变
   static const String ddlForUnifiedChatPartner =
       '''
       CREATE TABLE IF NOT EXISTS $tableUnifiedChatPartner (
@@ -96,7 +98,16 @@ class UnifiedChatDdl {
         max_tokens                    INTEGER,
         is_stream                     INTEGER               DEFAULT 1,
         created_at                    INTEGER   NOT NULL,
-        updated_at                    INTEGER   NOT NULL
+        updated_at                    INTEGER   NOT NULL,
+        description                   TEXT,
+        personality                   TEXT,
+        scenario                      TEXT,
+        first_message                 TEXT,
+        example_dialogue              TEXT,
+        tags                          TEXT,
+        preferred_model_id            TEXT,
+        background                    TEXT,
+        background_opacity            REAL
       )
     ''';
 
@@ -132,6 +143,7 @@ class UnifiedChatDdl {
         is_archived                 INTEGER   NOT NULL      DEFAULT 0,
         created_at                  INTEGER   NOT NULL,
         updated_at                  INTEGER   NOT NULL,
+        current_branch_path         TEXT,
         FOREIGN KEY (model_id) REFERENCES $tableUnifiedModelSpec (id),
         FOREIGN KEY (platform_id) REFERENCES $tableUnifiedPlatformSpec (id)
       )
@@ -139,7 +151,12 @@ class UnifiedChatDdl {
 
   /// 对话消息表
   /// 每个对话都要保留使用的平台和模型名(作为请求参数的那个)
-  /// model_name_used platform_id_used 具体的模型平台信息、以及音频视频等媒体资源的地址信息，都放在metadata中
+  /// model_name_used platform_id_used 具体的模型、平台信息、以及音频视频等媒体资源的地址信息，都放在metadata中
+  /// 2026-08-31 v2 增加分支对话支持：
+  ///   parent_id: 父消息id(树形结构指针)；根消息和系统消息为null
+  ///   branch_index: 同父节点下兄弟消息的序号(从0开始)
+  ///   depth: 树深度(根为0)；系统消息不入树，固定为-1
+  ///   branch_path: 根到当前消息的路径字符串，比如 "0/1/0"；系统消息为空字符串
   static const tableUnifiedChatMessage =
       '${DBInitConfig.tablePerfix}unified_chat_message';
 
@@ -171,6 +188,10 @@ class UnifiedChatDdl {
         metadata            TEXT,
         created_at          INTEGER   NOT NULL,
         updated_at          INTEGER   NOT NULL,
+        parent_id           TEXT,
+        branch_index        INTEGER   NOT NULL     DEFAULT 0,
+        depth               INTEGER   NOT NULL     DEFAULT 0,
+        branch_path         TEXT      NOT NULL     DEFAULT '',
         FOREIGN KEY (conversation_id) REFERENCES $tableUnifiedConversation (id) ON DELETE CASCADE
       )
     ''';

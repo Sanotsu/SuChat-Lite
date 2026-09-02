@@ -19,6 +19,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../shared/widgets/toast_utils.dart';
 import '../../shared/constants/constants.dart';
 import 'get_dir.dart';
+import '../services/media_save_service.dart';
 
 /// 全局单例，所有保留print但不想有提示或者使用debugPrint的，都用这个
 final pl = ProsteLogger();
@@ -183,10 +184,7 @@ Future<void> saveTextFileToStorage(
   String? extension = 'txt',
 }) async {
   try {
-    // 首先获取设备外部存储管理权限
-    if (!(await requestStoragePermission())) {
-      return ToastUtils.showError("未授权访问设备外部存储，无法保存文档");
-    }
+    // [0.1.5] 存储权限检查已移除：数据保存于应用私有区，无需权限
 
     // 翻译保存的文本，放到设备外部存储固定位置，不存在文件夹则先创建
     if (!await dir.exists()) {
@@ -246,6 +244,9 @@ Future<File> saveTtiBase64ImageToLocal(
 
   await file.writeAsBytes(bytes);
 
+  // AI生成媒体：异步写公共区副本(MediaStore/相册)
+  MediaSaveService.onFileSaved(file.path);
+
   return file;
 }
 
@@ -258,11 +259,7 @@ Future<String?> saveImageToLocal(
   bool showSaveHint = true,
   bool overwriteExisting = false,
 }) async {
-  // 首先获取设备外部存储管理权限
-  if (!(await requestStoragePermission())) {
-    ToastUtils.showError("未授权访问设备外部存储，无法保存图片");
-    return null;
-  }
+  // [0.1.5] 存储权限检查已移除：数据保存于应用私有区，无需权限
 
   // 2024-09-04 文生图片一般有一个随机的名称，就只使用它就好(可以避免同一个保存了多份)
   // 注意，像阿里云这种地址会带上过期日期token信息等参数内容，所以下载保存的文件名要过滤掉，只保留图片地址信息
@@ -313,11 +310,14 @@ Future<String?> saveImageToLocal(
         closeToast();
       }
       if (fileExists && overwriteExisting) {
-        ToastUtils.showToast("图片已覆盖保存在手机下/${file.path.split("/0/").last}");
+        ToastUtils.showToast("图片已覆盖保存在 $filePath");
       } else {
-        ToastUtils.showToast("图片已保存在手机下/${file.path.split("/0/").last}");
+        ToastUtils.showToast("图片已保存在 $filePath");
       }
     }
+
+    // AI生成媒体：异步写公共区副本(MediaStore/相册)；NET_DL缓存不触发
+    MediaSaveService.onFileSaved(file.path);
 
     return file.path;
   } catch (e) {
@@ -343,11 +343,7 @@ Future<String?> saveNetMediaToLocal(
   bool showSaveHint = true,
   bool overwriteExisting = false,
 }) async {
-  // 首先获取设备外部存储管理权限
-  if (!(await requestStoragePermission())) {
-    ToastUtils.showError("未授权访问设备外部存储，无法保存图片");
-    return null;
-  }
+  // [0.1.5] 存储权限检查已移除：数据保存于应用私有区，无需权限
 
   // 如果有指定保存的图片名称，则不用从url获取;需要过滤地址带有过期日期token信息等额外内容
   mediaName ??= netMediaUrl.split("?").first.split('/').last;
@@ -434,11 +430,7 @@ Future<List<String?>> saveMultipleImagesToLocal(
   bool stopOnError = false, // 是否在遇到错误时停止
   Function(int, int)? onProgress, // 进度回调 (当前进度, 总数)
 }) async {
-  // 首先获取设备外部存储管理权限
-  if (!(await requestStoragePermission())) {
-    ToastUtils.showError("未授权访问设备外部存储，无法保存图片");
-    return List.filled(netImageUrls.length, null);
-  }
+  // [0.1.5] 存储权限检查已移除：数据保存于应用私有区，无需权限
 
   final List<String?> results = [];
   int successCount = 0;
@@ -563,11 +555,7 @@ Future<String?> saveVideoToLocal(
   // 是否显示保存提示
   bool showSaveHint = true,
 }) async {
-  // 首先获取设备外部存储管理权限
-  if (!(await requestStoragePermission())) {
-    ToastUtils.showError("未授权访问设备外部存储，无法保存视频");
-    return null;
-  }
+  // [0.1.5] 存储权限检查已移除：数据保存于应用私有区，无需权限
 
   videoName ??= netVideoUrl.split("?").first.split('/').last;
 
@@ -590,8 +578,11 @@ Future<String?> saveVideoToLocal(
     // 保存的地址在 /storage/emulated/0/SuChatFiles/…… 前面一节就不显示了
     if (showSaveHint && closeToast != null) {
       closeToast();
-      ToastUtils.showToast("视频已保存在手机下/${filePath.split("/0/").last}");
+      ToastUtils.showToast("视频已保存在 $filePath");
     }
+
+    // AI生成视频：异步写公共区副本(MediaStore/相册)
+    MediaSaveService.onFileSaved(filePath);
 
     return filePath;
   } finally {
@@ -643,10 +634,7 @@ Future<String> getBase64FromNetworkImage(String imageUrl) async {
 
 // 保存文生视频的视频到本地
 Future<void> savevgVideoToLocal(String netVideoUrl, {String? prefix}) async {
-  // 首先获取设备外部存储管理权限
-  if (!(await requestStoragePermission())) {
-    return ToastUtils.showError("未授权访问设备外部存储，无法保存视频");
-  }
+  // [0.1.5] 存储权限检查已移除：数据保存于应用私有区，无需权限
 
   dynamic closeToast;
   try {
@@ -658,9 +646,12 @@ Future<void> savevgVideoToLocal(String netVideoUrl, {String? prefix}) async {
     closeToast = ToastUtils.showLoading('【视频保存中...】');
     await Dio().download(netVideoUrl, filePath);
 
+    // AI生成视频：异步写公共区副本(MediaStore/相册)
+    MediaSaveService.onFileSaved(filePath);
+
     closeToast();
     // 保存的地址在 /storage/emulated/0/SuChatFiles/…… 前面一节就不显示了
-    ToastUtils.showToast("视频已保存在手机下/${filePath.split("/0/").last}");
+    ToastUtils.showToast("视频已保存在 $filePath");
   } finally {
     if (closeToast != null) {
       closeToast();

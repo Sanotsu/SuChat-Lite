@@ -455,8 +455,9 @@ class MonthlyStatisticsPageState extends State<MonthlyStatisticsPage>
         final stats = monthsData[key]!;
 
         // 根据选择的类型获取数据
-        double value =
-            _selectedType == 0 ? stats.totalIncome : stats.totalExpense;
+        double value = _selectedType == 0
+            ? stats.totalIncome
+            : stats.totalExpense;
 
         // 提取月份显示
         String monthDisplay;

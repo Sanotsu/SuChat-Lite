@@ -78,11 +78,10 @@ class _TrainingAssistantPageState extends State<TrainingAssistantPage> {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder:
-            (context) => ChangeNotifierProvider.value(
-              value: _userInfoViewModel,
-              child: const UserInfoPage(),
-            ),
+        builder: (context) => ChangeNotifierProvider.value(
+          value: _userInfoViewModel,
+          child: const UserInfoPage(),
+        ),
       ),
     );
 
@@ -108,22 +107,20 @@ class _TrainingAssistantPageState extends State<TrainingAssistantPage> {
           ),
         ],
         // 桌面端导航在页面左侧，移动端导航在顶部AppBar底部
-        bottom:
-            (_isUserInfoCompleted && ScreenHelper.isMobile())
-                ? PreferredSize(
-                  preferredSize: const Size.fromHeight(60),
-                  child: _buildTopNavigation(),
-                )
-                : null,
+        bottom: (_isUserInfoCompleted && ScreenHelper.isMobile())
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(60),
+                child: _buildTopNavigation(),
+              )
+            : null,
       ),
-      body:
-          _isCheckingUserInfo
-              ? const Center(child: CircularProgressIndicator())
-              : !_isUserInfoCompleted
-              ? _buildNoUserInfoView()
-              : ScreenHelper.isDesktop()
-              ? _buildDesktopLayout()
-              : _buildCurrentPage(),
+      body: _isCheckingUserInfo
+          ? const Center(child: CircularProgressIndicator())
+          : !_isUserInfoCompleted
+          ? _buildNoUserInfoView()
+          : ScreenHelper.isDesktop()
+          ? _buildDesktopLayout()
+          : _buildCurrentPage(),
     );
   }
 
@@ -160,14 +157,12 @@ class _TrainingAssistantPageState extends State<TrainingAssistantPage> {
         label: Text(title),
         style: ElevatedButton.styleFrom(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          backgroundColor:
-              isSelected
-                  ? Theme.of(context).colorScheme.primaryContainer
-                  : Theme.of(context).colorScheme.surface,
-          foregroundColor:
-              isSelected
-                  ? Theme.of(context).colorScheme.onPrimaryContainer
-                  : Theme.of(context).colorScheme.onSurface,
+          backgroundColor: isSelected
+              ? Theme.of(context).colorScheme.primaryContainer
+              : Theme.of(context).colorScheme.surface,
+          foregroundColor: isSelected
+              ? Theme.of(context).colorScheme.onPrimaryContainer
+              : Theme.of(context).colorScheme.onSurface,
         ),
       ),
     );
@@ -264,18 +259,17 @@ class _TrainingAssistantPageState extends State<TrainingAssistantPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder:
-                      (context) => ChangeNotifierProvider.value(
-                        value: _trainingViewModel,
-                        child: PlanDetailPage(
-                          showAppBar: true,
-                          onSwitchToStatistics: () {
-                            setState(() {
-                              _currentIndex = 2; // 切换到统计页面
-                            });
-                          },
-                        ),
-                      ),
+                  builder: (context) => ChangeNotifierProvider.value(
+                    value: _trainingViewModel,
+                    child: PlanDetailPage(
+                      showAppBar: true,
+                      onSwitchToStatistics: () {
+                        setState(() {
+                          _currentIndex = 2; // 切换到统计页面
+                        });
+                      },
+                    ),
+                  ),
                 ),
               );
             },
@@ -294,18 +288,17 @@ class _TrainingAssistantPageState extends State<TrainingAssistantPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder:
-                      (context) => ChangeNotifierProvider.value(
-                        value: _trainingViewModel,
-                        child: PlanDetailPage(
-                          showAppBar: true,
-                          onSwitchToStatistics: () {
-                            setState(() {
-                              _currentIndex = 2; // 切换到统计页面
-                            });
-                          },
-                        ),
-                      ),
+                  builder: (context) => ChangeNotifierProvider.value(
+                    value: _trainingViewModel,
+                    child: PlanDetailPage(
+                      showAppBar: true,
+                      onSwitchToStatistics: () {
+                        setState(() {
+                          _currentIndex = 2; // 切换到统计页面
+                        });
+                      },
+                    ),
+                  ),
                 ),
               );
             },

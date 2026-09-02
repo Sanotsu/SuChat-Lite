@@ -440,8 +440,6 @@ ${UnifiedModelType.values.map((e) => e.name).join(", ")}
         ? 'assets/platform_icons/small/'
         : 'assets/platform_icons/';
     switch (platform.id) {
-      case 'lingyiwanwu':
-        return '${commonIcon}lingyiwanwu.png';
       case 'deepseek':
         return '${commonIcon}deepseek.png';
       case 'zhipu':
@@ -457,8 +455,6 @@ ${UnifiedModelType.values.map((e) => e.name).join(", ")}
         return '${commonIcon}aliyun.png';
       case 'siliconCloud':
         return '${commonIcon}siliconcloud.png';
-      case 'infini':
-        return '${commonIcon}infini.png';
       default:
         return '';
     }

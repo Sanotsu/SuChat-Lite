@@ -93,18 +93,17 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder:
-                        (context) => FoodEditPage(
-                          foodItem: widget.foodItem,
-                          onSave: (updatedFood) {
-                            _viewModel.updateFood(updatedFood).then((_) {
-                              ToastUtils.showInfo('食品信息已更新');
+                    builder: (context) => FoodEditPage(
+                      foodItem: widget.foodItem,
+                      onSave: (updatedFood) {
+                        _viewModel.updateFood(updatedFood).then((_) {
+                          ToastUtils.showInfo('食品信息已更新');
 
-                              if (!context.mounted) return;
-                              Navigator.pop(context);
-                            });
-                          },
-                        ),
+                          if (!context.mounted) return;
+                          Navigator.pop(context);
+                        });
+                      },
+                    ),
                   ),
                 );
               },

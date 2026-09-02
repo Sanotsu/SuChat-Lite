@@ -28,12 +28,11 @@ class NoteCard extends StatelessWidget {
     // 获取笔记颜色
     final noteColor = note.getNoteColor();
     // 处理归档笔记的颜色
-    final cardColor =
-        note.isArchived
-            ? (noteColor != null
-                ? _desaturateColor(noteColor)
-                : Colors.grey.shade50)
-            : noteColor ?? Colors.white;
+    final cardColor = note.isArchived
+        ? (noteColor != null
+              ? _desaturateColor(noteColor)
+              : Colors.grey.shade50)
+        : noteColor ?? Colors.white;
 
     return Card(
       color: cardColor,
@@ -41,16 +40,15 @@ class NoteCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
         // 归档笔记添加边框
-        side:
-            note.isArchived
-                ? BorderSide(
-                  color: Colors.grey.withValues(alpha: 0.5),
-                  width: 1,
-                  style: BorderStyle.solid,
-                )
-                : isSelected
-                ? const BorderSide(color: Colors.blue, width: 2)
-                : BorderSide.none,
+        side: note.isArchived
+            ? BorderSide(
+                color: Colors.grey.withValues(alpha: 0.5),
+                width: 1,
+                style: BorderStyle.solid,
+              )
+            : isSelected
+            ? const BorderSide(color: Colors.blue, width: 2)
+            : BorderSide.none,
       ),
       child: Stack(
         children: [
@@ -138,12 +136,11 @@ class NoteCard extends StatelessWidget {
               fontWeight: FontWeight.bold,
               fontSize: 16,
               // 归档笔记文字颜色降低
-              color:
-                  note.isArchived
-                      ? Theme.of(
-                        context,
-                      ).textTheme.bodyLarge?.color?.withValues(alpha: 0.7)
-                      : null,
+              color: note.isArchived
+                  ? Theme.of(
+                      context,
+                    ).textTheme.bodyLarge?.color?.withValues(alpha: 0.7)
+                  : null,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -166,22 +163,20 @@ class NoteCard extends StatelessWidget {
   /// 构建笔记内容
   Widget buildNoteContent(BuildContext context) {
     return Padding(
-      padding:
-          isListView
-              ? const EdgeInsets.only(top: 4)
-              : const EdgeInsets.symmetric(vertical: 8),
+      padding: isListView
+          ? const EdgeInsets.only(top: 4)
+          : const EdgeInsets.symmetric(vertical: 8),
       child: Text(
         note.content,
         style: TextStyle(
           fontSize: 14,
-          color:
-              note.isArchived
-                  ? Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.color?.withValues(alpha: 0.6)
-                  : Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
+          color: note.isArchived
+              ? Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.color?.withValues(alpha: 0.6)
+              : Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
         ),
         maxLines: isListView ? 2 : 5,
         overflow: TextOverflow.ellipsis,
@@ -264,8 +259,9 @@ class NoteCard extends StatelessWidget {
         // 显示标签
         final tag = nTags[index];
         // 标签文字最多显示5个字符
-        final displayName =
-            tag.name.length > 5 ? '${tag.name.substring(0, 5)}...' : tag.name;
+        final displayName = tag.name.length > 5
+            ? '${tag.name.substring(0, 5)}...'
+            : tag.name;
 
         return Container(
           margin: const EdgeInsets.only(right: 2),

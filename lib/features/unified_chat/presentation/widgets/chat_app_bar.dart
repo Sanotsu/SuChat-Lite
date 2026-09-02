@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/utils/simple_tools.dart';
+import '../../../ai_tool_page.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/database/unified_chat_db_init.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
+import '../pages/chat_background_picker_page.dart';
 import '../pages/search_tools_settings_page.dart';
+import 'appearance_tool_widgets.dart';
 
 /// 聊天页面顶部应用栏
 class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -18,13 +20,15 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
     return Consumer<UnifiedChatViewModel>(
       builder: (context, viewModel, child) {
         return AppBar(
-          // leading: IconButton(
-          //   onPressed: onMenuPressed,
-          //   icon: const Icon(Icons.menu),
-          // ),
+          // 背景图模式下AppBar透明，背景从页面顶层透出(对齐旧版)
+          backgroundColor: viewModel.hasBackgroundImage
+              ? Colors.transparent
+              : null,
+          // 首页即聊天页：左上角为对话历史抽屉入口(不再是返回按钮)
           leading: IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back),
+            onPressed: onMenuPressed,
+            icon: const Icon(Icons.menu),
+            tooltip: '对话历史',
           ),
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,7 +82,7 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
             //     icon: const Icon(Icons.stop),
             //     tooltip: '停止生成',
             //   ),
-            IconButton(onPressed: onMenuPressed, icon: const Icon(Icons.menu)),
+            // 用户设置入口已收敛到侧栏/抽屉底部(避免重复入口)，此处不再放设置图标
 
             // 更多操作菜单
             PopupMenuButton<String>(
@@ -86,12 +90,53 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
                   _handleMenuAction(context, value, viewModel),
               itemBuilder: (context) => [
                 const PopupMenuItem(
+                  value: 'more_tools',
+                  child: Row(
+                    children: [
+                      Icon(Icons.apps),
+                      SizedBox(width: 8),
+                      Text('更多功能'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
                   value: 'search_tools',
                   child: Row(
                     children: [
                       Icon(Icons.search),
                       SizedBox(width: 8),
                       Text('搜索工具设置'),
+                    ],
+                  ),
+                ),
+                // ===== 外观设置(从旧版branch_chat移植) =====
+                const PopupMenuItem(
+                  value: 'text_size',
+                  child: Row(
+                    children: [
+                      Icon(Icons.format_size),
+                      SizedBox(width: 8),
+                      Text('文字大小'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'background',
+                  child: const Row(
+                    children: [
+                      Icon(Icons.image),
+                      SizedBox(width: 8),
+                      Text('切换背景'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'brief_mode',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.visibility_off),
+                      const SizedBox(width: 8),
+                      Text(viewModel.isBriefDisplay ? '详细显示' : '简洁显示'),
                     ],
                   ),
                 ),
@@ -140,8 +185,25 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
     UnifiedChatViewModel viewModel,
   ) {
     switch (action) {
+      case 'more_tools':
+        // 0.1.5: 旧版首页下拉手势入口迁移到聊天菜单
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const AIToolPage()),
+        );
+        break;
       case 'search_tools':
         _openSearchToolsSettings(context);
+        break;
+      case 'text_size':
+        _adjustTextScale(context, viewModel);
+        break;
+      case 'background':
+        _openBackgroundPicker(context, viewModel);
+        break;
+      case 'brief_mode':
+        viewModel.toggleBriefDisplay();
+        ToastUtils.showInfo(viewModel.isBriefDisplay ? '已切换为简洁显示' : '已切换为详细显示');
         break;
       case 'clear':
         _showClearConfirmDialog(context, viewModel);
@@ -153,6 +215,32 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
         _exportConversation(context, viewModel);
         break;
     }
+  }
+
+  /// 调整消息文字大小(复用旧版branch_chat的滑块弹窗，存储key共用)
+  void _adjustTextScale(BuildContext context, UnifiedChatViewModel viewModel) {
+    adjustTextScale(context, viewModel.textScaleFactor, (value) {
+      Navigator.of(context).pop();
+      viewModel.setTextScale(value);
+    });
+  }
+
+  /// 打开背景选择页(复用旧版branch_chat的背景选择页面，存储key共用)
+  void _openBackgroundPicker(
+    BuildContext context,
+    UnifiedChatViewModel viewModel,
+  ) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ChatBackgroundPickerPage(title: '聊天背景设置'),
+      ),
+    ).then((confirmed) {
+      // 保存返回true后重载背景与字体颜色配置
+      if (confirmed == true) {
+        viewModel.refreshBackgroundSettings();
+      }
+    });
   }
 
   void _showClearConfirmDialog(
@@ -186,12 +274,6 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
     UnifiedChatViewModel viewModel,
   ) async {
     try {
-      bool flag = await requestStoragePermission();
-      if (!flag) {
-        ToastUtils.showError("未授权访问设备外部存储，无法导出对话。");
-        return;
-      }
-
       final closeToast = ToastUtils.showLoading("正在导出对话数据...");
 
       // 导出数据库
@@ -201,8 +283,7 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
       closeToast();
 
       ToastUtils.showSuccess(
-        // 安卓写法
-        '数据已导出到: ${filePath.split("emulated/0").last}',
+        '数据已导出到: $filePath',
         duration: Duration(seconds: 5),
       );
 

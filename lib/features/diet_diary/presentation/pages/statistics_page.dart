@@ -170,28 +170,27 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
           // 图表内容
           Expanded(
-            child:
-                _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _error?.isNotEmpty == true
-                    ? Center(child: Text(_error!))
-                    : _nutritionData.isEmpty
-                    ? const Center(child: Text('没有数据'))
-                    : SingleChildScrollView(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          children: [
-                            _buildCaloriesChart(),
-                            _buildCaloriesDeficitChart(),
-                            _buildNutrientsChart(),
-                            _buildCaloriesSummary(),
-                            _buildNutrientsSummary(),
-                            const SizedBox(height: 16),
-                          ],
-                        ),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _error?.isNotEmpty == true
+                ? Center(child: Text(_error!))
+                : _nutritionData.isEmpty
+                ? const Center(child: Text('没有数据'))
+                : SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          _buildCaloriesChart(),
+                          _buildCaloriesDeficitChart(),
+                          _buildNutrientsChart(),
+                          _buildCaloriesSummary(),
+                          _buildNutrientsSummary(),
+                          const SizedBox(height: 16),
+                        ],
                       ),
                     ),
+                  ),
           ),
         ],
       ),
@@ -209,13 +208,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
       ColumnSeries<Map<String, dynamic>, String>(
         name: '实际摄入',
         dataSource: _nutritionData,
-        xValueMapper:
-            (Map<String, dynamic> data, _) => DateFormat(
-              formatToMD,
-            ).format(DateTime.parse(data['date'].toString())),
-        yValueMapper:
-            (Map<String, dynamic> data, _) =>
-                (data['totalCalories'] as num?)?.toDouble() ?? 0.0,
+        xValueMapper: (Map<String, dynamic> data, _) => DateFormat(
+          formatToMD,
+        ).format(DateTime.parse(data['date'].toString())),
+        yValueMapper: (Map<String, dynamic> data, _) =>
+            (data['totalCalories'] as num?)?.toDouble() ?? 0.0,
         color: Colors.blue,
         dataLabelSettings: const DataLabelSettings(isVisible: true),
         width: 0.8, // 设置柱状图宽度
@@ -229,10 +226,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
         LineSeries<Map<String, dynamic>, String>(
           name: '目标摄入',
           dataSource: _nutritionData,
-          xValueMapper:
-              (Map<String, dynamic> data, _) => DateFormat(
-                formatToMD,
-              ).format(DateTime.parse(data['date'].toString())),
+          xValueMapper: (Map<String, dynamic> data, _) => DateFormat(
+            formatToMD,
+          ).format(DateTime.parse(data['date'].toString())),
           yValueMapper: (Map<String, dynamic> data, _) => targetCalories,
           color: Colors.red,
           markerSettings: const MarkerSettings(isVisible: true),
@@ -283,14 +279,12 @@ class _StatisticsPageState extends State<StatisticsPage> {
         ColumnSeries<Map<String, dynamic>, String>(
           name: '热量缺口',
           dataSource: deficitData,
-          xValueMapper:
-              (Map<String, dynamic> data, _) => DateFormat(
-                formatToMD,
-              ).format(DateTime.parse(data['date'].toString())),
+          xValueMapper: (Map<String, dynamic> data, _) => DateFormat(
+            formatToMD,
+          ).format(DateTime.parse(data['date'].toString())),
           yValueMapper: (Map<String, dynamic> data, _) => data['deficit'],
-          pointColorMapper:
-              (Map<String, dynamic> data, _) =>
-                  (data['isPositive'] as bool) ? Colors.green : Colors.red,
+          pointColorMapper: (Map<String, dynamic> data, _) =>
+              (data['isPositive'] as bool) ? Colors.green : Colors.red,
           dataLabelSettings: const DataLabelSettings(isVisible: true),
           width: 0.8, // 设置柱状图宽度
           spacing: 0.2, // 设置柱状图间距
@@ -334,19 +328,16 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     radius: '70%',
                     innerRadius: '50%',
                     dataSource: _calculateAverageNutrients(),
-                    xValueMapper:
-                        (Map<String, dynamic> data, _) =>
-                            data['name'] as String,
-                    yValueMapper:
-                        (Map<String, dynamic> data, _) =>
-                            data['value'] as double,
+                    xValueMapper: (Map<String, dynamic> data, _) =>
+                        data['name'] as String,
+                    yValueMapper: (Map<String, dynamic> data, _) =>
+                        data['value'] as double,
                     dataLabelSettings: const DataLabelSettings(
                       isVisible: true,
                       labelPosition: ChartDataLabelPosition.outside,
                     ),
-                    pointColorMapper:
-                        (Map<String, dynamic> data, _) =>
-                            data['color'] as Color,
+                    pointColorMapper: (Map<String, dynamic> data, _) =>
+                        data['color'] as Color,
                   ),
                 ],
               ),
@@ -449,10 +440,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
     final targetCalories =
         _userViewModel.dailyRecommendedIntake?.calories ?? 0.0;
     final avgDeficit = targetCalories - avgCalories;
-    final deficitText =
-        avgDeficit >= 0
-            ? '平均每日热量缺口: ${avgDeficit.toStringAsFixed(0)} 千卡'
-            : '平均每日热量过剩: ${(-avgDeficit).toStringAsFixed(0)} 千卡';
+    final deficitText = avgDeficit >= 0
+        ? '平均每日热量缺口: ${avgDeficit.toStringAsFixed(0)} 千卡'
+        : '平均每日热量过剩: ${(-avgDeficit).toStringAsFixed(0)} 千卡';
     final deficitColor = avgDeficit >= 0 ? Colors.green : Colors.red;
 
     return Card(

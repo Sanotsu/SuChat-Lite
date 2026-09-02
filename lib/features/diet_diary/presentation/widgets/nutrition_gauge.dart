@@ -87,12 +87,11 @@ class GaugePainter extends CustomPainter {
     final radius = math.min(size.width / 2, size.height / 2) * 0.8;
 
     // 绘制背景弧
-    final backgroundPaint =
-        Paint()
-          ..color = backgroundColor
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 12
-          ..strokeCap = StrokeCap.round;
+    final backgroundPaint = Paint()
+      ..color = backgroundColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 12
+      ..strokeCap = StrokeCap.round;
 
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
@@ -103,12 +102,11 @@ class GaugePainter extends CustomPainter {
     );
 
     // 绘制进度弧
-    final progressPaint =
-        Paint()
-          ..color = progressColor
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 12
-          ..strokeCap = StrokeCap.round;
+    final progressPaint = Paint()
+      ..color = progressColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 12
+      ..strokeCap = StrokeCap.round;
 
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
@@ -119,11 +117,10 @@ class GaugePainter extends CustomPainter {
     );
 
     // 绘制刻度
-    final tickPaint =
-        Paint()
-          ..color = Colors.grey[400]!
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1;
+    final tickPaint = Paint()
+      ..color = Colors.grey[400]!
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
 
     for (int i = 0; i <= 10; i++) {
       final angle = math.pi * 0.8 + math.pi * 1.4 * (i / 10);
@@ -142,12 +139,11 @@ class GaugePainter extends CustomPainter {
       if (i == 0 || i == 5 || i == 10) {
         final textPainter = TextPainter(
           text: TextSpan(
-            text:
-                i == 0
-                    ? '0'
-                    : i == 5
-                    ? '50%'
-                    : '100%',
+            text: i == 0
+                ? '0'
+                : i == 5
+                ? '50%'
+                : '100%',
             style: TextStyle(color: Colors.grey[600], fontSize: 10),
           ),
           textDirection: TextDirection.ltr,

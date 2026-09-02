@@ -112,14 +112,12 @@ class MealFoodDetail {
       vitaminAPer100g: map['vitaminAPer100g'] as double?,
       vitaminCPer100g: map['vitaminCPer100g'] as double?,
       vitaminEPer100g: map['vitaminEPer100g'] as double?,
-      gmtCreate:
-          map['gmtCreate'] != null
-              ? DateTime.parse(map['gmtCreate'])
-              : DateTime.now(),
-      gmtModified:
-          map['gmtModified'] != null
-              ? DateTime.parse(map['gmtModified'])
-              : DateTime.now(),
+      gmtCreate: map['gmtCreate'] != null
+          ? DateTime.parse(map['gmtCreate'])
+          : DateTime.now(),
+      gmtModified: map['gmtModified'] != null
+          ? DateTime.parse(map['gmtModified'])
+          : DateTime.now(),
     );
   }
 

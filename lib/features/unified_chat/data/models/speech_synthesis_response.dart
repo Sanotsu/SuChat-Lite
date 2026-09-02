@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:json_annotation/json_annotation.dart';
 
+import '../../../../core/services/media_save_service.dart';
 import '../../../../core/utils/datetime_formatter.dart';
 import '../../../../core/utils/get_dir.dart';
 
@@ -105,6 +106,9 @@ class SpeechSynthesisResponse {
     // 写入文件
     final file = File(filePath);
     await file.writeAsBytes(audioBytes, flush: true);
+
+    // AI生成语音：异步写公共区副本(MediaStore/相册)
+    MediaSaveService.onFileSaved(filePath);
 
     return filePath;
   }

@@ -115,16 +115,15 @@ class _FoodRecognitionPageState extends State<FoodRecognitionPage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder:
-                (context) => FoodEditPage(
-                  foodItem: foodItem,
-                  onSave: (newFoodItem) {
-                    viewModel.addFood(newFoodItem).then((_) {
-                      if (!context.mounted) return;
-                      Navigator.pop(context); // 返回到食品管理页面
-                    });
-                  },
-                ),
+            builder: (context) => FoodEditPage(
+              foodItem: foodItem,
+              onSave: (newFoodItem) {
+                viewModel.addFood(newFoodItem).then((_) {
+                  if (!context.mounted) return;
+                  Navigator.pop(context); // 返回到食品管理页面
+                });
+              },
+            ),
           ),
         );
       } else {
@@ -172,12 +171,11 @@ class _FoodRecognitionPageState extends State<FoodRecognitionPage> {
                         const SizedBox(width: 8),
                         Text(
                           '使用说明',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                         ),
                       ],
                     ),
@@ -211,12 +209,11 @@ class _FoodRecognitionPageState extends State<FoodRecognitionPage> {
                         const SizedBox(width: 8),
                         Text(
                           '选择视觉大模型',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                         ),
                       ],
                     ),
@@ -227,11 +224,10 @@ class _FoodRecognitionPageState extends State<FoodRecognitionPage> {
                       height: 56,
                       hintLabel: "选择支持视觉功能的模型",
                       alignment: Alignment.centerLeft,
-                      onChanged:
-                          (value) => setState(() => selectedModel = value!),
-                      itemToString:
-                          (e) =>
-                              "${CP_NAME_MAP[(e as CusLLMSpec).platform]} - ${e.name}",
+                      onChanged: (value) =>
+                          setState(() => selectedModel = value!),
+                      itemToString: (e) =>
+                          "${CP_NAME_MAP[(e as CusLLMSpec).platform]} - ${e.name}",
                     ),
                   ],
                 ),
@@ -255,12 +251,11 @@ class _FoodRecognitionPageState extends State<FoodRecognitionPage> {
                         const SizedBox(width: 8),
                         Text(
                           '营养成分表图片',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                         ),
                       ],
                     ),
@@ -275,30 +270,29 @@ class _FoodRecognitionPageState extends State<FoodRecognitionPage> {
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.grey[300]!),
                       ),
-                      child:
-                          _selectedImage != null
-                              ? ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.file(
-                                  _selectedImage!,
-                                  fit: BoxFit.contain,
-                                ),
-                              )
-                              : Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.image_not_supported,
-                                    size: 48,
-                                    color: Colors.grey[400],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    '未选择图片',
-                                    style: TextStyle(color: Colors.grey[600]),
-                                  ),
-                                ],
+                      child: _selectedImage != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(
+                                _selectedImage!,
+                                fit: BoxFit.contain,
                               ),
+                            )
+                          : Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.image_not_supported,
+                                  size: 48,
+                                  color: Colors.grey[400],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '未选择图片',
+                                  style: TextStyle(color: Colors.grey[600]),
+                                ),
+                              ],
+                            ),
                     ),
 
                     const SizedBox(height: 16),
@@ -357,21 +351,18 @@ class _FoodRecognitionPageState extends State<FoodRecognitionPage> {
               child: ElevatedButton.icon(
                 onPressed:
                     _isProcessing ||
-                            _selectedImage == null ||
-                            selectedModel == null
-                        ? null
-                        : _recognizeNutritionLabel,
-                icon:
-                    _isProcessing
-                        ? Container(
-                          width: 24,
-                          height: 24,
-                          padding: const EdgeInsets.all(2.0),
-                          child: const CircularProgressIndicator(
-                            strokeWidth: 2,
-                          ),
-                        )
-                        : const Icon(Icons.search),
+                        _selectedImage == null ||
+                        selectedModel == null
+                    ? null
+                    : _recognizeNutritionLabel,
+                icon: _isProcessing
+                    ? Container(
+                        width: 24,
+                        height: 24,
+                        padding: const EdgeInsets.all(2.0),
+                        child: const CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.search),
                 label: Text(_isProcessing ? '正在识别...' : '识别营养成分表'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,

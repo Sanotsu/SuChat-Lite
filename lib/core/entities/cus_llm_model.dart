@@ -68,8 +68,9 @@ class CusLLMSpec {
       name: map['name'],
       isFree: map['isFree'] == 1 ? true : false,
       cusLlmSpecId: map['cusLlmSpecId'],
-      gmtCreate:
-          map['gmtCreate'] != null ? DateTime.parse(map['gmtCreate']) : null,
+      gmtCreate: map['gmtCreate'] != null
+          ? DateTime.parse(map['gmtCreate'])
+          : null,
       isBuiltin: map['isBuiltin'] == 1 ? true : false,
       baseUrl: map['baseUrl'],
       apiKey: map['apiKey'],

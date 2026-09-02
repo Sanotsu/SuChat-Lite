@@ -497,7 +497,7 @@ class _HaokanReadingPageState extends State<HaokanReadingPage> {
                 saveMultipleImagesToLocal(
                   imageUrls,
                   imageNames: imageNames,
-                  dlDir: await getAppHomeDirectory(
+                  dlDir: await getAppPrivateDir(
                     subfolder: "NET_DL/haokan/$chapterName",
                   ),
                 );

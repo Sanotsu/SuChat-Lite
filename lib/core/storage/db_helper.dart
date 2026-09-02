@@ -107,10 +107,15 @@ class DBHelper {
   );
 
   // 新增
+  // 2026-08-31 合并恢复需要：同主键数据用备份覆盖(replace)，不同主键的现有数据保留
   Future<List<Object?>> saveCusLLMSpecs(List<CusLLMSpec> rsts) async {
     var batch = (await database).batch();
     for (var item in rsts) {
-      batch.insert(DBDdl.tableCusLlmSpec, item.toMap());
+      batch.insert(
+        DBDdl.tableCusLlmSpec,
+        item.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
     }
     return await batch.commit();
   }
@@ -242,12 +247,17 @@ class DBHelper {
   }
 
   // 批量插入媒体资源生成记录
+  // 2026-08-31 合并恢复需要：同主键数据用备份覆盖(replace)
   Future<List<Object?>> saveMediaGenerationHistories(
     List<MediaGenerationHistory> histories,
   ) async {
     var batch = (await database).batch();
     for (var item in histories) {
-      batch.insert(DBDdl.tableMediaGenerationHistory, item.toMap());
+      batch.insert(
+        DBDdl.tableMediaGenerationHistory,
+        item.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
     }
     return await batch.commit();
   }

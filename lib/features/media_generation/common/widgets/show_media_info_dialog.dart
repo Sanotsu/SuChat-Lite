@@ -100,17 +100,18 @@ Future<void> showMediaInfoDialog(AssetEntity entity, BuildContext context) {
                       title: const Text("文件大小"),
                       subtitle: FutureBuilder<File?>(
                         future: entity.file,
-                        builder: (
-                          BuildContext context,
-                          AsyncSnapshot<File?> snapshot,
-                        ) {
-                          // 其实分为hasData、hasError、加载中几个情况。
-                          return (snapshot.hasData)
-                              ? Text(
-                                "${formatFileSize(snapshot.data?.statSync().size ?? 0, decimals: 2)} (${snapshot.data?.statSync().size} Byte)",
-                              )
-                              : const SizedBox();
-                        },
+                        builder:
+                            (
+                              BuildContext context,
+                              AsyncSnapshot<File?> snapshot,
+                            ) {
+                              // 其实分为hasData、hasError、加载中几个情况。
+                              return (snapshot.hasData)
+                                  ? Text(
+                                      "${formatFileSize(snapshot.data?.statSync().size ?? 0, decimals: 2)} (${snapshot.data?.statSync().size} Byte)",
+                                    )
+                                  : const SizedBox();
+                            },
                       ),
                       dense: true,
                     ),

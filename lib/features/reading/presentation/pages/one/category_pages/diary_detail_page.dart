@@ -32,7 +32,7 @@ class DiaryDetailPage extends StatelessWidget {
                 await saveImageToLocal(
                   diary.picture!,
                   imageName: "ONE一个_小记_${fileTs(DateTime.now())}.jpg",
-                  dlDir: await getAppHomeDirectory(subfolder: "NET_DL/one"),
+                  dlDir: await getAppPrivateDir(subfolder: "NET_DL/one"),
                 );
               },
             ),

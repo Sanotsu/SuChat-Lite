@@ -41,20 +41,19 @@ class TrainingPlan {
       targetGoal: map['targetGoal'],
       targetMuscleGroups: map['targetMuscleGroups'],
       duration: map['duration'],
-      frequency:
-          map['frequency'] is int
-              ? map['frequency'].toString()
-              : map['frequency'],
+      frequency: map['frequency'] is int
+          ? map['frequency'].toString()
+          : map['frequency'],
       difficulty: map['difficulty'],
       description: map['description'],
       equipment: map['equipment'],
       isActive: map['isActive'] == 1,
-      gmtCreate:
-          map['gmtCreate'] != null ? DateTime.parse(map['gmtCreate']) : null,
-      gmtModified:
-          map['gmtModified'] != null
-              ? DateTime.parse(map['gmtModified'])
-              : null,
+      gmtCreate: map['gmtCreate'] != null
+          ? DateTime.parse(map['gmtCreate'])
+          : null,
+      gmtModified: map['gmtModified'] != null
+          ? DateTime.parse(map['gmtModified'])
+          : null,
     );
   }
 

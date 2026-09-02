@@ -55,24 +55,23 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
         isExpanded: true,
         // 提示词
         hint: Text(widget.hintLable ?? '请选择', style: TextStyle(fontSize: 14)),
-        items:
-            widget.items
-                .map(
-                  (e) => DropdownMenuItem<T>(
-                    value: e,
-                    alignment: widget.alignment ?? AlignmentDirectional.center,
-                    child: Text(
-                      widget.itemToString != null
-                          ? widget.itemToString!(e)
-                          : e.toString(),
-                      style: TextStyle(
-                        fontSize: widget.labelSize ?? 15,
-                        color: Colors.blue,
-                      ),
-                    ),
+        items: widget.items
+            .map(
+              (e) => DropdownMenuItem<T>(
+                value: e,
+                alignment: widget.alignment ?? AlignmentDirectional.center,
+                child: Text(
+                  widget.itemToString != null
+                      ? widget.itemToString!(e)
+                      : e.toString(),
+                  style: TextStyle(
+                    fontSize: widget.labelSize ?? 15,
+                    color: Colors.blue,
                   ),
-                )
-                .toList(),
+                ),
+              ),
+            )
+            .toList(),
         value: widget.value,
         onChanged: widget.onChanged,
         // 默认的按钮的样式(下拉框旋转的样式)

@@ -45,8 +45,8 @@ class BillItemCard extends StatelessWidget {
                 backgroundColor:
                     // 收入红色，支出绿色
                     billItem.itemType == 0
-                        ? Colors.red.shade100
-                        : Colors.green.shade100,
+                    ? Colors.red.shade100
+                    : Colors.green.shade100,
                 child: Icon(
                   billItem.itemType == 0
                       ? Icons.arrow_downward

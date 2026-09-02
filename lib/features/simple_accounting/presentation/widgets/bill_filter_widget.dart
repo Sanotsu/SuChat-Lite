@@ -67,10 +67,9 @@ class _BillFilterWidgetState extends State<BillFilterWidget> {
   Widget _getSelectedFilterIcon() {
     if (widget.selectedCategory != null) {
       // 查找选中的分类
-      final categories =
-          widget.selectedType == 0
-              ? widget.incomeCategories
-              : widget.expenseCategories;
+      final categories = widget.selectedType == 0
+          ? widget.incomeCategories
+          : widget.expenseCategories;
 
       final category = categories.firstWhere(
         (c) => c.name == widget.selectedCategory,
@@ -138,25 +137,23 @@ class _BillFilterWidgetState extends State<BillFilterWidget> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder:
-          (context) => DraggableScrollableSheet(
-            initialChildSize: 0.85,
-            minChildSize: 0.5,
-            maxChildSize: 0.95,
-            expand: false,
-            builder:
-                (context, scrollController) => FilterDialogContent(
-                  expenseCategories: widget.expenseCategories,
-                  incomeCategories: widget.incomeCategories,
-                  selectedCategory: widget.selectedCategory,
-                  selectedType: widget.selectedType,
-                  minAmount: widget.minAmount,
-                  maxAmount: widget.maxAmount,
-                  onFilter: widget.onFilter,
-                  scrollController: scrollController,
-                  isMobile: true,
-                ),
-          ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) => FilterDialogContent(
+          expenseCategories: widget.expenseCategories,
+          incomeCategories: widget.incomeCategories,
+          selectedCategory: widget.selectedCategory,
+          selectedType: widget.selectedType,
+          minAmount: widget.minAmount,
+          maxAmount: widget.maxAmount,
+          onFilter: widget.onFilter,
+          scrollController: scrollController,
+          isMobile: true,
+        ),
+      ),
     );
   }
 
@@ -164,26 +161,25 @@ class _BillFilterWidgetState extends State<BillFilterWidget> {
   void _showDesktopFilterDialog() {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('筛选账单'),
-            content: Container(
-              width: MediaQuery.of(context).size.width * 0.6,
-              padding: const EdgeInsets.only(bottom: 32),
-              child: FilterDialogContent(
-                expenseCategories: widget.expenseCategories,
-                incomeCategories: widget.incomeCategories,
-                selectedCategory: widget.selectedCategory,
-                selectedType: widget.selectedType,
-                minAmount: widget.minAmount,
-                maxAmount: widget.maxAmount,
-                onFilter: widget.onFilter,
-                isMobile: false,
-              ),
-            ),
-            contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-            actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+      builder: (context) => AlertDialog(
+        title: const Text('筛选账单'),
+        content: Container(
+          width: MediaQuery.of(context).size.width * 0.6,
+          padding: const EdgeInsets.only(bottom: 32),
+          child: FilterDialogContent(
+            expenseCategories: widget.expenseCategories,
+            incomeCategories: widget.incomeCategories,
+            selectedCategory: widget.selectedCategory,
+            selectedType: widget.selectedType,
+            minAmount: widget.minAmount,
+            maxAmount: widget.maxAmount,
+            onFilter: widget.onFilter,
+            isMobile: false,
           ),
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+      ),
     );
   }
 
@@ -585,16 +581,15 @@ class _FilterDialogContentState extends State<FilterDialogContent> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children:
-              widget.expenseCategories.map((category) {
-                final isSelected =
-                    _selectedCategory == category.name && _selectedType == 1;
-                return _buildCategoryFilterChip(
-                  category: category,
-                  isSelected: isSelected,
-                  onTap: () => _selectCategory(category.name, 1),
-                );
-              }).toList(),
+          children: widget.expenseCategories.map((category) {
+            final isSelected =
+                _selectedCategory == category.name && _selectedType == 1;
+            return _buildCategoryFilterChip(
+              category: category,
+              isSelected: isSelected,
+              onTap: () => _selectCategory(category.name, 1),
+            );
+          }).toList(),
         ),
 
         const SizedBox(height: 16),
@@ -611,16 +606,15 @@ class _FilterDialogContentState extends State<FilterDialogContent> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children:
-              widget.incomeCategories.map((category) {
-                final isSelected =
-                    _selectedCategory == category.name && _selectedType == 0;
-                return _buildCategoryFilterChip(
-                  category: category,
-                  isSelected: isSelected,
-                  onTap: () => _selectCategory(category.name, 0),
-                );
-              }).toList(),
+          children: widget.incomeCategories.map((category) {
+            final isSelected =
+                _selectedCategory == category.name && _selectedType == 0;
+            return _buildCategoryFilterChip(
+              category: category,
+              isSelected: isSelected,
+              onTap: () => _selectCategory(category.name, 0),
+            );
+          }).toList(),
         ),
 
         const SizedBox(height: 16),
@@ -702,17 +696,15 @@ class _FilterDialogContentState extends State<FilterDialogContent> {
         borderRadius: BorderRadius.circular(10),
         child: Container(
           decoration: BoxDecoration(
-            color:
-                isSelected
-                    ? Theme.of(
-                      context,
-                    ).colorScheme.primaryContainer.withValues(alpha: 0.3)
-                    : Colors.transparent,
+            color: isSelected
+                ? Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer.withValues(alpha: 0.3)
+                : Colors.transparent,
             border: Border.all(
-              color:
-                  isSelected
-                      ? Theme.of(context).colorScheme.primary
-                      : Colors.grey.withValues(alpha: 0.5),
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary
+                  : Colors.grey.withValues(alpha: 0.5),
               width: 1,
             ),
             borderRadius: BorderRadius.circular(10),

@@ -76,8 +76,6 @@ Details as follows (2025-05-27):
   - [Zhipu AI](https://open.bigmodel.cn/dev/api/normal-model/glm-4)
   - [DeepSeek](https://api-docs.deepseek.com/zh-cn/)
   - [Volcano Engine (Ark)](https://www.volcengine.com/docs/82379/1330310)
-  - [01.AI](https://platform.lingyiwanwu.com/docs/api-reference)
-  - [Infini-AI](https://docs.infini-ai.com/gen-studio/api/maas.html#/operations/chatCompletions)
   - [SiliconFlow](https://docs.siliconflow.cn/cn/api-reference/chat-completions/chat-completions)
   - Other cloud platforms and HTTP APIs compatible with the OpenAI API structure can be added via custom mode
     - For this, select "Custom" in the platform management section, then add the request URL, model code, and platform API key
@@ -200,10 +198,8 @@ enum ApiPlatform {
   baidu,
   tencent,
   deepseek,
-  lingyiwanwu,
   zhipu,
   siliconCloud,
-  infini,
   volcengine,
   volcesBot,
 }
@@ -223,6 +219,29 @@ enum LLModelType {
 Pre-configured model specs are available in [/\_cus_model_jsons](./_cus_model_jsons).
 
 </details>
+
+## Packaging & Distribution
+
+The project uses [Fastforge](https://fastforge.dev) (formerly flutter_distributor) for packaging, with configs committed:
+
+- `distribute_options.yaml` — master packaging config (exe / zip / appimage jobs)
+- `windows/packaging/exe/make_config.yaml` — Windows Inno Setup installer config
+- `linux/packaging/appimage/make_config.yaml` — Linux AppImage config
+
+```sh
+dart pub global activate fastforge
+
+# Windows installer (Inno Setup) / portable zip (7-Zip required, both on PATH)
+fastforge package --platform windows --targets exe
+fastforge package --platform windows --targets zip
+
+# Linux AppImage (run on Linux; deps: locate p7zip-full appimagetool)
+fastforge package --platform linux --targets appimage
+
+# Artifacts go to dist/<version>/; add --skip-clean to reuse a previous build
+```
+
+Notes: APK stays with plain `flutter build apk` (fastforge's apk target is just a wrapper with no extra value). If the packaged AppImage cannot switch to Chinese input methods, use the kept `build_appimage_script.sh` instead — its AppRun exports fcitx environment variables which fastforge does not set (see `build_appimage_note.md`).
 
 ## Development Environment
 

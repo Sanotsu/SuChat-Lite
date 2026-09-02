@@ -82,10 +82,9 @@ class _FoodEditPageState extends State<FoodEditPage> {
       final vitaminA = double.tryParse(formData['vitaminA']?.toString() ?? '');
       final vitaminC = double.tryParse(formData['vitaminC']?.toString() ?? '');
       final vitaminE = double.tryParse(formData['vitaminE']?.toString() ?? '');
-      final foodCode =
-          (formData['foodCode'] as String?)?.trim().isEmpty == true
-              ? identityHashCode(formData['name']).toString()
-              : formData['foodCode'] as String?;
+      final foodCode = (formData['foodCode'] as String?)?.trim().isEmpty == true
+          ? identityHashCode(formData['name']).toString()
+          : formData['foodCode'] as String?;
 
       final ingredients = formData['ingredients'] as String?;
 
@@ -116,8 +115,9 @@ class _FoodEditPageState extends State<FoodEditPage> {
             vitaminEPer100g: vitaminE,
             foodCode: foodCode,
             isFavorite: _isFavorite,
-            otherParams:
-                ingredients != null ? {'ingredients': ingredients} : null,
+            otherParams: ingredients != null
+                ? {'ingredients': ingredients}
+                : null,
           )) ??
           FoodItem(
             name: name,
@@ -136,8 +136,9 @@ class _FoodEditPageState extends State<FoodEditPage> {
             vitaminEPer100g: vitaminE,
             foodCode: foodCode,
             isFavorite: _isFavorite,
-            otherParams:
-                ingredients != null ? {'ingredients': ingredients} : null,
+            otherParams: ingredients != null
+                ? {'ingredients': ingredients}
+                : null,
           );
 
       // 调用保存回调
@@ -200,20 +201,19 @@ class _FoodEditPageState extends State<FoodEditPage> {
                       color: Colors.grey[300],
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child:
-                        _imageFile != null
-                            ? ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.file(_imageFile!, fit: BoxFit.cover),
-                            )
-                            : (_imageUrl != null && _imageUrl!.isNotEmpty
-                                ? ClipRRect(
+                    child: _imageFile != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.file(_imageFile!, fit: BoxFit.cover),
+                          )
+                        : (_imageUrl != null && _imageUrl!.isNotEmpty
+                              ? ClipRRect(
                                   borderRadius: BorderRadius.circular(8),
                                   child: buildImageViewCarouselSlider([
                                     _imageUrl!,
                                   ]),
                                 )
-                                : const Center(
+                              : const Center(
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
@@ -313,10 +313,9 @@ class _FoodEditPageState extends State<FoodEditPage> {
                               subtitle: Text(
                                 _isFavorite ? '已收藏' : '未收藏',
                                 style: TextStyle(
-                                  color:
-                                      _isFavorite
-                                          ? Colors.red
-                                          : Colors.grey[600],
+                                  color: _isFavorite
+                                      ? Colors.red
+                                      : Colors.grey[600],
                                 ),
                               ),
                               value: _isFavorite,
@@ -632,13 +631,12 @@ class _FoodEditPageState extends State<FoodEditPage> {
         fillColor: Colors.grey[50],
       ),
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      validator:
-          isRequired
-              ? FormBuilderValidators.compose([
-                FormBuilderValidators.required(errorText: '请输入$label'),
-                FormBuilderValidators.numeric(errorText: '请输入有效的数值'),
-              ])
-              : null,
+      validator: isRequired
+          ? FormBuilderValidators.compose([
+              FormBuilderValidators.required(errorText: '请输入$label'),
+              FormBuilderValidators.numeric(errorText: '请输入有效的数值'),
+            ])
+          : null,
     );
   }
 }

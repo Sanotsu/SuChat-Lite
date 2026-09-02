@@ -8,15 +8,7 @@ import 'unified_model_spec.dart';
 part 'unified_platform_spec.g.dart';
 
 /// 内置的平台
-enum UnifiedPlatformId {
-  aliyun,
-  siliconCloud,
-  deepseek,
-  zhipu,
-  infini,
-  lingyiwanwu,
-  volcengine,
-}
+enum UnifiedPlatformId { aliyun, siliconCloud, deepseek, zhipu, volcengine }
 
 // 内置的平台对应的中文名
 final Map<UnifiedPlatformId, String> UPI_NAME_MAP = {
@@ -24,8 +16,6 @@ final Map<UnifiedPlatformId, String> UPI_NAME_MAP = {
   UnifiedPlatformId.siliconCloud: '硅基流动',
   UnifiedPlatformId.deepseek: 'DeepSeek',
   UnifiedPlatformId.zhipu: '智谱',
-  UnifiedPlatformId.infini: '无问芯穹',
-  UnifiedPlatformId.lingyiwanwu: '零一万物',
   UnifiedPlatformId.volcengine: '火山方舟',
 };
 

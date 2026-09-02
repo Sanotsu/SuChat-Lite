@@ -13,7 +13,6 @@ import '../features/training_assistant/presentation/viewmodels/training_viewmode
 import '../features/diet_diary/presentation/viewmodels/diet_diary_viewmodel.dart';
 import '../features/simple_accounting/presentation/viewmodels/bill_viewmodel.dart';
 import '../features/unified_chat/presentation/viewmodels/unified_chat_viewmodel.dart';
-import '../shared/widgets/min_size_layout.dart';
 import 'routes.dart';
 
 GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -68,19 +67,17 @@ class SuChatApp extends StatelessWidget {
             // 根据平台调整字体缩放
             child = MediaQuery(
               ///设置文字大小不随系统设置改变
-              data: MediaQuery.of(context).copyWith(
-                textScaler: TextScaler.linear(
-                  ScreenHelper.isDesktop() ? 1.0 : 1.0,
-                ),
-              ),
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: const TextScaler.linear(1.0)),
               child: child!,
             );
 
             // 1 先初始化 bot_toast
             child = BotToastInit()(context, child);
 
-            // 应用最小尺寸限制
-            child = MinSizeLayout(minWidth: 640, minHeight: 360, child: child);
+            // 桌面最小尺寸已由 DesktopWindowService(window_manager) 原生约束，
+            // 不再用 MinSizeLayout 提示页兜底
 
             // 针对桌面平台的背景处理
             if (ScreenHelper.isDesktop()) {

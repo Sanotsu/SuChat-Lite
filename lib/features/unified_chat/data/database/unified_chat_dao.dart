@@ -217,6 +217,7 @@ class UnifiedChatDao {
   }
 
   /// 删除同一对话指定消息及其之后的消息
+  /// (分支化后已不再使用，保留兼容；分支模式下请使用 deleteBranchSubtree)
   Future<void> deleteMessageAndAfter(
     String conversationId,
     UnifiedChatMessage message,
@@ -227,6 +228,214 @@ class UnifiedChatDao {
       where: 'conversation_id = ? AND created_at >= ?',
       whereArgs: [conversationId, message.createdAt.millisecondsSinceEpoch],
     );
+  }
+
+  // ==================== 分支对话相关操作 ====================
+
+  /// 获取指定消息的子消息列表(按branch_index升序)
+  Future<List<UnifiedChatMessage>> getChildMessages(
+    String conversationId,
+    String parentId,
+  ) async {
+    final db = await dbInit.database;
+    final maps = await db.query(
+      UnifiedChatDdl.tableUnifiedChatMessage,
+      where: 'conversation_id = ? AND parent_id = ?',
+      whereArgs: [conversationId, parentId],
+      orderBy: 'branch_index ASC',
+    );
+    return maps.map((m) => UnifiedChatMessage.fromMap(m)).toList();
+  }
+
+  /// 获取同级兄弟消息(同父节点、同角色、非system，按branch_index升序)
+  /// 用于分支切换器的数据源
+  Future<List<UnifiedChatMessage>> getSiblingMessages(
+    String conversationId,
+    String? parentId,
+    String role,
+  ) async {
+    final db = await dbInit.database;
+
+    // 根级消息(parent_id为null)和子级消息的查询条件不同
+    final where = parentId == null
+        ? "conversation_id = ? AND parent_id IS NULL AND role = ? AND role != 'system'"
+        : "conversation_id = ? AND parent_id = ? AND role = ? AND role != 'system'";
+    final whereArgs = parentId == null
+        ? [conversationId, role]
+        : [conversationId, parentId, role];
+
+    final maps = await db.query(
+      UnifiedChatDdl.tableUnifiedChatMessage,
+      where: where,
+      whereArgs: whereArgs,
+      orderBy: 'branch_index ASC',
+    );
+    return maps.map((m) => UnifiedChatMessage.fromMap(m)).toList();
+  }
+
+  /// 获取指定父节点下同角色子消息的最大分支索引；没有则返回-1
+  Future<int> maxBranchIndex(
+    String conversationId,
+    String? parentId,
+    String role,
+  ) async {
+    final db = await dbInit.database;
+
+    final where = parentId == null
+        ? "conversation_id = ? AND parent_id IS NULL AND role = ?"
+        : 'conversation_id = ? AND parent_id = ? AND role = ?';
+    final whereArgs = parentId == null
+        ? [conversationId, role]
+        : [conversationId, parentId, role];
+
+    final results = await db.rawQuery(
+      'SELECT MAX(branch_index) as max_index FROM '
+      '${UnifiedChatDdl.tableUnifiedChatMessage} WHERE $where',
+      whereArgs,
+    );
+
+    return (results.first['max_index'] as int?) ?? -1;
+  }
+
+  /// 删除指定消息及其整个子树(按branch_path精确前缀匹配)
+  /// 注意使用 LIKE ?||'/%' 避免 '0/1' 误匹配 '0/10' 的问题
+  Future<void> deleteBranchSubtree(
+    String conversationId,
+    String branchPath,
+  ) async {
+    final db = await dbInit.database;
+    await db.delete(
+      UnifiedChatDdl.tableUnifiedChatMessage,
+      where: 'conversation_id = ? AND (branch_path = ? OR branch_path LIKE ?)',
+      whereArgs: [conversationId, branchPath, '$branchPath/%'],
+    );
+  }
+
+  /// 获取指定消息及其整个子树(分支树对话框用)
+  Future<List<UnifiedChatMessage>> getBranchSubtree(
+    String conversationId,
+    String branchPath,
+  ) async {
+    final db = await dbInit.database;
+    final maps = await db.query(
+      UnifiedChatDdl.tableUnifiedChatMessage,
+      where: 'conversation_id = ? AND (branch_path = ? OR branch_path LIKE ?)',
+      whereArgs: [conversationId, branchPath, '$branchPath/%'],
+      orderBy: 'depth ASC, branch_index ASC',
+    );
+    return maps.map((m) => UnifiedChatMessage.fromMap(m)).toList();
+  }
+
+  /// 删除指定对话的所有消息(清空对话用，替代逐条删除)
+  Future<void> deleteMessagesByConversationId(String conversationId) async {
+    final db = await dbInit.database;
+    await db.delete(
+      UnifiedChatDdl.tableUnifiedChatMessage,
+      where: 'conversation_id = ?',
+      whereArgs: [conversationId],
+    );
+  }
+
+  /// 判断对话是否存在(备份合并恢复判重用)
+  Future<bool> existsConversation(String id) async {
+    final db = await dbInit.database;
+    final results = await db.rawQuery(
+      'SELECT COUNT(*) as cnt FROM ${UnifiedChatDdl.tableUnifiedConversation} '
+      'WHERE id = ?',
+      [id],
+    );
+    return ((results.first['cnt'] as int?) ?? 0) > 0;
+  }
+
+  /// 判断消息是否存在(备份合并恢复判重用)
+  Future<bool> existsMessage(String id) async {
+    final db = await dbInit.database;
+    final results = await db.rawQuery(
+      'SELECT COUNT(*) as cnt FROM ${UnifiedChatDdl.tableUnifiedChatMessage} '
+      'WHERE id = ?',
+      [id],
+    );
+    return ((results.first['cnt'] as int?) ?? 0) > 0;
+  }
+
+  /// 更新对话的当前分支路径
+  Future<void> updateConversationBranchPath(
+    String conversationId,
+    String branchPath,
+  ) async {
+    final db = await dbInit.database;
+    await db.update(
+      UnifiedChatDdl.tableUnifiedConversation,
+      {'current_branch_path': branchPath},
+      where: 'id = ?',
+      whereArgs: [conversationId],
+    );
+  }
+
+  /// 备份合并恢复后的分支列回填：
+  /// v1旧备份中的消息行没有分支字段(branch_path='')，恢复后需要重新串链。
+  /// 对每个会话：将branch_path为空的非system消息按时间顺序，
+  /// 接到该会话现有分支树的最新叶子后面(无树则成为根)。
+  Future<void> backfillBranchColumnsForRestore() async {
+    final db = await dbInit.database;
+
+    // 找出所有待回填的行
+    final pendingMaps = await db.query(
+      UnifiedChatDdl.tableUnifiedChatMessage,
+      where: "branch_path = '' AND role != 'system'",
+      orderBy: 'created_at ASC',
+    );
+    if (pendingMaps.isEmpty) return;
+
+    // 按会话分组
+    final byConversation = <String, List<Map<String, dynamic>>>{};
+    for (final row in pendingMaps) {
+      final convId = row['conversation_id'] as String;
+      byConversation.putIfAbsent(convId, () => []).add(row);
+    }
+
+    final batch = db.batch();
+    for (final entry in byConversation.entries) {
+      // 查询该会话现有树的最新叶子(深度最大)
+      final leafRows = await db.rawQuery(
+        'SELECT id, depth, branch_path FROM '
+        '${UnifiedChatDdl.tableUnifiedChatMessage} '
+        "WHERE conversation_id = ? AND role != 'system' AND branch_path != '' "
+        'ORDER BY depth DESC LIMIT 1',
+        [entry.key],
+      );
+
+      String? parentId;
+      var depth = -1;
+      var path = '';
+
+      if (leafRows.isNotEmpty) {
+        final leaf = leafRows.first;
+        parentId = leaf['id'] as String?;
+        depth = (leaf['depth'] as int?) ?? 0;
+        path = (leaf['branch_path'] as String?) ?? '';
+      }
+
+      for (final row in entry.value) {
+        depth++;
+        final newPath = depth == 0 ? '0' : '$path/0';
+        batch.update(
+          UnifiedChatDdl.tableUnifiedChatMessage,
+          {
+            'parent_id': parentId,
+            'branch_index': 0,
+            'depth': depth,
+            'branch_path': newPath,
+          },
+          where: 'id = ?',
+          whereArgs: [row['id']],
+        );
+        parentId = row['id'] as String;
+        path = newPath;
+      }
+    }
+
+    await batch.commit(noResult: true);
   }
 
   // ==================== 聊天搭档相关操作 ====================

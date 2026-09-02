@@ -44,8 +44,9 @@ List<CusLabel> activityLevels = [
   CusLabel(enLabel: 'veryHigh', cnLabel: '极高活动 (1.9)', value: 1.9),
 ];
 
-List<double> activityLevelValues =
-    activityLevels.map((e) => e.value as double).toList();
+List<double> activityLevelValues = activityLevels
+    .map((e) => e.value as double)
+    .toList();
 
 CusLabel getActivityLevel(ActivityLevel level) {
   return activityLevels.firstWhere((e) => e.value == level.name);
@@ -151,12 +152,12 @@ class UserInfo {
       targetProtein: map['targetProtein'] as double?,
       targetFat: map['targetFat'] as double?,
       otherParams: map['otherParams'] as String?,
-      gmtCreate:
-          map['gmtCreate'] != null ? DateTime.parse(map['gmtCreate']) : null,
-      gmtModified:
-          map['gmtModified'] != null
-              ? DateTime.parse(map['gmtModified'])
-              : null,
+      gmtCreate: map['gmtCreate'] != null
+          ? DateTime.parse(map['gmtCreate'])
+          : null,
+      gmtModified: map['gmtModified'] != null
+          ? DateTime.parse(map['gmtModified'])
+          : null,
     );
   }
 

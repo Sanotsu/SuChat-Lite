@@ -94,10 +94,9 @@ class _VideoPageState extends MediaGenerationBaseState<GenVideoPage> {
 
   Widget buildMediaOptionsBak() {
     return SizedBox(
-      width:
-          ScreenHelper.isDesktop()
-              ? MediaQuery.of(context).size.width * 0.2
-              : 0.45.sw,
+      width: ScreenHelper.isDesktop()
+          ? MediaQuery.of(context).size.width * 0.2
+          : 0.45.sw,
       child: Row(
         children: [
           // 分辨率选择
@@ -106,12 +105,11 @@ class _VideoPageState extends MediaGenerationBaseState<GenVideoPage> {
               value: _resolution,
               items: _resolutionOptions,
               hintLabel: "选择类型",
-              onChanged:
-                  isGenerating
-                      ? null
-                      : (value) {
-                        setState(() => _resolution = value!);
-                      },
+              onChanged: isGenerating
+                  ? null
+                  : (value) {
+                      setState(() => _resolution = value!);
+                    },
               itemToString: (e) => (e as CusLabel).cnLabel,
             ),
           ),
@@ -122,20 +120,18 @@ class _VideoPageState extends MediaGenerationBaseState<GenVideoPage> {
             child: DropdownButton<int>(
               value: _videoLength,
               isExpanded: true,
-              items:
-                  [3, 6, 9, 12].map((length) {
-                    return DropdownMenuItem(
-                      value: length,
-                      alignment: AlignmentDirectional.center,
-                      child: Text('$length秒', style: TextStyle(fontSize: 12)),
-                    );
-                  }).toList(),
-              onChanged:
-                  isGenerating
-                      ? null
-                      : (value) {
-                        setState(() => _videoLength = value!);
-                      },
+              items: [3, 6, 9, 12].map((length) {
+                return DropdownMenuItem(
+                  value: length,
+                  alignment: AlignmentDirectional.center,
+                  child: Text('$length秒', style: TextStyle(fontSize: 12)),
+                );
+              }).toList(),
+              onChanged: isGenerating
+                  ? null
+                  : (value) {
+                      setState(() => _videoLength = value!);
+                    },
             ),
           ),
         ],
@@ -202,9 +198,8 @@ class _VideoPageState extends MediaGenerationBaseState<GenVideoPage> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder:
-                  (_) =>
-                      VideoPlayerPage(videoUrl: task.videoUrls!.first.trim()),
+              builder: (_) =>
+                  VideoPlayerPage(videoUrl: task.videoUrls!.first.trim()),
             ),
           );
         } else if (task.isFailed == true) {
@@ -293,8 +288,9 @@ class _VideoPageState extends MediaGenerationBaseState<GenVideoPage> {
       final history = MediaGenerationHistory(
         requestId: response.requestId ?? const Uuid().v4(),
         prompt: promptController.text.trim(),
-        refImageUrls:
-            referenceImage?.path != null ? [referenceImage!.path] : null,
+        refImageUrls: referenceImage?.path != null
+            ? [referenceImage!.path]
+            : null,
         taskId: taskId,
         isSuccess: false,
         isProcessing: true,
@@ -356,8 +352,9 @@ class _VideoPageState extends MediaGenerationBaseState<GenVideoPage> {
       await _queryAllTasks();
 
       // 过滤出未完成的任务
-      final unfinishedTasks =
-          _allTasks.where((e) => e.isProcessing == true).toList();
+      final unfinishedTasks = _allTasks
+          .where((e) => e.isProcessing == true)
+          .toList();
 
       if (unfinishedTasks.isEmpty) return;
 

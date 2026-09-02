@@ -226,39 +226,37 @@ class _GitHubStorageSettingsPageState extends State<GitHubStorageSettingsPage> {
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                child:
-                    _isLoading
-                        ? const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
+                child: _isLoading
+                    ? const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
                             ),
-                            SizedBox(width: 12),
-                            Text('验证中...'),
-                          ],
-                        )
-                        : const Text('保存并验证'),
+                          ),
+                          SizedBox(width: 12),
+                          Text('验证中...'),
+                        ],
+                      )
+                    : const Text('保存并验证'),
               ),
               const SizedBox(height: 16),
 
               // 清除按钮
               TextButton(
-                onPressed:
-                    _isLoading
-                        ? null
-                        : () {
-                          setState(() {
-                            _usernameController.clear();
-                            _repoController.clear();
-                            _tokenController.clear();
-                          });
-                        },
+                onPressed: _isLoading
+                    ? null
+                    : () {
+                        setState(() {
+                          _usernameController.clear();
+                          _repoController.clear();
+                          _tokenController.clear();
+                        });
+                      },
                 style: TextButton.styleFrom(foregroundColor: Colors.red),
                 child: const Text('清除所有配置'),
               ),
@@ -273,68 +271,62 @@ class _GitHubStorageSettingsPageState extends State<GitHubStorageSettingsPage> {
   void _showHelpDialog() {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('GitHub存储使用说明'),
-            content: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Text(
-                    '1. 创建GitHub公开仓库',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text('在GitHub上创建一个公开仓库，用于存储音频文件。'),
-                  SizedBox(height: 8),
-
-                  Text(
-                    '2. 生成个人访问令牌',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    '访问GitHub设置→开发者设置→个人访问令牌→生成新令牌。\n选择"repo"权限，设置一个合适的过期时间。',
-                  ),
-                  SizedBox(height: 8),
-
-                  Text(
-                    '3. 配置存储设置',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text('将您的GitHub用户名、仓库名和访问令牌填入表单中。\n点击"保存并验证"按钮进行验证。'),
-                  SizedBox(height: 8),
-
-                  Text(
-                    '注意事项',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red,
-                    ),
-                  ),
-                  Text(
-                    '- 请确保使用公开仓库，否则无法访问上传的文件。\n- 保管好您的访问令牌，不要泄露给他人。\n- 音频文件将以公开形式存储，请不要上传敏感内容。',
-                  ),
-                ],
+      builder: (context) => AlertDialog(
+        title: const Text('GitHub存储使用说明'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Text(
+                '1. 创建GitHub公开仓库',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Clipboard.setData(
-                    const ClipboardData(
-                      text: 'https://github.com/settings/tokens/new',
-                    ),
-                  );
-                  ToastUtils.showToast('GitHub令牌创建链接已复制');
-                },
-                child: const Text('复制令牌创建链接'),
+              Text('在GitHub上创建一个公开仓库，用于存储音频文件。'),
+              SizedBox(height: 8),
+
+              Text(
+                '2. 生成个人访问令牌',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('关闭'),
+              Text('访问GitHub设置→开发者设置→个人访问令牌→生成新令牌。\n选择"repo"权限，设置一个合适的过期时间。'),
+              SizedBox(height: 8),
+
+              Text('3. 配置存储设置', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text('将您的GitHub用户名、仓库名和访问令牌填入表单中。\n点击"保存并验证"按钮进行验证。'),
+              SizedBox(height: 8),
+
+              Text(
+                '注意事项',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
+              ),
+              Text(
+                '- 请确保使用公开仓库，否则无法访问上传的文件。\n- 保管好您的访问令牌，不要泄露给他人。\n- 音频文件将以公开形式存储，请不要上传敏感内容。',
               ),
             ],
           ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(
+                const ClipboardData(
+                  text: 'https://github.com/settings/tokens/new',
+                ),
+              );
+              ToastUtils.showToast('GitHub令牌创建链接已复制');
+            },
+            child: const Text('复制令牌创建链接'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('关闭'),
+          ),
+        ],
+      ),
     );
   }
 }
