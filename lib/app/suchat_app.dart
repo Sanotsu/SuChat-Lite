@@ -1,7 +1,6 @@
 import 'package:bot_toast/bot_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:form_builder_validators/localization/l10n.dart';
 import 'package:provider/provider.dart';
@@ -13,6 +12,7 @@ import '../features/training_assistant/presentation/viewmodels/training_viewmode
 import '../features/diet_diary/presentation/viewmodels/diet_diary_viewmodel.dart';
 import '../features/simple_accounting/presentation/viewmodels/bill_viewmodel.dart';
 import '../features/unified_chat/presentation/viewmodels/unified_chat_viewmodel.dart';
+import '../features/notebook/presentation/viewmodels/notebook_viewmodel.dart';
 import 'routes.dart';
 
 GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -93,19 +93,20 @@ class SuChatApp extends StatelessWidget {
       },
     );
 
-    // 将 Provider 和 Riverpod 结合使用
-    // 先用 MultiProvider 包装，再用 ProviderScope 包装
-    return riverpod.ProviderScope(
-      child: MultiProvider(
-        providers: [
-          ChangeNotifierProvider(create: (_) => TrainingViewModel()),
-          ChangeNotifierProvider(create: (_) => DietDiaryViewModel()),
-          ChangeNotifierProvider(create: (_) => UserInfoViewModel()),
-          ChangeNotifierProvider(create: (_) => BillViewModel()),
-          ChangeNotifierProvider(create: (_) => UnifiedChatViewModel()),
-        ],
-        child: providerChild,
-      ),
+    // 2026-09-02 移除riverpod后统一为Provider+ChangeNotifier体系
+    // (notebook三个VM原为riverpod @riverpod类，已迁移为ChangeNotifier)
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => TrainingViewModel()),
+        ChangeNotifierProvider(create: (_) => DietDiaryViewModel()),
+        ChangeNotifierProvider(create: (_) => UserInfoViewModel()),
+        ChangeNotifierProvider(create: (_) => BillViewModel()),
+        ChangeNotifierProvider(create: (_) => UnifiedChatViewModel()),
+        ChangeNotifierProvider(create: (_) => NotebookViewModel()),
+        ChangeNotifierProvider(create: (_) => NoteCategoryViewModel()),
+        ChangeNotifierProvider(create: (_) => NoteTagViewModel()),
+      ],
+      child: providerChild,
     );
   }
 }

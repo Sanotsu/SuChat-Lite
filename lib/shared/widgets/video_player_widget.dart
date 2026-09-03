@@ -345,6 +345,11 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 
   @override
   void dispose() {
+    // media_kit(Windows)已知缺陷：播放器析构后native回调仍可能触发导致
+    // "Callback invoked after it has been deleted"崩溃，销毁前先暂停降低竞态概率
+    try {
+      _controller.pause();
+    } catch (_) {}
     _controller.removeListener(_videoListener);
     _controller.dispose();
     super.dispose();

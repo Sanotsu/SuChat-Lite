@@ -403,6 +403,7 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
     return metadata.containsKey('images') ||
         metadata.containsKey('audio') ||
         metadata.containsKey('video') ||
+        metadata.containsKey('videos') ||
         metadata.containsKey('files');
   }
 
@@ -448,6 +449,14 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
     if (metadata.containsKey('video')) {
       final videoPath = metadata['video'].toString();
       widgets.add(_buildMetadataVideo(videoPath));
+    }
+
+    // 显示视频生成结果(2026-09-02 媒体生成并入聊天：视频生成消息的metadata.videos)
+    if (metadata.containsKey('videos')) {
+      final videos = metadata['videos'] as List<dynamic>;
+      for (final videoPath in videos) {
+        widgets.add(_buildMetadataVideo(videoPath.toString()));
+      }
     }
 
     // 显示文件附件

@@ -257,7 +257,7 @@ class MealFoodRecordDao {
       DietDiaryDdl.tableMealFoodRecord,
       {
         'quantity': newQuantity,
-        if (unit != null) 'unit': unit,
+        'unit': ?unit,
         'gmtModified': DateTime.now().toIso8601String(),
       },
       where: 'id = ?',

@@ -7,6 +7,7 @@ import '../../../../core/utils/simple_tools.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/models/unified_chat_message.dart';
+import '../../data/models/unified_model_spec.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
 import 'chat_message_item.dart';
 
@@ -160,56 +161,62 @@ class _ChatMessageListState extends State<ChatMessageList> {
                 child: Scrollbar(
                   controller: _scrollController,
                   thumbVisibility: ScreenHelper.isDesktop(),
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 8,
+                  // 整体排除语义树：流式高频重建+自动滚动挂载语义节点会触发
+                  // Windows引擎AXTree增量更新bug("Failed to update ui::AXTree"
+                  // 海量刷屏)。聊天列表无屏幕阅读器场景，排除不影响视觉与
+                  // 文本选择(SelectionArea在gesture层工作)
+                  child: ExcludeSemantics(
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 8,
+                      ),
+                      itemCount: viewModel.messages.length,
+                      itemBuilder: (context, index) {
+                        final message = viewModel.messages[index];
+
+                        // 只有在对话开始后才隐藏系统消息，新对话时显示系统消息
+                        // if (message.role == UnifiedMessageRole.system &&
+                        //     viewModel.messages.length > 1) {
+                        //   return const SizedBox.shrink();
+                        // }
+                        //   // 跳过系统消息的显示
+                        // if (message.role == UnifiedMessageRole.system) {
+                        //   return const SizedBox.shrink();
+                        // }
+
+                        return ChatMessageItem(
+                          message: message,
+                          viewModel: viewModel,
+                          onRegenerate: message.isAssistant
+                              ? () => viewModel.regenerateMessage(
+                                  message,
+                                  isWebSearch: viewModel.isWebSearchEnabled,
+                                )
+                              : null,
+                          onResend: message.isUser
+                              ? () => viewModel.resendUserMessage(
+                                  message,
+                                  isWebSearch: viewModel.isWebSearchEnabled,
+                                )
+                              : null,
+                          onDelete: () => _showDeleteConfirmDialog(
+                            context,
+                            viewModel,
+                            message,
+                          ),
+                          onCopy: () => _copyMessageContent(context, message),
+                          // 修改完消息vm中已经更新了消息列表，这里应该就直接看到新的消息内容了
+                          onUpdateMessage: message.isAssistant
+                              ? (msg) => viewModel.updateMessage(msg)
+                              : null,
+                          onEditMessage: message.isUser
+                              ? (msg) => viewModel.startEditingUserMessage(msg)
+                              : null,
+                        );
+                      },
                     ),
-                    itemCount: viewModel.messages.length,
-                    itemBuilder: (context, index) {
-                      final message = viewModel.messages[index];
-
-                      // 只有在对话开始后才隐藏系统消息，新对话时显示系统消息
-                      // if (message.role == UnifiedMessageRole.system &&
-                      //     viewModel.messages.length > 1) {
-                      //   return const SizedBox.shrink();
-                      // }
-                      //   // 跳过系统消息的显示
-                      // if (message.role == UnifiedMessageRole.system) {
-                      //   return const SizedBox.shrink();
-                      // }
-
-                      return ChatMessageItem(
-                        message: message,
-                        viewModel: viewModel,
-                        onRegenerate: message.isAssistant
-                            ? () => viewModel.regenerateMessage(
-                                message,
-                                isWebSearch: viewModel.isWebSearchEnabled,
-                              )
-                            : null,
-                        onResend: message.isUser
-                            ? () => viewModel.resendUserMessage(
-                                message,
-                                isWebSearch: viewModel.isWebSearchEnabled,
-                              )
-                            : null,
-                        onDelete: () => _showDeleteConfirmDialog(
-                          context,
-                          viewModel,
-                          message,
-                        ),
-                        onCopy: () => _copyMessageContent(context, message),
-                        // 修改完消息vm中已经更新了消息列表，这里应该就直接看到新的消息内容了
-                        onUpdateMessage: message.isAssistant
-                            ? (msg) => viewModel.updateMessage(msg)
-                            : null,
-                        onEditMessage: message.isUser
-                            ? (msg) => viewModel.startEditingUserMessage(msg)
-                            : null,
-                      );
-                    },
                   ),
                 ),
               ),
@@ -224,34 +231,104 @@ class _ChatMessageListState extends State<ChatMessageList> {
             // 悬浮新建对话按钮
             // 用 Align 相对消息列表区域居中(之前用 0.5.sw 按全屏宽计算，
             // 桌面有侧栏+内容列限宽时不在消息区中心)
+            // 2026-09-02 媒体生成并入聊天：点击弹出类型菜单(对齐Chatbox"新图片"入口模式)
             Align(
               alignment: Alignment.bottomCenter,
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: SizedBox(
-                  // 小按钮尺寸为40*40,不够小，手动32*32包裹
-                  width: 32,
-                  height: 32,
-                  child: FloatingActionButton.small(
-                    onPressed: () {
-                      viewModel.createNewConversation();
-                      setState(() {
-                        _showScrollToTop = false;
-                        _showScrollToBottom = false;
-                      });
-                    },
-                    heroTag: 'create_new_conversation',
-                    backgroundColor: Theme.of(context).colorScheme.surface,
-                    foregroundColor: Theme.of(context).colorScheme.onSurface,
-                    tooltip: '新建对话',
-                    child: const Icon(Icons.add),
-                  ),
-                ),
+                child: _buildNewConversationButton(viewModel),
               ),
             ),
           ],
         );
       },
+    );
+  }
+
+  /// 新建对话按钮：点击弹出类型菜单(普通对话/图片生成/视频生成/语音合成)
+  /// 选择生成类会自动切换到对应类型的可用模型
+  Widget _buildNewConversationButton(UnifiedChatViewModel viewModel) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return PopupMenuButton<String>(
+      tooltip: '新建对话',
+      position: PopupMenuPosition.under,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: colorScheme.surface,
+      onSelected: (value) {
+        final type = UnifiedModelType.values.firstWhere(
+          (t) => t.name == value,
+          orElse: () => UnifiedModelType.cc,
+        );
+        viewModel.createNewConversationForType(type);
+        setState(() {
+          _showScrollToTop = false;
+          _showScrollToBottom = false;
+        });
+      },
+      itemBuilder: (context) => const [
+        PopupMenuItem(
+          value: 'cc',
+          height: 44,
+          child: Row(
+            children: [
+              Icon(Icons.chat_bubble_outline, size: 20),
+              SizedBox(width: 12),
+              Text('普通对话'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'image',
+          height: 44,
+          child: Row(
+            children: [
+              Icon(Icons.image_outlined, size: 20),
+              SizedBox(width: 12),
+              Text('图片生成'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'video',
+          height: 44,
+          child: Row(
+            children: [
+              Icon(Icons.video_camera_back_outlined, size: 20),
+              SizedBox(width: 12),
+              Text('视频生成'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'tts',
+          height: 44,
+          child: Row(
+            children: [
+              Icon(Icons.record_voice_over, size: 20),
+              SizedBox(width: 12),
+              Text('语音合成'),
+            ],
+          ),
+        ),
+      ],
+      child: Container(
+        // 小按钮尺寸为40*40,不够小，手动32*32包裹
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(Icons.add, size: 18, color: colorScheme.onSurface),
+      ),
     );
   }
 

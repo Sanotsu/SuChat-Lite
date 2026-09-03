@@ -82,7 +82,7 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    Widget content = Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -98,6 +98,14 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
         ],
       ),
     );
+
+    // 流式中的消息高频重建，其语义节点变化会触发Windows引擎AXTree增量更新bug
+    // ("Failed to update ui::AXTree... will not be in the tree"海量刷屏)。
+    // 流式期间将该消息整棵子树从语义树摘除(不影响视觉/文本选择)，流完自动恢复
+    if (widget.message.isStreaming) {
+      content = ExcludeSemantics(child: content);
+    }
+    return content;
   }
 
   // 头像区域反向固定不缩放(避免文字放大时头像行溢出，对齐旧版处理)
@@ -566,15 +574,17 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
                   TextSpan(
                     text: formatRelativeDate(widget.message.createdAt),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).primaryColor,
-                      fontSize: ScreenHelper.metaFontSize(14),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant.withValues(alpha: 0.55),
+                      fontSize: ScreenHelper.metaFontSize(12),
                     ),
                   ),
                   TextSpan(
                     text: "    $note",
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).disabledColor,
-                      fontSize: ScreenHelper.metaFontSize(12),
+                      fontSize: ScreenHelper.metaFontSize(11),
                     ),
                   ),
                 ],

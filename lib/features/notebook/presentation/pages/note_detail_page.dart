@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:convert';
 import 'dart:async';
@@ -22,16 +22,16 @@ import '../widgets/create_color_item_dialog.dart';
 import '../widgets/note_audio_recorder.dart';
 import '../widgets/note_audio_list.dart';
 
-class NoteDetailPage extends ConsumerStatefulWidget {
+class NoteDetailPage extends StatefulWidget {
   final Note? note; // 如果为 null，则是创建新笔记
 
   const NoteDetailPage({super.key, this.note});
 
   @override
-  ConsumerState<NoteDetailPage> createState() => _NoteDetailPageState();
+  State<NoteDetailPage> createState() => _NoteDetailPageState();
 }
 
-class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
+class _NoteDetailPageState extends State<NoteDetailPage> {
   late TextEditingController _titleController;
   late QuillController _quillController;
   late bool _isTodo;
@@ -191,7 +191,7 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
     }
 
     try {
-      final notebookViewModel = ref.read(notebookViewModelProvider.notifier);
+      final notebookViewModel = context.read<NotebookViewModel>();
 
       // 获取纯文本内容
       final plainText = _quillController.document.toPlainText().trim();
@@ -413,9 +413,9 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
 
   List<Widget> buildActions() {
     // 获取分类数据
-    final categoriesAsyncValue = ref.watch(noteCategoryViewModelProvider);
+    final categories = context.watch<NoteCategoryViewModel>().categories;
     // 获取标签数据
-    final tagsAsyncValue = ref.watch(noteTagViewModelProvider);
+    final tags = context.watch<NoteTagViewModel>().tags;
 
     return [
       // 待办事项开关 - 只有非归档笔记才显示
@@ -449,10 +449,10 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
         onSelected: (value) {
           switch (value) {
             case 'category':
-              _showCategoryDialog(categoriesAsyncValue.value ?? []);
+              _showCategoryDialog(categories);
               break;
             case 'tags':
-              _showTagsDialog(tagsAsyncValue.value ?? []);
+              _showTagsDialog(tags);
               break;
             case 'color':
               _showColorPicker();
@@ -561,9 +561,7 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
                 });
 
                 try {
-                  final notebookViewModel = ref.read(
-                    notebookViewModelProvider.notifier,
-                  );
+                  final notebookViewModel = context.read<NotebookViewModel>();
                   await notebookViewModel.deleteNote(_currentNote!.id!);
 
                   if (mounted) {
@@ -595,7 +593,7 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
     });
 
     try {
-      final notebookViewModel = ref.read(notebookViewModelProvider.notifier);
+      final notebookViewModel = context.read<NotebookViewModel>();
 
       if (_isArchived) {
         // 取消归档
@@ -688,45 +686,37 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
 
   Widget buildCategory() {
     // 获取分类数据
-    final categoriesAsyncValue = ref.watch(noteCategoryViewModelProvider);
+    final categories = context.watch<NoteCategoryViewModel>().categories;
 
-    return categoriesAsyncValue.when(
-      data: (categories) {
-        final category = categories.firstWhere(
-          (c) => c.id == _selectedCategoryId,
-          orElse: () => NoteCategory(name: '未知分类'),
-        );
-        return Container(
-          padding: const EdgeInsets.only(right: 8),
-          child: Chip(
-            label: Text(category.name, style: TextStyle(color: Colors.white)),
-            backgroundColor: category.getCategoryColor(),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(0),
-            ),
-            onDeleted: _isReadOnly
-                ? null
-                : () {
-                    // 归档笔记不允许删除分类
-                    setState(() {
-                      _selectedCategoryId = null;
-                      _isEdited = true;
-                    });
-                  },
-            deleteIcon: _isReadOnly
-                ? null
-                : const Icon(Icons.close, size: 16, color: Colors.white),
-          ),
-        );
-      },
-      loading: () => const SizedBox(),
-      error: (_, _) => const SizedBox(),
+    final category = categories.firstWhere(
+      (c) => c.id == _selectedCategoryId,
+      orElse: () => NoteCategory(name: '未知分类'),
+    );
+    return Container(
+      padding: const EdgeInsets.only(right: 8),
+      child: Chip(
+        label: Text(category.name, style: TextStyle(color: Colors.white)),
+        backgroundColor: category.getCategoryColor(),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
+        onDeleted: _isReadOnly
+            ? null
+            : () {
+                // 归档笔记不允许删除分类
+                setState(() {
+                  _selectedCategoryId = null;
+                  _isEdited = true;
+                });
+              },
+        deleteIcon: _isReadOnly
+            ? null
+            : const Icon(Icons.close, size: 16, color: Colors.white),
+      ),
     );
   }
 
   Expanded buildTags() {
     // 获取标签数据
-    final tagsAsyncValue = ref.watch(noteTagViewModelProvider);
+    final tags = context.watch<NoteTagViewModel>().tags;
 
     //  移动端可以显示5个，桌面端显示8个
     int showCount = ScreenHelper.isMobile() ? 5 : 8;
@@ -775,9 +765,7 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
             // 如果有更多标签，显示更多指示器
             if (_selectedTags.length > showCount)
               GestureDetector(
-                onTap: _isReadOnly
-                    ? null
-                    : () => _showTagsDialog(tagsAsyncValue.value ?? []),
+                onTap: _isReadOnly ? null : () => _showTagsDialog(tags),
                 child: Chip(
                   label: Text(
                     '+${_selectedTags.length - showCount}',
@@ -795,7 +783,7 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
             if (!_isReadOnly)
               IconButton(
                 icon: const Icon(Icons.add_circle_outline),
-                onPressed: () => _showTagsDialog(tagsAsyncValue.value ?? []),
+                onPressed: () => _showTagsDialog(tags),
                 tooltip: '管理标签',
                 iconSize: 20,
               ),
@@ -1077,9 +1065,7 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
             maxLength: 6,
             onSubmit: (name, color) async {
               try {
-                final categoryViewModel = ref.read(
-                  noteCategoryViewModelProvider.notifier,
-                );
+                final categoryViewModel = context.read<NoteCategoryViewModel>();
                 final category = await categoryViewModel.createCategory(
                   name,
                   color: color,
@@ -1133,9 +1119,8 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
             TextButton(
               onPressed: () async {
                 try {
-                  final categoryViewModel = ref.read(
-                    noteCategoryViewModelProvider.notifier,
-                  );
+                  final categoryViewModel = context
+                      .read<NoteCategoryViewModel>();
                   await categoryViewModel.deleteCategory(category.id!);
 
                   // 如果当前笔记使用了这个分类，清除它
@@ -1154,8 +1139,7 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
                     Navigator.pop(dialogContext);
 
                     // 获取最新的分类列表
-                    final categories =
-                        ref.read(noteCategoryViewModelProvider).value ?? [];
+                    final categories = categoryViewModel.categories;
 
                     // 如果已经不在导航堆栈中，不要尝试关闭
                     if (Navigator.canPop(dialogContext)) {
@@ -1316,9 +1300,7 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
             maxLength: 10,
             onSubmit: (name, color) async {
               try {
-                final tagViewModel = ref.read(
-                  noteTagViewModelProvider.notifier,
-                );
+                final tagViewModel = context.read<NoteTagViewModel>();
                 await tagViewModel.createTag(name, color: color);
 
                 if (mounted) {
@@ -1332,8 +1314,7 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
                     Navigator.pop(dialogContext);
                   }
 
-                  final allTags =
-                      ref.read(noteTagViewModelProvider).value ?? [];
+                  final allTags = tagViewModel.tags;
                   _showTagsDialog(allTags);
                 }
               } catch (e) {
@@ -1370,9 +1351,7 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
             TextButton(
               onPressed: () async {
                 try {
-                  final tagViewModel = ref.read(
-                    noteTagViewModelProvider.notifier,
-                  );
+                  final tagViewModel = context.read<NoteTagViewModel>();
                   await tagViewModel.deleteTag(tag.id!);
 
                   // 从临时选中列表中移除
@@ -1394,8 +1373,7 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
                     Navigator.pop(context);
 
                     // 获取最新的标签列表
-                    final allTags =
-                        ref.read(noteTagViewModelProvider).value ?? [];
+                    final allTags = context.read<NoteTagViewModel>().tags;
 
                     // 关闭原标签管理对话框
                     Navigator.pop(context);
@@ -1591,14 +1569,13 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
   // 处理录制的音频
   Future<void> _handleAudioRecorded(File audioFile) async {
     try {
+      final notebookViewModel = context.read<NotebookViewModel>();
       if (_currentNote == null) {
         // 如果是新笔记，先保存笔记
         await _saveNote(silent: true);
       }
 
       if (_currentNote != null) {
-        final notebookViewModel = ref.read(notebookViewModelProvider.notifier);
-
         // 将音频文件添加到笔记
         await notebookViewModel.addMediaToNote(
           _currentNote!,
@@ -1625,7 +1602,7 @@ class _NoteDetailPageState extends ConsumerState<NoteDetailPage> {
   Future<void> _handleDeleteMedia(NoteMedia media) async {
     try {
       if (_currentNote != null) {
-        final notebookViewModel = ref.read(notebookViewModelProvider.notifier);
+        final notebookViewModel = context.read<NotebookViewModel>();
         await notebookViewModel.deleteNoteMedia(_currentNote!, media.id!);
 
         setState(() {

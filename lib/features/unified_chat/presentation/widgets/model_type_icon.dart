@@ -18,18 +18,14 @@ class ModelTypeIcon extends StatelessWidget {
         return Colors.purple.shade600; // 嵌入使用紫色
       case UnifiedModelType.reranker:
         return Colors.orange.shade600; // 重排使用橙色
-      case UnifiedModelType.tti:
-        return Colors.green.shade600; // 文生图使用绿色
-      case UnifiedModelType.iti:
-        return Colors.teal.shade600; // 图生图使用青色
+      case UnifiedModelType.image:
+        return Colors.green.shade600; // 图片生成使用绿色
+      case UnifiedModelType.video:
+        return Colors.deepOrange.shade600; // 视频生成使用深橙色
       case UnifiedModelType.tts:
         return Colors.red.shade600; // 文本转语音使用红色
       case UnifiedModelType.asr:
         return Colors.indigo.shade600; // 语音识别使用靛蓝色
-      // case UnifiedModelType.ttv:
-      //   return Colors.deepOrange.shade600; // 文生视频使用深橙色
-      // case UnifiedModelType.itv:
-      //   return Colors.pink.shade600; // 图生视频使用粉色
     }
   }
 
@@ -42,18 +38,14 @@ class ModelTypeIcon extends StatelessWidget {
         return Icons.integration_instructions; // 嵌入代码
       case UnifiedModelType.reranker:
         return Icons.import_export; // 排序交换
-      case UnifiedModelType.tti:
-        return Icons.texture; // 文字转纹理
-      case UnifiedModelType.iti:
-        return Icons.photo_library; // 图片库
+      case UnifiedModelType.image:
+        return Icons.image_outlined; // 图片
+      case UnifiedModelType.video:
+        return Icons.video_camera_back_outlined; // 视频相机
       case UnifiedModelType.tts:
         return Icons.record_voice_over; // 语音输出
       case UnifiedModelType.asr:
         return Icons.keyboard_voice; // 语音输入
-      // case UnifiedModelType.ttv:
-      //   return Icons.video_camera_back; // 视频相机
-      // case UnifiedModelType.itv:
-      //   return Icons.slideshow; // 幻灯片播放
     }
   }
 
@@ -86,17 +78,13 @@ String _getTooltipText(UnifiedModelType type) {
       return '文本嵌入模型';
     case UnifiedModelType.reranker:
       return '重排序模型';
-    case UnifiedModelType.tti:
-      return '文生图模型';
-    case UnifiedModelType.iti:
-      return '图生图模型';
+    case UnifiedModelType.image:
+      return '图片生成模型';
+    case UnifiedModelType.video:
+      return '视频生成模型';
     case UnifiedModelType.tts:
       return '文本转语音';
     case UnifiedModelType.asr:
       return '语音识别';
-    // case UnifiedModelType.ttv:
-    //   return '文生视频';
-    // case UnifiedModelType.itv:
-    //   return '图生视频';
   }
 }

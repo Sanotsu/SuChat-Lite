@@ -87,7 +87,14 @@ class DesktopWindowService with WindowListener {
 
   @override
   void onWindowClose() async {
-    await _saveBounds();
-    await windowManager.destroy();
+    // setPreventClose(true)下若此处异常/被阻塞(如media_kit native线程占用平台通道)，
+    // destroy不执行会导致窗口白屏无响应，故各步均加超时并最终exit兜底
+    try {
+      await _saveBounds().timeout(const Duration(milliseconds: 800));
+    } catch (_) {}
+    try {
+      await windowManager.destroy().timeout(const Duration(milliseconds: 800));
+    } catch (_) {}
+    exit(0);
   }
 }

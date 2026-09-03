@@ -83,6 +83,11 @@ class SpeechRecognitionResponse {
     );
   }
 
+  /// 从OpenAI兼容响应创建(用户自建平台通用，/audio/transcriptions标准格式)
+  factory SpeechRecognitionResponse.fromOpenAIResponse(
+    Map<String, dynamic> json,
+  ) => SpeechRecognitionResponse.fromZhipuResponse(json);
+
   /// 从硅基流动响应创建(只有text一个字段)
   factory SpeechRecognitionResponse.fromSiliconCloudResponse(
     Map<String, dynamic> json,

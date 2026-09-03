@@ -6,7 +6,7 @@ import '../../../../core/entities/user_info.dart';
 import '../../../../core/utils/screen_helper.dart';
 import '../../../../core/viewmodels/user_info_viewmodel.dart';
 import '../../../../shared/constants/constant_llm_enum.dart';
-import '../../../../shared/services/model_manager_service.dart';
+import '../../../../shared/services/unified_model_bridge.dart';
 import '../../../../shared/widgets/cus_dropdown_button.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../shared/widgets/toast_utils.dart';
@@ -100,16 +100,18 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
   }
 
   Future<void> initModels() async {
-    // 获取可用模型列表
-    final availableModels = await ModelManagerService.getAvailableModelByTypes([
-      LLModelType.cc,
-      LLModelType.reasoner,
-    ]);
+    // 2026-09-03 接入平台管理统一模型库(无内置免费模型)
+    final availableModels = await UnifiedModelBridge.loadChatModels();
 
+    if (!mounted) return;
     setState(() {
       modelList = availableModels;
       selectedModel = availableModels.isNotEmpty ? availableModels.first : null;
     });
+
+    if (availableModels.isEmpty) {
+      ToastUtils.showError('无可用对话模型，请在聊天页-平台管理中配置', align: Alignment.center);
+    }
   }
 
   // 生成并显示提示词对话框

@@ -82,7 +82,21 @@ class SpeechSynthesisService {
           );
 
         default:
-          throw Exception('不支持的平台: ${platform.id}');
+          // 2026-09-03 通用化：用户自建平台按OpenAI兼容(/audio/speech)处理，
+          // 返回二进制音频数据
+          final audioBytes = await HttpUtils.post(
+            path: url,
+            headers: headers,
+            data: requestBody,
+            responseType: CusRespType.bytes,
+            showLoading: false,
+          );
+
+          return SpeechSynthesisResponse.fromBinaryData(
+            audioBytes,
+            format: request.responseFormat ?? 'mp3',
+            source: platform.id,
+          );
       }
     } catch (e) {
       throw Exception('语音合成请求失败: $e');

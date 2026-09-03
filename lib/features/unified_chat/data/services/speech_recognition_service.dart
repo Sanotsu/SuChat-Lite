@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 
 import '../../../../core/network/dio_client/cus_http_client.dart';
+import '../../../../shared/services/tmp_file_upload_service.dart';
 import '../models/unified_platform_spec.dart';
 import '../models/speech_recognition_request.dart';
 import '../models/speech_recognition_response.dart';
@@ -23,7 +24,17 @@ class SpeechRecognitionService {
         case 'zhipu':
           return await _recognizeWithZhipu(platform, request, apiKey);
         default:
-          throw Exception('不支持的平台: ${platform.id}');
+          // 2026-09-03 通用化：用户在平台管理中自建的平台，只要配置了
+          // 语音识别端点(asrPrefix，OpenAI兼容/v1/audio/transcriptions格式)
+          // 即可使用，不再限制内置三平台
+          if (platform.getSpeechToTextUrl() != null) {
+            return await _recognizeWithOpenAICompatible(
+              platform,
+              request,
+              apiKey,
+            );
+          }
+          throw Exception('不支持的平台: ${platform.id} (未配置语音识别端点，请在平台管理中配置)');
       }
     } catch (e) {
       throw Exception('语音识别请求失败: $e');
@@ -48,9 +59,12 @@ class SpeechRecognitionService {
       throw Exception('音频文件不存在或路径无效');
     }
 
-    // 1 直接上传文件到 https://tmpfiles.org/ 最大100M，60分钟后自动删除
+    // 1 直接上传文件到 tmpfile.link 换取公网直链
     // qwen-asr最大只支持10M和3分钟内的音频文件
-    final directLink = await uploadToTmpFiles(audioFile, maxSizeMB: 10);
+    final directLink = await TmpFileUploadService.upload(
+      audioFile,
+      maxSizeMB: 10,
+    );
 
     // 2 使用直接链接调用阿里百炼语音识别API
     final requestData = request.toAliyunFormat(audioUrl: directLink);
@@ -189,57 +203,48 @@ class SpeechRecognitionService {
     return bytes / (1024 * 1024);
   }
 
-  /// 验证音频文件大小
-  static bool isValidAudioFileSize(String filePath, {double maxSizeMB = 25.0}) {
-    final sizeMB = getAudioFileSizeMB(filePath);
-    return sizeMB > 0 && sizeMB <= maxSizeMB;
-  }
+  /// OpenAI兼容语音识别(用户自建平台通用)
+  /// 标准 multipart 字段：file + model，适配任意实现/audio/transcriptions的服务
+  static Future<SpeechRecognitionResponse> _recognizeWithOpenAICompatible(
+    UnifiedPlatformSpec platform,
+    SpeechRecognitionRequest request,
+    String apiKey,
+  ) async {
+    final url = platform.getSpeechToTextUrl();
+    final audioFile = request.getAudioFile();
 
-  /// 上传文件到tmpfiles.org
-  static Future<String> uploadToTmpFiles(
-    File file, {
-    double maxSizeMB = 25.0,
-  }) async {
-    if (!isValidAudioFileSize(file.path, maxSizeMB: maxSizeMB)) {
-      throw Exception('文件大小超过限制');
+    if (audioFile == null || !audioFile.existsSync()) {
+      throw Exception('音频文件不存在或路径无效');
     }
 
-    // 直接上传文件到 https://tmpfiles.org/
-    // 最大100M，60分钟后自动删除
     final formData = FormData();
     formData.files.add(
       MapEntry(
         'file',
         await MultipartFile.fromFile(
-          file.path,
-          filename: file.path.split('/').last,
+          audioFile.path,
+          filename: audioFile.path.split('/').last,
         ),
       ),
     );
-
-    final uploadResponse = await HttpUtils.post(
-      path: 'https://tmpfiles.org/api/v1/upload',
-      data: formData,
-    );
-
-    // 从上传响应中获取下载地址
-    final downloadUrl = uploadResponse['data']['url'] as String?;
-    if (downloadUrl == null) {
-      throw Exception(
-        '无法获取上传到tmpfiles.org的下载地址。\nuploadResponse:$uploadResponse',
-      );
+    formData.fields.add(MapEntry('model', request.model));
+    if (request.language != null) {
+      formData.fields.add(MapEntry('language', request.language!));
     }
 
-    // 步骤3: 创建直接链接
-    // 注意：响应中的地址类似(浏览器访问得到下载按钮)
-    // http://tmpfiles.org/3978861/4c6de638-49e4-4e9a-a555-4cb9f1fa8553.mp3
-    // 但下载地址需要(直接的文件地址)
-    // https://tmpfiles.org/dl/3978861/4c6de638-49e4-4e9a-a555-4cb9f1fa8553.mp3
-    final directLink = downloadUrl.replaceFirst(
-      'http://tmpfiles.org',
-      'https://tmpfiles.org/dl',
+    final responseData = await HttpUtils.post(
+      path: url!,
+      data: formData,
+      showLoading: false,
+      headers: {'Authorization': 'Bearer $apiKey'},
     );
 
-    return directLink;
+    return SpeechRecognitionResponse.fromOpenAIResponse(responseData);
+  }
+
+  /// 验证音频文件大小
+  static bool isValidAudioFileSize(String filePath, {double maxSizeMB = 25.0}) {
+    final sizeMB = getAudioFileSizeMB(filePath);
+    return sizeMB > 0 && sizeMB <= maxSizeMB;
   }
 }

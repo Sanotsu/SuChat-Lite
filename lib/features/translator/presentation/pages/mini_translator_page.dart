@@ -1,7 +1,8 @@
-import 'dart:async';
-import 'dart:typed_data';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
 import '../../../../core/entities/cus_llm_model.dart';
@@ -12,14 +13,28 @@ import '../../../../shared/services/translation_service.dart';
 import '../../../../shared/widgets/audio_player_widget.dart';
 import '../../../../shared/widgets/cus_dropdown_button.dart';
 import '../../../../shared/widgets/toast_utils.dart';
-import '../../../media_generation/voice/data/repositories/voice_generation_service.dart';
-import '../../data/datasources/aliyun_translator_apis.dart';
-import '../../data/models/aliyun_asr_realtime_models.dart';
+import '../../../unified_chat/data/database/translation_history_dao.dart';
+import '../../../unified_chat/data/database/unified_chat_dao.dart';
+import '../../../unified_chat/data/models/speech_recognition_request.dart';
+import '../../../unified_chat/data/models/speech_synthesis_request.dart';
+import '../../../unified_chat/data/models/unified_model_spec.dart';
+import '../../../unified_chat/data/models/unified_platform_spec.dart';
+import '../../../unified_chat/data/services/speech_recognition_service.dart';
+import '../../../unified_chat/data/services/speech_synthesis_service.dart';
+import '../../../unified_chat/data/services/unified_secure_storage.dart';
 import '../../data/models/translator_supported_languages.dart';
-import 'full_translator_page.dart';
+import 'translation_history_page.dart';
+
+/// 翻译模型条目(统一配置的模型+所属平台)
+typedef _ModelEntry = ({UnifiedModelSpec model, UnifiedPlatformSpec platform});
 
 /// 快速翻译页面
-/// 实时语音识别、翻译、语音合成模型内嵌，用户不可选择但需要导入自己阿里云百炼的AK
+/// 2026-09-03 改造：
+/// - 语音识别/翻译/语音合成模型均可从平台管理配置的统一模型库中选择
+/// - 语音识别改为录音后同步识别(自建平台可用，一般限制25MB内)
+/// - 翻译使用对话模型+翻译系统提示词(qwen-mt系列自动走translation_options)
+/// - 语音合成固定默认音色，不再提供音色选择
+/// - 新增翻译历史(存unified聊天库translation_history表，随DB备份链备份)
 class MiniTranslatorPage extends StatefulWidget {
   const MiniTranslatorPage({super.key});
 
@@ -28,8 +43,9 @@ class MiniTranslatorPage extends StatefulWidget {
 }
 
 class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
-  // API客户端
-  late AliyunTranslatorApiClient _apiClient;
+  final UnifiedChatDao _chatDao = UnifiedChatDao();
+  final TranslationHistoryDao _historyDao = TranslationHistoryDao();
+  final SpeechSynthesisService _ttsService = SpeechSynthesisService();
 
   // 文本控制器
   late TextEditingController _textController;
@@ -43,24 +59,25 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
   LanguageOption _sourceLanguage = SupportedLanguages.languages.first; // 自动
   LanguageOption _targetLanguage = SupportedLanguages.languages[3]; // 英语
 
-  // 语音合成配置
-  AliyunVoiceType _selectedVoice =
-      VoiceGenerationService.getQwenTTSVoices().first;
+  // 统一配置的模型条目(平台管理中配置的模型，含用户自建平台)
+  final List<_ModelEntry> _asrEntries = [];
+  final List<_ModelEntry> _ccEntries = [];
+  final List<_ModelEntry> _ttsEntries = [];
+  _ModelEntry? _selectedAsr;
+  _ModelEntry? _selectedCc;
+  _ModelEntry? _selectedTts;
+  int? _lastHistoryId;
+  bool _isLoadingModels = true;
+
+  // 录音相关
+  late AudioRecorder _audioRecorder;
+  bool _isRecording = false;
+  String? _recordingPath;
+  bool _isRecognizing = false;
 
   // 加载状态
   bool _isTranslating = false;
   bool _isSynthesizing = false;
-  bool _isRealtimeRecording = false;
-  Stream<AsrRtResult>? _realtimeStream;
-  StreamSubscription<AsrRtResult>? _realtimeSubscription;
-
-  // 录音相关
-  late AudioRecorder _audioRecorder;
-  StreamSubscription<Uint8List>? _audioStreamSubscription;
-  Timer? _audioTimer;
-  bool _isUpdatingFromVoice = false;
-  DateTime? _lastUserEditTime;
-  static const int _userEditProtectionMs = 1000;
 
   // 错误状态
   bool _hasTranslationError = false;
@@ -71,197 +88,206 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
   @override
   void initState() {
     super.initState();
-    _initializeApiClient();
     _textController = TextEditingController(text: _inputText);
     _audioRecorder = AudioRecorder();
-  }
-
-  void _initializeApiClient() {
-    _apiClient = AliyunTranslatorApiClient();
+    _loadModels();
   }
 
   @override
   void dispose() {
-    _stopRecording();
-    _realtimeSubscription?.cancel();
+    _stopRecording(cancelOnly: true);
     _textController.dispose();
     _audioRecorder.dispose();
-    _apiClient.dispose();
     super.dispose();
   }
 
-  // 检查用户是否在保护时间窗口内进行了编辑
-  bool _isInUserEditProtection() {
-    if (_lastUserEditTime == null) return false;
-    final now = DateTime.now();
-    final timeDiff = now.difference(_lastUserEditTime!).inMilliseconds;
-    return timeDiff < _userEditProtectionMs;
+  /// 加载平台管理配置的模型(统一模型库，按类型分桶)
+  Future<void> _loadModels() async {
+    try {
+      final models = await _chatDao.getModelSpecs();
+      final platforms = await _chatDao.getPlatformSpecs();
+      final platformMap = {for (final p in platforms) p.id: p};
+
+      final asr = <_ModelEntry>[];
+      final cc = <_ModelEntry>[];
+      final tts = <_ModelEntry>[];
+      for (final m in models) {
+        if (!m.isActive) continue;
+        final p = platformMap[m.platformId];
+        if (p == null || !p.isActive) continue;
+        final entry = (model: m, platform: p);
+        final type = m.modelType;
+        if (type == UnifiedModelType.asr.name) {
+          asr.add(entry);
+        } else if (type == UnifiedModelType.cc.name) {
+          cc.add(entry);
+        } else if (type == UnifiedModelType.tts.name) {
+          tts.add(entry);
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _asrEntries
+          ..clear()
+          ..addAll(asr);
+        _ccEntries
+          ..clear()
+          ..addAll(cc);
+        _ttsEntries
+          ..clear()
+          ..addAll(tts);
+        // 默认选中第一个可用模型
+        _selectedAsr = asr.isEmpty ? null : asr.first;
+        _selectedCc = cc.isEmpty ? null : cc.first;
+        _selectedTts = tts.isEmpty ? null : tts.first;
+        _isLoadingModels = false;
+      });
+    } catch (e) {
+      debugPrint('加载平台管理配置的模型失败: $e');
+      if (mounted) {
+        setState(() => _isLoadingModels = false);
+      }
+    }
   }
 
-  // 从语音识别更新文本
-  void _updateTextFromVoice(String text) {
-    if (_isUpdatingFromVoice) return;
+  /// 将统一配置的对话模型桥接为TranslationService使用的CusLLMSpec
+  /// (baseUrl为完整chat端点，apiKey从统一安全存储读取)
+  Future<CusLLMSpec?> _buildTranslationSpec(_ModelEntry? entry) async {
+    if (entry == null) return null;
+    final apiKey = await UnifiedSecureStorage.getApiKey(entry.platform.id);
+    if (apiKey == null || apiKey.isEmpty) {
+      throw Exception('平台[${entry.platform.displayName}]未配置API Key');
+    }
+    return CusLLMSpec(
+      // platform仅为枚举占位，实际地址与密钥由baseUrl/apiKey提供
+      ApiPlatform.aliyun,
+      entry.model.modelName,
+      LLModelType.cc,
+      name: entry.model.displayName,
+      baseUrl: entry.platform.getChatCompletionsUrl(),
+      apiKey: apiKey,
+      cusLlmSpecId: 'unified_${entry.platform.id}_${entry.model.id}',
+    );
+  }
 
-    _isUpdatingFromVoice = true;
+  // ============ 录音与同步识别 ============
 
-    // 如果用户正在编辑，保持光标位置
-    if (_isInUserEditProtection() && _textController.selection.isValid) {
-      final currentSelection = _textController.selection;
-      _textController.text = text;
-      final newOffset = currentSelection.baseOffset.clamp(0, text.length);
-      _textController.selection = TextSelection.fromPosition(
-        TextPosition(offset: newOffset),
+  Future<void> _toggleRecording() async {
+    if (_isRecording) {
+      final path = await _stopRecording();
+      if (path != null && path.isNotEmpty) {
+        await _recognizeAudio(path);
+      }
+      return;
+    }
+
+    try {
+      if (!await _audioRecorder.hasPermission()) {
+        ToastUtils.showError('需要录音权限才能使用语音输入');
+        return;
+      }
+      final tempDir = await getTemporaryDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final path = '${tempDir.path}/translator_rec_$timestamp.wav';
+
+      await _audioRecorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.wav,
+          sampleRate: 16000,
+          numChannels: 1,
+        ),
+        path: path,
       );
-    } else {
+
+      setState(() {
+        _isRecording = true;
+        _recordingPath = path;
+      });
+      ToastUtils.showToast('开始录音，再次点击结束');
+    } catch (e) {
+      ToastUtils.showError('启动录音失败: $e');
+    }
+  }
+
+  /// 停止录音并返回文件路径(cancelOnly为true时仅停止不关心结果)
+  Future<String?> _stopRecording({bool cancelOnly = false}) async {
+    try {
+      if (!await _audioRecorder.isRecording()) {
+        if (mounted) {
+          setState(() => _isRecording = false);
+        }
+        return null;
+      }
+      final path = await _audioRecorder.stop();
+      if (mounted) {
+        setState(() => _isRecording = false);
+      }
+      if (cancelOnly && _recordingPath != null) {
+        final f = File(_recordingPath!);
+        if (f.existsSync()) f.deleteSync();
+      }
+      return path;
+    } catch (e) {
+      debugPrint('停止录音失败: $e');
+      if (mounted) {
+        setState(() => _isRecording = false);
+      }
+      return null;
+    }
+  }
+
+  /// 使用选中的语音识别模型同步识别录音文件
+  Future<void> _recognizeAudio(String audioPath) async {
+    final entry = _selectedAsr;
+    if (entry == null) {
+      ToastUtils.showError('请先选择语音识别模型');
+      return;
+    }
+
+    setState(() => _isRecognizing = true);
+    try {
+      final apiKey = await UnifiedSecureStorage.getApiKey(entry.platform.id);
+      if (apiKey == null || apiKey.isEmpty) {
+        throw Exception('平台[${entry.platform.displayName}]未配置API Key');
+      }
+
+      final response = await SpeechRecognitionService.recognizeSpeech(
+        platform: entry.platform,
+        request: SpeechRecognitionRequest(
+          model: entry.model.modelName,
+          audioPath: audioPath,
+        ),
+        apiKey: apiKey,
+      );
+
+      final text = response.text;
+      if (text.isEmpty) {
+        ToastUtils.showError('未识别到内容');
+        return;
+      }
+
       _textController.text = text;
       _textController.selection = TextSelection.fromPosition(
         TextPosition(offset: text.length),
       );
-    }
-
-    setState(() {
-      _inputText = text;
-    });
-
-    _isUpdatingFromVoice = false;
-  }
-
-  // 记录用户编辑时间
-  void _recordUserEdit() {
-    _lastUserEditTime = DateTime.now();
-  }
-
-  // 开始实时语音识别
-  void _startRealtimeRecognition() async {
-    try {
-      if (await _audioRecorder.hasPermission()) {
+      setState(() => _inputText = text);
+    } catch (e) {
+      ToastUtils.showError('语音识别失败: $e');
+    } finally {
+      // 清理临时录音文件
+      final f = File(audioPath);
+      if (f.existsSync()) f.deleteSync();
+      if (mounted) {
         setState(() {
-          _isRealtimeRecording = true;
-          _inputText = '';
-          _textController.clear();
+          _isRecognizing = false;
+          _recordingPath = null;
         });
-
-        // 初始化语音识别连接
-        // 快速翻译，时是语音识别模型用默认的
-        final model = CusLLMSpec(
-          ApiPlatform.aliyun,
-          "paraformer-realtime-v2",
-          LLModelType.asr_realtime,
-          cusLlmSpecId: 'aliyun-paraformer-realtime-v2',
-        );
-
-        _realtimeStream = await _apiClient.initSpeechRecognition(
-          model: model,
-          params: AsrRtParameter(sampleRate: 16000, format: 'pcm'),
-        );
-
-        _realtimeSubscription = _realtimeStream!.listen(
-          (result) {
-            if (result.isTaskStarted) {
-              ToastUtils.showToast('语音识别已启动，开始说话...');
-            } else if (result.isResultGenerated && !result.shouldSkip) {
-              if (result.text != null && result.text!.isNotEmpty) {
-                _updateTextFromVoice(_inputText + result.text!);
-              }
-            } else if (result.isTaskFinished) {
-              ToastUtils.showToast('语音识别已完成');
-              _stopRealtimeRecognition();
-            } else if (result.isTaskFailed) {
-              ToastUtils.showError('实时识别失败: ${result.errorMessage ?? "未知错误"}');
-              _stopRealtimeRecognition();
-            }
-          },
-          onError: (error) {
-            ToastUtils.showError('实时识别错误: $error');
-            _stopRealtimeRecognition();
-          },
-        );
-
-        // 开始录音流
-        await _startRecordingStream();
-      } else {
-        ToastUtils.showError('需要录音权限才能使用语音识别功能');
       }
-    } catch (e) {
-      setState(() {
-        _isRealtimeRecording = false;
-      });
-      ToastUtils.showError('启动实时识别失败: \n$e', duration: Duration(seconds: 5));
     }
   }
 
-  // 停止实时语音识别
-  void _stopRealtimeRecognition() async {
-    if (!_isRealtimeRecording) return;
-
-    try {
-      await _stopRecording();
-      await _realtimeSubscription?.cancel();
-      _realtimeSubscription = null;
-      _realtimeStream = null;
-      await _apiClient.endSpeechRecognition();
-
-      setState(() {
-        _isRealtimeRecording = false;
-      });
-
-      ToastUtils.showToast('实时语音识别已停止');
-    } catch (e) {
-      setState(() {
-        _isRealtimeRecording = false;
-      });
-      ToastUtils.showError('停止实时识别失败: $e');
-    }
-  }
-
-  Future<void> _startRecordingStream() async {
-    try {
-      const config = RecordConfig(
-        encoder: AudioEncoder.pcm16bits,
-        sampleRate: 16000,
-        numChannels: 1,
-      );
-
-      final stream = await _audioRecorder.startStream(config);
-
-      _audioStreamSubscription = stream.listen(
-        (audioData) {
-          if (_isRealtimeRecording && _apiClient.isTaskStarted) {
-            _apiClient.sendAudioData(audioData);
-          }
-        },
-        onError: (error) {
-          debugPrint('录音流错误: $error');
-          _stopRealtimeRecognition();
-        },
-      );
-    } catch (e) {
-      debugPrint('启动录音流失败: $e');
-      _stopRealtimeRecognition();
-    }
-  }
-
-  Future<void> _stopRecording() async {
-    try {
-      await _audioStreamSubscription?.cancel();
-      _audioStreamSubscription = null;
-      await _audioRecorder.stop();
-      _audioTimer?.cancel();
-      _audioTimer = null;
-    } catch (e) {
-      debugPrint('停止录音失败: $e');
-    }
-  }
-
-  // 处理文本输入变化
-  void _onTextChanged(String text) {
-    if (!_isUpdatingFromVoice) {
-      _recordUserEdit();
-      setState(() {
-        _inputText = text;
-      });
-    }
-  }
+  // ============ 翻译 ============
 
   // 交换语言
   void _swapLanguages() {
@@ -269,6 +295,13 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
       final temp = _sourceLanguage;
       _sourceLanguage = _targetLanguage;
       _targetLanguage = temp;
+    });
+  }
+
+  // 处理文本输入变化
+  void _onTextChanged(String text) {
+    setState(() {
+      _inputText = text;
     });
   }
 
@@ -288,25 +321,43 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
     });
 
     try {
-      // 快速翻译，翻译模型用预设的
-      final model = CusLLMSpec(
-        ApiPlatform.aliyun,
-        "qwen-mt-turbo",
-        LLModelType.cc,
-        cusLlmSpecId: 'aliyun_qwen_mt_turbo',
-      );
+      CusLLMSpec? spec;
+      if (_selectedCc != null) {
+        spec = await _buildTranslationSpec(_selectedCc);
+      }
 
-      final result = await _apiClient.translateText(
+      final result = await TranslationService.translate(
         _inputText.trim(),
-        model,
         _targetLanguage.value,
         sourceLang: _sourceLanguage.value,
+        model: spec,
       );
 
       setState(() {
         _translatedText = result;
         _isTranslating = false;
       });
+
+      // 保存翻译历史(记录id，语音合成成功后回写音频路径)
+      try {
+        _lastHistoryId = await _historyDao.insert(
+          TranslationHistoryEntry(
+            createdAt: DateTime.now(),
+            sourceLang: _sourceLanguage.name,
+            targetLang: _targetLanguage.name,
+            sourceText: _inputText.trim(),
+            translatedText: result,
+            modelName:
+                _selectedCc?.model.displayName ??
+                _selectedCc?.model.modelName ??
+                '默认模型',
+            platformName: _selectedCc?.platform.displayName,
+          ),
+        );
+      } catch (e) {
+        debugPrint('保存翻译历史失败: $e');
+      }
+
       ToastUtils.showToast('翻译完成');
     } catch (e) {
       setState(() {
@@ -317,10 +368,17 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
     }
   }
 
-  // 执行语音合成
+  // ============ 语音合成 ============
+
+  // 执行语音合成(固定默认音色)
   void _synthesizeSpeech() async {
     if (_translatedText == null || _translatedText!.trim().isEmpty) {
       ToastUtils.showError('没有可合成的翻译文本');
+      return;
+    }
+    final entry = _selectedTts;
+    if (entry == null) {
+      ToastUtils.showError('请先选择语音合成模型');
       return;
     }
 
@@ -332,23 +390,35 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
     });
 
     try {
-      // 快速翻译，语音合成用默认的
-      final model = CusLLMSpec(
-        ApiPlatform.aliyun,
-        "qwen-tts",
-        LLModelType.tts,
-        cusLlmSpecId: 'aliyun_qwen_tts',
-      );
-      final result = await _apiClient.synthesizeSpeech(
-        _translatedText!.trim(),
-        model,
-        _selectedVoice,
+      final response = await _ttsService.synthesizeSpeech(
+        platform: entry.platform,
+        model: entry.model,
+        request: SpeechSynthesisRequest(
+          model: entry.model.modelName,
+          input: _translatedText!.trim(),
+          // 阿里qwen-tts需要显式音色，使用其默认音色；其他平台走服务端默认
+          voice: entry.platform.id == 'aliyun' ? 'Cherry' : null,
+          responseFormat: entry.platform.id == 'aliyun' ? null : 'mp3',
+        ),
       );
 
       setState(() {
-        _audioUrl = result;
+        _audioUrl = response.audioUrl;
         _isSynthesizing = false;
       });
+
+      // 回写音频路径到翻译历史
+      if (_lastHistoryId != null && response.audioUrl != null) {
+        try {
+          await _historyDao.updateAudioPath(
+            _lastHistoryId!,
+            response.audioUrl!,
+          );
+        } catch (e) {
+          debugPrint('回写翻译历史音频路径失败: $e');
+        }
+      }
+
       ToastUtils.showToast('语音合成完成');
     } catch (e) {
       setState(() {
@@ -359,7 +429,7 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
     }
   }
 
-  bool get _isEnabled => !_isTranslating && !_isSynthesizing;
+  bool get _isEnabled => !_isTranslating && !_isSynthesizing && !_isRecognizing;
 
   @override
   Widget build(BuildContext context) {
@@ -374,16 +444,16 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
         backgroundColor: Colors.transparent,
         actions: [
           IconButton(
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const FullTranslatorPage(),
+                  builder: (context) => const TranslationHistoryPage(),
                 ),
               );
             },
-            icon: Icon(Icons.translate),
-            tooltip: '自选模型翻译',
+            icon: Icon(Icons.history),
+            tooltip: '翻译历史',
           ),
           IconButton(
             onPressed: () {
@@ -433,6 +503,45 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
           ),
         ),
       ),
+    );
+  }
+
+  /// 模型选择行(标题+下拉)
+  Widget _buildModelRow({
+    required String title,
+    required List<_ModelEntry> entries,
+    required _ModelEntry? value,
+    required String hintLabel,
+    required ValueChanged<_ModelEntry?> onChanged,
+  }) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 64.w,
+          child: Text(
+            title,
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
+        ),
+        Expanded(
+          child: entries.isEmpty
+              ? Text(
+                  '平台管理中暂无可用模型',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                )
+              : buildDropdownButton2<_ModelEntry?>(
+                  value: value,
+                  items: entries,
+                  height: 34,
+                  itemMaxHeight: 300,
+                  hintLabel: hintLabel,
+                  alignment: Alignment.centerLeft,
+                  onChanged: _isEnabled ? onChanged : null,
+                  itemToString: (e) =>
+                      '${(e as _ModelEntry).platform.displayName} / ${(e).model.displayName}',
+                ),
+        ),
+      ],
     );
   }
 
@@ -522,6 +631,47 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
 
             SizedBox(height: spacing),
 
+            // 模型选择区(语音识别/翻译/语音合成，来自平台管理统一配置)
+            if (_isLoadingModels)
+              const Padding(
+                padding: EdgeInsets.all(8),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            else
+              Column(
+                children: [
+                  _buildModelRow(
+                    title: '识别模型',
+                    entries: _asrEntries,
+                    value: _selectedAsr,
+                    hintLabel: '语音识别模型',
+                    onChanged: (v) => setState(() => _selectedAsr = v),
+                  ),
+                  SizedBox(height: spacing * 0.6),
+                  _buildModelRow(
+                    title: '翻译模型',
+                    entries: _ccEntries,
+                    value: _selectedCc,
+                    hintLabel: '翻译模型(不选用内置默认)',
+                    onChanged: (v) => setState(() => _selectedCc = v),
+                  ),
+                  SizedBox(height: spacing * 0.6),
+                  _buildModelRow(
+                    title: '合成模型',
+                    entries: _ttsEntries,
+                    value: _selectedTts,
+                    hintLabel: '语音合成模型',
+                    onChanged: (v) => setState(() => _selectedTts = v),
+                  ),
+                ],
+              ),
+
+            SizedBox(height: spacing),
+
             // 文本输入区域
             Container(
               height: 0.25.sh,
@@ -550,17 +700,15 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                // 录音按钮
+                // 录音按钮(录完自动识别)
                 _buildActionButton(
-                  onPressed: _isEnabled
-                      ? (_isRealtimeRecording
-                            ? _stopRealtimeRecognition
-                            : _startRealtimeRecognition)
+                  onPressed: _isEnabled || _isRecording
+                      ? _toggleRecording
                       : null,
-                  icon: _isRealtimeRecording ? Icons.stop : Icons.mic,
-                  label: _isRealtimeRecording ? '停止' : '说话',
-                  color: _isRealtimeRecording ? Colors.red : AppColors.success,
-                  isLoading: false,
+                  icon: _isRecording ? Icons.stop : Icons.mic,
+                  label: _isRecording ? '停止' : '说话',
+                  color: _isRecording ? Colors.red : AppColors.success,
+                  isLoading: _isRecognizing,
                 ),
 
                 // 清空按钮
@@ -635,10 +783,7 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
             ),
 
             // 语音合成控制区域
-            if (_translatedText != null &&
-                _translatedText!.isNotEmpty &&
-                (_targetLanguage.value == TargetLanguage.zh ||
-                    _targetLanguage.value == TargetLanguage.en)) ...[
+            if (_translatedText != null && _translatedText!.isNotEmpty) ...[
               SizedBox(height: spacing),
               _buildSynthesisSection(),
             ],
@@ -704,7 +849,6 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
     final isDesktop = ScreenHelper.isDesktop();
     final padding = isDesktop ? 12.0 : 4.0;
     final spacing = isDesktop ? 12.0 : 4.0;
-    final buttonSpacing = isDesktop ? 12.0 : 4.0;
 
     return Container(
       padding: EdgeInsets.all(padding),
@@ -715,37 +859,28 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
       ),
       child: Column(
         children: [
-          // 音色选择和合成按钮
+          // 合成按钮行(音色固定默认，不再提供选择)
           Row(
             children: [
-              // 音色选择
-              Expanded(
-                child: buildDropdownButton2<AliyunVoiceType?>(
-                  value: _selectedVoice,
-                  items: VoiceGenerationService.getQwenTTSVoices(),
-                  height: 36,
-                  itemMaxHeight: 200,
-                  hintLabel: "选择音色",
-                  alignment: Alignment.center,
-                  onChanged: _isEnabled
-                      ? (voice) {
-                          if (voice != null) {
-                            setState(() {
-                              _selectedVoice = voice;
-                            });
-                          }
-                        }
-                      : null,
-                  itemToString: (e) => (e as AliyunVoiceType).name,
+              if (_selectedTts != null)
+                Expanded(
+                  child: Text(
+                    '${_selectedTts!.platform.displayName} / ${_selectedTts!.model.displayName}',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                )
+              else
+                Expanded(
+                  child: Text(
+                    '平台管理中暂无语音合成模型',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  ),
                 ),
-              ),
-
-              SizedBox(width: buttonSpacing),
-
-              // 合成按钮
               _buildActionButton(
                 onPressed:
                     _isEnabled &&
+                        _selectedTts != null &&
                         _translatedText != null &&
                         _translatedText!.isNotEmpty
                     ? _synthesizeSpeech
@@ -762,11 +897,6 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
           if (_audioUrl != null) ...[
             SizedBox(height: spacing),
             AudioPlayerWidget(audioUrl: _audioUrl!, dense: true),
-            SizedBox(height: spacing),
-            Text(
-              "${_audioUrl?.split('emulated/0').last}",
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
-            ),
           ],
 
           // 错误信息
@@ -838,21 +968,18 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHelpItem(
-              '1. 使用平台',
-              '预设模型使用的是阿里云百炼平台模型，所以需要先在【模型配置】中添加阿里云百炼的ApiKey。',
+              '1. 模型配置',
+              '三个模型(识别/翻译/合成)均来自【平台管理】中配置的模型，自建平台也可使用；请先在对应平台配置API Key。',
             ),
             _buildHelpItem(
-              '2. 使用模型',
-              '实时语音识别:paraformer-realtime-v2\n文本翻译:qwen-mt-turbo\n语音合成:qwen-tts(仅支持简中英文)',
+              '2. 语音输入',
+              '点击"说话"录音，再次点击结束并自动识别(同步模式，录音一般不超过25MB/数分钟)。',
             ),
             _buildHelpItem(
-              '3. 模型切换',
-              '如果需要切换 paraformer-realtime 、qwen-mt、 qwen-tts系列模型版本，可在模型配置中导入后，点击右侧按钮进入“自选模型翻译”页面。',
+              '3. 翻译模型',
+              '使用所选对话模型+翻译提示词完成翻译；qwen-mt系列自动使用其专用翻译参数。不选择时使用内置默认模型。',
             ),
-            _buildHelpItem(
-              '4. 音频路径',
-              'qwen-tts 系列模型合成的语音文件位置:\n${ScreenHelper.isDesktop() ? '/文档' : ''}/SuChatFiles/AI_GEN/voices/translator/',
-            ),
+            _buildHelpItem('4. 翻译历史', '翻译完成后自动保存历史，点击右上角历史按钮查看、复制或删除。'),
           ],
         ),
         actions: [

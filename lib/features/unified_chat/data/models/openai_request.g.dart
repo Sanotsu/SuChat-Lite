@@ -48,6 +48,7 @@ OpenAIChatCompletionRequest _$OpenAIChatCompletionRequestFromJson(
   ),
   logprobs: json['logprobs'] as bool?,
   topLogprobs: (json['top_logprobs'] as num?)?.toInt(),
+  customParams: json['customParams'] as Map<String, dynamic>?,
 );
 
 Map<String, dynamic> _$OpenAIChatCompletionRequestToJson(
@@ -76,6 +77,7 @@ Map<String, dynamic> _$OpenAIChatCompletionRequestToJson(
   'logit_bias': instance.logitBias,
   'logprobs': instance.logprobs,
   'top_logprobs': instance.topLogprobs,
+  'customParams': ?instance.customParams,
 };
 
 OpenAIStreamOptions _$OpenAIStreamOptionsFromJson(Map<String, dynamic> json) =>

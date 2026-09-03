@@ -13,7 +13,16 @@ import 'appearance_tool_widgets.dart';
 class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onMenuPressed;
 
-  const ChatAppBar({super.key, required this.onMenuPressed});
+  /// 桌面：内容区宽度切换回调(标准880限宽/宽屏铺满)；null=不显示切换按钮(移动端)
+  final VoidCallback? onToggleWidescreen;
+  final bool isWidescreen;
+
+  const ChatAppBar({
+    super.key,
+    required this.onMenuPressed,
+    this.onToggleWidescreen,
+    this.isWidescreen = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -83,6 +92,16 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
             //     tooltip: '停止生成',
             //   ),
             // 用户设置入口已收敛到侧栏/抽屉底部(避免重复入口)，此处不再放设置图标
+
+            // 桌面：内容区宽度切换(对齐Chatbox的做法)
+            if (onToggleWidescreen != null)
+              IconButton(
+                onPressed: onToggleWidescreen,
+                icon: Icon(
+                  isWidescreen ? Icons.width_full : Icons.width_normal,
+                ),
+                tooltip: isWidescreen ? '切换为标准宽度' : '切换为宽屏模式',
+              ),
 
             // 更多操作菜单
             PopupMenuButton<String>(

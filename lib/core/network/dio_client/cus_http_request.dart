@@ -67,6 +67,7 @@ class HttpRequest {
           'images',
           'image',
           'image_url',
+          'img_url',
           'data',
         ],
         truncateLength: 50,

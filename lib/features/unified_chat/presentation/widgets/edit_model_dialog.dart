@@ -24,6 +24,8 @@ class _EditModelDialogState extends State<EditModelDialog> {
   late bool _supportsVision;
   late bool _supportsThinking;
   late bool _supportsToolCalling;
+  // 图片/视频生成模型是否接受参考图输入(图生图/图生视频)
+  late bool _supportsImageInput;
 
   @override
   void initState() {
@@ -38,6 +40,7 @@ class _EditModelDialogState extends State<EditModelDialog> {
       _supportsVision = widget.model!.supportsVision;
       _supportsThinking = widget.model!.supportsThinking;
       _supportsToolCalling = widget.model!.supportsToolCalling;
+      _supportsImageInput = widget.model!.supportsImageInput;
     } else {
       _idController = TextEditingController();
       _displayNameController = TextEditingController();
@@ -45,6 +48,7 @@ class _EditModelDialogState extends State<EditModelDialog> {
       _supportsVision = false;
       _supportsThinking = false;
       _supportsToolCalling = false;
+      _supportsImageInput = false;
     }
   }
 
@@ -69,6 +73,7 @@ class _EditModelDialogState extends State<EditModelDialog> {
           supportsThinking: _supportsThinking,
           supportsVision: _supportsVision,
           supportsToolCalling: _supportsToolCalling,
+          supportsImageInput: _supportsImageInput,
           updatedAt: DateTime.now(),
         );
       } else if (widget.platformId != null) {
@@ -83,6 +88,7 @@ class _EditModelDialogState extends State<EditModelDialog> {
           supportsThinking: _supportsThinking,
           supportsVision: _supportsVision,
           supportsToolCalling: _supportsToolCalling,
+          supportsImageInput: _supportsImageInput,
           isFavorite: false,
           isBuiltIn: false,
           createdAt: DateTime.now(),
@@ -160,10 +166,32 @@ class _EditModelDialogState extends State<EditModelDialog> {
                         _supportsThinking = false;
                         _supportsToolCalling = false;
                       }
+                      if (value != UnifiedModelType.image.name &&
+                          value != UnifiedModelType.video.name) {
+                        _supportsImageInput = false;
+                      }
                     });
                   },
                 ),
                 const SizedBox(height: 16),
+
+                // 图片/视频生成模型的参考图输入能力(图生图/图生视频)
+                if (_selectedModelType == UnifiedModelType.image.name ||
+                    _selectedModelType == UnifiedModelType.video.name) ...[
+                  CheckboxListTile(
+                    title: const Text('支持参考图输入(图生图/图生视频)'),
+                    subtitle: const Text(
+                      '关闭则为纯文生模式',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    value: _supportsImageInput,
+                    onChanged: (value) =>
+                        setState(() => _supportsImageInput = value ?? false),
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                  const SizedBox(height: 8),
+                ],
 
                 // 能力标题
                 if (_selectedModelType == UnifiedModelType.cc.name) ...[

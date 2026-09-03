@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/utils/image_picker_utils.dart';
 import '../../../../shared/constants/constant_llm_enum.dart';
-import '../../../../shared/services/model_manager_service.dart';
+import '../../../../shared/services/unified_model_bridge.dart';
 import '../../../../shared/widgets/cus_dropdown_button.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/services/food_nutrition_recognition_service.dart';
@@ -36,15 +36,20 @@ class _FoodRecognitionPageState extends State<FoodRecognitionPage> {
   }
 
   Future<void> _initModels() async {
-    // 获取支持视觉功能的模型列表
-    final availableModels = await ModelManagerService.getAvailableModelByTypes([
-      LLModelType.vision,
-    ]);
+    // 2026-09-03 接入平台管理统一模型库(仅支持视觉的模型，无内置免费模型)
+    final availableModels = await UnifiedModelBridge.loadChatModels(
+      visionOnly: true,
+    );
 
+    if (!mounted) return;
     setState(() {
       modelList = availableModels;
       selectedModel = availableModels.isNotEmpty ? availableModels.first : null;
     });
+
+    if (availableModels.isEmpty) {
+      ToastUtils.showError('无可用视觉模型，请在聊天页-平台管理中配置');
+    }
   }
 
   // 从相册选择图片

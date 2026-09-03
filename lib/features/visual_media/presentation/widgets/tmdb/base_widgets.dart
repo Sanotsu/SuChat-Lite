@@ -395,7 +395,7 @@ class TmdbSectionWidget extends StatelessWidget {
                   ),
                 ),
               ),
-              if (headerActions != null) ...headerActions!,
+              ...?headerActions,
               if (showMoreButton && onShowMore != null)
                 TextButton(onPressed: onShowMore, child: const Text('查看更多')),
             ],

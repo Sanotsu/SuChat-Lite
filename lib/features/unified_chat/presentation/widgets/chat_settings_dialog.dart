@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../core/utils/screen_helper.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
+import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/models/unified_chat_partner.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
 
@@ -19,6 +22,8 @@ class ChatSettingsDialog extends StatefulWidget {
   final bool? enableThinking;
   final UnifiedChatPartner? selectedPartner;
   final Map<String, dynamic>? omniParams;
+  // 用户自定义请求参数(JSON字符串)，发送时合并到请求体顶层
+  final Map<String, dynamic>? customParams;
   final Function(Map<String, dynamic>) onSave;
 
   const ChatSettingsDialog({
@@ -34,6 +39,7 @@ class ChatSettingsDialog extends StatefulWidget {
     this.enableThinking = false,
     this.selectedPartner,
     this.omniParams,
+    this.customParams,
     required this.onSave,
   });
 
@@ -45,6 +51,7 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
   late TextEditingController _titleController;
   late TextEditingController _systemPromptController;
   late TextEditingController _maxTokensController;
+  late TextEditingController _customParamsController;
 
   late double _contextMessageLength;
   late double _temperature;
@@ -72,6 +79,11 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
     );
     _maxTokensController = TextEditingController(
       text: (widget.maxTokens ?? 4096).toString(),
+    );
+    _customParamsController = TextEditingController(
+      text: widget.customParams == null
+          ? ''
+          : const JsonEncoder.withIndent('  ').convert(widget.customParams),
     );
 
     _contextMessageLength = (widget.contextMessageLength ?? 6).toDouble();
@@ -124,10 +136,28 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
     _titleController.dispose();
     _systemPromptController.dispose();
     _maxTokensController.dispose();
+    _customParamsController.dispose();
     super.dispose();
   }
 
   void _handleSave() {
+    // 校验自定义JSON参数(可留空)
+    Map<String, dynamic>? customParams;
+    final customText = _customParamsController.text.trim();
+    if (customText.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(customText);
+        if (decoded is! Map<String, dynamic>) {
+          ToastUtils.showError('自定义请求参数必须是JSON对象(以{}包裹)');
+          return;
+        }
+        customParams = decoded;
+      } catch (e) {
+        ToastUtils.showError('自定义请求参数JSON格式错误: $e');
+        return;
+      }
+    }
+
     final settings = {
       'title': _titleController.text,
       'systemPrompt': _systemPromptController.text,
@@ -140,6 +170,8 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
       // qwen-omni模型还可以指定
       'modalities': _isOutputAudio ? ['text', 'audio'] : ['text'],
       if (_isOutputAudio) 'audio': {'voice': _audioVoice, 'format': 'wav'},
+      // 为null时显式清空已保存的自定义参数
+      'customRequestParams': customParams,
     };
 
     widget.onSave(settings);
@@ -554,6 +586,39 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
               child: Icon(Icons.info_outline, size: 16, color: Colors.grey),
             ),
           ],
+        ),
+        const SizedBox(height: 8),
+
+        // 自定义请求参数(JSON)：平台/模型特例配置，合并到请求体顶层
+        Row(
+          children: [
+            const Text('自定义请求参数(JSON)'),
+            const SizedBox(width: 8),
+            Tooltip(
+              message:
+                  '以JSON对象形式输入任意请求参数，发送时合并到请求体顶层，'
+                  '同名键将覆盖上方通用设置。用于各平台模型的特殊参数，'
+                  '例如 {"top_k": 50}、{"reasoning_effort": "high"} 等。留空表示不附加。',
+              triggerMode: TooltipTriggerMode.tap,
+              showDuration: Duration(seconds: 20),
+              margin: EdgeInsets.all(24),
+              child: Icon(Icons.info_outline, size: 16, color: Colors.grey),
+            ),
+          ],
+        ),
+        TextField(
+          controller: _customParamsController,
+          maxLines: 4,
+          style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+          decoration: InputDecoration(
+            border: const OutlineInputBorder(),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 8,
+            ),
+            hintText: '例如: {"top_k": 50, "frequency_penalty": 0.5}',
+            hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+          ),
         ),
       ],
     );

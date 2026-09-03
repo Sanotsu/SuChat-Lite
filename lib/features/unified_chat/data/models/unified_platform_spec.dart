@@ -38,6 +38,10 @@ class UnifiedPlatformSpec {
   @JsonKey(name: 'img_gen_prefix')
   final String? imgGenPrefix;
 
+  // 视频生成API端点(2026-09-02 媒体生成并入聊天新增)
+  @JsonKey(name: 'video_gen_prefix')
+  final String? videoGenPrefix;
+
   // 语音合成API端点
   @JsonKey(name: 'tts_prefix')
   final String? ttsPrefix;
@@ -71,6 +75,7 @@ class UnifiedPlatformSpec {
     required this.hostUrl,
     this.ccPrefix = '/v1/chat/completions',
     this.imgGenPrefix,
+    this.videoGenPrefix,
     this.ttsPrefix,
     this.asrPrefix,
     this.isBuiltIn = false,
@@ -93,6 +98,7 @@ class UnifiedPlatformSpec {
       hostUrl: map['host_url'] as String,
       ccPrefix: map['cc_prefix'] as String? ?? '/v1/chat/completions',
       imgGenPrefix: map['img_gen_prefix'] as String?,
+      videoGenPrefix: map['video_gen_prefix'] as String?,
       ttsPrefix: map['tts_prefix'] as String?,
       asrPrefix: map['asr_prefix'] as String?,
       isBuiltIn: (map['is_built_in'] as int? ?? 0) == 1,
@@ -113,6 +119,7 @@ class UnifiedPlatformSpec {
       'host_url': hostUrl,
       'cc_prefix': ccPrefix,
       'img_gen_prefix': imgGenPrefix,
+      'video_gen_prefix': videoGenPrefix,
       'tts_prefix': ttsPrefix,
       'asr_prefix': asrPrefix,
       'is_built_in': isBuiltIn ? 1 : 0,
@@ -130,6 +137,7 @@ class UnifiedPlatformSpec {
     String? hostUrl,
     String? ccPrefix,
     String? imgGenPrefix,
+    String? videoGenPrefix,
     String? ttsPrefix,
     String? asrPrefix,
     bool? isBuiltIn,
@@ -145,6 +153,7 @@ class UnifiedPlatformSpec {
       hostUrl: hostUrl ?? this.hostUrl,
       ccPrefix: ccPrefix ?? this.ccPrefix,
       imgGenPrefix: imgGenPrefix ?? this.imgGenPrefix,
+      videoGenPrefix: videoGenPrefix ?? this.videoGenPrefix,
       ttsPrefix: ttsPrefix ?? this.ttsPrefix,
       asrPrefix: asrPrefix ?? this.asrPrefix,
       isBuiltIn: isBuiltIn ?? this.isBuiltIn,
@@ -191,6 +200,18 @@ class UnifiedPlatformSpec {
     return '$cleanBaseUrl$cleanEndpoint';
   }
 
+  /// 获取视频生成API URL
+  String? getVideoGenerationUrl() {
+    if (videoGenPrefix == null) return null;
+    final cleanBaseUrl = hostUrl.endsWith('/')
+        ? hostUrl.substring(0, hostUrl.length - 1)
+        : hostUrl;
+    final cleanEndpoint = videoGenPrefix!.startsWith('/')
+        ? videoGenPrefix!
+        : '/$videoGenPrefix!';
+    return '$cleanBaseUrl$cleanEndpoint';
+  }
+
   /// 获取语音合成API URL
   String? getTextToSpeechUrl() {
     if (ttsPrefix == null) return null;
@@ -220,9 +241,10 @@ class UnifiedPlatformSpec {
     switch (modelType) {
       case UnifiedModelType.cc:
         return getChatCompletionsUrl();
-      case UnifiedModelType.tti:
-      case UnifiedModelType.iti:
+      case UnifiedModelType.image:
         return getImageGenerationUrl();
+      case UnifiedModelType.video:
+        return getVideoGenerationUrl();
       case UnifiedModelType.tts:
         return getTextToSpeechUrl();
       case UnifiedModelType.asr:
@@ -230,9 +252,6 @@ class UnifiedPlatformSpec {
       case UnifiedModelType.embedding:
       case UnifiedModelType.reranker:
         return getChatCompletionsUrl(); // 暂时使用聊天端点
-      // case UnifiedModelType.ttv:
-      // case UnifiedModelType.itv:
-      // return null; // 暂未支持
     }
   }
 

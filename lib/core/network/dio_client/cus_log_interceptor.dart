@@ -33,7 +33,13 @@ class CustomLogInterceptor extends Interceptor {
   final int binaryMaxDisplayLength;
 
   CustomLogInterceptor({
-    this.sensitiveKeys = const ['url', 'video_url', 'audio_url', 'data'],
+    this.sensitiveKeys = const [
+      'url',
+      'video_url',
+      'audio_url',
+      'img_url',
+      'data',
+    ],
     this.truncateLength = 50,
     this.truncateIndicator = '……[截断][TRUNCATED]',
     this.requestEnabled = true,

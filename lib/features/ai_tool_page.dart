@@ -3,22 +3,17 @@ import 'package:flutter/material.dart';
 import '../core/utils/screen_helper.dart';
 import '../shared/widgets/feature_grid_card.dart';
 import '../shared/widgets/modern_feature_card.dart';
-import 'model_management/index.dart';
 import 'translator/presentation/pages/mini_translator_page.dart';
-import 'unified_chat/presentation/pages/unified_chat_page.dart';
 import 'visual_media/presentation/pages/index.dart';
+import 'voice_recognition/presentation/index.dart';
 import 'diet_diary/presentation/index.dart';
 import 'food/presentation/pages/usda_food_data/index.dart';
 import 'funny_stuff/persentation/pages/index.dart';
-import 'media_generation/image/presentation/index.dart';
-import 'media_generation/video/presentation/index.dart';
-import 'media_generation/voice/presentation/index.dart';
 import 'news/presentation/pages/index.dart';
 import 'notebook/presentation/pages/notebook_page.dart';
 import 'simple_accounting/presentation/pages/bill_list_page.dart';
 import 'training_assistant/presentation/index.dart';
 import 'visual_media/presentation/pages/tmdb/home_page.dart';
-import 'voice_recognition/presentation/index.dart';
 import 'reading/presentation/pages/daodu/main_page.dart';
 import 'reading/presentation/pages/one/main_page.dart';
 
@@ -33,20 +28,9 @@ class _AIToolPageState extends State<AIToolPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('更多功能'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => ModelConfig()),
-              );
-            },
-            child: Text('模型配置'),
-          ),
-        ],
-      ),
+      // 2026-09-03 旧"模型配置"入口移除：模型/AK配置统一到聊天页-平台管理
+      // (扩展功能的内置免费模型链路不依赖该页，仍正常可用)
+      appBar: AppBar(title: const Text('更多功能')),
       body: SafeArea(
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
@@ -224,46 +208,9 @@ class _AIToolPageState extends State<AIToolPage> {
           spacing: 16,
           runSpacing: 16,
           children: [
-            SizedBox(
-              width: 150,
-              height: 150,
-              child: FeatureGridCard(
-                targetPage: const GenVoicePage(),
-                title: "语音合成",
-                icon: Icons.audiotrack,
-                accentColor: Colors.red,
-              ),
-            ),
-            SizedBox(
-              width: 150,
-              height: 150,
-              child: FeatureGridCard(
-                targetPage: const GenImagePage(),
-                title: "图片生成",
-                icon: Icons.image,
-                accentColor: Colors.green,
-              ),
-            ),
-            SizedBox(
-              width: 150,
-              height: 150,
-              child: FeatureGridCard(
-                targetPage: const GenVideoPage(),
-                title: "视频生成",
-                icon: Icons.videocam,
-                accentColor: Colors.blue,
-              ),
-            ),
-            SizedBox(
-              width: 150,
-              height: 150,
-              child: FeatureGridCard(
-                targetPage: const VoiceRecognitionPage(),
-                title: "录音识别",
-                icon: Icons.audio_file,
-                accentColor: Colors.orange,
-              ),
-            ),
+            // 2026-09-03 媒体生成功能并入聊天模块(选定生成类模型即对应模式)，
+            // 语音合成/图片生成/视频生成独立页入口移除，统一由 Chat 进入；
+            // 录音文件识别(voice_recognition)为独立完整功能，保留入口
             SizedBox(
               width: 150,
               height: 150,
@@ -279,11 +226,10 @@ class _AIToolPageState extends State<AIToolPage> {
               width: 150,
               height: 150,
               child: FeatureGridCard(
-                isNew: true,
-                targetPage: const UnifiedChatPage(),
-                title: "Chat",
-                icon: Icons.chat,
-                accentColor: Colors.indigo,
+                targetPage: const VoiceRecognitionPage(),
+                title: "语音识别",
+                icon: Icons.graphic_eq,
+                accentColor: Colors.teal,
               ),
             ),
           ],
@@ -303,44 +249,8 @@ class _AIToolPageState extends State<AIToolPage> {
           mainAxisSpacing: 1,
         ),
         delegate: SliverChildListDelegate([
-          // 2025-04-28不启用这两个是测试有从侧边栏跳转。但返回后无法更新修改的模型和角色等
-          // 实际上，这两个模块有其他入口，所以暂时不启用
-          // FeatureGridCard(
-          //   targetPage: const ModelConfig(),
-          //   title: "模型配置",
-          //   icon: Icons.settings,
-          //   accentColor: Colors.blue.shade600,
-          // ),
-          // FeatureGridCard(
-          //   targetPage: const CharacterListPage(),
-          //   title: "角色扮演",
-          //   icon: Icons.people_alt,
-          //   accentColor: Colors.purple.shade600,
-          // ),
-          FeatureGridCard(
-            targetPage: const GenVoicePage(),
-            title: "语音合成",
-            icon: Icons.audiotrack,
-            accentColor: Colors.red,
-          ),
-          FeatureGridCard(
-            targetPage: const GenImagePage(),
-            title: "图片生成",
-            icon: Icons.image,
-            accentColor: Colors.green,
-          ),
-          FeatureGridCard(
-            targetPage: const GenVideoPage(),
-            title: "视频生成",
-            icon: Icons.videocam,
-            accentColor: Colors.blue,
-          ),
-          FeatureGridCard(
-            targetPage: const VoiceRecognitionPage(),
-            title: "录音识别",
-            icon: Icons.audio_file,
-            accentColor: Colors.orange,
-          ),
+          // 2026-09-03 媒体生成功能并入聊天模块，独立页入口移除；
+          // 录音文件识别(voice_recognition)为独立完整功能，保留入口
           FeatureGridCard(
             isNew: true,
             targetPage: const MiniTranslatorPage(),
@@ -349,11 +259,10 @@ class _AIToolPageState extends State<AIToolPage> {
             accentColor: Colors.purple,
           ),
           FeatureGridCard(
-            isNew: true,
-            targetPage: const UnifiedChatPage(),
-            title: "Chat",
-            icon: Icons.chat,
-            accentColor: Colors.indigo,
+            targetPage: const VoiceRecognitionPage(),
+            title: "语音识别",
+            icon: Icons.graphic_eq,
+            accentColor: Colors.teal,
           ),
         ]),
       ),

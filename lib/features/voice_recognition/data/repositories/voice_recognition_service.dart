@@ -2,13 +2,19 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 
+import 'package:uuid/uuid.dart';
+
 import '../../../../shared/constants/constants.dart';
 import '../../../../shared/constants/constant_llm_enum.dart';
+import '../../../unified_chat/data/models/speech_recognition_request.dart';
+import '../../../unified_chat/data/models/unified_model_spec.dart';
+import '../../../unified_chat/data/models/unified_platform_spec.dart';
+import '../../../unified_chat/data/services/speech_recognition_service.dart';
+import '../../../unified_chat/data/services/unified_secure_storage.dart';
 import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/network/dio_client/cus_http_client.dart';
 import '../../../../core/storage/db_helper.dart';
-import '../../../../core/storage/cus_get_storage.dart';
-import '../../../../shared/services/github_storage_service.dart';
+import '../../../../shared/services/tmp_file_upload_service.dart';
 import '../../domain/entities/voice_recognition_task_info.dart';
 import '../models/sense_voice.dart';
 
@@ -31,13 +37,13 @@ class VoiceRecognitionService {
       'https://dashscope.aliyuncs.com/api/v1/tasks/$taskId';
 
   /// 获取API Key
+  /// 2026-09-03 AK统一到平台管理：从统一安全存储读取阿里云平台密钥
+  /// (旧CusGetStorage AKMap配置入口已移除，仅作存量兼容不再使用)
   static Future<String> _getApiKey() async {
-    // 使用用户的 API Key
-    final userKeys = CusGetStorage().getUserAKMap();
-    String? apiKey = userKeys[ApiPlatformAKLabel.USER_ALIYUN_API_KEY.name];
+    final apiKey = await UnifiedSecureStorage.getApiKey('aliyun');
 
     if (apiKey == null || apiKey.isEmpty) {
-      throw Exception('未配置阿里云平台的 API Key');
+      throw Exception('未配置阿里云平台的 API Key，请在聊天页-平台管理中配置');
     }
     return apiKey;
   }
@@ -94,13 +100,21 @@ class VoiceRecognitionService {
       // 具体参数参考文档，这里是使用必填的和一些简单的
       // https://help.aliyun.com/zh/model-studio/developer-reference/sensevoice-recorded-speech-recognition-restful-api#b52292e65768b
       // https://help.aliyun.com/zh/model-studio/paraformer-recorded-speech-recognition-restful-api#b52292e65768b
+      // 2026-09-03 新一代模型适配(以2026-09官方文档核实)：
+      // qwen3-asr-flash-filetrans的input为file_url(单数)，
+      // 其余(Qwen-Audio-3.0-ASR-Flash-Filetrans/Fun-ASR/Paraformer)均为file_urls(数组)
+      final isQwen3Filetrans = model.model.startsWith(
+        'qwen3-asr-flash-filetrans',
+      );
       final Map<String, dynamic> params = {
         // 指定模型名
         'model': model.model,
-        // 待识别音/视频文件的URL列表，支持HTTP / HTTPS协议，单次请求最多支持100个URL
-        'input': {
-          'file_urls': [audioUrl],
-        },
+        'input': isQwen3Filetrans
+            ? {'file_url': audioUrl}
+            : {
+                // 待识别音/视频文件的URL列表，单次请求最多支持100个URL
+                'file_urls': [audioUrl],
+              },
         'parameters': {
           // 指定在多音轨文件中需要进行语音识别的音轨索引
           // [0]表示仅识别第一条音轨，[0, 1]表示同时识别前两条音轨。
@@ -123,8 +137,15 @@ class VoiceRecognitionService {
         },
       };
 
-      // 2025-05-07 如果模型是paraformer，则启用diarization 自动说话人分离，可选
-      if (model.model.toLowerCase().contains('paraformer')) {
+      // 启用diarization自动说话人分离(可选)
+      // 支持范围(2026-09官方文档)：Paraformer系列、Qwen-Audio-3.0-ASR-Flash-Filetrans、
+      // Fun-ASR/Fun-ASR-MTL(flash版不支持)；qwen3-asr-flash-filetrans不支持
+      final modelName = model.model.toLowerCase();
+      final supportsDiarization =
+          modelName.contains('paraformer') ||
+          modelName.startsWith('qwen-audio-3.0-asr-flash-filetrans') ||
+          (modelName.startsWith('fun-asr') && !modelName.contains('flash'));
+      if (supportsDiarization) {
         (params['parameters'] as Map<String, dynamic>)['diarization_enabled'] =
             true;
       }
@@ -146,6 +167,7 @@ class VoiceRecognitionService {
         final taskInfo = VoiceRecognitionTaskInfo(
           taskId: taskId,
           localAudioPath: cloudAudioUrl == null ? audioPath : null,
+          // 字段名沿用历史(原GitHub存储)，现存放tmpfiles.org临时直链
           githubAudioUrl: audioUrl,
           languageHint: languageHint ?? 'auto',
           taskStatus: taskStatus,
@@ -282,44 +304,75 @@ class VoiceRecognitionService {
   }
 
   /// 上传音频文件到临时存储服务，返回可公开访问的URL
-  /// 使用GitHub存储服务进行上传
+  /// 2026-09-03 改用tmpfiles.org临时存储(免配置，100M内，暂存1小时)，
+  /// 替代原GitHub公共仓库方案(需用户配置仓库与令牌，过重)；
+  /// DashScope任务提交后通常数分钟内即拉取音频URL，暂存时长足够
   static Future<String> _uploadAudioFile(File audioFile) async {
-    try {
-      // 从存储中获取GitHub配置
-      final storage = CusGetStorage();
-      final githubUsername = storage.getGithubUsername();
-      final githubRepo = storage.getGithubRepo();
-      final githubToken = storage.getGithubToken();
+    // 2026-09-03 改用tmpfile.link(响应直接给下载直链，匿名保存7天)
+    return TmpFileUploadService.upload(audioFile, maxSizeMB: 100.0);
+  }
 
-      // 检查GitHub配置是否存在
-      if (githubUsername.isEmpty || githubRepo.isEmpty || githubToken.isEmpty) {
-        throw Exception('未配置GitHub存储，请在设置中配置GitHub用户名、仓库名和访问令牌');
-      }
-
-      // 创建GitHub存储服务
-      final githubStorage = GitHubStorageService(
-        username: githubUsername,
-        repoName: githubRepo,
-        accessToken: githubToken,
-        targetDirectory: 'voice_recognition_audio',
-      );
-
-      // 验证GitHub凭证
-      final isValid = await githubStorage.validateCredentials();
-      if (!isValid) {
-        throw Exception('GitHub凭证验证失败，请检查访问令牌是否有效');
-      }
-
-      // 确保目标目录存在
-      await githubStorage.ensureDirectoryExists();
-
-      // 上传文件并获取公开URL
-      final fileUrl = await githubStorage.uploadFile(audioFile);
-
-      return fileUrl;
-    } catch (e) {
-      throw Exception('上传音频文件失败：$e - 请确保GitHub配置正确');
+  /// 使用平台管理中配置的模型执行同步识别(2026-09-03 打通统一配置)
+  /// 适用于用户自建平台/统一模型库中的asr模型(OpenAI兼容/v1/audio/transcriptions)；
+  /// 同步接口一般限制25MB内，超长音频请使用内置的阿里云异步模型
+  static Future<VoiceRecognitionTaskInfo> recognizeWithUnifiedConfig({
+    required UnifiedModelSpec model,
+    required UnifiedPlatformSpec platform,
+    required String audioPath,
+  }) async {
+    final apiKey = await UnifiedSecureStorage.getApiKey(platform.id);
+    if (apiKey == null || apiKey.isEmpty) {
+      throw Exception('平台[${platform.displayName}]未配置API Key，请在平台管理中配置');
     }
+
+    final request = SpeechRecognitionRequest(
+      model: model.modelName,
+      audioPath: audioPath,
+    );
+
+    final response = await SpeechRecognitionService.recognizeSpeech(
+      platform: platform,
+      request: request,
+      apiKey: apiKey,
+    );
+
+    // 将同步结果转换为标准任务实体，复用任务列表/详情页的展示与复制逻辑
+    // segments(秒) -> sentences(毫秒时间戳)
+    final sentences = response.segments
+        ?.map(
+          (s) => SenseVoiceRRTranscriptSentence(
+            (s.start * 1000).round(),
+            (s.end * 1000).round(),
+            s.text,
+            null,
+            null,
+            null,
+          ),
+        )
+        .toList();
+    final recogResp = SenseVoiceRecogResp(null, null, [
+      SenseVoiceRRTranscript(0, 0, response.text, sentences ?? []),
+    ]);
+
+    final taskInfo = VoiceRecognitionTaskInfo(
+      taskId: const Uuid().v4(),
+      localAudioPath: audioPath,
+      languageHint: response.language,
+      taskStatus: 'SUCCEEDED',
+      gmtCreate: DateTime.now(),
+      llmSpec: CusLLMSpec(
+        // platform字段仅为展示(统一配置平台无对应枚举值，统一以阿里占位)
+        ApiPlatform.aliyun,
+        model.modelName,
+        LLModelType.asr,
+        description: '平台管理·${platform.displayName}',
+        cusLlmSpecId: const Uuid().v4(),
+      ),
+      recognitionResponse: recogResp,
+    );
+
+    await _dbHelper.saveVoiceRecognitionTask(taskInfo);
+    return taskInfo;
   }
 
   /// 通过任务ID获取录音识别任务

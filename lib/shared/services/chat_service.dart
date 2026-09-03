@@ -112,7 +112,10 @@ class ChatService {
   }
 
   static Future<Map<String, String>> _getHeaders(CusLLMSpec model) async {
-    final apiKey = await _getApiKey(model);
+    // 2026-09-03 模型自带apiKey时优先使用(统一平台配置的模型桥接TranslationService等场景)
+    final apiKey = (model.apiKey != null && model.apiKey!.isNotEmpty)
+        ? model.apiKey!
+        : await _getApiKey(model);
 
     if (ApiPlatform.values.contains(model.platform)) {
       return {

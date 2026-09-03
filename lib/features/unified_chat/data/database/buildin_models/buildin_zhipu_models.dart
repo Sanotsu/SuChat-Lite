@@ -1,126 +1,67 @@
-// 智谱模型
+// 智谱平台模型
+// 2026-09-02 按官方文档核对：GLM-5.3为强制思考旗舰(仅支持开启思考，传false会400)；
+// GLM-4.x全系调用时会自动切换至GLM-5.3，不再内置
 final zhipuModels = [
-  /// 免费的模型
+  // ===== 文本对话 =====
   {
-    'id': 'glm-4.5-flash',
+    'id': 'glm-5.3',
     'platform_id': 'zhipu',
-    'model_name': 'glm-4.5-flash',
-    'display_name': 'GLM-4.5-Flash',
-    'model_type': 'cc',
-    'supports_thinking': 1,
-    'supports_tool_calling': 1,
-  },
-  {
-    'id': 'glm-4.1v-thinking-flash',
-    'platform_id': 'zhipu',
-    'model_name': 'glm-4.1v-thinking-flash',
-    'display_name': 'GLM-4.1V-Thinking-Flash',
+    'model_name': 'glm-5.3',
+    'display_name': 'GLM-5.3(旗舰,强制思考)',
     'model_type': 'cc',
     'supports_thinking': 1,
     'supports_vision': 1,
-  },
-  {
-    'id': 'glm-4-flash-250414',
-    'platform_id': 'zhipu',
-    'model_name': 'glm-4-flash-250414',
-    'display_name': 'GLM-4-Flash-250414',
-    'model_type': 'cc',
     'supports_tool_calling': 1,
   },
   {
-    'id': 'glm-4v-flash',
+    'id': 'glm-5.3-flash',
     'platform_id': 'zhipu',
-    'model_name': 'glm-4v-flash',
-    'display_name': 'GLM-4V-Flash',
-    'model_type': 'cc',
-    'supports_vision': 1,
-  },
-  {
-    'id': 'glm-z1-flash',
-    'platform_id': 'zhipu',
-    'model_name': 'glm-z1-flash',
-    'display_name': 'GLM-Z1-Flash',
-    'model_type': 'cc',
-    'supports_thinking': 1,
-    'supports_tool_calling': 1,
-  },
-  {
-    'id': 'cogview-3-flash',
-    'platform_id': 'zhipu',
-    'model_name': 'cogview-3-flash',
-    'display_name': 'CogView-3-Flash',
-    'model_type': 'tti',
-  },
-
-  /// 收费的cc模型
-  {
-    'id': 'glm-4.6',
-    'platform_id': 'zhipu',
-    'model_name': 'glm-4.6',
-    'display_name': 'GLM-4.6',
-    'model_type': 'cc',
-    'supports_thinking': 1,
-    'supports_tool_calling': 1,
-  },
-  {
-    'id': 'glm-4.5',
-    'platform_id': 'zhipu',
-    'model_name': 'glm-4.5',
-    'display_name': 'GLM-4.5',
-    'model_type': 'cc',
-    'supports_thinking': 1,
-    'supports_tool_calling': 1,
-  },
-  {
-    'id': 'glm-4.5-air',
-    'platform_id': 'zhipu',
-    'model_name': 'glm-4.5-air',
-    'display_name': 'GLM-4.5-Air',
-    'model_type': 'cc',
-    'supports_thinking': 1,
-    'supports_tool_calling': 1,
-  },
-  {
-    'id': 'glm-4.5v',
-    'platform_id': 'zhipu',
-    'model_name': 'glm-4.5v',
-    'display_name': 'GLM-4.5V',
+    'model_name': 'glm-5.3-flash',
+    'display_name': 'GLM-5.3-Flash(普惠多模态)',
     'model_type': 'cc',
     'supports_thinking': 1,
     'supports_vision': 1,
+    'supports_tool_calling': 1,
   },
-
-  /// 智谱图片生成模型
+  {
+    'id': 'glm-5.2',
+    'platform_id': 'zhipu',
+    'model_name': 'glm-5.2',
+    'display_name': 'GLM-5.2(长程任务)',
+    'model_type': 'cc',
+    'supports_thinking': 1,
+    'supports_tool_calling': 1,
+  },
+  // ===== 图片生成 =====
   {
     'id': 'cogview-4-250304',
     'platform_id': 'zhipu',
     'model_name': 'cogview-4-250304',
-    'display_name': 'CogView-4-250304',
-    'model_type': 'tti',
+    'display_name': 'CogView-4(图像生成)',
+    'model_type': 'image',
   },
+  // ===== 视频生成 =====
   {
-    'id': 'cogview-4',
+    'id': 'cogvideox-flash',
     'platform_id': 'zhipu',
-    'model_name': 'cogview-4',
-    'display_name': 'CogView-4',
-    'model_type': 'tti',
+    'model_name': 'cogvideox-flash',
+    'display_name': 'CogVideoX-Flash(视频生成)',
+    'model_type': 'video',
   },
-
-  /// 智谱语音合成模型
+  // ===== 语音合成 =====
   {
     'id': 'cogtts',
     'platform_id': 'zhipu',
     'model_name': 'cogtts',
-    'display_name': 'CogTTS',
+    'display_name': 'CogTTS(语音合成)',
     'model_type': 'tts',
   },
-
-  /// 智谱语音识别模型
+  // ===== 语音识别 =====
   {
     'id': 'glm-asr',
     'platform_id': 'zhipu',
     'model_name': 'glm-asr',
-    'display_name': 'GLM-ASR',
+    'display_name': 'GLM-ASR(语音识别)',
     'model_type': 'asr',
   },
 ];

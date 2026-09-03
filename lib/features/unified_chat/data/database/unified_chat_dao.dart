@@ -5,6 +5,7 @@ import '../models/unified_model_spec.dart';
 import '../models/unified_conversation.dart';
 import '../models/unified_chat_message.dart';
 import '../models/unified_chat_partner.dart';
+import 'buildin_models/index.dart';
 import 'unified_chat_db_init.dart';
 import 'unified_chat_ddl.dart';
 
@@ -543,6 +544,29 @@ class UnifiedChatDao {
   Future<void> reloadBuiltInPlatforms({UnifiedPlatformId? platformId}) async {
     final db = await dbInit.database;
     await UnifiedChatDdl.initDefaultPlatforms(db, platformId: platformId);
+
+    // 2026-09-03 同步清理已从内置种子中移除的模型行(如已下线/选型错误的
+    // qwen-audio-3.0-asr-flash-streaming)，避免残留在模型下拉中误导；
+    // 仅清理内置行(is_built_in=1)，用户自建模型不受影响
+    final builtInNames = BUILD_IN_MODELS
+        .where((m) => platformId == null || m['platform_id'] == platformId.name)
+        .map((m) => m['model_name'] as String)
+        .toSet();
+    final rows = await db.query(
+      UnifiedChatDdl.tableUnifiedModelSpec,
+      where:
+          'is_built_in = 1${platformId != null ? ' AND platform_id = ?' : ''}',
+      whereArgs: platformId != null ? [platformId.name] : null,
+    );
+    for (final row in rows) {
+      if (!builtInNames.contains(row['model_name'])) {
+        await db.delete(
+          UnifiedChatDdl.tableUnifiedModelSpec,
+          where: 'id = ?',
+          whereArgs: [row['id']],
+        );
+      }
+    }
     // TEST
     // await UnifiedChatDdl.initDefaultPartners(db);
   }
@@ -701,24 +725,27 @@ class UnifiedChatDao {
     String? name,
     List<String>? platformIds,
   }) async {
-    // 如果有传关键字搜索，才使用like和where
-    String where = '1=1';
-    List<String> whereArgs = [];
+    // 2026-09-02 修复：原实现用双引号拼接平台id，SQLite标准中双引号是标识符引用，
+    // 新版sqflite_ffi禁用双引号字符串回退(DQS)后直接报no such column；
+    // 改为参数绑定，且name与platformIds条件改为AND组合(原实现会互相覆盖)
+    final conds = <String>['1=1'];
+    final args = <String>[];
     if (name != null) {
-      where = 'name LIKE ?';
-      whereArgs = ['%$name%'];
+      conds.add('name LIKE ?');
+      args.add('%$name%');
     }
-
     if (platformIds != null) {
-      // 注意，平台id是字符串，所以要加引号
-      where = 'platform_id IN (${platformIds.map((id) => '"$id"').join(",")})';
+      conds.add(
+        'platform_id IN (${List.filled(platformIds.length, '?').join(",")})',
+      );
+      args.addAll(platformIds);
     }
 
     final db = await dbInit.database;
     final maps = await db.query(
       UnifiedChatDdl.tableUnifiedModelSpec,
-      where: where,
-      whereArgs: whereArgs,
+      where: conds.join(' AND '),
+      whereArgs: args,
     );
     return List.generate(maps.length, (i) {
       return UnifiedModelSpec.fromMap(maps[i]);

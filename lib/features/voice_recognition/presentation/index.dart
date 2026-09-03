@@ -15,9 +15,11 @@ import '../../../core/utils/screen_helper.dart';
 import '../../../core/storage/db_helper.dart';
 import '../../../core/theme/style/app_colors.dart';
 import '../../../shared/widgets/audio_operation_widgets.dart';
-import '../../media_generation/voice/presentation/pages/github_storage_settings_page.dart';
 import '../domain/entities/voice_recognition_task_info.dart';
 import '../data/repositories/voice_recognition_service.dart';
+import '../../unified_chat/data/database/unified_chat_dao.dart';
+import '../../unified_chat/data/models/unified_model_spec.dart';
+import '../../unified_chat/data/models/unified_platform_spec.dart';
 import 'pages/voice_recognition_detail_page.dart';
 
 /// 录音识别页面
@@ -51,50 +53,90 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
   // 默认选中的模型
   late CusLLMSpec _selectedModel;
 
+  // 平台管理中配置的语音识别模型(2026-09-03 打通统一配置)：
+  // 用户自建平台+asr模型可在此直接使用(同步识别，一般限制25MB内)
+  final List<({UnifiedModelSpec model, UnifiedPlatformSpec platform})>
+  _unifiedAsrEntries = [];
+  ({UnifiedModelSpec model, UnifiedPlatformSpec platform})?
+  _selectedUnifiedEntry;
+
+  // 自定义模型名(2026-09-03)：DashScope录音文件识别端点对模型名透传，
+  // 填入后优先于下拉选择，可使用未列出的新模型/快照版本
+  final TextEditingController _customModelController = TextEditingController();
+
+  /// 构造实际提交用的模型规格：自定义名非空时优先生效
+  CusLLMSpec get _effectiveModel {
+    final custom = _customModelController.text.trim();
+    if (custom.isEmpty) return _selectedModel;
+    return CusLLMSpec(
+      ApiPlatform.aliyun,
+      custom,
+      LLModelType.asr,
+      description: '自定义模型',
+      cusLlmSpecId: const Uuid().v4(),
+    );
+  }
+
   // 支持的模型列表
-  // 2025-05-07 都是阿里云的模型，都是先提交job，再查询结果，然后下载json文件解析
+  // 都是阿里云的模型，先提交job，再查询结果，然后下载json文件解析
   // 所以模型预设好，但要检测到用户有自己的阿里云AK才能提交成功
+  // 2026-09-03 按2026-09官方文档重写：sensevoice-v1已于2026-03-09下线(移除)；
+  // 新增新一代Fun-ASR/Qwen3-ASR系；Paraformer为较早一代仍可用(存量保留)
   final List<CusLLMSpec> _asrModels = [
     CusLLMSpec(
       ApiPlatform.aliyun,
-      "paraformer-v1",
+      "qwen-audio-3.0-asr-flash-filetrans",
       LLModelType.asr,
-      description: '仅支持中英文',
+      description: '新·中英日韩粤等多语种方言/说话人分离/热词/上下文增强',
+      cusLlmSpecId: const Uuid().v4(),
+    ),
+    CusLLMSpec(
+      ApiPlatform.aliyun,
+      "fun-asr",
+      LLModelType.asr,
+      description: '新·中(多方言)英日韩等50+语种/说话人分离/热词',
+      cusLlmSpecId: const Uuid().v4(),
+    ),
+    CusLLMSpec(
+      ApiPlatform.aliyun,
+      "fun-asr-mtl",
+      LLModelType.asr,
+      description: '新·中(粤)英日韩等50+语种/说话人分离/热词',
+      cusLlmSpecId: const Uuid().v4(),
+    ),
+    CusLLMSpec(
+      ApiPlatform.aliyun,
+      "qwen3-asr-flash-filetrans",
+      LLModelType.asr,
+      description: '新·中(多方言)英日韩等27+语种/情感识别',
       cusLlmSpecId: const Uuid().v4(),
     ),
     CusLLMSpec(
       ApiPlatform.aliyun,
       "paraformer-v2",
       LLModelType.asr,
-      description: '中(部分方言)英日韩',
-      cusLlmSpecId: const Uuid().v4(),
-    ),
-    CusLLMSpec(
-      ApiPlatform.aliyun,
-      "paraformer-8k-v1",
-      LLModelType.asr,
-      description: '仅支持中文',
-      cusLlmSpecId: const Uuid().v4(),
-    ),
-    CusLLMSpec(
-      ApiPlatform.aliyun,
-      "paraformer-8k-v2",
-      LLModelType.asr,
-      description: '仅支持中文',
+      description: '旧·中(部分方言)英日韩德法俄/说话人分离',
       cusLlmSpecId: const Uuid().v4(),
     ),
     CusLLMSpec(
       ApiPlatform.aliyun,
       "paraformer-mtl-v1",
       LLModelType.asr,
-      description: '中(部分方言)英日韩法意等',
+      description: '旧·中(部分方言)英日韩法意等/说话人分离',
       cusLlmSpecId: const Uuid().v4(),
     ),
     CusLLMSpec(
       ApiPlatform.aliyun,
-      "sensevoice-v1",
+      "paraformer-v1",
       LLModelType.asr,
-      description: '中英粤日韩俄法意西德等',
+      description: '旧·仅中英文/说话人分离',
+      cusLlmSpecId: const Uuid().v4(),
+    ),
+    CusLLMSpec(
+      ApiPlatform.aliyun,
+      "paraformer-8k-v2",
+      LLModelType.asr,
+      description: '旧·8k电话场景·仅中文',
       cusLlmSpecId: const Uuid().v4(),
     ),
   ];
@@ -109,24 +151,23 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
 
   String note = '''
 - 使用**阿里云**平台的录音语音识别服务
-- Paraformer
-  - `paraformer-v2` : 中(部分方言)英日韩
-  - `paraformer-8k-v2` : 仅中文
+- **新一代模型**(2026-09文档核实，推荐)
+  - `qwen-audio-3.0-asr-flash-filetrans` : 中英日韩粤等多语种方言，支持说话人分离/热词/上下文增强
+  - `fun-asr` / `fun-asr-mtl` : 50+语种，支持说话人分离/热词
+  - `qwen3-asr-flash-filetrans` : 27+语种，支持情感识别
+- **Paraformer**(较早一代，存量可用)
+  - `paraformer-v2` : 中(部分方言)英日韩德法俄
+  - `paraformer-mtl-v1` : 中(部分方言)英日韩法意等
   - `paraformer-v1` : 仅中英文
-  - `paraformer-8k-v1` : 仅中文
-  - `paraformer-mtl-v1`: 中(部分方言)英日韩法意等
-  - 单价：0.00008元/秒
-- SenseVoice
-  - `sensevoice-v1` : 中英粤日韩俄法意西德等
-  - 单价：2.52元/小时
-- 音频文件不超过2GB；12 小时以内
-- 暂时每次只支持识别 1 个录音文件
+  - `paraformer-8k-v2` : 8k电话场景仅中文
+- `sensevoice-v1` 已于2026-03-09下线，请改用上述新模型
+- 音频文件不超过2GB；12 小时以内(启用说话人分离建议不超过2小时)
 - 支持两种音频输入方式：
-  - **本地音频文件**：将上传到 Github 公共仓库，需要网络支持
-  - **云端音频URL**：直接使用已上传到云端的音频文件地址，无需再次上传
+  - **本地音频文件**：自动上传到tmpfiles.org临时存储(100M内，免配置，暂存1小时)
+  - **云端音频URL**：直接使用已上传到云端的音频文件地址
+- 可在"自定义模型名"中填入任意阿里云录音文件识别支持的模型名(含未列出的新模型/快照版本)
 -  **请勿在提交识别任务过程中退出**
-- 录制的语音会保存在设备的以下目录:
-  - /SuChatFiles/VOICE_REC/voice_recordings
+- 录制的语音会保存在设备私有目录VOICE_REC/voice_recordings下
 ''';
 
   @override
@@ -134,6 +175,7 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
     super.initState();
 
     _selectedModel = _asrModels.first;
+    _loadUnifiedAsrModels();
 
     // _languageOptions = VoiceRecognitionService.getLanguageOptions(
     //   _selectedModel,
@@ -195,6 +237,7 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
   void dispose() {
     _audioRecordManager.dispose();
     _cloudAudioUrlController.dispose();
+    _customModelController.dispose();
     super.dispose();
   }
 
@@ -219,6 +262,33 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
     }
   }
 
+  /// 加载平台管理中配置的语音识别模型(统一模型库，含用户自建平台)
+  Future<void> _loadUnifiedAsrModels() async {
+    try {
+      final models = await UnifiedChatDao().getModelSpecs();
+      final platforms = await UnifiedChatDao().getPlatformSpecs();
+      final platformMap = {for (final p in platforms) p.id: p};
+
+      final entries =
+          <({UnifiedModelSpec model, UnifiedPlatformSpec platform})>[];
+      for (final m in models) {
+        if (!m.isActive || m.modelType != UnifiedModelType.asr.name) continue;
+        final p = platformMap[m.platformId];
+        if (p == null || !p.isActive) continue;
+        entries.add((model: m, platform: p));
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _unifiedAsrEntries
+          ..clear()
+          ..addAll(entries);
+      });
+    } catch (e) {
+      debugPrint('加载平台管理配置的语音识别模型失败: $e');
+    }
+  }
+
   // 模型变更处理
   void _onModelChanged(CusLLMSpec? value) {
     if (value == null) return;
@@ -239,6 +309,13 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
 
   // 提交录音识别任务
   Future<void> _submitRecognitionTask() async {
+    // 平台管理配置的模型优先(2026-09-03 打通统一配置)：
+    // 该流程走UnifiedSecureStorage按所选平台读AK，无需阿里云AK，须置于阿里AK检查之前
+    if (_selectedUnifiedEntry != null) {
+      await _submitWithUnifiedModel();
+      return;
+    }
+
     try {
       final apiKey = await VoiceRecognitionService.getAliyunAK();
 
@@ -273,9 +350,9 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
         messages: ["请耐心等待一会儿", "请勿退出当前页面", "录音文件过大上传会比较耗时"],
       );
 
-      // 调用服务提交识别任务
+      // 调用服务提交识别任务(自定义模型名非空时优先)
       final taskId = await VoiceRecognitionService.submitRecognitionTask(
-        model: _selectedModel,
+        model: _effectiveModel,
         audioPath: _recordingPath ?? '',
         cloudAudioUrl: _useCloudAudio ? _cloudAudioUrlController.text : null,
       );
@@ -329,6 +406,49 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
     }
   }
 
+  /// 使用平台管理配置的模型提交识别(同步，一次性返回结果)
+  Future<void> _submitWithUnifiedModel() async {
+    final entry = _selectedUnifiedEntry!;
+    if (!_useCloudAudio && _recordingPath == null) {
+      ToastUtils.showError('请先录制或选择音频文件');
+      return;
+    }
+    // 同步接口直接上传本地文件，不支持云端URL输入
+    if (_useCloudAudio) {
+      ToastUtils.showError('平台管理模型仅支持本地录音/文件(同步上传)，云端URL请使用内置阿里云模型');
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+    LoadingOverlay.show(context, title: '正在上传并识别...');
+
+    try {
+      await VoiceRecognitionService.recognizeWithUnifiedConfig(
+        model: entry.model,
+        platform: entry.platform,
+        audioPath: _recordingPath!,
+      );
+
+      ToastUtils.showToast('识别完成');
+      setState(() {
+        _recordingPath = null;
+      });
+      await _refreshTaskList();
+    } catch (e) {
+      if (!mounted) return;
+      commonExceptionDialog(context, '识别失败', e.toString());
+    } finally {
+      LoadingOverlay.hide();
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
   // 删除识别任务
   Future<void> _deleteTask(VoiceRecognitionTaskInfo task) async {
     try {
@@ -349,17 +469,7 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
       appBar: AppBar(
         title: const Text('录音文件识别'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.storage),
-            tooltip: 'GitHub存储设置',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const GitHubStorageSettingsPage(),
-                ),
-              );
-            },
-          ),
+          // 2026-09-03 音频上传改为tmpfiles.org临时存储(免配置)，GitHub存储设置入口移除
           IconButton(
             onPressed: () {
               ScreenHelper.isDesktop()
@@ -483,6 +593,38 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
+        // 平台管理配置的语音识别模型(含用户自建平台)
+        if (_unifiedAsrEntries.isNotEmpty) ...[
+          Row(
+            children: [
+              Text('平台管理模型', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(width: 8),
+              Expanded(
+                child:
+                    buildDropdownButton2<
+                      ({UnifiedModelSpec model, UnifiedPlatformSpec platform})?
+                    >(
+                      height: 48,
+                      value: _selectedUnifiedEntry,
+                      items: _unifiedAsrEntries,
+                      alignment: Alignment.centerLeft,
+                      hintLabel: '平台管理配置的语音识别模型(选中后优先使用)',
+                      onChanged: (v) =>
+                          setState(() => _selectedUnifiedEntry = v),
+                      itemToString: (e) =>
+                          '${e.platform.displayName} / ${e.model.displayName} (${e.model.modelName})',
+                    ),
+              ),
+              if (_selectedUnifiedEntry != null)
+                IconButton(
+                  icon: const Icon(Icons.close, size: 18),
+                  tooltip: '清除选择',
+                  onPressed: () => setState(() => _selectedUnifiedEntry = null),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
         Row(
           children: [
             Text('选择模型', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -501,6 +643,19 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
             ),
           ],
         ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _customModelController,
+          enabled: !_isSubmitting,
+          onChanged: (_) => setState(() {}),
+          decoration: const InputDecoration(
+            labelText: '自定义模型名(可选，填入后优先于上方选择)',
+            hintText: '如 qwen3-asr-flash-filetrans-2025-11-17',
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
+        ),
+        const SizedBox(height: 8),
 
         // 使用通用音频源选择器组件
         AudioSourceSelector(

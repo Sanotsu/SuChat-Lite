@@ -32,6 +32,12 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
   late TextEditingController _apiPerfixController;
   late TextEditingController _searchController;
 
+  // 各能力端点前缀(图片/视频/语音合成/语音识别)
+  late TextEditingController _imgPrefixController;
+  late TextEditingController _videoPrefixController;
+  late TextEditingController _ttsPrefixController;
+  late TextEditingController _asrPrefixController;
+
   // 状态变量
   String _selectedApiMode = 'OpenAI API 兼容';
   bool _isApiKeyVisible = false;
@@ -43,8 +49,8 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
   // 标记表单是否有修改
   bool _isFormModified = false;
 
-  // 是否显示请求地址和端点
-  bool _isUrlVisible = false;
+  // 内置平台地址编辑模式(2026-09-02 平台地址可查看可修改)
+  bool _isEditingBuiltInUrl = false;
 
   @override
   void initState() {
@@ -61,6 +67,18 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
       text: widget.platform.ccPrefix,
     );
     _searchController = TextEditingController();
+    _imgPrefixController = TextEditingController(
+      text: widget.platform.imgGenPrefix ?? '',
+    );
+    _videoPrefixController = TextEditingController(
+      text: widget.platform.videoGenPrefix ?? '',
+    );
+    _ttsPrefixController = TextEditingController(
+      text: widget.platform.ttsPrefix ?? '',
+    );
+    _asrPrefixController = TextEditingController(
+      text: widget.platform.asrPrefix ?? '',
+    );
 
     _searchController.addListener(_filterModels);
 
@@ -68,6 +86,10 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
     _nameController.addListener(_markFormAsModified);
     _hostUrlController.addListener(_markFormAsModified);
     _apiPerfixController.addListener(_markFormAsModified);
+    _imgPrefixController.addListener(_markFormAsModified);
+    _videoPrefixController.addListener(_markFormAsModified);
+    _ttsPrefixController.addListener(_markFormAsModified);
+    _asrPrefixController.addListener(_markFormAsModified);
   }
 
   void _markFormAsModified() {
@@ -85,6 +107,10 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
     _hostUrlController.dispose();
     _apiPerfixController.dispose();
     _searchController.dispose();
+    _imgPrefixController.dispose();
+    _videoPrefixController.dispose();
+    _ttsPrefixController.dispose();
+    _asrPrefixController.dispose();
     super.dispose();
   }
 
@@ -192,19 +218,31 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
   }
 
   // 保存平台信息
+  // 2026-09-02 内置平台也允许修改请求地址与各能力端点(平台域名/端点可能随官方更新变化)；
+  // 名称等身份字段仍不可改。注意：平台列表的"重载内置平台"会恢复默认地址
   Future<void> _savePlatform() async {
     if (_formKey.currentState!.validate()) {
       try {
+        String? trimOrNull(String s) => s.trim().isEmpty ? null : s.trim();
+
         final platform = widget.platform.copyWith(
-          displayName: _nameController.text.trim(),
+          // 内置平台不改名称
+          displayName: widget.platform.isBuiltIn
+              ? widget.platform.displayName
+              : _nameController.text.trim(),
           hostUrl: _hostUrlController.text.trim(),
           ccPrefix: _apiPerfixController.text.trim(),
+          imgGenPrefix: trimOrNull(_imgPrefixController.text),
+          videoGenPrefix: trimOrNull(_videoPrefixController.text),
+          ttsPrefix: trimOrNull(_ttsPrefixController.text),
+          asrPrefix: trimOrNull(_asrPrefixController.text),
         );
 
         await _chatDao.savePlatformSpec(platform);
 
         setState(() {
           _isFormModified = false;
+          _isEditingBuiltInUrl = false;
         });
 
         ToastUtils.showSuccess('平台信息保存成功');
@@ -313,7 +351,8 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
         _loadModels();
         ToastUtils.showSuccess('模型添加成功');
       } catch (e) {
-        ToastUtils.showError('添加模型失败: $e');
+        ToastUtils.showError('添加模型失败11: $e');
+        debugPrint('添加模型失败: $e');
       }
     }
   }
@@ -439,10 +478,51 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
     _nameController.text = widget.platform.displayName;
     _hostUrlController.text = widget.platform.hostUrl;
     _apiPerfixController.text = widget.platform.ccPrefix;
+    _imgPrefixController.text = widget.platform.imgGenPrefix ?? '';
+    _videoPrefixController.text = widget.platform.videoGenPrefix ?? '';
+    _ttsPrefixController.text = widget.platform.ttsPrefix ?? '';
+    _asrPrefixController.text = widget.platform.asrPrefix ?? '';
 
     setState(() {
       _isFormModified = false;
+      _isEditingBuiltInUrl = false;
     });
+  }
+
+  /// 各能力端点前缀输入字段(自定义平台配置与内置平台地址修改共用)
+  /// 留空表示该平台不支持对应能力
+  List<Widget> _buildCapabilityPrefixFields({bool includeChatPrefix = false}) {
+    Widget field(TextEditingController controller, String label) => Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: TextFormField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: '留空表示不支持',
+          border: const OutlineInputBorder(),
+          isDense: true,
+        ),
+      ),
+    );
+
+    return [
+      if (includeChatPrefix)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: TextFormField(
+            controller: _apiPerfixController,
+            decoration: const InputDecoration(
+              labelText: '对话完成端点(API路径)',
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+        ),
+      field(_imgPrefixController, '图片生成端点'),
+      field(_videoPrefixController, '视频生成端点'),
+      field(_ttsPrefixController, '语音合成端点'),
+      field(_asrPrefixController, '语音识别端点'),
+    ];
   }
 
   @override
@@ -453,8 +533,9 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         actions: [
-          // 保存按钮
-          if (_isFormModified && !widget.platform.isBuiltIn) ...[
+          // 保存按钮(自定义平台改任意字段 / 内置平台修改了请求地址)
+          if (_isFormModified &&
+              (!widget.platform.isBuiltIn || _isEditingBuiltInUrl)) ...[
             TextButton(
               onPressed: _cancelChanges,
               child: const Text('取消', style: TextStyle(color: Colors.grey)),
@@ -496,15 +577,6 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-            IconButton(
-              onPressed: () {
-                setState(() => _isUrlVisible = !_isUrlVisible);
-              },
-              icon: Icon(
-                _isUrlVisible ? Icons.visibility_off : Icons.visibility,
-              ),
-              tooltip: _isUrlVisible ? '隐藏地址和端点' : '显示地址和端点',
             ),
             IconButton(
               onPressed: _deletePlatform,
@@ -607,7 +679,7 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
         const SizedBox(height: 16),
 
         // API主机和路径
-        // 如果是内置平台，不需要修改
+        // 自定义平台：直接编辑，并支持配置各能力端点(可选)
         if (!widget.platform.isBuiltIn) ...[
           Row(
             children: [
@@ -633,22 +705,77 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
             ],
           ),
           Text(_hostUrlController.text + _apiPerfixController.text),
+          const SizedBox(height: 12),
+          ..._buildCapabilityPrefixFields(),
           const SizedBox(height: 16),
         ],
 
-        // 如果是内置平台，条件显示地址和端点
-        if (widget.platform.isBuiltIn && _isUrlVisible) ...[
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Text(
-              "基础请求地址: ${widget.platform.hostUrl}"
-              "\n对话完成端点: ${widget.platform.ccPrefix}"
-              "\n图片生成端点: ${(widget.platform.imgGenPrefix ?? '不支持')}"
-              "\n语音合成端点: ${(widget.platform.ttsPrefix ?? '不支持')}"
-              "\n语音识别端点: ${(widget.platform.asrPrefix ?? '不支持')}",
-              style: TextStyle(fontSize: 12),
+        // 内置平台：默认显示请求地址和各能力端点，可点"修改"编辑
+        // (平台域名/端点可能随官方更新变化，允许用户自行校正)
+        if (widget.platform.isBuiltIn) ...[
+          if (_isEditingBuiltInUrl) ...[
+            TextFormField(
+              controller: _hostUrlController,
+              decoration: const InputDecoration(
+                labelText: '基础请求地址(API主机)',
+                border: OutlineInputBorder(),
+              ),
             ),
-          ),
+            const SizedBox(height: 8),
+            ..._buildCapabilityPrefixFields(includeChatPrefix: true),
+            const SizedBox(height: 4),
+            Text(
+              '提示：平台列表的"重载内置平台"会恢复默认地址',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 16),
+          ] else ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '请求地址与端点',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () =>
+                            setState(() => _isEditingBuiltInUrl = true),
+                        icon: const Icon(Icons.edit, size: 16),
+                        label: const Text('修改'),
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "基础请求地址: ${widget.platform.hostUrl}"
+                    "\n对话完成端点: ${widget.platform.ccPrefix}"
+                    "\n图片生成端点: ${(widget.platform.imgGenPrefix ?? '不支持')}"
+                    "\n视频生成端点: ${(widget.platform.videoGenPrefix ?? '不支持')}"
+                    "\n语音合成端点: ${(widget.platform.ttsPrefix ?? '不支持')}"
+                    "\n语音识别端点: ${(widget.platform.asrPrefix ?? '不支持')}",
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
         ],
 
         // 模型管理相关

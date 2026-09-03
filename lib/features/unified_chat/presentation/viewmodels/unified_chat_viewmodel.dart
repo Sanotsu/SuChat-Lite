@@ -22,6 +22,7 @@ import '../../data/services/unified_chat_service.dart';
 import '../../data/services/unified_branch_utils.dart';
 import '../../data/services/image_generation_service.dart';
 import '../../data/models/image_generation_request.dart';
+import '../../data/services/video_generation_service.dart';
 import '../../data/services/speech_synthesis_service.dart';
 import '../../data/models/speech_synthesis_request.dart';
 import '../../data/services/speech_recognition_service.dart';
@@ -144,8 +145,10 @@ class UnifiedChatViewModel extends ChangeNotifier {
   }
 
   bool get isImageGenerationModel =>
-      _currentModel?.type == UnifiedModelType.tti ||
-      _currentModel?.type == UnifiedModelType.iti;
+      _currentModel?.type == UnifiedModelType.image;
+
+  bool get isVideoGenerationModel =>
+      _currentModel?.type == UnifiedModelType.video;
 
   bool get isSpeechSynthesisModel =>
       _currentModel?.type == UnifiedModelType.tts;
@@ -153,11 +156,12 @@ class UnifiedChatViewModel extends ChangeNotifier {
   bool get isSpeechRecognitionModel =>
       _currentModel?.type == UnifiedModelType.asr;
 
-  // 是否可显示添加附件按钮(录音文件识别、图生图/视频、cc中支持视觉理解)
+  // 是否可显示添加附件按钮(录音文件识别、图生图/图生视频的参考图、cc中支持视觉理解)
   bool get canShowAttachmentButton =>
       _currentModel?.type == UnifiedModelType.asr ||
-      _currentModel?.type == UnifiedModelType.iti ||
-      // _currentModel?.type == UnifiedModelType.itv ||
+      ((_currentModel?.type == UnifiedModelType.image ||
+              _currentModel?.type == UnifiedModelType.video) &&
+          _currentModel?.supportsImageInput == true) ||
       (_currentModel?.type == UnifiedModelType.cc &&
           _currentModel?.supportsVision == true);
 
@@ -392,6 +396,35 @@ class UnifiedChatViewModel extends ChangeNotifier {
     }
   }
 
+  /// 按模型类型新建对话(2026-09-02 媒体生成并入聊天的快捷入口)
+  /// 自动选用首个可用(已配Key)的指定类型模型；无可用模型时提示并保持普通新对话
+  void createNewConversationForType(UnifiedModelType type) {
+    if (type == UnifiedModelType.cc) {
+      createNewConversation();
+      return;
+    }
+
+    final model = _availableModels.cast<UnifiedModelSpec?>().firstWhere(
+      (m) => m!.type == type,
+      orElse: () => null,
+    );
+
+    if (model == null) {
+      ToastUtils.showError(
+        '没有可用的${UMT_NAME_MAP[type]}模型，请先在模型选择器确认已配置对应平台的API Key',
+      );
+      createNewConversation();
+      return;
+    }
+
+    _currentModel = model;
+    _currentPlatform = _availablePlatforms
+        .cast<UnifiedPlatformSpec?>()
+        .firstWhere((p) => p?.id == model.platformId, orElse: () => null);
+
+    createNewConversation(title: '新${UMT_NAME_MAP[type]}');
+  }
+
   ///初始化时（即在用户首次发送消息时）保存对话到数据库
   Future<void> _initSaveConversation(String userMessage) async {
     if (_currentConversation == null) return;
@@ -487,6 +520,9 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
         // 搭档专属背景可能生效，检查外观缓存
         _checkAppearanceCache();
+
+        // 恢复未完成的视频生成任务(任务态持久化在消息metadata，重进对话续查)
+        _resumeUnfinishedVideoTasks();
       }
       _clearError();
     } catch (e) {
@@ -662,12 +698,31 @@ class UnifiedChatViewModel extends ChangeNotifier {
   }
 
   /// 更新对话设置
+  /// extraParams 类配置采用合并式更新：只覆盖传入的键(含显式传null清空)，
+  /// 未传入的键保留原值，避免各设置弹窗互相覆盖丢失配置
   Future<void> updateConversationSettings(Map<String, dynamic> settings) async {
     if (_currentConversation == null) return;
 
     try {
       final oldSystemPrompt = _currentConversation!.systemPrompt;
       final newSystemPrompt = settings['systemPrompt'] as String?;
+
+      final newExtraParams = Map<String, dynamic>.from(
+        _currentConversation!.extraParams ?? {},
+      );
+      for (final key in const [
+        'enableThinking',
+        'omniParams',
+        'imageGenerationParams',
+        'videoGenerationParams',
+        'speechSynthesisParams',
+        'speechRecognitionParams',
+        'customRequestParams',
+      ]) {
+        if (settings.containsKey(key)) {
+          newExtraParams[key] = settings[key];
+        }
+      }
 
       _currentConversation = _currentConversation!.copyWith(
         title: settings['title'] as String?,
@@ -679,16 +734,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
         isStream: settings['isStream'] as bool?,
         frequencyPenalty: settings['frequencyPenalty'] as double?,
         presencePenalty: settings['presencePenalty'] as double?,
-        extraParams: {
-          'enableThinking': settings['enableThinking'] as bool?,
-          'omniParams': settings['omniParams'] as Map<String, dynamic>?,
-          'imageGenerationParams':
-              settings['imageGenerationParams'] as Map<String, dynamic>?,
-          'speechSynthesisParams':
-              settings['speechSynthesisParams'] as Map<String, dynamic>?,
-          'speechRecognitionParams':
-              settings['speechRecognitionParams'] as Map<String, dynamic>?,
-        },
+        extraParams: newExtraParams,
         updatedAt: DateTime.now(),
       );
 
@@ -1088,6 +1134,10 @@ class UnifiedChatViewModel extends ChangeNotifier {
     DateTime? endTime;
     // 思考时长
     var thinkingTime = 0;
+    // 流式UI刷新节流：高频chunk触发消息列表全量重建，Windows下高频重建还会
+    // 导致无障碍桥AXTree更新失败刷屏(Failed to update ui::AXTree)；
+    // 限制最低150ms刷新一次，流结束(_handleStreamDone)时仍会强制刷新
+    var lastUiRefresh = DateTime.now();
 
     _streamSubscription = stream.listen(
       (response) async {
@@ -1114,7 +1164,11 @@ class UnifiedChatViewModel extends ChangeNotifier {
         endTime = chunkResult.endTime;
         thinkingTime = chunkResult.thinkingTime;
 
-        notifyListeners();
+        final now = DateTime.now();
+        if (now.difference(lastUiRefresh).inMilliseconds >= 150) {
+          lastUiRefresh = now;
+          notifyListeners();
+        }
       },
       onDone: () async {
         await _handleStreamDone(assistantMessage);
@@ -1461,14 +1515,9 @@ class UnifiedChatViewModel extends ChangeNotifier {
     // 保存用户消息到数据库
     await _chatDao.saveMessage(userMessage);
 
-    // 构建完整的图片生成提示词（包含历史用户消息）
-    final allUserMessages = _messages
-        .where((m) => m.role == UnifiedMessageRole.user)
-        .map((m) => m.content ?? '')
-        .where((content) => content.isNotEmpty)
-        .toList();
-
-    final combinedPrompt = allUserMessages.join('\n\n');
+    // 图片生成只使用本次输入的提示词(2026-09-02修正：旧版误将历史用户消息
+    // 合并进prompt，导致"再生成一只狗"会拼接上之前的小猫咪描述)
+    final combinedPrompt = prompt.trim();
 
     // 创建助手消息占位符
     final assistantMessage = _createAssistantPlaceholder(
@@ -1480,10 +1529,9 @@ class UnifiedChatViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 准备参考图片地址（如果是图生图模型且有选择的图片）
+      // 准备参考图片地址（模型支持参考图输入且有选择的图片）
       List<String>? referenceImages;
-      if (_currentModel!.type == UnifiedModelType.iti &&
-          images?.isNotEmpty == true) {
+      if (_currentModel!.supportsImageInput && images?.isNotEmpty == true) {
         referenceImages = images!.map((file) => file.path).toList();
       }
 
@@ -1556,6 +1604,242 @@ class UnifiedChatViewModel extends ChangeNotifier {
     }
 
     notifyListeners();
+  }
+
+  /// ******************************************
+  /// 视频生成(2026-09-02 媒体生成并入聊天新增)
+  /// ******************************************
+
+  /// 发送视频生成消息
+  /// 三平台均为"提交任务+轮询任务"的异步模式，任务态持久化在助手消息
+  /// metadata.videoTask 中——页面退出/应用重启后 loadConversation 会续查
+  Future<void> sendVideoGenerationMessage({
+    required String prompt,
+    List<File>? images,
+    Map<String, dynamic>? settings,
+  }) async {
+    if (_currentConversation == null ||
+        _currentModel == null ||
+        _currentPlatform == null) {
+      return;
+    }
+
+    // 初始化对话保存
+    await _initSaveConversation(prompt.trim());
+
+    // 用户消息(提示词+可选首帧图)
+    final multimodalContent = <UnifiedContentItem>[
+      UnifiedContentItem.text(prompt.trim()),
+      if (images != null)
+        for (final image in images)
+          UnifiedContentItem.image(image.path, detail: 'auto'),
+    ];
+
+    final userMessage = _createUserPlaceholder(
+      prompt,
+      contentType: UnifiedContentType.multimodal,
+      multimodalContent: multimodalContent,
+    );
+
+    _messages.add(userMessage);
+    _allMessages.add(userMessage);
+    notifyListeners();
+    await _chatDao.saveMessage(userMessage);
+
+    // 助手占位消息(任务卡片，metadata记录任务态)
+    final videoTask = <String, dynamic>{
+      'platformId': _currentPlatform!.id,
+      'modelName': _currentModel!.modelName,
+      'status': 'submitting',
+    };
+    final assistantMessage = _createAssistantPlaceholder(
+      content: '正在提交视频生成任务...\n',
+    ).copyWith(metadata: {'videoTask': videoTask});
+
+    _messages.add(assistantMessage);
+    _allMessages.add(assistantMessage);
+    notifyListeners();
+    await _chatDao.saveMessage(assistantMessage);
+
+    try {
+      final taskId = await VideoGenerationService().submitVideoTask(
+        prompt: prompt.trim(),
+        referenceImagePaths:
+            _currentModel!.supportsImageInput && images?.isNotEmpty == true
+            ? images!.map((file) => file.path).toList()
+            : null,
+        settings: settings,
+        platform: _currentPlatform!,
+        model: _currentModel!,
+      );
+
+      await _pollVideoTask(
+        assistantMessage.copyWith(
+          metadata: {
+            'videoTask': {
+              ...videoTask,
+              'taskId': taskId,
+              'status': 'processing',
+            },
+          },
+        ),
+      );
+    } catch (e) {
+      await _updateAssistantMessage(
+        assistantMessage.copyWith(
+          content: '视频生成失败: $e',
+          isStreaming: false,
+          metadata: {
+            'videoTask': {...videoTask, 'status': 'failed', 'error': '$e'},
+          },
+        ),
+      );
+    }
+
+    await _updateConversationStats();
+    notifyListeners();
+  }
+
+  /// 轮询视频任务直到终态(每5秒一次，最长约5分钟)
+  Future<void> _pollVideoTask(UnifiedChatMessage taskMessage) async {
+    final task = taskMessage.metadata?['videoTask'] as Map<String, dynamic>?;
+    final taskId = task?['taskId'] as String?;
+    final platformId = task?['platformId'] as String? ?? '';
+    if (taskId == null || taskId.isEmpty) return;
+
+    UnifiedPlatformSpec? platform = _currentPlatform?.id == platformId
+        ? _currentPlatform
+        : null;
+    platform ??= _availablePlatforms.isNotEmpty
+        ? _availablePlatforms.firstWhere(
+            (p) => p.id == platformId,
+            orElse: () => _availablePlatforms.first,
+          )
+        : null;
+    if (platform == null) {
+      await _updateAssistantMessage(
+        taskMessage.copyWith(
+          content: '视频生成失败: 未找到任务所属平台',
+          isStreaming: false,
+          metadata: {
+            'videoTask': {...?task, 'status': 'failed', 'error': '平台不可用'},
+          },
+        ),
+      );
+      return;
+    }
+
+    const maxAttempts = 60;
+    const interval = Duration(seconds: 5);
+    int networkErrors = 0;
+
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      await Future.delayed(interval);
+
+      final VideoTaskResult result;
+      try {
+        result = await VideoGenerationService().queryVideoTask(
+          taskId: taskId,
+          platform: platform,
+        );
+      } catch (_) {
+        // 单次查询异常(网络抖动等)不终止任务，连续10次才放弃
+        if (++networkErrors >= 10) break;
+        continue;
+      }
+      networkErrors = 0;
+
+      switch (result.status) {
+        case VideoTaskStatus.succeeded:
+          // 生成视频的网络地址有时效性，需下载到本地保存
+          final localPaths = <String>[];
+          for (final url in result.videoUrls) {
+            final localPath = await saveVideoToLocal(
+              url,
+              dlDir: await getUnifiedChatMediaDir(),
+              showSaveHint: false,
+            );
+            if (localPath != null) {
+              localPaths.add(localPath);
+            }
+          }
+
+          await _updateAssistantMessage(
+            taskMessage.copyWith(
+              content: localPaths.isNotEmpty ? '视频已生成' : '视频生成完成，但保存到本地失败',
+              isStreaming: false,
+              multimodalContent: localPaths
+                  .map((path) => UnifiedContentItem.video(path))
+                  .toList(),
+              metadata: {
+                ...?taskMessage.metadata,
+                'videoTask': {...?task, 'status': 'succeeded'},
+                'videos': localPaths,
+              },
+            ),
+          );
+          notifyListeners();
+          return;
+
+        case VideoTaskStatus.failed:
+          await _updateAssistantMessage(
+            taskMessage.copyWith(
+              content: '视频生成失败: ${result.error ?? '未知错误'}',
+              isStreaming: false,
+              metadata: {
+                ...?taskMessage.metadata,
+                'videoTask': {
+                  ...?task,
+                  'status': 'failed',
+                  'error': result.error,
+                },
+              },
+            ),
+          );
+          notifyListeners();
+          return;
+
+        default:
+          // processing：更新等待提示
+          await _updateAssistantMessage(
+            taskMessage.copyWith(
+              content: '视频生成中，已等待 ${attempt * 5} 秒...\n',
+              isStreaming: true,
+            ),
+          );
+      }
+    }
+
+    // 轮询超时/连续网络异常
+    // 标记为timeout而非failed：服务端任务可能仍在执行(DashScope结果保留24小时)，
+    // 保留taskId，下次进入对话时_resumeUnfinishedVideoTasks会继续查询结果
+    await _updateAssistantMessage(
+      taskMessage.copyWith(
+        content: '视频生成中，本轮等待超时，进入本对话时将自动继续查询...\n',
+        isStreaming: false,
+        metadata: {
+          ...?taskMessage.metadata,
+          'videoTask': {...?task, 'status': 'timeout', 'error': '本轮等待超时'},
+        },
+      ),
+    );
+    notifyListeners();
+  }
+
+  /// 恢复会话中未完成的视频生成任务(切换对话/重进对话/应用重启后触发)
+  /// 覆盖processing(进行中)与timeout(上轮轮询超时，服务端可能已完成)两种状态
+  void _resumeUnfinishedVideoTasks() {
+    if (_allMessages.isEmpty) return;
+
+    for (final message in List.of(_allMessages)) {
+      final task = message.metadata?['videoTask'] as Map<String, dynamic>?;
+      if (task == null) continue;
+      final status = task['status'] as String?;
+      if (status != 'processing' && status != 'timeout') continue;
+
+      // 后台续查，不阻塞会话加载
+      unawaited(_pollVideoTask(message));
+    }
   }
 
   /// 发送语音合成消息
@@ -1647,7 +1931,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
         isStreaming: false,
         metadata: {
           // 这个参数在消息组件会展示
-          if (newUrl != null) 'audio': newUrl,
+          'audio': ?newUrl,
           'audio_url': response.audioUrl,
           'audio_base64': response.audioBase64,
           'audio_format': response.format ?? 'mp3',
@@ -2241,6 +2525,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
     // 清空多模态配置属性，以确保切换到不同平台模型后不会使用其他平台的配置
     await updateConversationSettings({
       'imageGenerationParams': null,
+      'videoGenerationParams': null,
       'speechSynthesisParams': null,
       'speechRecognitionParams': null,
     });

@@ -175,8 +175,13 @@ class TranslationService {
 
     // 获取API配置
     final headers = await ChatService.getHeaders(usedModel);
-    final baseUrl =
-        "${ChatService.getBaseUrl(usedModel.platform)}/chat/completions";
+    // 2026-09-03 模型自带baseUrl(统一平台getChatCompletionsUrl的完整端点)时优先使用
+    final base = (usedModel.baseUrl != null && usedModel.baseUrl!.isNotEmpty)
+        ? usedModel.baseUrl!
+        : ChatService.getBaseUrl(usedModel.platform);
+    final baseUrl = base.endsWith('/chat/completions')
+        ? base
+        : "$base/chat/completions";
 
     // 构建请求体
     Map<String, dynamic> requestBody = {

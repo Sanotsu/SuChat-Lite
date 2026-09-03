@@ -124,6 +124,7 @@ class _FetchModelsDialogState extends State<FetchModelsDialog> {
         ToastUtils.showSuccess('模型添加成功');
       } catch (e) {
         ToastUtils.showError('添加模型失败: $e');
+        debugPrint('添加模型失败: $e');
       }
     }
   }

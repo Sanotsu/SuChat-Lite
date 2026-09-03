@@ -27,6 +27,7 @@ class UnifiedChatDdl {
         host_url                      TEXT      NOT NULL,
         cc_prefix                     TEXT      NOT NULL    DEFAULT '/v1/chat/completions',
         img_gen_prefix                TEXT,
+        video_gen_prefix              TEXT,
         tts_prefix                    TEXT,
         asr_prefix                    TEXT,
         is_built_in                   INTEGER   NOT NULL    DEFAULT 0,
@@ -62,6 +63,7 @@ class UnifiedChatDdl {
         supports_thinking           INTEGER   NOT NULL    DEFAULT 0,
         supports_vision             INTEGER   NOT NULL    DEFAULT 0,
         supports_tool_calling       INTEGER   NOT NULL    DEFAULT 0,
+        supports_image_input        INTEGER   NOT NULL    DEFAULT 0,
         is_built_in                 INTEGER   NOT NULL    DEFAULT 0,
         is_active                   INTEGER   NOT NULL    DEFAULT 1,
         is_favorite                 INTEGER   NOT NULL    DEFAULT 0,
@@ -76,6 +78,31 @@ class UnifiedChatDdl {
   /// 聊天搭档表
   /// 这就和之前的角色功能类似,但是只适用最基础的配置
   /// 最主要就是: 系统提示词\创造性参数等内容,context_message_length为调用API时最多发送的消息数量
+  /// 翻译历史(2026-09-03 快速翻译新增)
+  static const String tableTranslationHistory = 'translation_history';
+
+  static const String ddlForTranslationHistory =
+      '''
+  CREATE TABLE IF NOT EXISTS $tableTranslationHistory (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TEXT NOT NULL,
+    source_lang TEXT NOT NULL,
+    target_lang TEXT NOT NULL,
+    source_text TEXT NOT NULL,
+    translated_text TEXT NOT NULL,
+    model_name TEXT,
+    platform_name TEXT,
+    audio_path TEXT
+  )
+''';
+
+  /// 翻译历史索引(按时间倒序查询)
+  static const String ddlIndexTranslationHistory =
+      '''
+  CREATE INDEX IF NOT EXISTS idx_translation_history_created_at
+  ON $tableTranslationHistory (created_at DESC)
+''';
+
   static const String tableUnifiedChatPartner =
       '${DBInitConfig.tablePerfix}unified_chat_partner';
 

@@ -20,7 +20,7 @@ import '../../../core/storage/ddl_training.dart';
 import '../../../core/utils/get_dir.dart';
 import '../../diet_diary/data/index.dart';
 import '../../diet_diary/domain/entities/index.dart';
-import '../../media_generation/common/entities/media_generation_history.dart';
+import '../../../core/entities/media_generation_history.dart';
 import '../../notebook/data/note_dao.dart';
 import '../../notebook/domain/entities/index.dart';
 import '../../simple_accounting/data/bill_dao.dart';

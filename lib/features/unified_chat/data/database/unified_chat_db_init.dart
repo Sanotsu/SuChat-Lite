@@ -50,7 +50,9 @@ class UnifiedChatDBInit {
     // 在给定路径上打开/创建数据库
     var db = await openDatabase(
       path,
-      version: 2,
+      // TODO(发布前): 当前版本未发布过，无线上旧库；正式发布时将version固定为最终值
+      // 并移除下方全部_upgradeToV2/_upgradeToV3升级逻辑(开发期保留以便调试，免于反复卸载重装)
+      version: 3,
       onCreate: _createDb,
       onUpgrade: _upgradeDb,
     );
@@ -71,6 +73,8 @@ class UnifiedChatDBInit {
       txn.execute(UnifiedChatDdl.ddlForUnifiedConversation);
       txn.execute(UnifiedChatDdl.ddlForUnifiedApiKey);
       txn.execute(UnifiedChatDdl.ddlForUnifiedChatPartner);
+      txn.execute(UnifiedChatDdl.ddlForTranslationHistory);
+      txn.execute(UnifiedChatDdl.ddlIndexTranslationHistory);
 
       // 创建一些索引来提高查询性能
       await _createUnifiedChatIndex(txn);
@@ -86,7 +90,27 @@ class UnifiedChatDBInit {
     print("Chat 数据库升级 _upgradeDb 从 $oldVersion 到 $newVersion");
 
     if (oldVersion < 2) {
+      // TODO(发布前): 移除(v2从未发布，无线上v1库)
       await _upgradeToV2(db);
+    }
+
+    if (oldVersion < 3) {
+      // TODO(发布前): 移除(v3为翻译历史表，开发期数据库可能存在无audio_path列的中间结构)
+      await _upgradeToV3(db);
+    }
+  }
+
+  /// v2 -> v3: 新增翻译历史表(2026-09-03 快速翻译改造)
+  /// 兼容开发期中间结构：已建过无audio_path列表的，ALTER补列
+  Future<void> _upgradeToV3(Database db) async {
+    await db.execute(UnifiedChatDdl.ddlForTranslationHistory);
+    await db.execute(UnifiedChatDdl.ddlIndexTranslationHistory);
+    try {
+      await db.execute(
+        'ALTER TABLE ${UnifiedChatDdl.tableTranslationHistory} ADD COLUMN audio_path TEXT',
+      );
+    } catch (_) {
+      // 列已存在(按最新DDL新建的表已包含)，忽略
     }
   }
 

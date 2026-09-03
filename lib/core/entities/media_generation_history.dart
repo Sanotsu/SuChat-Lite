@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:json_annotation/json_annotation.dart';
 
-import '../../../../shared/constants/constants.dart';
-import '../../../../core/entities/cus_llm_model.dart';
-import '../../../../shared/constants/constant_llm_enum.dart';
+import '../../shared/constants/constants.dart';
+import '../../core/entities/cus_llm_model.dart';
+import '../../shared/constants/constant_llm_enum.dart';
 
 part 'media_generation_history.g.dart';
 

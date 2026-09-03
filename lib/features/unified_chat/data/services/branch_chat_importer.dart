@@ -385,23 +385,30 @@ class BranchChatImporter {
     if (existing != null) return existing.id;
 
     // 旧模型类型 -> 新模型类型映射
+    // 2026-09-02 新版类型重构：图片/视频生成统一为任务类型，文生/图生差异
+    // 由 supportsImageInput 表达(返回四元组第4位)
     final (
       modelType,
       supportsThinking,
       supportsVision,
+      supportsImageInput,
     ) = switch (spec.modelType) {
-      LLModelType.cc => ('cc', false, false),
-      LLModelType.reasoner => ('cc', true, false),
-      LLModelType.vision => ('cc', false, true),
-      LLModelType.vision_reasoner => ('cc', true, true),
-      LLModelType.omni => ('cc', true, true),
-      LLModelType.tti => ('tti', false, false),
-      LLModelType.iti => ('iti', false, false),
-      LLModelType.tts => ('tts', false, false),
-      LLModelType.asr => ('asr', false, false),
-      LLModelType.asr_realtime => ('asr', false, false),
+      LLModelType.cc => ('cc', false, false, false),
+      LLModelType.reasoner => ('cc', true, false, false),
+      LLModelType.vision => ('cc', false, true, false),
+      LLModelType.vision_reasoner => ('cc', true, true, false),
+      LLModelType.omni => ('cc', true, true, false),
+      LLModelType.tti => ('image', false, false, false),
+      LLModelType.iti => ('image', false, false, true),
+      LLModelType.image => ('image', false, false, true),
+      LLModelType.ttv => ('video', false, false, false),
+      LLModelType.itv => ('video', false, false, true),
+      LLModelType.video => ('video', false, false, true),
+      LLModelType.tts => ('tts', false, false, false),
+      LLModelType.asr => ('asr', false, false, false),
+      LLModelType.asr_realtime => ('asr', false, false, false),
       // 新版暂无对应类型，降级为cc并在extra_config保留原类型
-      _ => ('cc', false, false),
+      _ => ('cc', false, false, false),
     };
 
     final now = DateTime.now();
@@ -413,6 +420,7 @@ class BranchChatImporter {
       modelType: modelType,
       supportsThinking: supportsThinking,
       supportsVision: supportsVision,
+      supportsImageInput: supportsImageInput,
       isActive: true,
       isBuiltIn: false,
       description: spec.description,
@@ -436,8 +444,12 @@ class BranchChatImporter {
       LLModelType.vision => 'cc',
       LLModelType.vision_reasoner => 'cc',
       LLModelType.omni => 'cc',
-      LLModelType.tti => 'tti',
-      LLModelType.iti => 'iti',
+      LLModelType.tti => 'image',
+      LLModelType.iti => 'image',
+      LLModelType.image => 'image',
+      LLModelType.ttv => 'video',
+      LLModelType.itv => 'video',
+      LLModelType.video => 'video',
       LLModelType.tts => 'tts',
       LLModelType.asr => 'asr',
       LLModelType.asr_realtime => 'asr',

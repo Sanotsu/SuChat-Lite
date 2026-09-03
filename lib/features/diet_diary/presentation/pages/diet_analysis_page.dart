@@ -7,7 +7,7 @@ import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/viewmodels/user_info_viewmodel.dart';
 import '../../../../shared/constants/constant_llm_enum.dart';
 import '../../../../shared/constants/constants.dart';
-import '../../../../shared/services/model_manager_service.dart';
+import '../../../../shared/services/unified_model_bridge.dart';
 import '../../../../shared/widgets/cus_dropdown_button.dart';
 import '../../../../shared/widgets/markdown_render/cus_markdown_renderer.dart';
 import '../../../../shared/widgets/show_tool_prompt_dialog.dart';
@@ -64,16 +64,20 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
 
   Future<void> _initModels() async {
     try {
-      // 获取支持文本生成的大模型列表
-      final availableModels =
-          await ModelManagerService.getAvailableModelByTypes([LLModelType.cc]);
+      // 2026-09-03 接入平台管理统一模型库(无内置免费模型)
+      final availableModels = await UnifiedModelBridge.loadChatModels();
 
+      if (!mounted) return;
       setState(() {
         _modelList = availableModels;
         _selectedModel = availableModels.isNotEmpty
             ? availableModels.first
             : null;
       });
+
+      if (availableModels.isEmpty) {
+        ToastUtils.showError('无可用对话模型，请在聊天页-平台管理中配置');
+      }
     } catch (e) {
       if (mounted) {
         ToastUtils.showError('加载模型列表失败: $e');

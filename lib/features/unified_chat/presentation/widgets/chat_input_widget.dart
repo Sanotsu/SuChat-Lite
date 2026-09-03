@@ -22,6 +22,7 @@ import '../viewmodels/unified_chat_viewmodel.dart';
 import 'model_selector_dialog.dart';
 import 'chat_settings_dialog.dart';
 import 'image_generation_settings_dialog.dart';
+import 'video_generation_settings_dialog.dart';
 import 'speech_synthesis_settings_dialog.dart';
 import 'speech_recognition_settings_dialog.dart';
 import 'model_type_icon.dart';
@@ -351,6 +352,16 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     return _inputText.trim().isNotEmpty || _hasAttachments();
   }
 
+  /// 统一清空输入框
+  /// 注意：controller.clear()不会触发onChanged，必须同步重置_inputText状态，
+  /// 否则发送按钮的_canSend()仍为true(残留旧文本)，空内容时仍可点击导致处理出错
+  void _clearInput() {
+    setState(() {
+      _inputText = '';
+      _textController.clear();
+    });
+  }
+
   ///
   /// 发送消息
   ///
@@ -383,17 +394,24 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     // 检查当前模型类型
     // 用户需要手动选择图片生成模型来使用图片生成功能
     if (viewModel.isImageGenerationModel) {
-      // 如果是阿里的图生图(图像编辑)，可能必须传入图片
-      if (viewModel.currentPlatform?.id == UnifiedPlatformId.aliyun.name &&
-          viewModel.currentModel?.type == UnifiedModelType.iti) {
-        if (_selectedImages.isEmpty) {
-          ToastUtils.showError('请上传图片');
-          return;
-        }
+      // 支持参考图输入的模型(图生图/图像编辑)，必须传入图片才有意义
+      if (viewModel.currentModel?.supportsImageInput == true &&
+          viewModel.currentModel!.modelName.contains('qwen-mt-image') ==
+              false &&
+          viewModel.currentModel!.modelName.contains('edit') == true &&
+          _selectedImages.isEmpty) {
+        ToastUtils.showError('请上传图片');
+        return;
       }
 
       // 图片生成模型：输入内容作为提示词，选择的图片作为参考图
       await _handleImageGeneration(viewModel, text);
+      return;
+    }
+
+    // 视频生成模型：输入内容作为提示词，选择的图片作为首帧参考图
+    if (viewModel.isVideoGenerationModel) {
+      await _handleVideoGeneration(viewModel, text);
       return;
     }
 
@@ -473,7 +491,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       final List<File> images = List.from(_selectedImages);
 
       // 清空输入框和附件(避免耗时太久输入框等未复原)
-      _textController.clear();
+      _clearInput();
       _clearAllAttachments();
       _isToolExpanded = false;
 
@@ -485,6 +503,49 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       );
     } catch (e) {
       ToastUtils.showError('图片生成失败: $e');
+    }
+  }
+
+  // 处理视频生成
+  Future<void> _handleVideoGeneration(
+    UnifiedChatViewModel viewModel,
+    String prompt,
+  ) async {
+    final model = viewModel.currentModel;
+
+    if (prompt.isEmpty) {
+      ToastUtils.showError('请输入视频描述');
+      return;
+    }
+
+    // 图生视频模型(支持首帧图)必须上传图片
+    if (model?.supportsImageInput == true && _selectedImages.isEmpty) {
+      ToastUtils.showError('请上传首帧图片');
+      return;
+    }
+
+    try {
+      // 获取当前对话的视频生成设置
+      final conversation = viewModel.currentConversation;
+      final Map<String, dynamic> currentSettings =
+          conversation?.extraParams?['videoGenerationParams'] ?? {};
+
+      // 先深拷贝，再清空输入框和附件(避免耗时太久输入框等未复原)
+      final String text = _textController.text.trim();
+      final List<File> images = List.from(_selectedImages);
+
+      _clearInput();
+      _clearAllAttachments();
+      _isToolExpanded = false;
+
+      // 调用专门的视频生成方法
+      await viewModel.sendVideoGenerationMessage(
+        prompt: text,
+        images: images,
+        settings: currentSettings,
+      );
+    } catch (e) {
+      ToastUtils.showError('视频生成失败: $e');
     }
   }
 
@@ -517,7 +578,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       final String textToSynthesize = _textController.text.trim();
 
       // 清空输入框(避免耗时太久输入框等未复原)
-      _textController.clear();
+      _clearInput();
       _isToolExpanded = false;
 
       // 调用专门的语音合成方法
@@ -540,17 +601,17 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
       // 先深拷贝一份输入框文本和音频文件，在发送消息之前清空输入框和附件,避免发送按钮等在发送后依旧可见
       // 录音文件识别不需要输入框文本，只需要选择的单个文件
-      final List<File> files = List.from([_selectedAudio]);
+      final File? audioFile = _selectedAudio;
 
       // 清空输入框和附件(避免耗时太久输入框等未复原)
-      _textController.clear();
+      _clearInput();
       _clearAllAttachments();
       _isToolExpanded = false;
 
-      if (files.isNotEmpty) {
+      if (audioFile != null) {
         // 调用专门的语音识别方法
         await viewModel.sendSpeechRecognitionMessage(
-          audioPath: files.first.path,
+          audioPath: audioFile.path,
           settings: currentSettings,
         );
       }
@@ -1165,9 +1226,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           // 第一行工具
           Row(
             children: [
-              // 可选择图片(视觉模型、图生图模型)
-              if (model.supportsVision ||
-                  model.type == UnifiedModelType.iti) ...[
+              // 可选择图片(视觉模型、支持参考图输入的图片/视频生成模型)
+              if (model.supportsVision || model.supportsImageInput) ...[
                 _buildToolButton(
                   icon: Icons.image_outlined,
                   label: '图片',
@@ -1418,15 +1478,17 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   ///
   void _showAdvancedSettings(UnifiedChatViewModel viewModel) {
     final currentModel = viewModel.currentModel;
-    final isImageGenerationModel =
-        currentModel?.type == UnifiedModelType.tti ||
-        currentModel?.type == UnifiedModelType.iti;
+    final isImageGenerationModel = currentModel?.type == UnifiedModelType.image;
+    final isVideoGenerationModel = currentModel?.type == UnifiedModelType.video;
     final isSpeechSynthesisModel = currentModel?.type == UnifiedModelType.tts;
     final isSpeechRecognitionModel = currentModel?.type == UnifiedModelType.asr;
 
     if (isImageGenerationModel) {
       // 显示图片生成设置对话框
       _showImageGenerationSettings(viewModel);
+    } else if (isVideoGenerationModel) {
+      // 显示视频生成设置对话框(分辨率/时长直接影响费用)
+      _showVideoGenerationSettings(viewModel);
     } else if (isSpeechSynthesisModel) {
       // 显示语音合成设置对话框
       _showSpeechSynthesisSettings(viewModel);
@@ -1509,6 +1571,27 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           // 保存时也使用同样的参数
           viewModel.updateConversationSettings({
             'imageGenerationParams': settings,
+          });
+        },
+      ),
+    );
+  }
+
+  // 显示视频生成设置对话框
+  void _showVideoGenerationSettings(UnifiedChatViewModel viewModel) {
+    final conversation = viewModel.currentConversation;
+    final Map<String, dynamic> currentSettings =
+        conversation?.extraParams?['videoGenerationParams'] ?? {};
+
+    showDialog(
+      context: context,
+      builder: (context) => VideoGenerationSettingsDialog(
+        currentPlatform: viewModel.currentPlatform,
+        currentModel: viewModel.currentModel,
+        currentSettings: currentSettings,
+        onSave: (settings) {
+          viewModel.updateConversationSettings({
+            'videoGenerationParams': settings,
           });
         },
       ),

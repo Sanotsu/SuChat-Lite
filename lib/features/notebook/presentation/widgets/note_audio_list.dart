@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../shared/constants/constants.dart';
 import '../../../../shared/widgets/audio_player_widget.dart';
 import '../../domain/entities/note_media.dart';
 
-class NoteAudioList extends ConsumerWidget {
+class NoteAudioList extends StatelessWidget {
   final List<NoteMedia> audioList;
   final Function(NoteMedia) onDelete;
   // 是否只读
@@ -24,7 +23,7 @@ class NoteAudioList extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final audioFiles = audioList.where((media) => media.isAudio).toList();
 
     if (audioFiles.isEmpty) {

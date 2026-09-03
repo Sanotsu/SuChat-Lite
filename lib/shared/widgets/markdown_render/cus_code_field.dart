@@ -29,22 +29,44 @@ class CusCodeField extends StatefulWidget {
 class _CusCodeFieldState extends State<CusCodeField> {
   bool _copied = false;
 
-  // 选择了一个flutter_highlight 中的主题，然后修改了root的背景颜色为透明
-  // 这样可以同时保留了其他的代码高亮
-  final modifiedTheme =
-      Map<String, TextStyle>.from(themeMap['xcode'] ?? githubTheme)
-        ..['root'] = TextStyle(
-          backgroundColor: Colors.transparent,
-          color: Colors.black,
-          fontFamily: 'FiraCode', // 使用等宽字体
-          fontSize: 14,
-        );
+  // 横向滚动控制器，供Scrollbar联动显示滚动条
+  final ScrollController _horizontalController = ScrollController();
+
+  // 选择flutter_highlight主题并修改root背景为透明以融入容器：
+  // 浅色用github，深色用atom-one-dark，字色随明暗模式切换
+  Map<String, TextStyle> _buildHighlightTheme(bool isDark) {
+    final base = Map<String, TextStyle>.from(
+      themeMap[isDark ? 'atom-one-dark' : 'github'] ?? githubTheme,
+    );
+    base['root'] = TextStyle(
+      backgroundColor: Colors.transparent,
+      color: isDark ? const Color(0xFFABB2BF) : const Color(0xFF24292E),
+      fontFamily: 'FiraCode', // 使用等宽字体
+      fontSize: 13.5,
+      height: 1.5,
+    );
+    return base;
+  }
+
+  @override
+  void dispose() {
+    _horizontalController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final highlightTheme = _buildHighlightTheme(isDark);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.15)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -55,13 +77,19 @@ class _CusCodeFieldState extends State<CusCodeField> {
             child: Row(
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(0),
-                  child: Text(widget.name),
+                  padding: const EdgeInsets.only(left: 12, top: 2),
+                  child: Text(
+                    widget.name,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
                 ),
                 const Spacer(),
                 TextButton.icon(
                   style: TextButton.styleFrom(
-                    foregroundColor: Theme.of(context).colorScheme.onSurface,
+                    foregroundColor: colorScheme.onSurface,
                     textStyle: const TextStyle(fontWeight: FontWeight.normal),
                   ),
                   onPressed: () async {
@@ -86,16 +114,26 @@ class _CusCodeFieldState extends State<CusCodeField> {
               ],
             ),
           ),
-          const Divider(height: 1),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.all(4),
-
-            // 使用highlight 渲染有好的样式和高亮，自定义修改主题后也可以背景透明
-            child: HighlightView(
-              widget.codes,
-              language: widget.name,
-              theme: modifiedTheme,
+          Divider(
+            height: 1,
+            color: colorScheme.outline.withValues(alpha: 0.15),
+          ),
+          // 横向滚动必须手动包Scrollbar(仅纵向走PrimaryScrollController才有默认滚动条)
+          Scrollbar(
+            controller: _horizontalController,
+            thumbVisibility: true,
+            thickness: 6,
+            radius: const Radius.circular(3),
+            child: SingleChildScrollView(
+              controller: _horizontalController,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.all(12),
+              // 使用highlight渲染代码高亮，root背景透明融入容器
+              child: HighlightView(
+                widget.codes,
+                language: widget.name,
+                theme: highlightTheme,
+              ),
             ),
           ),
         ],

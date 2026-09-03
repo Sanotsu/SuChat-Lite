@@ -37,7 +37,13 @@ class TrainingAssistantService {
       baseUrl = "${model.baseUrl}/chat/completions";
     } else {
       headers = await ChatService.getHeaders(model);
-      baseUrl = "${ChatService.getBaseUrl(model.platform)}/chat/completions";
+      // 2026-09-03 模型自带baseUrl(统一平台完整chat端点)优先
+      final base = (model.baseUrl != null && model.baseUrl!.isNotEmpty)
+          ? model.baseUrl!
+          : ChatService.getBaseUrl(model.platform);
+      baseUrl = base.endsWith('/chat/completions')
+          ? base
+          : '$base/chat/completions';
     }
 
     // 构建提示词
@@ -122,7 +128,13 @@ class TrainingAssistantService {
       baseUrl = "${model.baseUrl}/chat/completions";
     } else {
       headers = await ChatService.getHeaders(model);
-      baseUrl = "${ChatService.getBaseUrl(model.platform)}/chat/completions";
+      // 2026-09-03 模型自带baseUrl(统一平台完整chat端点)优先
+      final base = (model.baseUrl != null && model.baseUrl!.isNotEmpty)
+          ? model.baseUrl!
+          : ChatService.getBaseUrl(model.platform);
+      baseUrl = base.endsWith('/chat/completions')
+          ? base
+          : '$base/chat/completions';
     }
 
     // 基础请求体

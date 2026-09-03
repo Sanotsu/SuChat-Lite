@@ -78,7 +78,7 @@ class FilePickerUtils {
           type: fileType != null ? fileTypeValues[fileType] : FileType.any,
           allowedExtensions: allowedExtensions,
         );
-        result = [if (single != null) single];
+        result = [?single];
       }
 
       if (result.isEmpty) return [];

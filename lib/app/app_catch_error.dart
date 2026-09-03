@@ -12,7 +12,6 @@ import '../core/services/desktop_window_service.dart';
 import '../core/services/upgrade_migrator.dart';
 import '../core/storage/cus_get_storage.dart';
 import '../core/utils/simple_tools.dart';
-import '../shared/services/model_manager_service.dart';
 import '../shared/services/network_service.dart';
 import '../shared/widgets/toast_utils.dart';
 import 'suchat_app.dart';
@@ -57,7 +56,6 @@ class AppCatchError {
     /// 这里注释掉是担心直接删除了应用下DB文件夹后，再打开APP时会没有默认模型
 
     // if (CusGetStorage().isFirstLaunch()) {
-    await ModelManagerService.initBuiltinModels(isAppInit: true);
     // await CusGetStorage().markLaunched();
     // }
 

@@ -1,6 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 
-import '../../features/media_generation/common/entities/media_generation_history.dart';
+import '../entities/media_generation_history.dart';
 import '../../features/voice_recognition/domain/entities/voice_recognition_task_info.dart';
 import '../../shared/constants/constant_llm_enum.dart';
 import '../entities/cus_llm_model.dart';

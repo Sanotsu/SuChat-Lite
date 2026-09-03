@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 // import 'package:path/path.dart' as path;
 // import 'package:path_provider/path_provider.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../data/note_dao.dart';
 import '../../domain/entities/note.dart';
@@ -14,23 +13,30 @@ import '../../domain/entities/note_category.dart';
 import '../../domain/entities/note_media.dart';
 import '../../domain/entities/note_tag.dart';
 
-part 'notebook_viewmodel.g.dart';
-
 enum NoteViewType { list, grid }
 
 enum NoteFilterType { all, todo, archived }
 
-@riverpod
-class NotebookViewModel extends _$NotebookViewModel {
+// 2026-09-02 状态管理统一：由riverpod(@riverpod AsyncNotifier)迁移为
+// ChangeNotifier(与项目主体Provider+ChangeNotifier一致)，移除riverpod依赖
+class NotebookViewModel extends ChangeNotifier {
   late NoteDao _noteRepository;
 
-  @override
-  FutureOr<List<Note>> build() async {
+  final List<Note> _notes = [];
+  bool _isLoading = false;
+  String? _error;
+
+  List<Note> get notes => _notes;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+
+  // 初始化(原riverpod build方法)
+  Future<void> init() async {
     // 初始化仓库
     _noteRepository = NoteDao();
 
     // 加载笔记列表
-    return _loadNotes();
+    await refreshNotes();
   }
 
   // 加载笔记列表
@@ -65,7 +71,8 @@ class NotebookViewModel extends _$NotebookViewModel {
     bool? isPinned,
     bool? isArchived,
   }) async {
-    state = const AsyncLoading();
+    _isLoading = true;
+    notifyListeners();
     try {
       final notes = await _loadNotes(
         searchQuery: searchQuery,
@@ -75,10 +82,15 @@ class NotebookViewModel extends _$NotebookViewModel {
         isPinned: isPinned,
         isArchived: isArchived,
       );
-      state = AsyncValue.data(notes);
+      _notes
+        ..clear()
+        ..addAll(notes);
+      _isLoading = false;
     } catch (e) {
-      state = AsyncValue.error(e, StackTrace.current);
+      _error = '$e';
+      _isLoading = false;
     }
+    notifyListeners();
   }
 
   // 获取笔记详情
@@ -118,7 +130,8 @@ class NotebookViewModel extends _$NotebookViewModel {
       final createdNote = await _noteRepository.createNote(note);
 
       // 更新状态
-      state = AsyncValue.data([...state.value ?? [], createdNote]);
+      _notes.add(createdNote);
+      notifyListeners();
 
       return createdNote;
     } catch (e) {
@@ -132,13 +145,10 @@ class NotebookViewModel extends _$NotebookViewModel {
       final updatedNote = await _noteRepository.updateNote(note);
 
       // 更新状态
-      if (state.hasValue) {
-        final notes = [...state.value!];
-        final index = notes.indexWhere((n) => n.id == note.id);
-        if (index != -1) {
-          notes[index] = updatedNote;
-          state = AsyncValue.data(notes);
-        }
+      final index = _notes.indexWhere((n) => n.id == note.id);
+      if (index != -1) {
+        _notes[index] = updatedNote;
+        notifyListeners();
       }
 
       return updatedNote;
@@ -153,10 +163,8 @@ class NotebookViewModel extends _$NotebookViewModel {
       await _noteRepository.deleteNote(id);
 
       // 更新状态
-      if (state.hasValue) {
-        final notes = state.value!.where((note) => note.id != id).toList();
-        state = AsyncValue.data(notes);
-      }
+      _notes.removeWhere((note) => note.id == id);
+      notifyListeners();
     } catch (e) {
       throw Exception('删除笔记失败: $e');
     }
@@ -265,13 +273,10 @@ class NotebookViewModel extends _$NotebookViewModel {
       note.mediaList.add(savedMedia);
 
       // 更新状态
-      if (state.hasValue) {
-        final notes = [...state.value!];
-        final index = notes.indexWhere((n) => n.id == note.id);
-        if (index != -1) {
-          notes[index] = note;
-          state = AsyncValue.data(notes);
-        }
+      final index = _notes.indexWhere((n) => n.id == note.id);
+      if (index != -1) {
+        _notes[index] = note;
+        notifyListeners();
       }
 
       return savedMedia;
@@ -290,13 +295,10 @@ class NotebookViewModel extends _$NotebookViewModel {
       note.mediaList.removeWhere((media) => media.id == mediaId);
 
       // 更新状态
-      if (state.hasValue) {
-        final notes = [...state.value!];
-        final index = notes.indexWhere((n) => n.id == note.id);
-        if (index != -1) {
-          notes[index] = note;
-          state = AsyncValue.data(notes);
-        }
+      final index = _notes.indexWhere((n) => n.id == note.id);
+      if (index != -1) {
+        _notes[index] = note;
+        notifyListeners();
       }
     } catch (e) {
       throw Exception('删除笔记媒体失败: $e');
@@ -345,17 +347,24 @@ class NotebookViewModel extends _$NotebookViewModel {
 }
 
 // 分类视图模型
-@riverpod
-class NoteCategoryViewModel extends _$NoteCategoryViewModel {
+class NoteCategoryViewModel extends ChangeNotifier {
   late NoteDao _noteRepository;
 
-  @override
-  FutureOr<List<NoteCategory>> build() async {
+  final List<NoteCategory> _categories = [];
+  bool _isLoading = false;
+  String? _error;
+
+  List<NoteCategory> get categories => _categories;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+
+  // 初始化(原riverpod build方法)
+  Future<void> init() async {
     // 初始化仓库
     _noteRepository = NoteDao();
 
     // 加载分类列表
-    return _loadCategories();
+    await refreshCategories();
   }
 
   // 加载分类列表
@@ -369,13 +378,19 @@ class NoteCategoryViewModel extends _$NoteCategoryViewModel {
 
   // 刷新分类列表
   Future<void> refreshCategories() async {
-    state = const AsyncLoading();
+    _isLoading = true;
+    notifyListeners();
     try {
       final categories = await _loadCategories();
-      state = AsyncValue.data(categories);
+      _categories
+        ..clear()
+        ..addAll(categories);
+      _isLoading = false;
     } catch (e) {
-      state = AsyncValue.error(e, StackTrace.current);
+      _error = '$e';
+      _isLoading = false;
     }
+    notifyListeners();
   }
 
   // 创建分类
@@ -390,7 +405,8 @@ class NoteCategoryViewModel extends _$NoteCategoryViewModel {
       final createdCategory = await _noteRepository.createCategory(category);
 
       // 更新状态
-      state = AsyncValue.data([...state.value ?? [], createdCategory]);
+      _categories.add(createdCategory);
+      notifyListeners();
 
       return createdCategory;
     } catch (e) {
@@ -404,13 +420,10 @@ class NoteCategoryViewModel extends _$NoteCategoryViewModel {
       final updatedCategory = await _noteRepository.updateCategory(category);
 
       // 更新状态
-      if (state.hasValue) {
-        final categories = [...state.value!];
-        final index = categories.indexWhere((c) => c.id == category.id);
-        if (index != -1) {
-          categories[index] = updatedCategory;
-          state = AsyncValue.data(categories);
-        }
+      final index = _categories.indexWhere((c) => c.id == category.id);
+      if (index != -1) {
+        _categories[index] = updatedCategory;
+        notifyListeners();
       }
 
       return updatedCategory;
@@ -425,12 +438,8 @@ class NoteCategoryViewModel extends _$NoteCategoryViewModel {
       await _noteRepository.deleteCategory(id);
 
       // 更新状态
-      if (state.hasValue) {
-        final categories = state.value!
-            .where((category) => category.id != id)
-            .toList();
-        state = AsyncValue.data(categories);
-      }
+      _categories.removeWhere((category) => category.id == id);
+      notifyListeners();
     } catch (e) {
       throw Exception('删除分类失败: $e');
     }
@@ -438,17 +447,24 @@ class NoteCategoryViewModel extends _$NoteCategoryViewModel {
 }
 
 // 标签视图模型
-@riverpod
-class NoteTagViewModel extends _$NoteTagViewModel {
+class NoteTagViewModel extends ChangeNotifier {
   late NoteDao _noteRepository;
 
-  @override
-  FutureOr<List<NoteTag>> build() async {
+  final List<NoteTag> _tags = [];
+  bool _isLoading = false;
+  String? _error;
+
+  List<NoteTag> get tags => _tags;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+
+  // 初始化(原riverpod build方法)
+  Future<void> init() async {
     // 初始化仓库
     _noteRepository = NoteDao();
 
     // 加载标签列表
-    return _loadTags();
+    await refreshTags();
   }
 
   // 加载标签列表
@@ -462,13 +478,19 @@ class NoteTagViewModel extends _$NoteTagViewModel {
 
   // 刷新标签列表
   Future<void> refreshTags() async {
-    state = const AsyncLoading();
+    _isLoading = true;
+    notifyListeners();
     try {
       final tags = await _loadTags();
-      state = AsyncValue.data(tags);
+      _tags
+        ..clear()
+        ..addAll(tags);
+      _isLoading = false;
     } catch (e) {
-      state = AsyncValue.error(e, StackTrace.current);
+      _error = '$e';
+      _isLoading = false;
     }
+    notifyListeners();
   }
 
   // 创建标签
@@ -479,7 +501,8 @@ class NoteTagViewModel extends _$NoteTagViewModel {
       final createdTag = await _noteRepository.createTag(tag);
 
       // 更新状态
-      state = AsyncValue.data([...state.value ?? [], createdTag]);
+      _tags.add(createdTag);
+      notifyListeners();
 
       return createdTag;
     } catch (e) {
@@ -493,13 +516,10 @@ class NoteTagViewModel extends _$NoteTagViewModel {
       final updatedTag = await _noteRepository.updateTag(tag);
 
       // 更新状态
-      if (state.hasValue) {
-        final tags = [...state.value!];
-        final index = tags.indexWhere((t) => t.id == tag.id);
-        if (index != -1) {
-          tags[index] = updatedTag;
-          state = AsyncValue.data(tags);
-        }
+      final index = _tags.indexWhere((t) => t.id == tag.id);
+      if (index != -1) {
+        _tags[index] = updatedTag;
+        notifyListeners();
       }
 
       return updatedTag;
@@ -514,10 +534,8 @@ class NoteTagViewModel extends _$NoteTagViewModel {
       await _noteRepository.deleteTag(id);
 
       // 更新状态
-      if (state.hasValue) {
-        final tags = state.value!.where((tag) => tag.id != id).toList();
-        state = AsyncValue.data(tags);
-      }
+      _tags.removeWhere((tag) => tag.id == id);
+      notifyListeners();
     } catch (e) {
       throw Exception('删除标签失败: $e');
     }

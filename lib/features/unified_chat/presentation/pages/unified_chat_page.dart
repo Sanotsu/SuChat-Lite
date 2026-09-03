@@ -33,12 +33,30 @@ class _UnifiedChatPageState extends State<UnifiedChatPage> {
   bool _sidebarVisible = true;
   bool _sidebarReady = false;
 
+  // 桌面内容区宽屏模式：false=限宽880居中(默认，保可读性)，true=铺满内容区
+  // (对齐Chatbox/ChatGPT的"限宽为默认+可切换宽屏"做法，记忆用户偏好)
+  static const _widescreenKey = 'desktop_content_widescreen';
+  bool _widescreen = false;
+
   @override
   void initState() {
     super.initState();
     _initializeChat();
     _checkLegacyMigrationPrompt();
     _loadSidebarVisible();
+    _loadWidescreen();
+  }
+
+  void _loadWidescreen() {
+    final saved = CusGetStorage().box.read(_widescreenKey);
+    if (saved is bool) {
+      setState(() => _widescreen = saved);
+    }
+  }
+
+  Future<void> _toggleWidescreen() async {
+    setState(() => _widescreen = !_widescreen);
+    await CusGetStorage().box.write(_widescreenKey, _widescreen);
   }
 
   void _loadSidebarVisible() {
@@ -258,6 +276,9 @@ class _UnifiedChatPageState extends State<UnifiedChatPage> {
                   onMenuPressed: isDesktop
                       ? _toggleSidebar
                       : () => _scaffoldKey.currentState?.openDrawer(),
+                  // 桌面：内容区宽度切换(标准880限宽/宽屏铺满)
+                  onToggleWidescreen: isDesktop ? _toggleWidescreen : null,
+                  isWidescreen: _widescreen,
                 ),
                 // 移动端抽屉放左侧(leading 菜单按钮在左，抽屉也从左弹出)
                 drawer: isDesktop ? null : const ChatHistoryDrawer(),
@@ -270,7 +291,8 @@ class _UnifiedChatPageState extends State<UnifiedChatPage> {
     );
   }
 
-  /// 桌面布局：左侧常驻会话侧栏 + 主内容区(限宽居中，宽屏可读性)
+  /// 桌面布局：左侧常驻会话侧栏 + 主内容区
+  /// 内容区默认限宽880居中保证宽屏可读性；宽屏模式(_widescreen)铺满
   Widget _buildDesktopBody(bool hasBg, Widget? content) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -284,7 +306,9 @@ class _UnifiedChatPageState extends State<UnifiedChatPage> {
         Expanded(
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 880),
+              constraints: BoxConstraints(
+                maxWidth: _widescreen ? double.infinity : 880,
+              ),
               child: content ?? const SizedBox.shrink(),
             ),
           ),

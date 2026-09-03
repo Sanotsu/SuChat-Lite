@@ -166,6 +166,10 @@ class UnifiedChatService {
       stream: stream,
       enableThinking: conversation.extraParams?['enableThinking'] ?? false,
       omniParams: conversation.extraParams?['omniParams'],
+      // 用户在对话设置中输入的自定义JSON参数，发送时合并到请求体顶层
+      customParams:
+          conversation.extraParams?['customRequestParams']
+              as Map<String, dynamic>?,
       tools: tools,
       toolChoice: tools != null ? 'auto' : null,
       platformId: platformId,
@@ -481,6 +485,7 @@ class UnifiedChatService {
       streamOptions: originalRequest.streamOptions,
       enableThinking: originalRequest.enableThinking,
       omniParams: originalRequest.omniParams,
+      customParams: originalRequest.customParams,
       // 保留工具配置，但不强制调用
       tools: originalRequest.tools,
       // 让模型自动决定是否需要调用工具
