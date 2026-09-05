@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../../core/utils/datetime_formatter.dart';
 import '../../../../../shared/constants/constants.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import '../../../../../shared/widgets/cus_dropdown_button.dart';
 import '../../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../../shared/widgets/keyword_input.dart';
@@ -102,77 +103,87 @@ abstract class BaseNewsPageState<T extends StatefulWidget, U> extends State<T> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: getAppBarTitleWidget(),
-        actions: [
-          // 如果点击之前是可搜索的，那么点击之后就是不可搜索(分类显示)，则清空输入
-          if (showSearchBox)
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: getAppBarTitleWidget(),
+          actions: [
+            // 如果点击之前是可搜索的，那么点击之后就是不可搜索(分类显示)，则清空输入
+            if (showSearchBox)
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    isClickSearch = !isClickSearch;
+
+                    if (!isClickSearch) {
+                      query = "";
+                      searchController.text = "";
+                    }
+                  });
+                },
+                icon: Icon(isClickSearch ? Icons.close : Icons.search),
+              ),
+            IconButton(
+              // 2026-09-04 桌面端适配：鼠标拖拽刷新体验差，提供按钮刷新
+              onPressed: () async {
+                await fetchNewsData(isRefresh: true);
+              },
+              icon: const Icon(Icons.refresh),
+            ),
             IconButton(
               onPressed: () {
-                setState(() {
-                  isClickSearch = !isClickSearch;
-
-                  if (!isClickSearch) {
-                    query = "";
-                    searchController.text = "";
-                  }
-                });
+                commonMDHintModalBottomSheet(
+                  context,
+                  "说明",
+                  getInfoMessage(),
+                  msgFontSize: 15,
+                );
               },
-              icon: Icon(isClickSearch ? Icons.close : Icons.search),
+              icon: const Icon(Icons.info_outline),
             ),
-          IconButton(
-            onPressed: () {
-              commonMDHintModalBottomSheet(
-                context,
-                "说明",
-                getInfoMessage(),
-                msgFontSize: 15,
-              );
-            },
-            icon: const Icon(Icons.info_outline),
-          ),
-        ],
-      ),
-      body: GestureDetector(
-        // 允许子控件（如TextField）接收点击事件
-        behavior: HitTestBehavior.translucent,
-        // 点击空白处可以移除焦点，关闭键盘
-        onTap: unfocusHandle,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            SizedBox(height: 4),
-
-            // 如果有查询功能，且选中了显示输入框，则显示输入框
-            if (showSearchBox && isClickSearch)
-              SizedBox(
-                height: 35,
-                child: KeywordInputArea(
-                  searchController: searchController,
-                  hintText: "Enter keywords",
-                  onSearchPressed: _handleSearch,
-                ),
-              ),
-
-            // 如果没有查询功能，或者点击了输入框是显示的但输入框的内容是空的，
-            // 同时有分类列表，就显示分类滚动
-            if ((!showSearchBox || (!isClickSearch && query.isEmpty)) &&
-                getCategories().isNotEmpty) ...[
-              if (getCategories().length < 8)
-                ScrollableCategoryList(
-                  scrollController: scrollController,
-                  categories: getCategories(),
-                  selectedIndex: _selectedIndex,
-                  onCategorySelected: _onCategorySelected,
-                ),
-
-              if (getCategories().length >= 8) buildCategoryListArea(),
-            ],
-
-            Divider(height: 8, thickness: 2),
-            buildRefreshList(),
           ],
+        ),
+        body: GestureDetector(
+          // 允许子控件（如TextField）接收点击事件
+          behavior: HitTestBehavior.translucent,
+          // 点击空白处可以移除焦点，关闭键盘
+          onTap: unfocusHandle,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(height: 4),
+
+              // 如果有查询功能，且选中了显示输入框，则显示输入框
+              if (showSearchBox && isClickSearch)
+                SizedBox(
+                  height: 35,
+                  child: KeywordInputArea(
+                    searchController: searchController,
+                    hintText: "Enter keywords",
+                    onSearchPressed: _handleSearch,
+                  ),
+                ),
+
+              // 如果没有查询功能，或者点击了输入框是显示的但输入框的内容是空的，
+              // 同时有分类列表，就显示分类滚动
+              if ((!showSearchBox || (!isClickSearch && query.isEmpty)) &&
+                  getCategories().isNotEmpty) ...[
+                if (getCategories().length < 8)
+                  ScrollableCategoryList(
+                    scrollController: scrollController,
+                    categories: getCategories(),
+                    selectedIndex: _selectedIndex,
+                    onCategorySelected: _onCategorySelected,
+                  ),
+
+                if (getCategories().length >= 8) buildCategoryListArea(),
+              ],
+
+              Divider(height: 8, thickness: 2),
+              buildRefreshList(),
+            ],
+          ),
         ),
       ),
     );
@@ -211,6 +222,7 @@ abstract class BaseNewsPageState<T extends StatefulWidget, U> extends State<T> {
   }
 
   /// 主列表，可上拉下拉刷新
+  /// 2026-09-04 桌面端适配：内容居中限宽，避免桌面全宽拉伸
   Widget buildRefreshList() {
     return Expanded(
       child: isLoading
@@ -235,18 +247,20 @@ abstract class BaseNewsPageState<T extends StatefulWidget, U> extends State<T> {
                     }
                   : null,
               // 查询框为空则显示每日放送；否则就是关键字查询后的列表
-              child: newsList.isEmpty
-                  ? ListView(
-                      padding: EdgeInsets.all(8),
-                      children: <Widget>[Center(child: Text("暂无数据"))],
-                    )
-                  : ListView.builder(
-                      itemCount: newsList.length,
-                      itemBuilder: (context, index) {
-                        var item = newsList[index];
-                        return buildNewsCard(item, index);
-                      },
-                    ),
+              child: CusContentWidth(
+                child: newsList.isEmpty
+                    ? ListView(
+                        padding: EdgeInsets.all(8),
+                        children: <Widget>[Center(child: Text("暂无数据"))],
+                      )
+                    : ListView.builder(
+                        itemCount: newsList.length,
+                        itemBuilder: (context, index) {
+                          var item = newsList[index];
+                          return buildNewsCard(item, index);
+                        },
+                      ),
+              ),
             ),
     );
   }

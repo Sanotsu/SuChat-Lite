@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:share_plus/share_plus.dart';
@@ -109,152 +110,157 @@ class _TmdbGalleryPageState extends State<TmdbGalleryPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: Text(widget.title),
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
         backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        bottom: _tabController.length > 1
-            ? TabBar(
-                controller: _tabController,
-                indicatorColor: Colors.white,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.grey,
-                tabs: _buildTabs(),
+        appBar: AppBar(
+          title: Text(widget.title),
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          bottom: _tabController.length > 1
+              ? TabBar(
+                  controller: _tabController,
+                  indicatorColor: Colors.white,
+                  labelColor: Colors.white,
+                  unselectedLabelColor: Colors.grey,
+                  tabs: _buildTabs(),
+                )
+              : null,
+        ),
+        body: Column(
+          children: [
+            // 图片计数器
+            if (_currentImages.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  '${_currentIndex + 1} / ${_currentImages.length}',
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                ),
+              ),
+            // 图片查看器
+            Expanded(
+              child: _currentImages.isEmpty
+                  ? const Center(
+                      child: Text(
+                        '暂无图片',
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                    )
+                  : PhotoViewGallery.builder(
+                      scrollPhysics: const BouncingScrollPhysics(),
+                      builder: (BuildContext context, int index) {
+                        final image = _currentImages[index];
+                        return PhotoViewGalleryPageOptions(
+                          imageProvider: NetworkImage(
+                            'https://image.tmdb.org/t/p/original${image.filePath}',
+                          ),
+                          initialScale: PhotoViewComputedScale.contained,
+                          minScale: PhotoViewComputedScale.contained * 0.8,
+                          maxScale: PhotoViewComputedScale.covered * 2.0,
+                          heroAttributes: PhotoViewHeroAttributes(
+                            tag: 'image_${image.filePath}',
+                          ),
+                        );
+                      },
+                      itemCount: _currentImages.length,
+                      loadingBuilder: (context, event) => const Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      ),
+                      backgroundDecoration: const BoxDecoration(
+                        color: Colors.black,
+                      ),
+                      pageController: _pageController,
+                      onPageChanged: (index) {
+                        setState(() {
+                          _currentIndex = index;
+                        });
+                      },
+                    ),
+            ),
+            // 缩略图列表
+            if (_currentImages.length > 1)
+              Container(
+                height: 80,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _currentImages.length,
+                  itemBuilder: (context, index) {
+                    final image = _currentImages[index];
+                    final isSelected = index == _currentIndex;
+
+                    return GestureDetector(
+                      onTap: () {
+                        _pageController.animateToPage(
+                          index,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      },
+                      child: Container(
+                        width: 60,
+                        height: 60,
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: isSelected
+                                ? Colors.white
+                                : Colors.transparent,
+                            width: 2,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: TmdbImageWidget(
+                            imagePath: image.filePath,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+        // 底部操作栏
+        bottomNavigationBar: _currentImages.isNotEmpty
+            ? Container(
+                color: Colors.black.withValues(alpha: 0.8),
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // 分享按钮
+                    IconButton(
+                      onPressed: () {
+                        _shareImage(context);
+                      },
+                      icon: const Icon(Icons.share, color: Colors.white),
+                    ),
+                    // 下载按钮
+                    IconButton(
+                      onPressed: () async {
+                        await _downloadImage();
+                      },
+                      icon: const Icon(Icons.download, color: Colors.white),
+                    ),
+                    // 信息按钮
+                    IconButton(
+                      onPressed: () {
+                        _showImageInfo();
+                      },
+                      icon: const Icon(Icons.info_outline, color: Colors.white),
+                    ),
+                  ],
+                ),
               )
             : null,
       ),
-      body: Column(
-        children: [
-          // 图片计数器
-          if (_currentImages.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                '${_currentIndex + 1} / ${_currentImages.length}',
-                style: const TextStyle(color: Colors.white, fontSize: 16),
-              ),
-            ),
-          // 图片查看器
-          Expanded(
-            child: _currentImages.isEmpty
-                ? const Center(
-                    child: Text(
-                      '暂无图片',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                  )
-                : PhotoViewGallery.builder(
-                    scrollPhysics: const BouncingScrollPhysics(),
-                    builder: (BuildContext context, int index) {
-                      final image = _currentImages[index];
-                      return PhotoViewGalleryPageOptions(
-                        imageProvider: NetworkImage(
-                          'https://image.tmdb.org/t/p/original${image.filePath}',
-                        ),
-                        initialScale: PhotoViewComputedScale.contained,
-                        minScale: PhotoViewComputedScale.contained * 0.8,
-                        maxScale: PhotoViewComputedScale.covered * 2.0,
-                        heroAttributes: PhotoViewHeroAttributes(
-                          tag: 'image_${image.filePath}',
-                        ),
-                      );
-                    },
-                    itemCount: _currentImages.length,
-                    loadingBuilder: (context, event) => const Center(
-                      child: CircularProgressIndicator(color: Colors.white),
-                    ),
-                    backgroundDecoration: const BoxDecoration(
-                      color: Colors.black,
-                    ),
-                    pageController: _pageController,
-                    onPageChanged: (index) {
-                      setState(() {
-                        _currentIndex = index;
-                      });
-                    },
-                  ),
-          ),
-          // 缩略图列表
-          if (_currentImages.length > 1)
-            Container(
-              height: 80,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: _currentImages.length,
-                itemBuilder: (context, index) {
-                  final image = _currentImages[index];
-                  final isSelected = index == _currentIndex;
-
-                  return GestureDetector(
-                    onTap: () {
-                      _pageController.animateToPage(
-                        index,
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      );
-                    },
-                    child: Container(
-                      width: 60,
-                      height: 60,
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: isSelected ? Colors.white : Colors.transparent,
-                          width: 2,
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: TmdbImageWidget(
-                          imagePath: image.filePath,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-        ],
-      ),
-      // 底部操作栏
-      bottomNavigationBar: _currentImages.isNotEmpty
-          ? Container(
-              color: Colors.black.withValues(alpha: 0.8),
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // 分享按钮
-                  IconButton(
-                    onPressed: () {
-                      _shareImage(context);
-                    },
-                    icon: const Icon(Icons.share, color: Colors.white),
-                  ),
-                  // 下载按钮
-                  IconButton(
-                    onPressed: () async {
-                      await _downloadImage();
-                    },
-                    icon: const Icon(Icons.download, color: Colors.white),
-                  ),
-                  // 信息按钮
-                  IconButton(
-                    onPressed: () {
-                      _showImageInfo();
-                    },
-                    icon: const Icon(Icons.info_outline, color: Colors.white),
-                  ),
-                ],
-              ),
-            )
-          : null,
     );
   }
 

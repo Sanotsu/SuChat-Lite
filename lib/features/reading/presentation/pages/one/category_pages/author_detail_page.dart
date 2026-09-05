@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../../shared/widgets/cus_content_width.dart';
 
 import '../../../../../../shared/widgets/common_error_empty_widgets.dart';
 import '../../../../../../shared/widgets/simple_tool_widget.dart';
@@ -103,23 +104,26 @@ class _AuthorDetailPageState extends State<AuthorDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.author.userName ?? '作者作品'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.author.userName ?? '作者作品'),
+          backgroundColor: Theme.of(context).primaryColor,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        // 因为作者信息比较长，如果固定上方，可滚动的列表区域就很少了
+        // body: Column(
+        //   children: [
+        //     // 作者信息头部
+        //     _buildAuthorHeader(),
+        //     // 作品列表
+        //     Expanded(child: _buildWorksList()),
+        //   ],
+        // ),
+        body: _buildWorksList(),
       ),
-      // 因为作者信息比较长，如果固定上方，可滚动的列表区域就很少了
-      // body: Column(
-      //   children: [
-      //     // 作者信息头部
-      //     _buildAuthorHeader(),
-      //     // 作品列表
-      //     Expanded(child: _buildWorksList()),
-      //   ],
-      // ),
-      body: _buildWorksList(),
     );
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../shared/widgets/simple_tool_widget.dart';
@@ -221,33 +222,36 @@ class _DaoduDailyCardPageState extends State<DaoduDailyCardPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('岛读')),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // 顶部日期显示
-            _buildDateHeader(),
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('岛读')),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // 顶部日期显示
+              _buildDateHeader(),
 
-            // 文章卡片区域
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                physics: _CustomPageViewPhysics(),
-                onPageChanged: (index) {
-                  final offset = index - 1000;
-                  _switchToOffset(offset);
-                },
-                itemBuilder: (context, index) {
-                  final offset = index - 1000;
-                  return _buildArticleCard(offset);
-                },
+              // 文章卡片区域
+              Expanded(
+                child: PageView.builder(
+                  controller: _pageController,
+                  physics: _CustomPageViewPhysics(),
+                  onPageChanged: (index) {
+                    final offset = index - 1000;
+                    _switchToOffset(offset);
+                  },
+                  itemBuilder: (context, index) {
+                    final offset = index - 1000;
+                    return _buildArticleCard(offset);
+                  },
+                ),
               ),
-            ),
 
-            // 底部操作区域
-            _buildBottomActions(),
-          ],
+              // 底部操作区域
+              _buildBottomActions(),
+            ],
+          ),
         ),
       ),
     );

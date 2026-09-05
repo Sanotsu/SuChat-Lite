@@ -123,8 +123,8 @@ class _DiaryListPageState extends State<DiaryListPage> {
         },
         child: GridView.builder(
           padding: const EdgeInsets.all(16),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 180,
             childAspectRatio: 3 / 5,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,

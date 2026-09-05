@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/utils/screen_helper.dart';
 import '../../../ai_tool_page.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/database/unified_chat_db_init.dart';
@@ -44,7 +45,7 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
             children: [
               Text(
                 viewModel.currentConversation?.title ?? '新对话',
-                style: const TextStyle(fontSize: 16),
+                style: const TextStyle(fontSize: 15),
               ),
               if (viewModel.currentModel != null)
                 Text(
@@ -101,6 +102,18 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
                   isWidescreen ? Icons.width_full : Icons.width_normal,
                 ),
                 tooltip: isWidescreen ? '切换为标准宽度' : '切换为宽屏模式',
+              ),
+
+            if (ScreenHelper.isMobile())
+              IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AIToolPage()),
+                  );
+                },
+                icon: Icon(Icons.apps),
+                tooltip: '更多功能',
               ),
 
             // 更多操作菜单

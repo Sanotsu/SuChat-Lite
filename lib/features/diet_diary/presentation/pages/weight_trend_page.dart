@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:intl/intl.dart';
@@ -251,41 +252,44 @@ class _WeightTrendPageState extends State<WeightTrendPage> {
     final userViewModel = Provider.of<UserInfoViewModel>(context);
     final userInfo = userViewModel.currentUser;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('体重趋势')),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? Center(child: Text(_error!))
-          : SingleChildScrollView(
-              child: Column(
-                children: [
-                  // BMI 卡片
-                  if (userInfo != null)
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('体重趋势')),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+            ? Center(child: Text(_error!))
+            : SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // BMI 卡片
+                    if (userInfo != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
+                        child: _buildBmiCard(userInfo),
+                      ),
+
+                    // 体重趋势图
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
-                      child: _buildBmiCard(userInfo),
+                      child: _buildWeightChart(),
                     ),
 
-                  // 体重趋势图
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
-                    child: _buildWeightChart(),
-                  ),
-
-                  // 体重记录列表
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
-                    child: _buildWeightRecordsList(),
-                  ),
-                ],
+                    // 体重记录列表
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
+                      child: _buildWeightRecordsList(),
+                    ),
+                  ],
+                ),
               ),
-            ),
-      floatingActionButton: buildFloatingActionButton(
-        _showAddWeightDialog,
-        context,
-        icon: Icons.add,
-        tooltip: '记录体重',
+        floatingActionButton: buildFloatingActionButton(
+          _showAddWeightDialog,
+          context,
+          icon: Icons.add,
+          tooltip: '记录体重',
+        ),
       ),
     );
   }

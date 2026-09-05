@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -504,9 +505,12 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
   @override
   Widget build(BuildContext context) {
     if (_todaysExercises.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('训练模式')),
-        body: const Center(child: Text('今天没有安排训练内容')),
+      return CusContentWidth(
+        maxWidth: 1000,
+        child: Scaffold(
+          appBar: AppBar(title: const Text('训练模式')),
+          body: const Center(child: Text('今天没有安排训练内容')),
+        ),
       );
     }
 

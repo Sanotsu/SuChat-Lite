@@ -5,6 +5,7 @@ import '../../../../core/dao/user_info_dao.dart';
 import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/entities/user_info.dart';
 import '../../../../shared/constants/constant_llm_enum.dart';
+import '../../../../shared/services/chat_completion_response.dart';
 import '../../../../shared/services/openai_compatible_apis.dart';
 import '../../../../shared/services/chat_service.dart';
 import '../../domain/entities/meal_food_detail.dart';
@@ -19,7 +20,8 @@ class DietAnalysisService {
   /// - mealFoodDetails: 一日四餐的食品详情
   /// - dailyNutrition: 一日营养摄入总量
   /// - dailyRecommended: 推荐的每日营养摄入量
-  Future<(Stream<String>, VoidCallback)> analyzeDailyDiet({
+  /// 2026-09-04 改返回完整响应流，思考模型的reasoning_content由页面分类展示
+  Future<(Stream<ChatCompletionResponse>, VoidCallback)> analyzeDailyDiet({
     required CusLLMSpec model,
     required UserInfo userInfo,
     required Map<int, List<MealFoodDetail>> mealFoodDetails,
@@ -76,8 +78,8 @@ class DietAnalysisService {
       // 'temperature': 0.7,
     };
 
-    // 调用大模型API
-    final (stream, cancel) = await getStreamOnlyStringResponse(
+    // 调用大模型API(完整响应流：delta含reasoning_content与content)
+    final (stream, cancel) = await getStreamResponse(
       baseUrl,
       headers,
       requestBody,

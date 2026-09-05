@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/utils/simple_tools.dart';
 import '../../../../../shared/constants/constants.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import '../../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../../shared/widgets/translatable_widgets.dart';
@@ -150,91 +151,98 @@ class _MALItemDetailPageState extends State<MALItemDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      appBar: AppBar(title: Text("${widget.malType.cnLabel}详情")),
-      body: buildBodyDetail(jkdata, (widget.malType.value as MALType)),
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        appBar: AppBar(title: Text("${widget.malType.cnLabel}详情")),
+        body: buildBodyDetail(jkdata, (widget.malType.value as MALType)),
+      ),
     );
   }
 
   /// 构建详情页面主体内容
+  /// 2026-09-04 桌面端适配：详情骨架限宽居中
   Widget buildBodyDetail(JKData item, MALType malType) {
-    return ListView(
-      children: [
-        /// 标题
-        TranslatableTitleButton(
-          title: item.title ?? item.name ?? "",
-          url: item.url,
-        ),
+    return CusContentWidth(
+      maxWidth: 900,
+      child: ListView(
+        children: [
+          /// 标题
+          TranslatableTitleButton(
+            title: item.title ?? item.name ?? "",
+            url: item.url,
+          ),
 
-        /// 预览图和评分区域
-        buildImageAndRatingArea(
-          context,
-          item.images.jpg?.imageUrl ?? "",
-          "mal",
-          _buildSubRatingChildren(item, malType),
-        ),
+          /// 预览图和评分区域
+          buildImageAndRatingArea(
+            context,
+            item.images.jpg?.imageUrl ?? "",
+            "mal",
+            _buildSubRatingChildren(item, malType),
+          ),
 
-        /// 显示角色表、图片集、演职表
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            // 只有动画和漫画才显示角色表
-            if ((widget.malType.value as MALType) == MALType.anime ||
-                (widget.malType.value as MALType) == MALType.manga)
+          /// 显示角色表、图片集、演职表
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              // 只有动画和漫画才显示角色表
+              if ((widget.malType.value as MALType) == MALType.anime ||
+                  (widget.malType.value as MALType) == MALType.manga)
+                TextButton(
+                  onPressed: () {
+                    setState(() => isShowCharacter = !isShowCharacter);
+                    // 如果角色不为空，则已经查询过了，不用再查了，直接展示即可
+                    if (isShowCharacter && malCharacterList.isEmpty) {
+                      queryMALCharacters();
+                    }
+                  },
+                  child: Text(isShowCharacter ? "隐藏角色表" : "显示角色表"),
+                ),
               TextButton(
                 onPressed: () {
-                  setState(() => isShowCharacter = !isShowCharacter);
-                  // 如果角色不为空，则已经查询过了，不用再查了，直接展示即可
-                  if (isShowCharacter && malCharacterList.isEmpty) {
-                    queryMALCharacters();
+                  setState(() => isShowPicture = !isShowPicture);
+                  // 如果图片不为空，则已经查询过了，不用再查了，直接展示即可
+                  if (isShowPicture && malPictureList.isEmpty) {
+                    queryMALPictures();
                   }
                 },
-                child: Text(isShowCharacter ? "隐藏角色表" : "显示角色表"),
+                child: Text(isShowPicture ? "隐藏图片集" : "显示图片集"),
               ),
-            TextButton(
-              onPressed: () {
-                setState(() => isShowPicture = !isShowPicture);
-                // 如果图片不为空，则已经查询过了，不用再查了，直接展示即可
-                if (isShowPicture && malPictureList.isEmpty) {
-                  queryMALPictures();
-                }
-              },
-              child: Text(isShowPicture ? "隐藏图片集" : "显示图片集"),
-            ),
-          ],
-        ),
-        if (isShowCharacter) buildCharacterArea(),
-        if (isShowPicture) buildPictureArea(),
+            ],
+          ),
+          if (isShowCharacter) buildCharacterArea(),
+          if (isShowPicture) buildPictureArea(),
 
-        /// 基础信息栏位
-        buildTitleText("信息"),
-        if (malType == MALType.anime) ...buildAnmieNote(item),
-        if (malType == MALType.manga) ...buildMangaNote(item),
-        if (malType == MALType.characters) ...buildCharactersNote(item),
-        if (malType == MALType.people) ...buildPeopleNote(item),
+          /// 基础信息栏位
+          buildTitleText("信息"),
+          if (malType == MALType.anime) ...buildAnmieNote(item),
+          if (malType == MALType.manga) ...buildMangaNote(item),
+          if (malType == MALType.characters) ...buildCharactersNote(item),
+          if (malType == MALType.people) ...buildPeopleNote(item),
 
-        /// 简介和背景栏位
-        Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [buildTitleText("简介")],
-        ),
-        TranslatableText(
-          text: item.synopsis ?? item.about ?? "",
-          isAppend: false,
-          stream: true,
-        ),
-
-        /// 角色和人物没有背景栏位
-        if (item.background != null && item.background!.isNotEmpty) ...[
+          /// 简介和背景栏位
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
-            children: [buildTitleText("背景")],
+            children: [buildTitleText("简介")],
           ),
-          TranslatableText(text: item.background ?? "", isAppend: false),
+          TranslatableText(
+            text: item.synopsis ?? item.about ?? "",
+            isAppend: false,
+            stream: true,
+          ),
+
+          /// 角色和人物没有背景栏位
+          if (item.background != null && item.background!.isNotEmpty) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [buildTitleText("背景")],
+            ),
+            TranslatableText(text: item.background ?? "", isAppend: false),
+          ],
+          SizedBox(height: 20.sp),
         ],
-        SizedBox(height: 20.sp),
-      ],
+      ),
     );
   }
 

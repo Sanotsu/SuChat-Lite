@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 
 import '../pages/free_statistics_page.dart';
 import '../pages/weekly_statistics_page.dart';
@@ -71,35 +72,38 @@ class _BillStatisticsPageState extends State<BillStatisticsPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('账单统计'),
-        bottom: TabBar(
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('账单统计'),
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(text: '周统计'),
+              Tab(text: '月统计'),
+              Tab(text: '年统计'),
+              Tab(text: '更多统计'),
+            ],
+          ),
+        ),
+        body: TabBarView(
           controller: _tabController,
-          tabs: const [
-            Tab(text: '周统计'),
-            Tab(text: '月统计'),
-            Tab(text: '年统计'),
-            Tab(text: '更多统计'),
+          // 使用独立的统计页面组件
+          children: [
+            // 周统计
+            WeeklyStatisticsPage(key: _weeklyKey),
+
+            // 月统计
+            MonthlyStatisticsPage(key: _monthlyKey),
+
+            // 年统计
+            YearlyStatisticsPage(key: _yearlyKey),
+
+            // 更多统计
+            FreeStatisticsPage(key: _freeKey),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        // 使用独立的统计页面组件
-        children: [
-          // 周统计
-          WeeklyStatisticsPage(key: _weeklyKey),
-
-          // 月统计
-          MonthlyStatisticsPage(key: _monthlyKey),
-
-          // 年统计
-          YearlyStatisticsPage(key: _yearlyKey),
-
-          // 更多统计
-          FreeStatisticsPage(key: _freeKey),
-        ],
       ),
     );
   }

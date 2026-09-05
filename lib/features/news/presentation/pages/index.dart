@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 
 import '../../../../shared/services/network_service.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
@@ -7,17 +8,14 @@ import '../../data/models/hitokoto.dart';
 import '../widgets/entrance_card.dart';
 import 'news_pages/baike_history_in_today_page.dart';
 import 'news_pages/duomoyu_page.dart';
-import 'news_pages/jiqizhixin_page.dart';
 import 'news_pages/momoyu_page.dart';
 import 'news_pages/newsapi_page.dart';
 import 'news_pages/readhub_page.dart';
 import 'news_pages/sina_roll_news_page.dart';
-import 'news_pages/daily_60s_page.dart';
 import 'news_pages/unofficial_ithome_page.dart';
 import 'news_pages/sut_bbc_news_page.dart';
 import 'news_pages/unofficial_toutiao_news_page.dart';
-import 'base_news_page/paper_news_image_page.dart';
-import 'news_pages/uo_zhihu_daily_page.dart';
+import 'news_pages/unofficial_zhihu_daily_page.dart';
 
 class NewsIndex extends StatefulWidget {
   const NewsIndex({super.key});
@@ -58,33 +56,36 @@ class _NewsIndexState extends State<NewsIndex> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      appBar: AppBar(title: const Text('新闻热榜')),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          /// 显示一言
-          buildHitokoto(),
-          const Divider(),
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        appBar: AppBar(title: const Text('新闻热榜')),
+        body: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            /// 显示一言
+            buildHitokoto(),
+            const Divider(),
 
-          /// 功能入口按钮
-          Expanded(
-            child: ListView(
-              children: [
-                // ...newsSourceList(context),
-                // /// 这个是分类的折叠栏
-                ...buildExpansionTileList(context),
-              ],
+            /// 功能入口按钮
+            Expanded(
+              child: ListView(
+                children: [
+                  // ...newsSourceList(context),
+                  // /// 这个是分类的折叠栏
+                  ...buildExpansionTileList(context),
+                ],
+              ),
             ),
-          ),
 
-          Text(
-            "数据来源若侵权，请及时联系我删除",
-            style: TextStyle(fontSize: 12, color: Colors.grey),
-          ),
-        ],
+            Text(
+              "数据来源若侵权，请及时联系我删除",
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -139,13 +140,6 @@ List<Widget> buildExpansionTileList(BuildContext context) {
       leading: const Icon(Icons.newspaper, color: Colors.green),
       title: _titleWidget('来源官网'),
       children: _officialSite(context),
-    ),
-    const Divider(),
-    ExpansionTile(
-      shape: const Border(),
-      leading: const Icon(Icons.newspaper, color: Colors.green),
-      title: _titleWidget('图片新闻'),
-      children: _imageNews(context),
     ),
     const Divider(),
 
@@ -238,68 +232,6 @@ List<Widget> _officialSite(BuildContext context) {
         onTap: () => showNoNetworkOrGoTargetPage(context, SinaRollNewsPage()),
       ),
     ]),
-
-    _rowWidget([
-      EntranceCard(
-        title: '机器之心',
-        subtitle: "追踪 AI 发展",
-        imageUrl: "https://www.jiqizhixin.com/favicon.ico",
-        onTap: () => showNoNetworkOrGoTargetPage(context, JiqizhixinPage()),
-      ),
-
-      SizedBox(width: 10),
-    ]),
-  ];
-}
-
-List<Widget> _imageNews(BuildContext context) {
-  return [
-    _rowWidget([
-      EntranceCard(
-        title: '每天60秒',
-        subtitle: "每天60秒读懂世界",
-        icon: Icons.newspaper,
-        onTap: () => showNoNetworkOrGoTargetPage(context, Daily60SPage()),
-      ),
-      EntranceCard(
-        title: '人民日报',
-        subtitle: "人民日报报纸图片",
-        icon: Icons.newspaper,
-        onTap: () => showNoNetworkOrGoTargetPage(
-          context,
-          PaperNewsImagePage(
-            title: '人民日报',
-            imageUrl: 'https://api.suyanw.cn/api/rmrb.php',
-          ),
-        ),
-      ),
-    ]),
-    _rowWidget([
-      EntranceCard(
-        title: '新华日报',
-        subtitle: "新华日报报纸图片",
-        icon: Icons.newspaper,
-        onTap: () => showNoNetworkOrGoTargetPage(
-          context,
-          PaperNewsImagePage(
-            title: '新华日报',
-            imageUrl: 'https://api.suyanw.cn/api/xhrb.php',
-          ),
-        ),
-      ),
-      EntranceCard(
-        title: '南方日报',
-        subtitle: "南方日报报纸图片",
-        icon: Icons.newspaper,
-        onTap: () => showNoNetworkOrGoTargetPage(
-          context,
-          PaperNewsImagePage(
-            title: '南方日报',
-            imageUrl: 'https://api.suyanw.cn/api/nfrb.php',
-          ),
-        ),
-      ),
-    ]),
   ];
 }
 
@@ -363,11 +295,21 @@ List<Widget> _outerNewsSite(BuildContext context) {
 }
 
 // 分类中的组件入口列表
+// 2026-09-04 桌面端适配：固定两列Expanded改为自适应换行
+// (移动端保持两列; 桌面宽屏每卡300限宽并居中，不再整行拉伸)
 Widget _rowWidget(List<Widget> children) {
-  return SizedBox(
-    height: 80,
-    child: Row(
-      children: children.map((child) => Expanded(child: child)).toList(),
-    ),
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      final w = constraints.maxWidth;
+      final cardW = w >= 700 ? 300.0 : (w - 12) / 2;
+      return Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        alignment: WrapAlignment.center,
+        children: children
+            .map((child) => SizedBox(width: cardW, height: 80, child: child))
+            .toList(),
+      );
+    },
   );
 }

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -437,68 +438,71 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
     final padding = isDesktop ? 24.0 : 8.0;
     final sectionSpacing = isDesktop ? 16.0 : 8.0;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('快速翻译'),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        actions: [
-          IconButton(
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const TranslationHistoryPage(),
-                ),
-              );
-            },
-            icon: Icon(Icons.history),
-            tooltip: '翻译历史',
-          ),
-          IconButton(
-            onPressed: () {
-              _showHelpDialog();
-            },
-            icon: Icon(Icons.help_outline),
-            tooltip: '使用帮助',
-          ),
-        ],
-      ),
-      resizeToAvoidBottomInset: true,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.blue[50]!, Colors.white],
-          ),
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('快速翻译'),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          actions: [
+            IconButton(
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const TranslationHistoryPage(),
+                  ),
+                );
+              },
+              icon: Icon(Icons.history),
+              tooltip: '翻译历史',
+            ),
+            IconButton(
+              onPressed: () {
+                _showHelpDialog();
+              },
+              icon: Icon(Icons.help_outline),
+              tooltip: '使用帮助',
+            ),
+          ],
         ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(padding),
-            child: Column(
-              children: [
-                // 输入区域
-                _buildInputSection(),
+        resizeToAvoidBottomInset: true,
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.blue[50]!, Colors.white],
+            ),
+          ),
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(padding),
+              child: Column(
+                children: [
+                  // 输入区域
+                  _buildInputSection(),
 
-                // 中间分隔线
-                Container(
-                  height: 1,
-                  margin: EdgeInsets.symmetric(vertical: sectionSpacing),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.transparent,
-                        Colors.grey[300]!,
-                        Colors.transparent,
-                      ],
+                  // 中间分隔线
+                  Container(
+                    height: 1,
+                    margin: EdgeInsets.symmetric(vertical: sectionSpacing),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.transparent,
+                          Colors.grey[300]!,
+                          Colors.transparent,
+                        ],
+                      ),
                     ),
                   ),
-                ),
 
-                // 结果区域
-                _buildResultSection(),
-              ],
+                  // 结果区域
+                  _buildResultSection(),
+                ],
+              ),
             ),
           ),
         ),

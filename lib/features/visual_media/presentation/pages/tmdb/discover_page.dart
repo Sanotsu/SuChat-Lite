@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 
+import '../../../../../core/utils/screen_helper.dart';
 import '../../../../../shared/widgets/toast_utils.dart';
 import '../../../data/datasources/tmdb/tmdb_apis.dart';
 import '../../../data/models/tmdb/tmdb_common.dart';
@@ -238,43 +240,71 @@ class _TmdbDiscoverPageState extends State<TmdbDiscoverPage> {
   }
 
   void _showFilterSheet() {
+    // 2026-09-04 桌面端适配：桌面改居中弹窗，移动端保持底部抽屉
+    final sheet = TmdbFilterSheet(
+      mediaType: widget.mediaType,
+      movieParams: _movieParams,
+      tvParams: _tvParams,
+      onApplyFilter: (movieParams, tvParams) {
+        setState(() {
+          _movieParams = movieParams;
+          _tvParams = tvParams;
+          _currentPage = 1;
+          _allResults.clear();
+        });
+        _loadData();
+      },
+    );
+
+    if (ScreenHelper.isDesktop()) {
+      showDialog<void>(
+        context: context,
+        builder: (context) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            width: 560,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.75,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: sheet,
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => TmdbFilterSheet(
-        mediaType: widget.mediaType,
-        movieParams: _movieParams,
-        tvParams: _tvParams,
-        onApplyFilter: (movieParams, tvParams) {
-          setState(() {
-            _movieParams = movieParams;
-            _tvParams = tvParams;
-            _currentPage = 1;
-            _allResults.clear();
-          });
-          _loadData();
-        },
-      ),
+      builder: (context) => sheet,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.tune),
-            onPressed: _showFilterSheet,
-            tooltip: '高级筛选',
-          ),
-        ],
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.title),
+          backgroundColor: Theme.of(context).primaryColor,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.tune),
+              onPressed: _showFilterSheet,
+              tooltip: '高级筛选',
+            ),
+          ],
+        ),
+        body: _buildBody(),
       ),
-      body: _buildBody(),
     );
   }
 

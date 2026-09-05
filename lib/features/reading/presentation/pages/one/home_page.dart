@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../shared/constants/constants.dart';
@@ -142,36 +143,39 @@ class _OneHomePageState extends State<OneHomePage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('ONE·一个'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          buildInfoButtonOnAction(
-            context,
-            "数据来源: 第三方 [ONE·一个](https://one-api.netstart.cn) API\n\n复杂生活的简单享受，为你提供每日精选的文字、图片和音乐。",
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // 顶部日期显示
-          _buildTopDateHeader(),
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('ONE·一个'),
+          backgroundColor: Theme.of(context).primaryColor,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          actions: [
+            buildInfoButtonOnAction(
+              context,
+              "数据来源: 第三方 [ONE·一个](https://one-api.netstart.cn) API\n\n复杂生活的简单享受，为你提供每日精选的文字、图片和音乐。",
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            // 顶部日期显示
+            _buildTopDateHeader(),
 
-          // 内容区域 - 支持左右滑动切换日期
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
-                ? buildCommonErrorWidget(
-                    error: _error,
-                    onRetry: _loadRecommendData,
-                  )
-                : _buildSwipeableContent(),
-          ),
-        ],
+            // 内容区域 - 支持左右滑动切换日期
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                  ? buildCommonErrorWidget(
+                      error: _error,
+                      onRetry: _loadRecommendData,
+                    )
+                  : _buildSwipeableContent(),
+            ),
+          ],
+        ),
       ),
     );
   }

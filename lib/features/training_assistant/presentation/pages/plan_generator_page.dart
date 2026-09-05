@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
+
 import 'package:provider/provider.dart';
 
 import '../../../../core/entities/user_info.dart';
@@ -68,10 +70,14 @@ class _PlanGeneratorPageState extends State<PlanGeneratorPage> {
         );
 
         // 根据是否显示AppBar返回不同的布局
+        // 2026-09-04 桌面端适配：独立页时内容限宽(嵌入主页tab时由父级限宽)
         return widget.showAppBar
-            ? Scaffold(
-                appBar: AppBar(title: const Text('创建训练计划')),
-                body: content,
+            ? CusContentWidth(
+                maxWidth: 1000,
+                child: Scaffold(
+                  appBar: AppBar(title: const Text('创建训练计划')),
+                  body: content,
+                ),
               )
             : content;
       },

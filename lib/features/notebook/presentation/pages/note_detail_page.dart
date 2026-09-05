@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
+
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
@@ -331,40 +333,44 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: !(_isEdited && !_isReadOnly),
-      onPopInvokedWithResult: (didPop, Object? result) async {
-        if (didPop) return;
+    // 2026-09-04 桌面端适配：内容限宽
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: PopScope(
+        canPop: !(_isEdited && !_isReadOnly),
+        onPopInvokedWithResult: (didPop, Object? result) async {
+          if (didPop) return;
 
-        final shouldPop = await _onWillPop();
-        if (shouldPop && context.mounted) {
-          Navigator.of(context).pop();
-        }
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(widget.note == null ? '新建笔记' : '编辑笔记'),
-          actions: buildActions(),
+          final shouldPop = await _onWillPop();
+          if (shouldPop && context.mounted) {
+            Navigator.of(context).pop();
+          }
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(widget.note == null ? '新建笔记' : '编辑笔记'),
+            actions: buildActions(),
+          ),
+          body: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : ScreenHelper.isDesktop()
+              // 如果是桌面端，则直接使用commonLayout，编辑器内部使用Expanded填充满剩下的区域
+              ? commonLayout()
+              // 如果是移动端，则使用可滚动组件包裹，且设定编辑器一个固定高度
+              : SingleChildScrollView(child: commonLayout()),
+          floatingActionButton: _isReadOnly
+              ? null
+              : Stack(
+                  children: [
+                    buildFloatingActionButton(
+                      _saveNote,
+                      context,
+                      icon: Icons.save,
+                      tooltip: '保存笔记',
+                    ),
+                  ],
+                ),
         ),
-        body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : ScreenHelper.isDesktop()
-            // 如果是桌面端，则直接使用commonLayout，编辑器内部使用Expanded填充满剩下的区域
-            ? commonLayout()
-            // 如果是移动端，则使用可滚动组件包裹，且设定编辑器一个固定高度
-            : SingleChildScrollView(child: commonLayout()),
-        floatingActionButton: _isReadOnly
-            ? null
-            : Stack(
-                children: [
-                  buildFloatingActionButton(
-                    _saveNote,
-                    context,
-                    icon: Icons.save,
-                    tooltip: '保存笔记',
-                  ),
-                ],
-              ),
       ),
     );
   }

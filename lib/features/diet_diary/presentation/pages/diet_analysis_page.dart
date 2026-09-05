@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -9,6 +10,7 @@ import '../../../../shared/constants/constant_llm_enum.dart';
 import '../../../../shared/constants/constants.dart';
 import '../../../../shared/services/unified_model_bridge.dart';
 import '../../../../shared/widgets/cus_dropdown_button.dart';
+import '../../../../shared/widgets/cus_thinking_collapse.dart';
 import '../../../../shared/widgets/markdown_render/cus_markdown_renderer.dart';
 import '../../../../shared/widgets/show_tool_prompt_dialog.dart';
 import '../../../../shared/widgets/toast_utils.dart';
@@ -36,6 +38,11 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
   StreamSubscription? _analysisSubscription;
   VoidCallback? _cancelAnalysis;
   String _analysisResult = '';
+
+  // 2026-09-04 思考模型的思考过程(reasoning_content)单独累积展示
+  String _thinkingResult = '';
+  DateTime? _thinkingStartTime;
+  int? _thinkingSeconds;
 
   // 自定义生成训练计划的提示词
   String? _customPrompt;
@@ -149,6 +156,9 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
       _isAnalyzing = true;
       _analysisResult = '';
       _displayedAnalysis = null;
+      _thinkingResult = '';
+      _thinkingStartTime = null;
+      _thinkingSeconds = null;
     });
 
     try {
@@ -177,11 +187,33 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
 
       _cancelAnalysis = cancel;
 
-      // 订阅流式响应
+      // 订阅流式响应(完整响应：delta含reasoning_content与content，分类累积)
       _analysisSubscription = stream.listen(
-        (content) {
+        (resp) {
           setState(() {
-            _analysisResult += content;
+            final delta = resp.choices.isNotEmpty
+                ? resp.choices.first.delta
+                : null;
+            if (delta != null) {
+              final reasoning = delta['reasoning_content'];
+              final content = delta['content'];
+              if (reasoning is String && reasoning.isNotEmpty) {
+                _thinkingStartTime ??= DateTime.now();
+                _thinkingResult += reasoning;
+              } else if (content is String && content.isNotEmpty) {
+                if (resp.id == 'error') {
+                  // 请求异常时cusText为完整错误信息(delta只是[ERROR]占位)
+                  _analysisResult += resp.cusText;
+                } else {
+                  if (_thinkingStartTime != null && _thinkingSeconds == null) {
+                    _thinkingSeconds = DateTime.now()
+                        .difference(_thinkingStartTime!)
+                        .inSeconds;
+                  }
+                  _analysisResult += content;
+                }
+              }
+            }
           });
         },
         onDone: () async {
@@ -246,97 +278,110 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('饮食分析'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.restaurant_menu),
-            tooltip: '定制食谱',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      DietRecipePage(analysisId: _displayedAnalysis?.id),
-                ),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.history),
-            tooltip: '历史记录',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => DietAnalysisHistoryPage(),
-                ),
-              ).then((result) async {
-                // 历史记录可能被删除，重新加载
-                await _loadExistingAnalysis();
-
-                // 处理从历史页面返回的分析数据
-                if (result != null && result is DietAnalysis) {
-                  _showAnalysis(result);
-                }
-              });
-            },
-          ),
-        ],
-      ),
-      body: Consumer<DietDiaryViewModel>(
-        builder: (context, viewModel, child) {
-          if (viewModel.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                /// 日期显示
-                dateCard(viewModel),
-                const SizedBox(height: 16),
-
-                /// 饮食摄入摘要
-                summaryCard(viewModel),
-                const SizedBox(height: 16),
-
-                /// 添加当日四餐的食品列表
-                MealFoodListCard(viewModel: viewModel),
-                const SizedBox(height: 16),
-
-                /// 模型选择
-                modelSelectionCard(),
-                const SizedBox(height: 16),
-
-                /// 分析按钮 - 修改为始终显示，允许重复分析
-                Row(
-                  children: [
-                    Expanded(child: showPromptButton()),
-                    const SizedBox(width: 16),
-                    Expanded(child: analysisButton()),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                /// 历史分析记录
-                if (_analysisHistory.isNotEmpty) ...[
-                  analysisHistoryCard(),
-                  const SizedBox(height: 16),
-                ],
-
-                // 当前显示的分析结果(首次生成时没有历史记录但也要追加显示)
-                if (_analysisResult.isNotEmpty) ...[
-                  analysisResultCard(viewModel),
-                  const SizedBox(height: 16),
-                ],
-              ],
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('饮食分析'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.restaurant_menu),
+              tooltip: '定制食谱',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        DietRecipePage(analysisId: _displayedAnalysis?.id),
+                  ),
+                );
+              },
             ),
-          );
-        },
+            IconButton(
+              icon: const Icon(Icons.history),
+              tooltip: '历史记录',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DietAnalysisHistoryPage(),
+                  ),
+                ).then((result) async {
+                  // 历史记录可能被删除，重新加载
+                  await _loadExistingAnalysis();
+
+                  // 处理从历史页面返回的分析数据
+                  if (result != null && result is DietAnalysis) {
+                    _showAnalysis(result);
+                  }
+                });
+              },
+            ),
+          ],
+        ),
+        body: Consumer<DietDiaryViewModel>(
+          builder: (context, viewModel, child) {
+            if (viewModel.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  /// 日期显示
+                  dateCard(viewModel),
+                  const SizedBox(height: 16),
+
+                  /// 饮食摄入摘要
+                  summaryCard(viewModel),
+                  const SizedBox(height: 16),
+
+                  /// 添加当日四餐的食品列表
+                  MealFoodListCard(viewModel: viewModel),
+                  const SizedBox(height: 16),
+
+                  /// 模型选择
+                  modelSelectionCard(),
+                  const SizedBox(height: 16),
+
+                  /// 分析按钮 - 修改为始终显示，允许重复分析
+                  Row(
+                    children: [
+                      Expanded(child: showPromptButton()),
+                      const SizedBox(width: 16),
+                      Expanded(child: analysisButton()),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  /// 历史分析记录
+                  if (_analysisHistory.isNotEmpty) ...[
+                    analysisHistoryCard(),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // 思考过程折叠区(思考模型，正文开始后默认收起)
+                  if (_thinkingResult.isNotEmpty) ...[
+                    CusThinkingCollapse(
+                      thinkingText: _thinkingResult,
+                      isThinking: _isAnalyzing && _analysisResult.isEmpty,
+                      thinkingSeconds: _thinkingSeconds,
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+
+                  // 当前显示的分析结果(首次生成时没有历史记录但也要追加显示)
+                  if (_analysisResult.isNotEmpty) ...[
+                    analysisResultCard(viewModel),
+                    const SizedBox(height: 16),
+                  ],
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -628,7 +673,7 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
               alignment: Alignment.centerLeft,
               onChanged: (value) => setState(() => _selectedModel = value!),
               itemToString: (e) =>
-                  "${CP_NAME_MAP[(e as CusLLMSpec).platform]} - ${e.name}",
+                  "${(e as CusLLMSpec).platformLabel ?? CP_NAME_MAP[e.platform]} - ${e.name}",
             ),
           ],
         ),

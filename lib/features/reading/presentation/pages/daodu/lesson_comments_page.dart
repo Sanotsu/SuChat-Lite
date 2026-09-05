@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 
 import '../../../../../shared/widgets/toast_utils.dart';
 import '../../../data/models/daodu_models.dart';
@@ -85,9 +86,12 @@ class _DaoduLessonCommentsPageState extends State<DaoduLessonCommentsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('评论 (${_comments.length})')),
-      body: _buildBody(),
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(title: Text('评论 (${_comments.length})')),
+        body: _buildBody(),
+      ),
     );
   }
 

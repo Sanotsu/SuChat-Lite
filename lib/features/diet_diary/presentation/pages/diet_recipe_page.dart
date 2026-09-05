@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -11,6 +12,7 @@ import '../../../../shared/constants/constant_llm_enum.dart';
 import '../../../../shared/constants/constants.dart';
 import '../../../../shared/services/unified_model_bridge.dart';
 import '../../../../shared/widgets/cus_dropdown_button.dart';
+import '../../../../shared/widgets/cus_thinking_collapse.dart';
 import '../../../../shared/widgets/markdown_render/cus_markdown_renderer.dart';
 import '../../../../shared/widgets/show_tool_prompt_dialog.dart';
 import '../../../../shared/widgets/toast_utils.dart';
@@ -42,6 +44,11 @@ class _DietRecipePageState extends State<DietRecipePage> {
   StreamSubscription? _recipeSubscription;
   VoidCallback? _cancelGeneration;
   String _recipeResult = '';
+
+  // 2026-09-04 思考模型的思考过程(reasoning_content)单独累积展示
+  String _thinkingResult = '';
+  DateTime? _thinkingStartTime;
+  int? _thinkingSeconds;
 
   // 自定义生成食谱的提示词
   String? _customPrompt;
@@ -140,6 +147,9 @@ class _DietRecipePageState extends State<DietRecipePage> {
       _displayedRecipe = recipe;
       _recipeResult = recipe.content;
       _isGenerating = false;
+      _thinkingResult = '';
+      _thinkingStartTime = null;
+      _thinkingSeconds = null;
     });
   }
 
@@ -167,6 +177,9 @@ class _DietRecipePageState extends State<DietRecipePage> {
       _isGenerating = true;
       _recipeResult = '';
       _displayedRecipe = null;
+      _thinkingResult = '';
+      _thinkingStartTime = null;
+      _thinkingSeconds = null;
     });
 
     try {
@@ -184,11 +197,33 @@ class _DietRecipePageState extends State<DietRecipePage> {
 
       _cancelGeneration = cancel;
 
-      // 订阅流式响应
+      // 订阅流式响应(完整响应：delta含reasoning_content与content，分类累积)
       _recipeSubscription = stream.listen(
-        (content) {
+        (resp) {
           setState(() {
-            _recipeResult += content;
+            final delta = resp.choices.isNotEmpty
+                ? resp.choices.first.delta
+                : null;
+            if (delta != null) {
+              final reasoning = delta['reasoning_content'];
+              final content = delta['content'];
+              if (reasoning is String && reasoning.isNotEmpty) {
+                _thinkingStartTime ??= DateTime.now();
+                _thinkingResult += reasoning;
+              } else if (content is String && content.isNotEmpty) {
+                if (resp.id == 'error') {
+                  // 请求异常时cusText为完整错误信息(delta只是[ERROR]占位)
+                  _recipeResult += resp.cusText;
+                } else {
+                  if (_thinkingStartTime != null && _thinkingSeconds == null) {
+                    _thinkingSeconds = DateTime.now()
+                        .difference(_thinkingStartTime!)
+                        .inSeconds;
+                  }
+                  _recipeResult += content;
+                }
+              }
+            }
           });
         },
         onDone: () async {
@@ -257,87 +292,100 @@ class _DietRecipePageState extends State<DietRecipePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('定制食谱'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.history),
-            tooltip: '历史记录',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const DietRecipeHistoryPage(),
-                ),
-              ).then((result) async {
-                // 历史记录可能被删除，重新加载
-                await _loadExistingRecipes();
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('定制食谱'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.history),
+              tooltip: '历史记录',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const DietRecipeHistoryPage(),
+                  ),
+                ).then((result) async {
+                  // 历史记录可能被删除，重新加载
+                  await _loadExistingRecipes();
 
-                // 处理从历史页面返回的食谱数据
-                if (result != null && result is DietRecipe) {
-                  _showRecipe(result);
-                }
-              });
-            },
-          ),
-        ],
-      ),
-      body: Consumer2<DietDiaryViewModel, UserInfoViewModel>(
-        builder: (context, viewModel, userViewModel, child) {
-          if (viewModel.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // 用户信息卡片
-                if (userViewModel.currentUser != null) ...[
-                  userInfoCard(userViewModel.currentUser!),
-                  const SizedBox(height: 16),
-                ],
-
-                /// 营养摄入卡片
-                nutritionCard(viewModel),
-                MealFoodListCard(viewModel: viewModel),
-                const SizedBox(height: 16),
-
-                /// 食谱定制选项卡片
-                recipeCustomizationCard(),
-                const SizedBox(height: 16),
-
-                // 模型选择卡片
-                modelSelectionCard(),
-                const SizedBox(height: 16),
-
-                // 生成按钮
-                Row(
-                  children: [
-                    Expanded(child: showPromptButton()),
-                    const SizedBox(width: 16),
-                    Expanded(child: generateButton()),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                /// 历史食谱记录
-                if (_recipeHistory.isNotEmpty) ...[
-                  recipeHistoryCard(),
-                  const SizedBox(height: 16),
-                ],
-
-                // 当前显示的食谱记录
-                if (_recipeResult.isNotEmpty) ...[
-                  recipeResultCard(viewModel),
-                  const SizedBox(height: 16),
-                ],
-              ],
+                  // 处理从历史页面返回的食谱数据
+                  if (result != null && result is DietRecipe) {
+                    _showRecipe(result);
+                  }
+                });
+              },
             ),
-          );
-        },
+          ],
+        ),
+        body: Consumer2<DietDiaryViewModel, UserInfoViewModel>(
+          builder: (context, viewModel, userViewModel, child) {
+            if (viewModel.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 用户信息卡片
+                  if (userViewModel.currentUser != null) ...[
+                    userInfoCard(userViewModel.currentUser!),
+                    const SizedBox(height: 16),
+                  ],
+
+                  /// 营养摄入卡片
+                  nutritionCard(viewModel),
+                  MealFoodListCard(viewModel: viewModel),
+                  const SizedBox(height: 16),
+
+                  /// 食谱定制选项卡片
+                  recipeCustomizationCard(),
+                  const SizedBox(height: 16),
+
+                  // 模型选择卡片
+                  modelSelectionCard(),
+                  const SizedBox(height: 16),
+
+                  // 生成按钮
+                  Row(
+                    children: [
+                      Expanded(child: showPromptButton()),
+                      const SizedBox(width: 16),
+                      Expanded(child: generateButton()),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  /// 历史食谱记录
+                  if (_recipeHistory.isNotEmpty) ...[
+                    recipeHistoryCard(),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // 思考过程折叠区(思考模型，正文开始后默认收起)
+                  if (_thinkingResult.isNotEmpty) ...[
+                    CusThinkingCollapse(
+                      thinkingText: _thinkingResult,
+                      isThinking: _isGenerating && _recipeResult.isEmpty,
+                      thinkingSeconds: _thinkingSeconds,
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+
+                  // 当前显示的食谱记录
+                  if (_recipeResult.isNotEmpty) ...[
+                    recipeResultCard(viewModel),
+                    const SizedBox(height: 16),
+                  ],
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -755,7 +803,7 @@ class _DietRecipePageState extends State<DietRecipePage> {
               alignment: Alignment.centerLeft,
               onChanged: (value) => setState(() => _selectedModel = value!),
               itemToString: (e) =>
-                  "${CP_NAME_MAP[(e as CusLLMSpec).platform]} - ${e.name}",
+                  "${(e as CusLLMSpec).platformLabel ?? CP_NAME_MAP[e.platform]} - ${e.name}",
             ),
           ],
         ),

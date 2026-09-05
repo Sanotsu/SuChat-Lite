@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import 'package:intl/intl.dart';
 import 'package:month_picker_dialog/month_picker_dialog.dart';
 
@@ -230,74 +231,77 @@ class _OneCategoryPageState extends State<OneCategoryPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('分类'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const OneSearchPage()),
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('分类'),
+          backgroundColor: Theme.of(context).primaryColor,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.search, color: Colors.white),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const OneSearchPage()),
+              ),
             ),
+          ],
+          bottom: TabBar(
+            controller: _tabController,
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            indicatorColor: Colors.white,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            tabs: _categories
+                .map((category) => Tab(text: category['name']))
+                .toList(),
           ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: _categories
-              .map((category) => Tab(text: category['name']))
-              .toList(),
         ),
-      ),
-      body: Column(
-        children: [
-          // Text(_tabController.index.toString()),
+        body: Column(
+          children: [
+            // Text(_tabController.index.toString()),
 
-          // 月份选择器
-          // 根据顶部TabBar的index来判断是否显示月份选择器，小记及需要二级菜单的，不显示月份选择器
-          if (_tabController.index <= 4) _buildMonthSelector(),
+            // 月份选择器
+            // 根据顶部TabBar的index来判断是否显示月份选择器，小记及需要二级菜单的，不显示月份选择器
+            if (_tabController.index <= 4) _buildMonthSelector(),
 
-          // 分类内容
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: _categories.map((category) {
-                switch (category['key']) {
-                  case 'hp':
-                    return _buildHpTab();
-                  case 'essay':
-                    return _buildEssayTab();
-                  case 'question':
-                    return _buildQuestionTab();
-                  case 'movie':
-                    return _buildMovieTab();
-                  case 'music':
-                    return _buildMusicTab();
-                  case 'diary':
-                    return DiaryListPage();
-                  case 'topic':
-                    return TopicListPage();
-                  case 'hot':
-                    return RankListPage();
-                  case 'serial':
-                    return SerialListPage();
-                  case 'author':
-                    return AuthorListPage();
-                  default:
-                    return _buildEmptyWidget(category['key']);
-                }
-              }).toList(),
+            // 分类内容
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: _categories.map((category) {
+                  switch (category['key']) {
+                    case 'hp':
+                      return _buildHpTab();
+                    case 'essay':
+                      return _buildEssayTab();
+                    case 'question':
+                      return _buildQuestionTab();
+                    case 'movie':
+                      return _buildMovieTab();
+                    case 'music':
+                      return _buildMusicTab();
+                    case 'diary':
+                      return DiaryListPage();
+                    case 'topic':
+                      return TopicListPage();
+                    case 'hot':
+                      return RankListPage();
+                    case 'serial':
+                      return SerialListPage();
+                    case 'author':
+                      return AuthorListPage();
+                    default:
+                      return _buildEmptyWidget(category['key']);
+                  }
+                }).toList(),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -354,8 +358,8 @@ class _OneCategoryPageState extends State<OneCategoryPage>
 
     return GridView.builder(
       padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 180,
         childAspectRatio: 1.3,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,

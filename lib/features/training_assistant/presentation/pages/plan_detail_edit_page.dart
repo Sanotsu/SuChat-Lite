@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import '../../../../core/utils/screen_helper.dart';
 import '../../../../shared/constants/constants.dart';
 import '../../domain/entities/training_plan_detail.dart';
@@ -33,44 +34,49 @@ class _PlanDetailEditPageState extends State<PlanDetailEditPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('编辑${dayWeekMapping[widget.day]}训练'),
-        actions: [TextButton(onPressed: _saveChanges, child: const Text('保存'))],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Form(
-              key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // 训练动作列表
-                  ..._details.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final detail = entry.value;
-                    return _buildExerciseEditCard(index, detail);
-                  }),
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('编辑${dayWeekMapping[widget.day]}训练'),
+          actions: [
+            TextButton(onPressed: _saveChanges, child: const Text('保存')),
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    // 训练动作列表
+                    ..._details.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final detail = entry.value;
+                      return _buildExerciseEditCard(index, detail);
+                    }),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                  // 添加新动作按钮
-                  ElevatedButton.icon(
-                    onPressed: _addNewExercise,
-                    icon: const Icon(Icons.add),
-                    label: const Text('添加动作'),
-                    style: ScreenHelper.isDesktop()
-                        ? ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 24),
-                          )
-                        : null,
-                  ),
+                    // 添加新动作按钮
+                    ElevatedButton.icon(
+                      onPressed: _addNewExercise,
+                      icon: const Icon(Icons.add),
+                      label: const Text('添加动作'),
+                      style: ScreenHelper.isDesktop()
+                          ? ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 24),
+                            )
+                          : null,
+                    ),
 
-                  // 底部留白，确保滚动时最后一项可以完全显示
-                  // const SizedBox(height: 80),
-                ],
+                    // 底部留白，确保滚动时最后一项可以完全显示
+                    // const SizedBox(height: 80),
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 

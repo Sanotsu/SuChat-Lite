@@ -12,6 +12,7 @@ import '../core/services/desktop_window_service.dart';
 import '../core/services/upgrade_migrator.dart';
 import '../core/storage/cus_get_storage.dart';
 import '../core/utils/simple_tools.dart';
+import '../core/utils/storage_paths.dart';
 import '../shared/services/network_service.dart';
 import '../shared/widgets/toast_utils.dart';
 import 'suchat_app.dart';
@@ -39,7 +40,10 @@ class AppCatchError {
         SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
       }
 
-      await GetStorage.init(CusGetStorage.storeName);
+      // 2026-09-04 容器文件收纳进私有区(直接以带path的工厂实例化并
+      // 初始化，init()静态方法不支持path参数)
+      final gsPath = (await getGetStorageDir()).path;
+      await GetStorage(CusGetStorage.storeName, gsPath).initStorage;
 
       // 0.1.5 起零存储权限启动：核心数据在应用私有区，直接初始化应用
       await initApp();

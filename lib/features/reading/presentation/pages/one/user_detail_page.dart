@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../shared/constants/constants.dart';
@@ -281,12 +282,15 @@ class _OneUserDetailPageState extends State<OneUserDetailPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? buildCommonErrorWidget(error: _error, onRetry: _loadUserData)
-          : _buildUserContent(),
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+            ? buildCommonErrorWidget(error: _error, onRetry: _loadUserData)
+            : _buildUserContent(),
+      ),
     );
   }
 
@@ -491,8 +495,8 @@ class _OneUserDetailPageState extends State<OneUserDetailPage>
           child: GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 100,
               childAspectRatio: 1,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../shared/constants/constants.dart';
@@ -238,22 +239,25 @@ class _OneSearchPageState extends State<OneSearchPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('搜索'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: Column(
-        children: [
-          // 搜索区域
-          _buildSearchArea(),
-          // 分类选择
-          _buildCategorySelector(),
-          // 搜索结果
-          Expanded(child: _buildSearchResults()),
-        ],
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('搜索'),
+          backgroundColor: Theme.of(context).primaryColor,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        body: Column(
+          children: [
+            // 搜索区域
+            _buildSearchArea(),
+            // 分类选择
+            _buildCategorySelector(),
+            // 搜索结果
+            Expanded(child: _buildSearchResults()),
+          ],
+        ),
       ),
     );
   }

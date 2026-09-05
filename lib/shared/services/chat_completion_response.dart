@@ -63,6 +63,8 @@ class ChatCompletionResponse {
         return transcript;
       }
 
+      // 2026-09-04 仅返回正文content；思考模型的reasoning_content由调用方
+      // 通过getStreamResponse的delta自行分类展示(如聊天模块/扩展功能思考折叠区)
       return choices[0].delta?["content"] ?? "";
     }
 

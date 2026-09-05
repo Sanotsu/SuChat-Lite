@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../../../../core/network/dio_client/interceptor_error.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import '../../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../../shared/widgets/simple_tool_widget.dart';
+import '../../../../../shared/widgets/toast_utils.dart';
 import '../../../../../shared/widgets/translatable_widgets.dart';
 import '../../../data/datasources/bangumi/bangumi_apis.dart';
 import '../../../data/models/bangumi/bangumi.dart';
@@ -56,49 +59,62 @@ class _BangumiItemDetailPageState extends State<BangumiItemDetailPage> {
       isLoading = true;
     });
 
-    // 查询指定条目详情
-    var stat = await getBangumiSubjectById(widget.id);
+    // 2026-09-04 补异常兜底：任一请求失败时复位loading，避免页面永远转圈
+    try {
+      // 查询指定条目详情
+      var stat = await getBangumiSubjectById(widget.id);
 
-    // 查询指定条目的演职表
-    var persons = await getBangumiSubjectRelated(widget.id, type: "persons");
+      // 查询指定条目的演职表
+      var persons = await getBangumiSubjectRelated(widget.id, type: "persons");
 
-    // 查询指定条目的角色
-    var characters = await getBangumiSubjectRelated(
-      widget.id,
-      type: "characters",
-    );
+      // 查询指定条目的角色
+      var characters = await getBangumiSubjectRelated(
+        widget.id,
+        type: "characters",
+      );
 
-    // 查询指定条目的关联条目
-    var subjects = await getBangumiSubjectRelated(widget.id, type: "subjects");
+      // 查询指定条目的关联条目
+      var subjects = await getBangumiSubjectRelated(
+        widget.id,
+        type: "subjects",
+      );
 
-    if (!mounted) return;
-    setState(() {
-      bgmSub = stat;
+      if (!mounted) return;
+      setState(() {
+        bgmSub = stat;
 
-      personList = persons;
-      characterList = characters;
-      subjectList = subjects;
+        personList = persons;
+        characterList = characters;
+        subjectList = subjects;
 
-      /// 构建评分柱状图的数据。
-      // 先清空，再构建
-      bgmScoreList.clear();
+        /// 构建评分柱状图的数据。
+        // 先清空，再构建
+        bgmScoreList.clear();
 
-      List<ChartData> tempScores = [];
-      if (bgmSub.rating?.count != null) {
-        bgmSub.rating?.count!.forEach((key, value) {
-          tempScores.add(
-            ChartData("$key星", value / (bgmSub.rating?.total ?? 1)),
-          );
+        List<ChartData> tempScores = [];
+        if (bgmSub.rating?.count != null) {
+          bgmSub.rating?.count!.forEach((key, value) {
+            tempScores.add(
+              ChartData("$key星", value / (bgmSub.rating?.total ?? 1)),
+            );
+          });
+        }
+
+        // 从左往右日期逐渐变大，所以数据要翻转
+        bgmScoreList.addAll([tempScores.reversed.toList()]);
+      });
+    } on CusHttpException catch (e) {
+      // http连接相关的报错在拦截器就有弹窗报错了
+      debugPrint(e.toString());
+    } catch (e) {
+      if (mounted) ToastUtils.showError("查询失败: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
         });
       }
-
-      // 从左往右日期逐渐变大，所以数据要翻转
-      bgmScoreList.addAll([tempScores.reversed.toList()]);
-    });
-
-    setState(() {
-      isLoading = false;
-    });
+    }
   }
 
   // 没看到剧照或者图片接口，这个图片可以省略
@@ -125,93 +141,107 @@ class _BangumiItemDetailPageState extends State<BangumiItemDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      appBar: AppBar(title: Text("${widget.subType}详情")),
-      body: isLoading
-          ? buildLoader(isLoading)
-          : ListView(
-              children: [
-                /// 标题
-                buildUrlTitle(
-                  context,
-                  (bgmSub.nameCn != null && bgmSub.nameCn!.isNotEmpty)
-                      ? bgmSub.nameCn!
-                      : bgmSub.name ?? "",
-                ),
-
-                /// 预览图和评分区域
-                buildImageAndRatingArea(
-                  context,
-                  bgmSub.images?.common ?? "",
-                  "bangumi",
-                  _buildSubRatingChildren(bgmSub),
-                ),
-
-                // 跳转到分集简介按钮
-                // (2024-09-25 应该是只有动画才有意义)
-                if (bgmSub.type == 2)
-                  buildGotoButton(
-                    context,
-                    "分集简介",
-                    BangumiEpisodeDetailPage(
-                      subjectId: bgmSub.id!,
-                      subjectName:
-                          (bgmSub.nameCn != null && bgmSub.nameCn!.isNotEmpty)
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        appBar: AppBar(title: Text("${widget.subType}详情")),
+        body: isLoading
+            ? buildLoader(isLoading)
+            // 2026-09-04 桌面端适配：详情骨架限宽居中
+            : CusContentWidth(
+                maxWidth: 900,
+                child: ListView(
+                  children: [
+                    /// 标题
+                    buildUrlTitle(
+                      context,
+                      (bgmSub.nameCn != null && bgmSub.nameCn!.isNotEmpty)
                           ? bgmSub.nameCn!
                           : bgmSub.name ?? "",
                     ),
-                  ),
 
-                /// 图片(没找到有意义的获取图片API)
-                // buildTitleText("图片"),
-                // buildPictureArea(),
-                if (characterList.isNotEmpty)
-                  RelatedCardList<int, String>(
-                    label: "角色表",
-                    list: characterList
-                        .map((e) => buildRelatedSimpleMap(e))
-                        .toList(),
-                    targetPageBuilder: (int data, String type) =>
-                        BangumiItemDetailPage(id: data, subType: type),
-                    dataExtractor: (Map<String, dynamic> item) => item["data"],
-                    typeExtractor: (Map<String, dynamic> item) => item["type"],
-                  ),
+                    /// 预览图和评分区域
+                    buildImageAndRatingArea(
+                      context,
+                      bgmSub.images?.common ?? "",
+                      "bangumi",
+                      _buildSubRatingChildren(bgmSub),
+                    ),
 
-                if (personList.isNotEmpty)
-                  RelatedCardList<int, String>(
-                    label: "演职表",
-                    list: personList
-                        .map((e) => buildRelatedSimpleMap(e))
-                        .toList(),
-                    targetPageBuilder: (int data, String type) =>
-                        BangumiItemDetailPage(id: data, subType: type),
-                    dataExtractor: (Map<String, dynamic> item) => item["data"],
-                    typeExtractor: (Map<String, dynamic> item) => item["type"],
-                  ),
+                    // 跳转到分集简介按钮
+                    // (2024-09-25 应该是只有动画才有意义)
+                    if (bgmSub.type == 2)
+                      buildGotoButton(
+                        context,
+                        "分集简介",
+                        BangumiEpisodeDetailPage(
+                          subjectId: bgmSub.id!,
+                          subjectName:
+                              (bgmSub.nameCn != null &&
+                                  bgmSub.nameCn!.isNotEmpty)
+                              ? bgmSub.nameCn!
+                              : bgmSub.name ?? "",
+                        ),
+                      ),
 
-                if (subjectList.isNotEmpty)
-                  RelatedCardList<int, String>(
-                    label: "关联作品",
-                    list: subjectList
-                        .map((e) => buildRelatedSimpleMap(e))
-                        .toList(),
-                    targetPageBuilder: (int data, String type) =>
-                        BangumiItemDetailPage(id: data, subType: type),
-                    dataExtractor: (Map<String, dynamic> item) => item["data"],
-                    typeExtractor: (Map<String, dynamic> item) => item["type"],
-                  ),
+                    /// 图片(没找到有意义的获取图片API)
+                    // buildTitleText("图片"),
+                    // buildPictureArea(),
+                    if (characterList.isNotEmpty)
+                      RelatedCardList<int, String>(
+                        label: "角色表",
+                        list: characterList
+                            .map((e) => buildRelatedSimpleMap(e))
+                            .toList(),
+                        targetPageBuilder: (int data, String type) =>
+                            BangumiItemDetailPage(id: data, subType: type),
+                        dataExtractor: (Map<String, dynamic> item) =>
+                            item["data"],
+                        typeExtractor: (Map<String, dynamic> item) =>
+                            item["type"],
+                      ),
 
-                ///
-                /// 上面几个占位的高度是比较固定的，下面的都不怎么固定
-                ///
-                /// 基础信息栏位
-                buildTitleText("信息"),
-                ...buildAnmieInfo(bgmSub),
+                    if (personList.isNotEmpty)
+                      RelatedCardList<int, String>(
+                        label: "演职表",
+                        list: personList
+                            .map((e) => buildRelatedSimpleMap(e))
+                            .toList(),
+                        targetPageBuilder: (int data, String type) =>
+                            BangumiItemDetailPage(id: data, subType: type),
+                        dataExtractor: (Map<String, dynamic> item) =>
+                            item["data"],
+                        typeExtractor: (Map<String, dynamic> item) =>
+                            item["type"],
+                      ),
 
-                SizedBox(height: 20.sp),
-              ],
-            ),
+                    if (subjectList.isNotEmpty)
+                      RelatedCardList<int, String>(
+                        label: "关联作品",
+                        list: subjectList
+                            .map((e) => buildRelatedSimpleMap(e))
+                            .toList(),
+                        targetPageBuilder: (int data, String type) =>
+                            BangumiItemDetailPage(id: data, subType: type),
+                        dataExtractor: (Map<String, dynamic> item) =>
+                            item["data"],
+                        typeExtractor: (Map<String, dynamic> item) =>
+                            item["type"],
+                      ),
+
+                    ///
+                    /// 上面几个占位的高度是比较固定的，下面的都不怎么固定
+                    ///
+                    /// 基础信息栏位
+                    buildTitleText("信息"),
+                    ...buildAnmieInfo(bgmSub),
+
+                    SizedBox(height: 20.sp),
+                  ],
+                ),
+              ),
+      ),
     );
   }
 

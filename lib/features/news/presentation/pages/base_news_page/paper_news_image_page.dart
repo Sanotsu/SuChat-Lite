@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../../../../../core/network/dio_client/cus_http_client.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import '../../../../../shared/widgets/toast_utils.dart';
 import '../../widgets/news_image_gallery.dart';
 
@@ -69,11 +70,15 @@ class _PaperNewsImagePageState extends State<PaperNewsImagePage> {
 
   @override
   Widget build(BuildContext context) {
-    return isLoading
-        ? Scaffold(
-            appBar: AppBar(title: Text(widget.title)),
-            body: Center(child: CircularProgressIndicator()),
-          )
-        : NewsImageGallery(imageUrls: imageList, title: widget.title);
+    // 2026-09-04 桌面端适配：整体限宽居中
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: isLoading
+          ? Scaffold(
+              appBar: AppBar(title: Text(widget.title)),
+              body: Center(child: CircularProgressIndicator()),
+            )
+          : NewsImageGallery(imageUrls: imageList, title: widget.title),
+    );
   }
 }

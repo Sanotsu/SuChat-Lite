@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../../shared/widgets/cus_content_width.dart';
 
 import '../../../../../../core/utils/datetime_formatter.dart';
 import '../../../../../../core/utils/get_dir.dart';
@@ -17,28 +18,31 @@ class DiaryDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('小记详情'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          if (diary.picture != null && diary.picture!.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.download),
-              onPressed: () async {
-                // 网络图片就保存都指定位置
-                await saveImageToLocal(
-                  diary.picture!,
-                  imageName: "ONE一个_小记_${fileTs(DateTime.now())}.jpg",
-                  dlDir: await getAppPrivateDir(subfolder: "NET_DL/one"),
-                );
-              },
-            ),
-        ],
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('小记详情'),
+          backgroundColor: Theme.of(context).primaryColor,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          actions: [
+            if (diary.picture != null && diary.picture!.isNotEmpty)
+              IconButton(
+                icon: const Icon(Icons.download),
+                onPressed: () async {
+                  // 网络图片就保存都指定位置
+                  await saveImageToLocal(
+                    diary.picture!,
+                    imageName: "ONE一个_小记_${fileTs(DateTime.now())}.jpg",
+                    dlDir: await getAppPrivateDir(subfolder: "NET_DL/one"),
+                  );
+                },
+              ),
+          ],
+        ),
+        body: SingleChildScrollView(child: buildBody()),
       ),
-      body: SingleChildScrollView(child: buildBody()),
     );
   }
 

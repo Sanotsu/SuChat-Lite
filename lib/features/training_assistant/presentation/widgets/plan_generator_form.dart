@@ -558,7 +558,7 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
             alignment: Alignment.centerLeft,
             onChanged: (value) => setState(() => selectedModel = value!),
             itemToString: (e) =>
-                "${CP_NAME_MAP[(e as CusLLMSpec).platform]} - ${e.name}",
+                "${(e as CusLLMSpec).platformLabel ?? CP_NAME_MAP[e.platform]} - ${e.name}",
           ),
         ),
 

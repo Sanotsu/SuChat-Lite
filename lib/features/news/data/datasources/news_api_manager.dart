@@ -4,7 +4,6 @@ import '../../../../shared/constants/default_models.dart';
 import '../models/baike_history_in_today_resp.dart';
 import '../models/duomoyu_resp.dart';
 import '../models/uo_ithome_resp.dart';
-import '../models/jiqizhixin_resp.dart';
 import '../models/momoyu_resp.dart';
 import '../models/news_api_resp.dart';
 import '../models/news_now_resp.dart';
@@ -23,27 +22,36 @@ class NewsApiManager extends BaseApiManager<NewsApiConfig> {
   NewsApiManager._internal() : super(NewsApiConfig());
 
   // 新闻源基础URL
-  static const String _newsapiBase = "https://newsapi.org/v2";
+
+  // 热点聚合
+  // 摸摸鱼
   static const String _momoyuBase = "https://momoyu.cc/api";
+  // 多模鱼
+  static const String _duomoyuBase = "https://duomoyu.com/api";
+  // 这个和上面的类似，暂时不单独显示了
+  static const String _newsnowBase = "https://newsnow.busiyi.world/api";
+
+  // 来源官网
   static const String _readhubBase = "https://api.readhub.cn";
   static const String _sinaRollNewsBase =
       "https://feed.mix.sina.com.cn/api/roll/get";
+
+  // 外网新闻源
+  static const String _newsapiBase = "https://newsapi.org/v2";
+  static const String _sutBbcNewsBase = "https://bbc-news-api.vercel.app/news";
+
+  // 野源数据（随时不可用）
+  // 头条新闻
   static const String _toutiaoBase = "https://www.toutiao.com/api/pc/feed/";
+  // it之家
   static const String _ithomeNewsBase =
       "https://api.ithome.com/json/newslist/news";
-  static const String _sutBbcNewsBase = "https://bbc-news-api.vercel.app/news";
-  static const String _duomoyuBase = "https://duomoyu.com/api";
-  static const String _jiqizhixinBase =
-      "https://www.jiqizhixin.com/api/v4/articles.json";
-  static const String _newsnowBase = "https://newsnow.busiyi.world/api";
-
+  // 知乎日报
   static const String _uoZhihudailyBase = "https://apis.netstart.cn/zhihudaily";
-
+  // 历史上的今天
   // static const String _baikeHistoryInTodayBase = "https://api.asilu.com/today";
   static const String _baikeHistoryInTodayBase =
       "https://60s.viki.moe/v2/today_in_history";
-
-  // static const String _hitokotoBase = "https://v1.hitokoto.cn";
 
   /// 获取NewsAPI新闻列表
   Future<NewsApiResp> getNewsapiList({
@@ -303,15 +311,42 @@ class NewsApiManager extends BaseApiManager<NewsApiConfig> {
     return SutBbcNewsResp.fromJson(respData);
   }
 
-  /// 获取多摸鱼
-  Future<DuomoyuResp> getDuomoyuList({
-    String category = 'thepaper',
+  /// 获取多摸鱼新闻源列表(动态分类)
+  /// 2026-09-04 API 改版：/api/{分类} 改为 /api/news/sources + /api/news/rankings/{slug}
+  Future<List<DuomoyuSource>> getDuomoyuSources({
     bool forceRefresh = false,
   }) async {
-    final cacheKey = 'duomoyu_hot_list_$category';
+    final cacheKey = 'duomoyu_news_sources';
 
     var respData = await get(
-      path: "$_duomoyuBase/$category",
+      path: "$_duomoyuBase/news/sources",
+      forceRefresh: forceRefresh,
+      customCacheKey: cacheKey,
+      // 源列表变动低频，缓存放宽
+      cacheDuration: const Duration(minutes: 30),
+    );
+
+    respData = processResponse(respData);
+
+    final resp = DuomoyuSourcesResp.fromJson(respData);
+    if (resp.success != true || resp.data?.sources == null) {
+      throw Exception("查询新闻源失败，请稍候重试");
+    }
+
+    final sources = resp.data!.sources!;
+    sources.sort();
+    return sources;
+  }
+
+  /// 获取多摸鱼指定源热榜
+  Future<DuomoyuRankingResp> getDuomoyuRanking({
+    required String slug,
+    bool forceRefresh = false,
+  }) async {
+    final cacheKey = 'duomoyu_rankings_$slug';
+
+    var respData = await get(
+      path: "$_duomoyuBase/news/rankings/$slug",
       forceRefresh: forceRefresh,
       customCacheKey: cacheKey,
       cacheDuration: const Duration(minutes: 5),
@@ -319,28 +354,12 @@ class NewsApiManager extends BaseApiManager<NewsApiConfig> {
 
     respData = processResponse(respData);
 
-    return DuomoyuResp.fromJson(respData);
-  }
+    final resp = DuomoyuRankingResp.fromJson(respData);
+    if (resp.success != true || resp.data == null) {
+      throw Exception("查询热榜失败，请稍候重试");
+    }
 
-  /// 获取机器之心新闻
-  Future<JiqizhixinResp> getJiqizhixinList({
-    int page = 1,
-    int size = 10,
-    bool forceRefresh = false,
-  }) async {
-    final cacheKey = 'jiqizhixin_news_${page}_$size';
-
-    var respData = await get(
-      path: _jiqizhixinBase,
-      queryParameters: {"sort": "time", "page": page, "per": size},
-      forceRefresh: forceRefresh,
-      customCacheKey: cacheKey,
-      cacheDuration: const Duration(minutes: 10),
-    );
-
-    respData = processResponse(respData);
-
-    return JiqizhixinResp.fromJson(respData);
+    return resp;
   }
 
   /// 获取newsnow指定分类
@@ -391,7 +410,7 @@ class NewsApiManager extends BaseApiManager<NewsApiConfig> {
     return UoZhihuDailyResp.fromJson(respData);
   }
 
-  /// 获取百度百科
+  /// 获取百度百科历史上的今天
   Future<BaikeHistoryInTodayResp> getBaikeHistoryInTodayList({
     bool forceRefresh = false,
   }) async {
@@ -412,30 +431,6 @@ class NewsApiManager extends BaseApiManager<NewsApiConfig> {
 
     return BaikeHistoryInTodayResp.fromJson(respData["data"]);
   }
-
-  // /// 获取一言
-  // /// 这个暂时不放在新闻API里面，后续会有其他同类型的API管理器
-  // Future<Hitokoto> getHitokoto({
-  //   // 类型：a动画；b漫画；c游戏；d文学；e原创；f来自网络；g其他；h影视；i诗词；j网易云；k哲学；l抖机灵；其他作为 动画 类型处理
-  //   String? cate,
-  //   bool forceRefresh = false,
-  // }) async {
-  //   final cacheKey = 'hitokoto';
-
-  //   var respData = await newsGet(
-  //     // 这里不传就随机一个类型
-  //     path: "$_hitokotoBase?c=${cate ?? ''}",
-  //     forceRefresh: forceRefresh,
-  //     customCacheKey: cacheKey,
-  //     cacheDuration: const Duration(hours: 1),
-  //   );
-
-  //   if (respData.runtimeType == String) {
-  //     respData = json.decode(respData);
-  //   }
-
-  //   return Hitokoto.fromJson(respData);
-  // }
 
   // 继承自BaseApiManager的clearAllCache()和getCacheStats()方法
 }

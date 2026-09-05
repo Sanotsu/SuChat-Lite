@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -86,15 +87,18 @@ class _TrainingRecordDetailPageState extends State<TrainingRecordDetailPage> {
   Widget build(BuildContext context) {
     // 显示加载状态
     if (_isLoading) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('训练记录详情'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.of(context).pop(),
+      return CusContentWidth(
+        maxWidth: 1000,
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('训练记录详情'),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
           ),
+          body: const Center(child: CircularProgressIndicator()),
         ),
-        body: const Center(child: CircularProgressIndicator()),
       );
     }
 

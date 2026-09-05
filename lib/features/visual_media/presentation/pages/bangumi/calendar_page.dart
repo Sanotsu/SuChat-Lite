@@ -1,10 +1,15 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import 'package:easy_refresh/easy_refresh.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../../../../core/network/dio_client/interceptor_error.dart';
 import '../../../../../shared/constants/constants.dart';
 import '../../../../../shared/widgets/keyword_input.dart';
 import '../../../../../shared/widgets/simple_tool_widget.dart';
+import '../../../../../shared/widgets/toast_utils.dart';
 import '../../../../../shared/widgets/type_dropdown.dart';
 import '../../../data/datasources/bangumi/bangumi_apis.dart';
 import '../../../data/models/bangumi/bangumi.dart';
@@ -71,37 +76,47 @@ class _BangumiCalendarPageState extends State<BangumiCalendarPage> {
     }
 
     // 如果是日历，则一次查询完所有，上拉下拉都重新刷新
-    if (query.isEmpty) {
-      var jkRst = await getBangumiCalendar();
-      if (!mounted) return;
-      setState(() {
-        calendarList = jkRst;
-        hasMore = true;
-      });
-    } else {
-      // 否则是关键字条件查询
-      var jkRst = await searchBangumiLargeSubjectByKeyword(
-        query,
-        type: (selectedBgmType.value as int),
-        start: (currentPage - 1) * pageSize,
-        maxResults: pageSize,
-      );
+    // 2026-09-04 补异常兜底：请求失败时复位loading，避免页面永远转圈
+    try {
+      if (query.isEmpty) {
+        var jkRst = await getBangumiCalendar();
+        if (!mounted) return;
+        setState(() {
+          calendarList = jkRst;
+          hasMore = true;
+        });
+      } else {
+        // 否则是关键字条件查询
+        var jkRst = await searchBangumiLargeSubjectByKeyword(
+          query,
+          type: (selectedBgmType.value as int),
+          start: (currentPage - 1) * pageSize,
+          maxResults: pageSize,
+        );
 
-      if (!mounted) return;
-      setState(() {
-        if (currentPage == 1) {
-          subjectList = jkRst.list ?? [];
-        } else {
-          subjectList.addAll(jkRst.list ?? []);
-        }
-        // 是否下拉加载更多，就该当前加载的数量，是否达到了响应的限制
-        hasMore = (jkRst.results ?? 0) > currentPage * pageSize;
-      });
+        if (!mounted) return;
+        setState(() {
+          if (currentPage == 1) {
+            subjectList = jkRst.list ?? [];
+          } else {
+            subjectList.addAll(jkRst.list ?? []);
+          }
+          // 是否下拉加载更多，就该当前加载的数量，是否达到了响应的限制
+          hasMore = (jkRst.results ?? 0) > currentPage * pageSize;
+        });
+      }
+    } on CusHttpException catch (e) {
+      // http连接相关的报错在拦截器就有弹窗报错了
+      debugPrint(e.toString());
+    } catch (e) {
+      if (mounted) ToastUtils.showError("查询失败: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isRefresh ? isRefreshLoading = false : isLoading = false;
+        });
+      }
     }
-
-    setState(() {
-      isRefresh ? isRefreshLoading = false : isLoading = false;
-    });
   }
 
   // 关键字查询
@@ -119,48 +134,51 @@ class _BangumiCalendarPageState extends State<BangumiCalendarPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Bangumi番组计划'),
-        actions: [
-          buildInfoButtonOnAction(
-            context,
-            "数据来源: [https://bangumi.tv](https://bangumi.tv/)",
-          ),
-        ],
-      ),
-      body: GestureDetector(
-        // 允许子控件（如TextField）接收点击事件
-        behavior: HitTestBehavior.translucent,
-        // 点击空白处可以移除焦点，关闭键盘
-        onTap: unfocusHandle,
-        child: Column(
-          children: [
-            /// 分类下拉框
-            TypeDropdown(
-              selectedValue: selectedBgmType,
-              items: bgmTypes,
-              onChanged: (value) async {
-                setState(() {
-                  selectedBgmType = value!;
-                });
-                // 因为查询必须输入关键字，所以切换时不用触发查询
-                // _handleSearch();
-              },
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Bangumi番组计划'),
+          actions: [
+            buildInfoButtonOnAction(
+              context,
+              "数据来源: [https://bangumi.tv](https://bangumi.tv/)",
             ),
-
-            /// 关键字输入框
-            KeywordInputArea(
-              searchController: searchController,
-              hintText: "关键字查询，空则查询每周番组",
-              onSearchPressed: _handleSearch,
-            ),
-
-            Divider(height: 20.sp),
-
-            /// 主列表，可上拉下拉刷新
-            buildRefreshList(),
           ],
+        ),
+        body: GestureDetector(
+          // 允许子控件（如TextField）接收点击事件
+          behavior: HitTestBehavior.translucent,
+          // 点击空白处可以移除焦点，关闭键盘
+          onTap: unfocusHandle,
+          child: Column(
+            children: [
+              /// 分类下拉框
+              TypeDropdown(
+                selectedValue: selectedBgmType,
+                items: bgmTypes,
+                onChanged: (value) async {
+                  setState(() {
+                    selectedBgmType = value!;
+                  });
+                  // 因为查询必须输入关键字，所以切换时不用触发查询
+                  // _handleSearch();
+                },
+              ),
+
+              /// 关键字输入框
+              KeywordInputArea(
+                searchController: searchController,
+                hintText: "关键字查询，空则查询每周番组",
+                onSearchPressed: _handleSearch,
+              ),
+
+              Divider(height: 20.sp),
+
+              /// 主列表，可上拉下拉刷新
+              buildRefreshList(),
+            ],
+          ),
         ),
       ),
     );
@@ -230,8 +248,8 @@ class _BangumiCalendarPageState extends State<BangumiCalendarPage> {
                     )
                   : GridView.builder(
                       gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 1,
+                          const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 500,
                             childAspectRatio: 2.8, // 调整子组件的宽高比
                           ),
                       itemCount: subjectList.length,
@@ -285,13 +303,14 @@ class _BangumiCalendarPageState extends State<BangumiCalendarPage> {
   Widget buildItemCardWrap(BGMLargeCalendar calendar, CusLabel type) {
     return Wrap(
       // direction: Axis.horizontal,
-      // alignment: WrapAlignment.spaceAround,
+      // 2026-09-04 桌面端适配: 卡片限宽并居中排布
+      alignment: WrapAlignment.center,
       children: calendar.items != null && calendar.items!.isNotEmpty
           ? List.generate(calendar.items!.length, (index) {
               var subject = calendar.items![index];
               return SizedBox(
                 height: 240.sp,
-                width: 0.325.sw,
+                width: math.min(0.325.sw, 280.0),
                 child: buildPreviewTileCard(
                   context,
                   // grid和small过于小了

@@ -186,7 +186,7 @@ class _ChatMessageListState extends State<ChatMessageList> {
                         //   return const SizedBox.shrink();
                         // }
 
-                        return ChatMessageItem(
+                        var cmItem = ChatMessageItem(
                           message: message,
                           viewModel: viewModel,
                           onRegenerate: message.isAssistant
@@ -215,6 +215,15 @@ class _ChatMessageListState extends State<ChatMessageList> {
                               ? (msg) => viewModel.startEditingUserMessage(msg)
                               : null,
                         );
+
+                        // 如果是最后一个消息，下方增加40高度，给分支按钮等显示
+                        if (index == viewModel.messages.length - 1) {
+                          return Column(
+                            children: [cmItem, SizedBox(height: 40)],
+                          );
+                        } else {
+                          return cmItem;
+                        }
                       },
                     ),
                   ),

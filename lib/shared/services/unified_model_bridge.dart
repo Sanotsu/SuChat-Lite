@@ -38,7 +38,8 @@ class UnifiedModelBridge {
 
   /// 统一模型 -> CusLLMSpec
   /// platform为枚举占位，实际地址与密钥由baseUrl(完整chat端点)/apiKey提供，
-  /// ChatService.getHeaders与各服务的baseUrl拼接均已支持模型自带值优先
+  /// ChatService.getHeaders与各服务的baseUrl拼接均已支持模型自带值优先；
+  /// platformLabel填充真实平台显示名(占位枚举会导致CP_NAME_MAP显示错误)
   static CusLLMSpec toCusSpec(
     UnifiedModelSpec model,
     UnifiedPlatformSpec platform,
@@ -51,5 +52,6 @@ class UnifiedModelBridge {
     baseUrl: platform.getChatCompletionsUrl(),
     apiKey: apiKey,
     cusLlmSpecId: 'unified_${platform.id}_${model.id}',
+    platformLabel: platform.displayName,
   );
 }

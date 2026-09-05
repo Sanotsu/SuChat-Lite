@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import 'package:tmdb_api/tmdb_api.dart';
 
 import '../../../../../shared/widgets/simple_tool_widget.dart';
@@ -275,99 +276,103 @@ class _TmdbHomePageState extends State<TmdbHomePage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('TMDB'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: Colors.white),
-            onSelected: (value) {
-              switch (value) {
-                case 'search':
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          TmdbSearchPage(initialQuery: _searchController.text),
-                    ),
-                  );
-                  break;
-                case 'discover_movies':
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const TmdbDiscoverPage(
-                        mediaType: 'movie',
-                        title: '电影筛选',
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('TMDB'),
+          backgroundColor: Theme.of(context).primaryColor,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          actions: [
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, color: Colors.white),
+              onSelected: (value) {
+                switch (value) {
+                  case 'search':
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TmdbSearchPage(
+                          initialQuery: _searchController.text,
+                        ),
                       ),
-                    ),
-                  );
-                  break;
-                case 'discover_tv':
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const TmdbDiscoverPage(
-                        mediaType: 'tv',
-                        title: '剧集筛选',
+                    );
+                    break;
+                  case 'discover_movies':
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const TmdbDiscoverPage(
+                          mediaType: 'movie',
+                          title: '电影筛选',
+                        ),
                       ),
-                    ),
-                  );
-                  break;
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'search',
-                child: ListTile(
-                  leading: Icon(Icons.search),
-                  title: Text('更多搜索'),
-                  contentPadding: EdgeInsets.zero,
+                    );
+                    break;
+                  case 'discover_tv':
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const TmdbDiscoverPage(
+                          mediaType: 'tv',
+                          title: '剧集筛选',
+                        ),
+                      ),
+                    );
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'search',
+                  child: ListTile(
+                    leading: Icon(Icons.search),
+                    title: Text('更多搜索'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
-              ),
-              const PopupMenuItem(
-                value: 'discover_movies',
-                child: ListTile(
-                  leading: Icon(Icons.movie),
-                  title: Text('电影筛选'),
-                  contentPadding: EdgeInsets.zero,
+                const PopupMenuItem(
+                  value: 'discover_movies',
+                  child: ListTile(
+                    leading: Icon(Icons.movie),
+                    title: Text('电影筛选'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
-              ),
-              const PopupMenuItem(
-                value: 'discover_tv',
-                child: ListTile(
-                  leading: Icon(Icons.tv),
-                  title: Text('剧集筛选'),
-                  contentPadding: EdgeInsets.zero,
+                const PopupMenuItem(
+                  value: 'discover_tv',
+                  child: ListTile(
+                    leading: Icon(Icons.tv),
+                    title: Text('剧集筛选'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          buildInfoButtonOnAction(
-            context,
-            "数据来源: [tmdb](https://www.themoviedb.org/)\n\n国外的API，需要科学上网才能正常访问。",
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // 搜索区域
-          _buildSearchArea(),
-          // 内容区域
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
-                ? buildCommonErrorWidget(
-                    error: _error,
-                    onRetry: _loadInitialData,
-                  )
-                : _buildHomeContent(),
-          ),
-        ],
+              ],
+            ),
+            buildInfoButtonOnAction(
+              context,
+              "数据来源: [tmdb](https://www.themoviedb.org/)\n\n国外的API，需要科学上网才能正常访问。",
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            // 搜索区域
+            _buildSearchArea(),
+            // 内容区域
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                  ? buildCommonErrorWidget(
+                      error: _error,
+                      onRetry: _loadInitialData,
+                    )
+                  : _buildHomeContent(),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -19,10 +19,6 @@ import 'default_video_generation_models.dart';
 //   static const xfyunApiKey = 'xxx';
 //   static const xfyunApiSecret = 'xxx';
 
-//   // NUTRITIONIX的应用编号和密钥
-//   static const nutritionixAppId = 'xxx';
-//   static const nutritionixAppKey = 'xxx';
-
 //   // newsapi完整的api key
 //   static const newsApiKey = 'xxx';
 

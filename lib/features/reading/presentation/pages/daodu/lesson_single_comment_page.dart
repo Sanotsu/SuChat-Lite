@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 
 import '../../../data/models/daodu_models.dart';
 import '../../../data/datasources/reading_api_manager.dart';
@@ -63,29 +64,32 @@ class _DaoduLessonSingleCommentPageState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('评论详情')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(1),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 相关文章信息卡片
-            DaoduLessonInfoCard(
-              isLoading: _isLoadingLesson,
-              errorMessage: _lessonError,
-              lessonInfo: _lessonInfo,
-            ),
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('评论详情')),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(1),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 相关文章信息卡片
+              DaoduLessonInfoCard(
+                isLoading: _isLoadingLesson,
+                errorMessage: _lessonError,
+                lessonInfo: _lessonInfo,
+              ),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // 评论详情卡片
-            DaoduCommentCard(
-              comment: widget.comment,
-              cardTitle: '评论内容',
-              isExpandable: false,
-            ),
-          ],
+              // 评论详情卡片
+              DaoduCommentCard(
+                comment: widget.comment,
+                cardTitle: '评论内容',
+                isExpandable: false,
+              ),
+            ],
+          ),
         ),
       ),
     );

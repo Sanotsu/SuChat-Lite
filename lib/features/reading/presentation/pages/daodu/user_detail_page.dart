@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 
 import '../../../../../core/utils/datetime_formatter.dart';
 import '../../../../../shared/constants/constants.dart';
@@ -57,17 +58,20 @@ class _DaoduUserDetailPageState extends State<DaoduUserDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('用户详情'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadUserDetail,
-          ),
-        ],
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('用户详情'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _loadUserDetail,
+            ),
+          ],
+        ),
+        body: _buildBody(),
       ),
-      body: _buildBody(),
     );
   }
 
@@ -326,13 +330,16 @@ class _DaoduUserDetailPageState extends State<DaoduUserDetailPage> {
           const SizedBox(height: 12),
 
           // 功能模块网格
-          GridView.count(
-            crossAxisCount: 3,
+          // 2026-09-04 桌面端适配: 固定3列改为自适应(手机约3列,桌面增列)
+          GridView(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.0,
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 130,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1.0,
+            ),
             children: [
               _buildModuleCard(
                 title: '摘要',

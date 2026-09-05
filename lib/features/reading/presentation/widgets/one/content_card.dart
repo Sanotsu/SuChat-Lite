@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../core/utils/datetime_formatter.dart';
 import '../../../../../shared/constants/constants.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import '../../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../data/models/one/one_category_list.dart';
@@ -31,16 +31,18 @@ class OneContentCard extends StatelessWidget {
     if (displayType == 'grid') {
       return miniGrid ? _buildMiniGridCard(context) : _buildGridCard(context);
     } else {
-      return _buildListCard(context);
+      // 2026-09-04 桌面端适配：列表卡片限宽居中(网格场景由网格布局控制)
+      return CusContentWidth(child: _buildListCard(context));
     }
   }
 
   /// 构建网格卡片(用于收音机等)
+  /// 2026-09-04 溢出修复：不再写死卡片总高与图片高，
+  /// 图区用Expanded自适应压缩，外层网格约束变小时不再溢出
   Widget _buildGridCard(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 200,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
@@ -57,84 +59,36 @@ class OneContentCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 图片区域（带标题叠加）
-              Stack(
-                children: [
-                  // 图片
-                  Container(
-                    height: 160, // 图片区域高度
-                    width: double.infinity,
-                    color: Colors.grey[200],
-                    child: content.cover != null
-                        ? buildNetworkOrFileImage(content.cover!)
-                        : const Icon(Icons.image_not_supported, size: 48),
-                  ),
-
-                  // 如果是电台，中间有个播放图标
-                  if (content.category.toString() == "8")
-                    Positioned(
-                      top: (160 / 2) - 24,
-                      // 16 是外层的左右边距(注意，需要一行一个时才是0.5sw)
-                      left: (0.5.sw - 16) - 24,
-                      child: Icon(
-                        Icons.play_circle_outline,
-                        size: 48,
-                        color: Colors.white,
-                      ),
+              Expanded(
+                child: Stack(
+                  children: [
+                    // 图片
+                    Container(
+                      height: double.infinity, // 图片区域高度(自适应)
+                      width: double.infinity,
+                      color: Colors.grey[200],
+                      child: content.cover != null
+                          ? buildNetworkOrFileImage(content.cover!)
+                          : const Icon(Icons.image_not_supported, size: 48),
                     ),
 
-                  // 标题叠加在图片上
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.7),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                      child: Text(
-                        content.title ?? '',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                    // 如果是电台，中间有个播放图标
+                    if (content.category.toString() == "8")
+                      Center(
+                        child: Icon(
+                          Icons.play_circle_outline,
+                          size: 48,
                           color: Colors.white,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ),
 
-                  if (content.volume != null && content.volume!.isNotEmpty)
+                    // 标题叠加在图片上
                     Positioned(
-                      top: 8,
-                      left: 8,
-                      child: Text(
-                        content.volume ?? '',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-
-                  if (content.maketime != null && content.maketime!.isNotEmpty)
-                    Positioned(
-                      top: 0,
+                      bottom: 0,
+                      left: 0,
                       right: 0,
-                      // 添加背景色更好与白底图片区分开来
                       child: Container(
-                        padding: const EdgeInsets.fromLTRB(2, 8, 8, 2),
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.bottomCenter,
@@ -146,10 +100,24 @@ class OneContentCard extends StatelessWidget {
                           ),
                         ),
                         child: Text(
-                          formatDateTimeString(
-                            content.maketime ?? '',
-                            formatType: formatToYMD,
+                          content.title ?? '',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+
+                    if (content.volume != null && content.volume!.isNotEmpty)
+                      Positioned(
+                        top: 8,
+                        left: 8,
+                        child: Text(
+                          content.volume ?? '',
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -159,59 +127,91 @@ class OneContentCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    ),
-                ],
-              ),
 
-              // 内容区域
-              Expanded(
-                child: Container(
-                  color: Colors.white,
-                  padding: const EdgeInsets.all(8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // 作者
-                      if (content.author != null)
-                        Expanded(
-                          child: Row(
-                            children: [
-                              // 用户头像
-                              buildUserCircleAvatar(content.author?.webUrl),
-                              const SizedBox(width: 12),
-                              Text(
-                                content.author!.userName ?? '',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                            ],
+                    if (content.maketime != null &&
+                        content.maketime!.isNotEmpty)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        // 添加背景色更好与白底图片区分开来
+                        child: Container(
+                          padding: const EdgeInsets.fromLTRB(2, 8, 8, 2),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                              colors: [
+                                Colors.black.withValues(alpha: 0.7),
+                                Colors.transparent,
+                              ],
+                            ),
+                          ),
+                          child: Text(
+                            formatDateTimeString(
+                              content.maketime ?? '',
+                              formatType: formatToYMD,
+                            ),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                      ),
+                  ],
+                ),
+              ),
 
-                      // 点赞数
-                      if (content.likeCount != null)
-                        Row(
+              // 内容区域(固定内容高度)
+              Container(
+                color: Colors.white,
+                padding: const EdgeInsets.all(8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // 作者
+                    if (content.author != null)
+                      Expanded(
+                        child: Row(
                           children: [
-                            Icon(
-                              Icons.favorite_border,
-                              size: 16,
-                              color: Colors.red[300],
-                            ),
-                            const SizedBox(width: 4),
+                            // 用户头像
+                            buildUserCircleAvatar(content.author?.webUrl),
+                            const SizedBox(width: 12),
                             Text(
-                              '${content.likeCount}',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 12,
+                              content.author!.userName ?? '',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black87,
                               ),
                             ),
                           ],
                         ),
-                    ],
-                  ),
+                      ),
+
+                    // 点赞数
+                    if (content.likeCount != null)
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.favorite_border,
+                            size: 16,
+                            color: Colors.red[300],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${content.likeCount}',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
                 ),
               ),
             ],
@@ -223,53 +223,47 @@ class OneContentCard extends StatelessWidget {
 
   // 只有图片和图片上的日期(用于图文)
   Widget _buildMiniGridCard(BuildContext context) {
-    // 内容区域
+    // 内容区域(固定内容高度,图区Expanded自适应)
     contentPart() {
-      return Expanded(
-        child: Container(
-          color: Colors.white,
-          padding: const EdgeInsets.all(8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // 作者
-              if (content.author != null)
-                Expanded(
-                  child: Row(
-                    children: [
-                      // 用户头像
-                      buildUserCircleAvatar(content.author?.webUrl),
-                      const SizedBox(width: 12),
-                      Text(
-                        content.author!.userName ?? '',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-              // 点赞数
-              if (content.likeCount != null)
-                Row(
+      return Container(
+        color: Colors.white,
+        padding: const EdgeInsets.all(8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // 作者
+            if (content.author != null)
+              Expanded(
+                child: Row(
                   children: [
-                    Icon(
-                      Icons.favorite_border,
-                      size: 16,
-                      color: Colors.red[300],
-                    ),
-                    const SizedBox(width: 4),
+                    // 用户头像
+                    buildUserCircleAvatar(content.author?.webUrl),
+                    const SizedBox(width: 12),
                     Text(
-                      '${content.likeCount}',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      content.author!.userName ?? '',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
+                      ),
                     ),
                   ],
                 ),
-            ],
-          ),
+              ),
+
+            // 点赞数
+            if (content.likeCount != null)
+              Row(
+                children: [
+                  Icon(Icons.favorite_border, size: 16, color: Colors.red[300]),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${content.likeCount}',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  ),
+                ],
+              ),
+          ],
         ),
       );
     }
@@ -333,7 +327,6 @@ class OneContentCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 150,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
@@ -346,28 +339,32 @@ class OneContentCard extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
+          // 2026-09-04 溢出修复：图区Expanded自适应压缩
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 图片区域（带标题叠加）
-              Stack(
-                children: [
-                  // 图片
-                  Container(
-                    height: 120,
-                    width: double.infinity,
-                    color: Colors.grey[200],
-                    child: content.cover != null
-                        ? buildNetworkOrFileImage(content.cover!)
-                        : const Icon(Icons.image_not_supported, size: 48),
-                  ),
+              Expanded(
+                child: Stack(
+                  children: [
+                    // 图片
+                    Container(
+                      height: double.infinity,
+                      width: double.infinity,
+                      color: Colors.grey[200],
+                      child: content.cover != null
+                          ? buildNetworkOrFileImage(content.cover!)
+                          : const Icon(Icons.image_not_supported, size: 48),
+                    ),
 
-                  if (content.maketime != null && content.maketime!.isNotEmpty)
-                    datePosition(content.maketime!),
+                    if (content.maketime != null &&
+                        content.maketime!.isNotEmpty)
+                      datePosition(content.maketime!),
 
-                  // 标题叠加在图片上
-                  titlePosition(content.title ?? ''),
-                ],
+                    // 标题叠加在图片上
+                    titlePosition(content.title ?? ''),
+                  ],
+                ),
               ),
               contentPart(),
             ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 
 import '../../../../../core/utils/simple_tools.dart';
 import '../../../../../shared/widgets/simple_tool_widget.dart';
@@ -26,20 +27,23 @@ class _TmdbReviewsPageState extends State<TmdbReviewsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
-      body: widget.reviews.isEmpty
-          ? const TmdbEmptyWidget(
-              message: '暂无评论',
-              icon: Icons.rate_review_outlined,
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: widget.reviews.length,
-              itemBuilder: (context, index) {
-                return _buildReviewCard(widget.reviews[index]);
-              },
-            ),
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(title: Text(widget.title)),
+        body: widget.reviews.isEmpty
+            ? const TmdbEmptyWidget(
+                message: '暂无评论',
+                icon: Icons.rate_review_outlined,
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: widget.reviews.length,
+                itemBuilder: (context, index) {
+                  return _buildReviewCard(widget.reviews[index]);
+                },
+              ),
+      ),
     );
   }
 

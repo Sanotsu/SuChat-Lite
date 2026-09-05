@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import 'package:easy_refresh/easy_refresh.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../../../../core/network/dio_client/interceptor_error.dart';
 import '../../../../../shared/constants/constants.dart';
 import '../../../../../shared/widgets/keyword_input.dart';
 import '../../../../../shared/widgets/simple_tool_widget.dart';
+import '../../../../../shared/widgets/toast_utils.dart';
 import '../../../../../shared/widgets/type_dropdown.dart';
 import '../../../data/datasources/jikan/get_jikan_apis.dart';
 import '../../../data/models/jikan/jikan_data.dart';
@@ -70,32 +73,42 @@ class _MALTopPageState extends State<MALTopPage> {
     }
 
     // 默认是top查询，也可能是关键字条件查询
-    var jkRst = query.isEmpty
-        ? await getJikanTop(
-            type: (selectedMalType.value as MALType),
-            page: currentPage,
-            limit: pageSize,
-          )
-        : await getJikanSearch(
-            q: query,
-            type: (selectedMalType.value as MALType),
-            page: currentPage,
-            limit: pageSize,
-          );
+    // 2026-09-04 补异常兜底：请求失败时复位loading，避免页面永远转圈(504等场景)
+    try {
+      var jkRst = query.isEmpty
+          ? await getJikanTop(
+              type: (selectedMalType.value as MALType),
+              page: currentPage,
+              limit: pageSize,
+            )
+          : await getJikanSearch(
+              q: query,
+              type: (selectedMalType.value as MALType),
+              page: currentPage,
+              limit: pageSize,
+            );
 
-    if (!mounted) return;
-    setState(() {
-      if (currentPage == 1) {
-        rankList = jkRst.data;
-      } else {
-        rankList.addAll(jkRst.data);
+      if (!mounted) return;
+      setState(() {
+        if (currentPage == 1) {
+          rankList = jkRst.data;
+        } else {
+          rankList.addAll(jkRst.data);
+        }
+        hasMore = jkRst.pagination?.hasNextPage ?? false;
+      });
+    } on CusHttpException catch (e) {
+      // http连接相关的报错在拦截器就有弹窗报错了
+      debugPrint(e.toString());
+    } catch (e) {
+      if (mounted) ToastUtils.showError("查询失败: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isRefresh ? isRefreshLoading = false : isLoading = false;
+        });
       }
-      hasMore = jkRst.pagination?.hasNextPage ?? false;
-    });
-
-    setState(() {
-      isRefresh ? isRefreshLoading = false : isLoading = false;
-    });
+    }
   }
 
   // 动漫漫画和角色人物返回的结构不太一样
@@ -119,61 +132,68 @@ class _MALTopPageState extends State<MALTopPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('MAL排行榜'),
-        actions: [
-          buildInfoButtonOnAction(
-            context,
-            """数据来源: [myanimelist](https://myanimelist.net/)
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('MAL排行榜'),
+          actions: [
+            buildInfoButtonOnAction(
+              context,
+              """数据来源: [myanimelist](https://myanimelist.net/)
 \n\n详情页面中提供的翻译按钮，是使用AI大模型进行文本翻译成中文，不一定准确，请注意识别。""",
-          ),
-        ],
-      ),
-      body: GestureDetector(
-        // 允许子控件（如TextField）接收点击事件
-        behavior: HitTestBehavior.translucent,
-        // 点击空白处可以移除焦点，关闭键盘
-        onTap: unfocusHandle,
-        child: Column(
-          children: [
-            /// 分类下拉框
-            /// 左边加个按钮获取放映计划
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                /// 可跳转到MAL的播放日期表(不在当前页处理了)
-                buildGotoButton(context, "放映计划", const MALAnimeSchedulePage()),
-
-                /// 分类下拉框
-                TypeDropdown(
-                  selectedValue: selectedMalType,
-                  items: malTypes,
-                  label: "排行榜分类:",
-                  onChanged: (value) async {
-                    setState(() {
-                      selectedMalType = value!;
-                    });
-                    // 切换分类后，直接重新查询
-                    _handleSearch();
-                  },
-                ),
-              ],
             ),
-            SizedBox(height: 10.sp),
-
-            /// 关键字输入框
-            KeywordInputArea(
-              searchController: searchController,
-              hintText: "输入关键字进行查询",
-              onSearchPressed: _handleSearch,
-            ),
-
-            Divider(height: 20.sp),
-
-            /// 主列表，可上拉下拉刷新
-            buildRefreshList(),
           ],
+        ),
+        body: GestureDetector(
+          // 允许子控件（如TextField）接收点击事件
+          behavior: HitTestBehavior.translucent,
+          // 点击空白处可以移除焦点，关闭键盘
+          onTap: unfocusHandle,
+          child: Column(
+            children: [
+              /// 分类下拉框
+              /// 左边加个按钮获取放映计划
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  /// 可跳转到MAL的播放日期表(不在当前页处理了)
+                  buildGotoButton(
+                    context,
+                    "放映计划",
+                    const MALAnimeSchedulePage(),
+                  ),
+
+                  /// 分类下拉框
+                  TypeDropdown(
+                    selectedValue: selectedMalType,
+                    items: malTypes,
+                    label: "排行榜分类:",
+                    onChanged: (value) async {
+                      setState(() {
+                        selectedMalType = value!;
+                      });
+                      // 切换分类后，直接重新查询
+                      _handleSearch();
+                    },
+                  ),
+                ],
+              ),
+              SizedBox(height: 10.sp),
+
+              /// 关键字输入框
+              KeywordInputArea(
+                searchController: searchController,
+                hintText: "输入关键字进行查询",
+                onSearchPressed: _handleSearch,
+              ),
+
+              Divider(height: 20.sp),
+
+              /// 主列表，可上拉下拉刷新
+              buildRefreshList(),
+            ],
+          ),
         ),
       ),
     );
@@ -202,8 +222,8 @@ class _MALTopPageState extends State<MALTopPage> {
                     }
                   : null,
               child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 1,
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 500,
                   childAspectRatio: 2.8, // 调整子组件的宽高比
                 ),
                 itemCount: rankList.length,

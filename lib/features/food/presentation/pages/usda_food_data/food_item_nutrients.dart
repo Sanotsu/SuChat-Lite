@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../../shared/widgets/simple_tool_widget.dart';
@@ -40,129 +41,135 @@ https://www.ars.usda.gov/northeast-area/beltsville-md-bhnrc/beltsville-human-nut
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        // title: const Text("食品成分表(每100克)"),
-        title: RichText(
-          textAlign: TextAlign.left,
-          text: TextSpan(
-            children: [
-              TextSpan(
-                text: "食品成分表",
-                style: TextStyle(fontSize: 22.sp, color: Colors.black),
-              ),
-              TextSpan(
-                text: "(每100克)",
-                style: TextStyle(fontSize: 15.sp, color: Colors.blue),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          IconButton(
-            onPressed: () {
-              commonMDHintModalBottomSheet(
-                context,
-                "食品成分说明",
-                note,
-                msgFontSize: 15.sp,
-              );
-            },
-            icon: const Icon(Icons.info_outline),
-          ),
-        ],
-      ),
-      body: FutureBuilder<USDAFoodItem>(
-        future: _foodItemFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return buildLoader(true);
-          } else if (snapshot.hasError) {
-            throw snapshot;
-            // return Center(child: Text('数据查询出错: ${snapshot.error}'));
-          } else if (!snapshot.hasData) {
-            return const Center(child: Text('暂无数据'));
-          }
-
-          final item = snapshot.data!;
-          final dataType = item.dataType ?? "Foundation";
-
-          return Container(
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(horizontal: 5.sp),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(15.sp),
-                topRight: Radius.circular(15.sp),
-              ),
-            ),
-            child: Column(
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          // title: const Text("食品成分表(每100克)"),
+          title: RichText(
+            textAlign: TextAlign.left,
+            text: TextSpan(
               children: [
-                // SingleChildScrollView(
-                //   scrollDirection: Axis.horizontal,
-                //   child: Row(
-                //     children: [
-                //       Wrap(
-                //         spacing: 10.sp,
-                //         children: buildFoodDetails(dataType, item),
-                //       ),
-                //     ],
-                //   ),
-                // ),
-                SizedBox(
-                  height: 50.sp,
-                  child: Center(
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            item.description,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18.sp,
-                              color: Theme.of(context).primaryColor,
-                            ),
-                            maxLines: 2,
-                          ),
-                        ),
-                        if (dataType == "Branded")
-                          IconButton(
-                            onPressed: () {
-                              commonMDHintModalBottomSheet(
-                                context,
-                                "Ingredients",
-                                item.ingredients ?? '',
-                                msgFontSize: 15.sp,
-                              );
-                            },
-                            icon: const Icon(Icons.biotech),
-                          ),
-                      ],
-                    ),
-                  ),
+                TextSpan(
+                  text: "食品成分表",
+                  style: TextStyle(fontSize: 22.sp, color: Colors.black),
                 ),
-                Divider(height: 5.sp),
-                SizedBox(
-                  height: 100.sp,
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: buildFoodDetails(dataType, item),
-                    ),
-                  ),
+                TextSpan(
+                  text: "(每100克)",
+                  style: TextStyle(fontSize: 15.sp, color: Colors.blue),
                 ),
-                Divider(height: 5.sp),
-                if (item.foodNutrients != null)
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: buildFoodDataTable(dataType, item.foodNutrients!),
-                    ),
-                  ),
               ],
             ),
-          );
-        },
+          ),
+          actions: [
+            IconButton(
+              onPressed: () {
+                commonMDHintModalBottomSheet(
+                  context,
+                  "食品成分说明",
+                  note,
+                  msgFontSize: 15.sp,
+                );
+              },
+              icon: const Icon(Icons.info_outline),
+            ),
+          ],
+        ),
+        body: FutureBuilder<USDAFoodItem>(
+          future: _foodItemFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return buildLoader(true);
+            } else if (snapshot.hasError) {
+              throw snapshot;
+              // return Center(child: Text('数据查询出错: ${snapshot.error}'));
+            } else if (!snapshot.hasData) {
+              return const Center(child: Text('暂无数据'));
+            }
+
+            final item = snapshot.data!;
+            final dataType = item.dataType ?? "Foundation";
+
+            return Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(horizontal: 5.sp),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(15.sp),
+                  topRight: Radius.circular(15.sp),
+                ),
+              ),
+              child: Column(
+                children: [
+                  // SingleChildScrollView(
+                  //   scrollDirection: Axis.horizontal,
+                  //   child: Row(
+                  //     children: [
+                  //       Wrap(
+                  //         spacing: 10.sp,
+                  //         children: buildFoodDetails(dataType, item),
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
+                  SizedBox(
+                    height: 50.sp,
+                    child: Center(
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.description,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18.sp,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                              maxLines: 2,
+                            ),
+                          ),
+                          if (dataType == "Branded")
+                            IconButton(
+                              onPressed: () {
+                                commonMDHintModalBottomSheet(
+                                  context,
+                                  "Ingredients",
+                                  item.ingredients ?? '',
+                                  msgFontSize: 15.sp,
+                                );
+                              },
+                              icon: const Icon(Icons.biotech),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Divider(height: 5.sp),
+                  SizedBox(
+                    height: 100.sp,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: buildFoodDetails(dataType, item),
+                      ),
+                    ),
+                  ),
+                  Divider(height: 5.sp),
+                  if (item.foodNutrients != null)
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: buildFoodDataTable(
+                          dataType,
+                          item.foodNutrients!,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

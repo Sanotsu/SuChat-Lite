@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import 'package:easy_refresh/easy_refresh.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../../../../core/network/dio_client/interceptor_error.dart';
 import '../../../../../shared/constants/constants.dart';
 import '../../../../../shared/widgets/simple_tool_widget.dart';
+import '../../../../../shared/widgets/toast_utils.dart';
 import '../../../../../shared/widgets/translatable_widgets.dart';
 import '../../../../../shared/widgets/type_dropdown.dart';
 import '../../../data/datasources/bangumi/bangumi_apis.dart';
@@ -67,61 +70,75 @@ class _BangumiEpisodeDetailPageState extends State<BangumiEpisodeDetailPage> {
     }
 
     // 否则是关键字条件查询
-    var jkRst = await getBangumiEpisodesById(
-      widget.subjectId,
-      type: (selectedBgmEpType.value as int),
-      offset: (_currentPage - 1) * _pageSize,
-      limit: _pageSize,
-    );
+    // 2026-09-04 补异常兜底：请求失败时复位loading，避免页面永远转圈
+    try {
+      var jkRst = await getBangumiEpisodesById(
+        widget.subjectId,
+        type: (selectedBgmEpType.value as int),
+        offset: (_currentPage - 1) * _pageSize,
+        limit: _pageSize,
+      );
 
-    setState(() {
-      if (_currentPage == 1) {
-        subjectList = jkRst.data ?? [];
-      } else {
-        subjectList.addAll(jkRst.data ?? []);
+      if (!mounted) return;
+      setState(() {
+        if (_currentPage == 1) {
+          subjectList = jkRst.data ?? [];
+        } else {
+          subjectList.addAll(jkRst.data ?? []);
+        }
+        // 是否下拉加载更多，就该当前加载的数量，是否达到了响应的限制
+        _hasMore = (jkRst.total ?? 0) > _currentPage * _pageSize;
+      });
+    } on CusHttpException catch (e) {
+      // http连接相关的报错在拦截器就有弹窗报错了
+      debugPrint(e.toString());
+    } catch (e) {
+      if (mounted) ToastUtils.showError("查询失败: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isRefresh ? _isRefreshLoading = false : isLoading = false;
+        });
       }
-      // 是否下拉加载更多，就该当前加载的数量，是否达到了响应的限制
-      _hasMore = (jkRst.total ?? 0) > _currentPage * _pageSize;
-    });
-
-    setState(() {
-      isRefresh ? _isRefreshLoading = false : isLoading = false;
-    });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('分集剧情')),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          buildTitleText(
-            widget.subjectName,
-            fontSize: 18.sp,
-            color: Colors.black,
-          ),
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('分集剧情')),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            buildTitleText(
+              widget.subjectName,
+              fontSize: 18.sp,
+              color: Colors.black,
+            ),
 
-          /// 分类下拉框
-          TypeDropdown(
-            selectedValue: selectedBgmEpType,
-            items: bgmEpTypes,
-            label: "分集类型: ",
-            width: 180.sp,
-            onChanged: (value) async {
-              setState(() {
-                selectedBgmEpType = value!;
-              });
+            /// 分类下拉框
+            TypeDropdown(
+              selectedValue: selectedBgmEpType,
+              items: bgmEpTypes,
+              label: "分集类型: ",
+              width: 180.sp,
+              onChanged: (value) async {
+                setState(() {
+                  selectedBgmEpType = value!;
+                });
 
-              fetchBGMData();
-            },
-          ),
+                fetchBGMData();
+              },
+            ),
 
-          Divider(height: 10.sp),
+            Divider(height: 10.sp),
 
-          /// 主列表，可上拉下拉刷新
-          buildRefreshList(),
-        ],
+            /// 主列表，可上拉下拉刷新
+            buildRefreshList(),
+          ],
+        ),
       ),
     );
   }

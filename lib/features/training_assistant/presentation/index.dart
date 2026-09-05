@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../shared/widgets/cus_content_width.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/utils/screen_helper.dart';
@@ -96,31 +97,35 @@ class _TrainingAssistantPageState extends State<TrainingAssistantPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('训练助手'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person),
-            tooltip: '个人信息',
-            onPressed: _navigateToUserInfo,
-          ),
-        ],
-        // 桌面端导航在页面左侧，移动端导航在顶部AppBar底部
-        bottom: (_isUserInfoCompleted && ScreenHelper.isMobile())
-            ? PreferredSize(
-                preferredSize: const Size.fromHeight(60),
-                child: _buildTopNavigation(),
-              )
-            : null,
+    // 2026-09-04 桌面端适配：内容限宽
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('训练助手'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.person),
+              tooltip: '个人信息',
+              onPressed: _navigateToUserInfo,
+            ),
+          ],
+          // 桌面端导航在页面左侧，移动端导航在顶部AppBar底部
+          bottom: (_isUserInfoCompleted && ScreenHelper.isMobile())
+              ? PreferredSize(
+                  preferredSize: const Size.fromHeight(60),
+                  child: _buildTopNavigation(),
+                )
+              : null,
+        ),
+        body: _isCheckingUserInfo
+            ? const Center(child: CircularProgressIndicator())
+            : !_isUserInfoCompleted
+            ? _buildNoUserInfoView()
+            : ScreenHelper.isDesktop()
+            ? _buildDesktopLayout()
+            : _buildCurrentPage(),
       ),
-      body: _isCheckingUserInfo
-          ? const Center(child: CircularProgressIndicator())
-          : !_isUserInfoCompleted
-          ? _buildNoUserInfoView()
-          : ScreenHelper.isDesktop()
-          ? _buildDesktopLayout()
-          : _buildCurrentPage(),
     );
   }
 

@@ -5,6 +5,7 @@ import '../../../../core/dao/user_info_dao.dart';
 import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/entities/user_info.dart';
 import '../../../../shared/constants/constant_llm_enum.dart';
+import '../../../../shared/services/chat_completion_response.dart';
 import '../../../../shared/services/openai_compatible_apis.dart';
 import '../../../../shared/services/chat_service.dart';
 
@@ -19,7 +20,9 @@ class DietRecipeService {
   /// - preferences: 用户的饮食偏好（如喜欢/不喜欢的食物、饮食禁忌等）
   /// - mealCount: 需要生成的餐次数量（1-4）
   /// - days: 需要生成的天数（1-7）
-  Future<(Stream<String>, VoidCallback)> generatePersonalizedRecipe({
+  /// 2026-09-04 改返回完整响应流，思考模型的reasoning_content由页面分类展示
+  Future<(Stream<ChatCompletionResponse>, VoidCallback)>
+  generatePersonalizedRecipe({
     required CusLLMSpec model,
     required UserInfo userInfo,
     MacrosIntake? dailyNutrition,
@@ -66,6 +69,8 @@ class DietRecipeService {
     }
 
     // 基础请求体
+    // 2026-09-04 食谱并无固定JSON结构限制，保持流式输出；
+    // 思考模型的reasoning_content已由cusText回退显示(见chat_completion_response)
     final Map<String, dynamic> requestBody = {
       'model': model.model,
       'messages': [
@@ -78,8 +83,8 @@ class DietRecipeService {
       "stream": true,
     };
 
-    // 调用大模型API
-    final (stream, cancel) = await getStreamOnlyStringResponse(
+    // 调用大模型API(完整响应流：delta含reasoning_content与content)
+    final (stream, cancel) = await getStreamResponse(
       baseUrl,
       headers,
       requestBody,

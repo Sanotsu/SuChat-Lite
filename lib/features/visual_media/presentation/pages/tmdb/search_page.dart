@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import 'package:tmdb_api/tmdb_api.dart';
 
 import '../../../../../shared/widgets/simple_tool_widget.dart';
@@ -214,31 +215,34 @@ class _TmdbSearchPageState extends State<TmdbSearchPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      // appBar: AppBar(
-      //   title: const Text('TMDB 搜索'),
-      //   backgroundColor: Theme.of(context).primaryColor,
-      //   foregroundColor: Colors.white,
-      //   elevation: 0,
-      // ),
-      body: Column(
-        children: [
-          // 搜索区域 - 与首页保持一致的风格
-          _buildSearchArea(),
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        // appBar: AppBar(
+        //   title: const Text('TMDB 搜索'),
+        //   backgroundColor: Theme.of(context).primaryColor,
+        //   foregroundColor: Colors.white,
+        //   elevation: 0,
+        // ),
+        body: Column(
+          children: [
+            // 搜索区域 - 与首页保持一致的风格
+            _buildSearchArea(),
 
-          // 放在外面不怎么好看，还是放在搜索中
-          // if (_currentQuery.isNotEmpty) ...[
-          //   const SizedBox(height: 16),
-          //   _buildFilterArea(),
-          // ],
+            // 放在外面不怎么好看，还是放在搜索中
+            // if (_currentQuery.isNotEmpty) ...[
+            //   const SizedBox(height: 16),
+            //   _buildFilterArea(),
+            // ],
 
-          // 内容区域
-          Expanded(
-            child: _currentQuery.isEmpty
-                ? _buildSuggestions()
-                : _buildSearchResults(),
-          ),
-        ],
+            // 内容区域
+            Expanded(
+              child: _currentQuery.isEmpty
+                  ? _buildSuggestions()
+                  : _buildSearchResults(),
+            ),
+          ],
+        ),
       ),
     );
   }

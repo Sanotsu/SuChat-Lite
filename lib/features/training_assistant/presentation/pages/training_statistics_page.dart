@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
+
 import 'package:provider/provider.dart';
 
 import '../../domain/entities/training_record.dart';
@@ -164,18 +166,25 @@ class _TrainingStatisticsPageState extends State<TrainingStatisticsPage> {
           );
 
     // 根据是否显示AppBar返回不同的布局
+    // 2026-09-04 桌面端适配：内容限宽(两个分支均为独立Scaffold页)
     return widget.showAppBar
-        ? Scaffold(
-            appBar: AppBar(title: const Text('训练统计'), actions: actions),
-            body: content,
-          )
-        : Scaffold(
-            appBar: AppBar(
-              automaticallyImplyLeading: false,
-              title: const SizedBox.shrink(),
-              actions: actions,
+        ? CusContentWidth(
+            maxWidth: 1000,
+            child: Scaffold(
+              appBar: AppBar(title: const Text('训练统计'), actions: actions),
+              body: content,
             ),
-            body: content,
+          )
+        : CusContentWidth(
+            maxWidth: 1000,
+            child: Scaffold(
+              appBar: AppBar(
+                automaticallyImplyLeading: false,
+                title: const SizedBox.shrink(),
+                actions: actions,
+              ),
+              body: content,
+            ),
           );
   }
 }

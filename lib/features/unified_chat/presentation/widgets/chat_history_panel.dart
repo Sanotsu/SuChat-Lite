@@ -60,6 +60,7 @@ class _ChatHistoryPanelState extends State<ChatHistoryPanel> {
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
       ToastUtils.showError('加载对话历史失败: $e');
     }
@@ -139,6 +140,26 @@ class _ChatHistoryPanelState extends State<ChatHistoryPanel> {
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               color: Theme.of(context).colorScheme.onPrimaryContainer,
             ),
+          ),
+          const Spacer(),
+
+          Consumer<UnifiedChatViewModel>(
+            builder: (context, viewModel, child) {
+              return IconButton(
+                icon: const Icon(Icons.storage),
+                tooltip: '平台管理',
+                onPressed: () => _navigate(() {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PlatformListPage(),
+                    ),
+                  ).then((value) async {
+                    viewModel.refreshPlatformsAndModels();
+                  });
+                }),
+              );
+            },
           ),
         ],
       ),
@@ -374,22 +395,22 @@ class _ChatHistoryPanelState extends State<ChatHistoryPanel> {
                   }),
                 ),
               ),
-              Expanded(
-                child: IconButton(
-                  icon: const Icon(Icons.storage),
-                  tooltip: '平台管理',
-                  onPressed: () => _navigate(() {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const PlatformListPage(),
-                      ),
-                    ).then((value) async {
-                      viewModel.refreshPlatformsAndModels();
-                    });
-                  }),
-                ),
-              ),
+              // Expanded(
+              //   child: IconButton(
+              //     icon: const Icon(Icons.storage),
+              //     tooltip: '平台管理',
+              //     onPressed: () => _navigate(() {
+              //       Navigator.push(
+              //         context,
+              //         MaterialPageRoute(
+              //           builder: (context) => const PlatformListPage(),
+              //         ),
+              //       ).then((value) async {
+              //         viewModel.refreshPlatformsAndModels();
+              //       });
+              //     }),
+              //   ),
+              // ),
 
               // 用户设置(备份恢复/数据迁移等入口)
               Expanded(

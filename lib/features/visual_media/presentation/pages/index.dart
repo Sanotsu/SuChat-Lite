@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../news/presentation/widgets/entrance_card.dart';
 import 'bangumi/calendar_page.dart';
 import 'my_anime_list/top_page.dart';
-import 'waifu_pics/index.dart';
 
 ///
 /// 后续动画、漫画、二次元、电影剧集真人秀、游戏等，都放在这个分类里面
@@ -25,28 +25,31 @@ class _VisualMediaIndexState extends State<VisualMediaIndex> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      appBar: AppBar(title: const Text('动漫资讯')),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          /// 功能入口按钮
-          Expanded(
-            child: ListView(
-              children: [
-                /// 这个是分类的折叠栏
-                ...buildExpansionTileList(context),
-              ],
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        appBar: AppBar(title: const Text('动漫资讯')),
+        body: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            /// 功能入口按钮
+            Expanded(
+              child: ListView(
+                children: [
+                  /// 这个是分类的折叠栏
+                  ...buildExpansionTileList(context),
+                ],
+              ),
             ),
-          ),
 
-          Text(
-            "数据来源若侵权，请及时联系我删除",
-            style: TextStyle(fontSize: 12, color: Colors.grey),
-          ),
-        ],
+            Text(
+              "数据来源若侵权，请及时联系我删除",
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -61,14 +64,6 @@ List<Widget> buildExpansionTileList(BuildContext context) {
       title: _titleWidget('动画和漫画'),
       children: _animeAndComics(context),
     ),
-    const Divider(),
-    ExpansionTile(
-      shape: const Border(),
-      leading: const Icon(Icons.text_fields, color: Colors.green),
-      title: _titleWidget('二次元图片'),
-      children: _waifuImage(context),
-    ),
-    const Divider(),
   ];
 }
 
@@ -108,18 +103,6 @@ List<Widget> _animeAndComics(BuildContext context) {
         title: 'MAL动漫排行',
         subtitle: "MyAnimeList排行榜",
         onTap: () => showNoNetworkOrGoTargetPage(context, MALTopPage()),
-      ),
-    ]),
-  ];
-}
-
-List<Widget> _waifuImage(BuildContext context) {
-  return [
-    _rowWidget([
-      EntranceCard(
-        title: 'WAIFU图片',
-        subtitle: "随机二次元WAIFU",
-        onTap: () => showNoNetworkOrGoTargetPage(context, WaifuPicIndex()),
       ),
     ]),
   ];

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:provider/provider.dart';
 import '../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../shared/widgets/toast_utils.dart';
@@ -81,82 +82,85 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: true,
-      appBar: AppBar(
-        title: Text(widget.foodItem.name),
-        actions: [
-          if (widget.isEditable)
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => FoodEditPage(
-                      foodItem: widget.foodItem,
-                      onSave: (updatedFood) {
-                        _viewModel.updateFood(updatedFood).then((_) {
-                          ToastUtils.showInfo('食品信息已更新');
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        resizeToAvoidBottomInset: true,
+        appBar: AppBar(
+          title: Text(widget.foodItem.name),
+          actions: [
+            if (widget.isEditable)
+              IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FoodEditPage(
+                        foodItem: widget.foodItem,
+                        onSave: (updatedFood) {
+                          _viewModel.updateFood(updatedFood).then((_) {
+                            ToastUtils.showInfo('食品信息已更新');
 
-                          if (!context.mounted) return;
-                          Navigator.pop(context);
-                        });
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
-          IconButton(
-            icon: Icon(
-              _isFavorite ? Icons.favorite : Icons.favorite_border,
-              color: _isFavorite ? Colors.red : null,
-            ),
-            onPressed: _toggleFavorite,
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // 食品图片
-                  if (widget.foodItem.imageUrl != null &&
-                      widget.foodItem.imageUrl!.isNotEmpty)
-                    SizedBox(
-                      height: 200,
-                      child: buildImageViewCarouselSlider([
-                        widget.foodItem.imageUrl!,
-                      ]),
-                    )
-                  else
-                    Container(
-                      height: 200,
-                      color: Colors.grey[300],
-                      child: const Center(
-                        child: Icon(
-                          Icons.restaurant,
-                          size: 64,
-                          color: Colors.white,
-                        ),
+                            if (!context.mounted) return;
+                            Navigator.pop(context);
+                          });
+                        },
                       ),
                     ),
+                  );
+                },
+              ),
+            IconButton(
+              icon: Icon(
+                _isFavorite ? Icons.favorite : Icons.favorite_border,
+                color: _isFavorite ? Colors.red : null,
+              ),
+              onPressed: _toggleFavorite,
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // 食品图片
+                    if (widget.foodItem.imageUrl != null &&
+                        widget.foodItem.imageUrl!.isNotEmpty)
+                      SizedBox(
+                        height: 200,
+                        child: buildImageViewCarouselSlider([
+                          widget.foodItem.imageUrl!,
+                        ]),
+                      )
+                    else
+                      Container(
+                        height: 200,
+                        color: Colors.grey[300],
+                        child: const Center(
+                          child: Icon(
+                            Icons.restaurant,
+                            size: 64,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
 
-                  // 基本信息
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: baseInfo(),
-                  ),
-                ],
+                    // 基本信息
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: baseInfo(),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          if (widget.mealRecordId != null) inputBar(),
-        ],
+            if (widget.mealRecordId != null) inputBar(),
+          ],
+        ),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -126,44 +127,56 @@ class _BillDetailPageState extends State<BillDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('账单详情'),
-        actions: [
-          if (_billItem != null) ...[
-            IconButton(icon: const Icon(Icons.edit), onPressed: _editBill),
-            IconButton(icon: const Icon(Icons.delete), onPressed: _deleteBill),
-          ],
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _billItem == null
-          ? const Center(child: Text('未找到账单信息'))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(),
-                  const Divider(height: 32),
-                  _buildDetailItem('分类', _billItem!.category, icon: _category),
-                  _buildDetailItem('账单名称', _billItem!.item),
-                  _buildDetailItem(
-                    '日期',
-                    _formatDate(_billItem!.date) +
-                        (_billItem!.time != null ? ' ${_billItem!.time}' : ''),
-                  ),
-                  _buildDetailItem(
-                    '创建时间',
-                    _formatDateTime(_billItem!.gmtModified),
-                  ),
-                  if (_billItem!.remark != null &&
-                      _billItem!.remark!.isNotEmpty)
-                    _buildDetailItem('备注', _billItem!.remark!),
-                ],
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('账单详情'),
+          actions: [
+            if (_billItem != null) ...[
+              IconButton(icon: const Icon(Icons.edit), onPressed: _editBill),
+              IconButton(
+                icon: const Icon(Icons.delete),
+                onPressed: _deleteBill,
               ),
-            ),
+            ],
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _billItem == null
+            ? const Center(child: Text('未找到账单信息'))
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(),
+                    const Divider(height: 32),
+                    _buildDetailItem(
+                      '分类',
+                      _billItem!.category,
+                      icon: _category,
+                    ),
+                    _buildDetailItem('账单名称', _billItem!.item),
+                    _buildDetailItem(
+                      '日期',
+                      _formatDate(_billItem!.date) +
+                          (_billItem!.time != null
+                              ? ' ${_billItem!.time}'
+                              : ''),
+                    ),
+                    _buildDetailItem(
+                      '创建时间',
+                      _formatDateTime(_billItem!.gmtModified),
+                    ),
+                    if (_billItem!.remark != null &&
+                        _billItem!.remark!.isNotEmpty)
+                      _buildDetailItem('备注', _billItem!.remark!),
+                  ],
+                ),
+              ),
+      ),
     );
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../../shared/widgets/cus_content_width.dart';
 
 import '../../../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../../../shared/widgets/common_error_empty_widgets.dart';
@@ -60,20 +61,23 @@ class _SerialDetailPageState extends State<SerialDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.serial.title ?? '连载章节'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: Column(
-        children: [
-          // 连载信息头部
-          _buildSerialHeader(),
-          // 章节列表
-          Expanded(child: _buildChapterList()),
-        ],
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.serial.title ?? '连载章节'),
+          backgroundColor: Theme.of(context).primaryColor,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        body: Column(
+          children: [
+            // 连载信息头部
+            _buildSerialHeader(),
+            // 章节列表
+            Expanded(child: _buildChapterList()),
+          ],
+        ),
       ),
     );
   }

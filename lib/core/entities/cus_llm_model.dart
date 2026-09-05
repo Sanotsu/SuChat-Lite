@@ -32,6 +32,10 @@ class CusLLMSpec {
   String? baseUrl;
   String? apiKey;
 
+  // 2026-09-04 平台显示名(仅运行时展示用，桥接统一模型库时填充真实平台名；
+  // 旧平台枚举体系下为null，展示时回退CP_NAME_MAP。不参与json序列化)
+  String? platformLabel;
+
   // 2025-04-23 预留一个想随意填写的栏位，供记录其他内容
   String? description;
 
@@ -46,6 +50,7 @@ class CusLLMSpec {
     this.isBuiltin = false,
     this.baseUrl,
     this.apiKey,
+    this.platformLabel,
     this.description,
   });
 

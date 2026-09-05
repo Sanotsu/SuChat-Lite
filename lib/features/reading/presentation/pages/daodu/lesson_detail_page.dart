@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
@@ -135,30 +136,33 @@ class _DaoduLessonDetailPageState extends State<DaoduLessonDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      // backgroundColor: _isDarkMode ? Colors.black : Colors.white,
-      backgroundColor: _isDarkMode ? Colors.black : _lightBgColor,
-      appBar: AppBar(
-        title: Text(_currentLesson?.title ?? '岛读文章详情'),
-        backgroundColor: _isDarkMode ? Colors.grey[900] : _lightBgColor,
-        foregroundColor: _isDarkMode ? Colors.white : null,
-        actions: [
-          IconButton(
-            icon: Icon(_isDarkMode ? Icons.light_mode : Icons.dark_mode),
-            onPressed: () {
-              setState(() {
-                _isDarkMode = !_isDarkMode;
-              });
-              _settingsService.setIsDarkMode(_isDarkMode);
-            },
-          ),
-          IconButton(
-            icon: Icon(Icons.text_fields),
-            onPressed: _showFontSizeDialog,
-          ),
-        ],
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        // backgroundColor: _isDarkMode ? Colors.black : Colors.white,
+        backgroundColor: _isDarkMode ? Colors.black : _lightBgColor,
+        appBar: AppBar(
+          title: Text(_currentLesson?.title ?? '岛读文章详情'),
+          backgroundColor: _isDarkMode ? Colors.grey[900] : _lightBgColor,
+          foregroundColor: _isDarkMode ? Colors.white : null,
+          actions: [
+            IconButton(
+              icon: Icon(_isDarkMode ? Icons.light_mode : Icons.dark_mode),
+              onPressed: () {
+                setState(() {
+                  _isDarkMode = !_isDarkMode;
+                });
+                _settingsService.setIsDarkMode(_isDarkMode);
+              },
+            ),
+            IconButton(
+              icon: Icon(Icons.text_fields),
+              onPressed: _showFontSizeDialog,
+            ),
+          ],
+        ),
+        body: _buildBody(),
       ),
-      body: _buildBody(),
     );
   }
 
@@ -194,46 +198,52 @@ class _DaoduLessonDetailPageState extends State<DaoduLessonDetailPage> {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 标题
-          if (_currentLesson!.title?.isNotEmpty == true)
-            Text(
-              _currentLesson!.title!,
-              style: TextStyle(
-                fontSize: _fontSize + 4,
-                fontWeight: FontWeight.bold,
-                color: _isDarkMode ? Colors.white : Colors.black87,
-                height: 1.4,
-              ),
-            ),
+      // 2026-09-04 桌面端适配：正文区限宽居中，避免宽屏长行
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 680),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 标题
+              if (_currentLesson!.title?.isNotEmpty == true)
+                Text(
+                  _currentLesson!.title!,
+                  style: TextStyle(
+                    fontSize: _fontSize + 4,
+                    fontWeight: FontWeight.bold,
+                    color: _isDarkMode ? Colors.white : Colors.black87,
+                    height: 1.4,
+                  ),
+                ),
 
-          const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-          // 作者信息
-          if (_currentLesson!.author != null) _buildAuthorInfo(),
+              // 作者信息
+              if (_currentLesson!.author != null) _buildAuthorInfo(),
 
-          const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-          // 文章内容
-          if (_currentLesson!.article?.isNotEmpty == true)
-            SelectableText(
-              _currentLesson!.article!,
-              style: TextStyle(
-                fontSize: _fontSize,
-                height: 1.8,
-                color: _isDarkMode ? Colors.grey[300] : Colors.black87,
-              ),
-            ),
+              // 文章内容
+              if (_currentLesson!.article?.isNotEmpty == true)
+                SelectableText(
+                  _currentLesson!.article!,
+                  style: TextStyle(
+                    fontSize: _fontSize,
+                    height: 1.8,
+                    color: _isDarkMode ? Colors.grey[300] : Colors.black87,
+                  ),
+                ),
 
-          const SizedBox(height: 32),
+              const SizedBox(height: 32),
 
-          // 底部操作区域
-          _buildBottomActions(),
+              // 底部操作区域
+              _buildBottomActions(),
 
-          const SizedBox(height: 16),
-        ],
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
       ),
     );
   }

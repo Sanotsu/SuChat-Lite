@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import 'package:flutter/services.dart';
 import '../../../../../shared/widgets/toast_utils.dart';
 import '../../../data/models/tmdb/tmdb_mt_review_resp.dart';
@@ -12,37 +13,40 @@ class TmdbFullReviewPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('评论详情'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          // 占位用
-          // IconButton(
-          //   icon: const Icon(Icons.share),
-          //   onPressed: () => shareReview(context),
-          // ),
-          IconButton(
-            icon: const Icon(Icons.copy),
-            onPressed: () => _copyReview(context),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 作者信息
-            _buildAuthorInfo(context),
-            const SizedBox(height: 24),
-            // 评论内容
-            _buildReviewContent(context),
-            const SizedBox(height: 24),
-            // 操作按钮(占位用，后续有需要再完善)
-            // buildActionButtons(context),
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('评论详情'),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          actions: [
+            // 占位用
+            // IconButton(
+            //   icon: const Icon(Icons.share),
+            //   onPressed: () => shareReview(context),
+            // ),
+            IconButton(
+              icon: const Icon(Icons.copy),
+              onPressed: () => _copyReview(context),
+            ),
           ],
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 作者信息
+              _buildAuthorInfo(context),
+              const SizedBox(height: 24),
+              // 评论内容
+              _buildReviewContent(context),
+              const SizedBox(height: 24),
+              // 操作按钮(占位用，后续有需要再完善)
+              // buildActionButtons(context),
+            ],
+          ),
         ),
       ),
     );

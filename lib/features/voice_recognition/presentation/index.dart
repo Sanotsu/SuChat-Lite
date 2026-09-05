@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../shared/widgets/cus_content_width.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
@@ -465,28 +466,31 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
     // 判断是否为桌面平台
     final isDesktop = ScreenHelper.isDesktop();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('录音文件识别'),
-        actions: [
-          // 2026-09-03 音频上传改为tmpfiles.org临时存储(免配置)，GitHub存储设置入口移除
-          IconButton(
-            onPressed: () {
-              ScreenHelper.isDesktop()
-                  ? commonMarkdwonHintDialog(context, "录音识别使用说明", note)
-                  : commonMDHintModalBottomSheet(context, "录音识别使用说明", note);
-            },
-            icon: const Icon(Icons.info_outline),
-          ),
-        ],
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('录音文件识别'),
+          actions: [
+            // 2026-09-03 音频上传改为tmpfiles.org临时存储(免配置)，GitHub存储设置入口移除
+            IconButton(
+              onPressed: () {
+                ScreenHelper.isDesktop()
+                    ? commonMarkdwonHintDialog(context, "录音识别使用说明", note)
+                    : commonMDHintModalBottomSheet(context, "录音识别使用说明", note);
+              },
+              icon: const Icon(Icons.info_outline),
+            ),
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CusLoadingIndicator(text: '加载中...'))
+            : isDesktop
+            // 桌面端布局 - 左右两栏
+            ? _buildDesktopLayout()
+            // 移动端布局 - 保持原有的垂直布局
+            : _buildMobileLayout(),
       ),
-      body: _isLoading
-          ? const Center(child: CusLoadingIndicator(text: '加载中...'))
-          : isDesktop
-          // 桌面端布局 - 左右两栏
-          ? _buildDesktopLayout()
-          // 移动端布局 - 保持原有的垂直布局
-          : _buildMobileLayout(),
     );
   }
 

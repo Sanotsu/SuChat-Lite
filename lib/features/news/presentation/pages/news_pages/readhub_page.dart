@@ -93,7 +93,7 @@ class _ReadHubPageState extends BaseNewsPageState<ReadHubPage, ReadhubItem> {
         ? buildHotTopicCard(item, index)
         : CoverNewsCard(
             title: item.title,
-            summary: item.summary,
+            summary: item.summary ?? '',
             url: item.url ?? '',
             author: item.siteNameDisplay,
             source: item.siteNameDisplay ?? "",
@@ -187,7 +187,7 @@ class _ReadHubPageState extends BaseNewsPageState<ReadHubPage, ReadhubItem> {
           ],
         ),
         subtitle: Text(
-          item.summary,
+          item.summary ?? '',
           maxLines: isExpanded ? null : 3,
           overflow: isExpanded ? null : TextOverflow.ellipsis,
           style: TextStyle(

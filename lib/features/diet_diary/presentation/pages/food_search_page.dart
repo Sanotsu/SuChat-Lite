@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/utils/simple_tools.dart';
@@ -93,71 +94,74 @@ class _FoodSearchPageState extends State<FoodSearchPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('添加食品到${_getMealTypeName(widget.mealType)}'),
-        actions: [
-          FavoriteFilterButton(
-            showOnlyFavorites: _showOnlyFavorites,
-            onToggle: () {
-              setState(() {
-                _showOnlyFavorites = !_showOnlyFavorites;
-              });
-            },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // 搜索框
-          FoodSearchBar(
-            controller: _searchController,
-            searchQuery: _searchQuery,
-            hintText: '搜索食品',
-            filled: true,
-            fillColor: Colors.grey[100],
-            onSearchChanged: (value) {
-              setState(() {
-                _searchQuery = value;
-              });
-              _viewModel.searchFood(value);
-            },
-            onClearSearch: () {
-              _searchController.clear();
-              setState(() {
-                _searchQuery = '';
-              });
-              _viewModel.searchFood('');
-            },
-          ),
-
-          // 食品列表
-          Expanded(
-            child: Consumer<DietDiaryViewModel>(
-              builder: (context, viewModel, child) {
-                return FoodListView(
-                  viewModel: viewModel,
-                  searchQuery: _searchQuery,
-                  showOnlyFavorites: _showOnlyFavorites,
-                  errorContext: 'food_management',
-                  existingFoodIds: _existingFoodIds,
-                  onFoodTap: _navigateToFoodDetail,
-                  onFavoriteToggle: _toggleFavorite,
-                  onAddToMeal: _showFoodQuantityEditor,
-                  onAddNewFood: _navigateToAddFood,
-                  showAddToMealAction: true,
-                  padding: const EdgeInsets.all(8),
-                );
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('添加食品到${_getMealTypeName(widget.mealType)}'),
+          actions: [
+            FavoriteFilterButton(
+              showOnlyFavorites: _showOnlyFavorites,
+              onToggle: () {
+                setState(() {
+                  _showOnlyFavorites = !_showOnlyFavorites;
+                });
               },
             ),
-          ),
-        ],
-      ),
-      floatingActionButton: buildFloatingActionButton(
-        () => _navigateToAddFood(''),
-        context,
-        icon: Icons.add,
-        tooltip: '添加新食品',
+          ],
+        ),
+        body: Column(
+          children: [
+            // 搜索框
+            FoodSearchBar(
+              controller: _searchController,
+              searchQuery: _searchQuery,
+              hintText: '搜索食品',
+              filled: true,
+              fillColor: Colors.grey[100],
+              onSearchChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+                _viewModel.searchFood(value);
+              },
+              onClearSearch: () {
+                _searchController.clear();
+                setState(() {
+                  _searchQuery = '';
+                });
+                _viewModel.searchFood('');
+              },
+            ),
+
+            // 食品列表
+            Expanded(
+              child: Consumer<DietDiaryViewModel>(
+                builder: (context, viewModel, child) {
+                  return FoodListView(
+                    viewModel: viewModel,
+                    searchQuery: _searchQuery,
+                    showOnlyFavorites: _showOnlyFavorites,
+                    errorContext: 'food_management',
+                    existingFoodIds: _existingFoodIds,
+                    onFoodTap: _navigateToFoodDetail,
+                    onFavoriteToggle: _toggleFavorite,
+                    onAddToMeal: _showFoodQuantityEditor,
+                    onAddNewFood: _navigateToAddFood,
+                    showAddToMealAction: true,
+                    padding: const EdgeInsets.all(8),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+        floatingActionButton: buildFloatingActionButton(
+          () => _navigateToAddFood(''),
+          context,
+          icon: Icons.add,
+          tooltip: '添加新食品',
+        ),
       ),
     );
   }

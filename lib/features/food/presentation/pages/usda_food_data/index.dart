@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import 'package:easy_refresh/easy_refresh.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../../../../core/network/dio_client/interceptor_error.dart';
 import '../../../../../shared/constants/constants.dart';
 import '../../../../../shared/widgets/simple_tool_widget.dart';
+import '../../../../../shared/widgets/toast_utils.dart';
 import '../../../../../shared/widgets/keyword_input.dart';
 import '../../../data/datasources/usda_food_data_central/usda_food_data_apis.dart';
 import '../../../data/models/usda_food_data/usda_food_item.dart';
@@ -111,28 +113,38 @@ class _USDAFoodDataCentralState extends State<USDAFoodDataCentral> {
     }
 
     // 关键字条件查询，可以指定数据类型
-    var usdaRst = await searchUSDAFoods(
-      query,
-      dataType: [selectedUSDADataType.value],
-      pageNumber: currentPage,
-      pageSize: pageSize,
-    );
+    // 2026-09-04 补异常兜底：请求失败时复位loading，避免页面永远转圈
+    try {
+      var usdaRst = await searchUSDAFoods(
+        query,
+        dataType: [selectedUSDADataType.value],
+        pageNumber: currentPage,
+        pageSize: pageSize,
+      );
 
-    if (!mounted) return;
-    setState(() {
-      if (currentPage == 1) {
-        rankList = usdaRst.foods;
-      } else {
-        rankList.addAll(usdaRst.foods);
+      if (!mounted) return;
+      setState(() {
+        if (currentPage == 1) {
+          rankList = usdaRst.foods;
+        } else {
+          rankList.addAll(usdaRst.foods);
+        }
+        hasMore = usdaRst.totalPages > currentPage;
+
+        total = usdaRst.totalHits;
+      });
+    } on CusHttpException catch (e) {
+      // http连接相关的报错在拦截器就有弹窗报错了
+      debugPrint(e.toString());
+    } catch (e) {
+      if (mounted) ToastUtils.showError("查询失败: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isRefresh ? isRefreshLoading = false : isLoading = false;
+        });
       }
-      hasMore = usdaRst.totalPages > currentPage;
-
-      total = usdaRst.totalHits;
-    });
-
-    setState(() {
-      isRefresh ? isRefreshLoading = false : isLoading = false;
-    });
+    }
   }
 
   // 关键字查询
@@ -150,63 +162,66 @@ class _USDAFoodDataCentralState extends State<USDAFoodDataCentral> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('USDA食品数据中心'),
-        actions: [buildInfoButtonOnAction(context, note)],
-      ),
-      body: GestureDetector(
-        // 允许子控件（如TextField）接收点击事件
-        behavior: HitTestBehavior.translucent,
-        // 点击空白处可以移除焦点，关闭键盘
-        onTap: unfocusHandle,
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                /// 分类下拉框
-                TypeDropdown(
-                  selectedValue: selectedUSDADataType,
-                  items: usdaDataTypes,
-                  label: "数据类型:",
-                  width: 200.sp,
-                  onChanged: (value) async {
-                    setState(() {
-                      selectedUSDADataType = value!;
-                    });
-                    // 切换分类后，直接重新查询
-                    _handleSearch();
-                  },
-                ),
-                // 显示已加载数量和总数量
-                if (total != null)
-                  Expanded(
-                    child: Text(
-                      "${rankList.length}/$total",
-                      style: TextStyle(fontSize: 10.sp),
-                      textAlign: TextAlign.end,
-                    ),
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('USDA食品数据中心'),
+          actions: [buildInfoButtonOnAction(context, note)],
+        ),
+        body: GestureDetector(
+          // 允许子控件（如TextField）接收点击事件
+          behavior: HitTestBehavior.translucent,
+          // 点击空白处可以移除焦点，关闭键盘
+          onTap: unfocusHandle,
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  /// 分类下拉框
+                  TypeDropdown(
+                    selectedValue: selectedUSDADataType,
+                    items: usdaDataTypes,
+                    label: "数据类型:",
+                    width: 200,
+                    onChanged: (value) async {
+                      setState(() {
+                        selectedUSDADataType = value!;
+                      });
+                      // 切换分类后，直接重新查询
+                      _handleSearch();
+                    },
                   ),
+                  // 显示已加载数量和总数量
+                  if (total != null)
+                    Expanded(
+                      child: Text(
+                        "${rankList.length}/$total",
+                        style: TextStyle(fontSize: 10),
+                        textAlign: TextAlign.end,
+                      ),
+                    ),
 
-                SizedBox(width: 5.sp),
-              ],
-            ),
-            SizedBox(height: 10.sp),
+                  SizedBox(width: 5),
+                ],
+              ),
+              SizedBox(height: 10),
 
-            /// 关键字输入框
-            KeywordInputArea(
-              searchController: searchController,
-              hintText: "Input English keywords",
-              onSearchPressed: _handleSearch,
-              height: 48.sp,
-            ),
+              /// 关键字输入框
+              KeywordInputArea(
+                searchController: searchController,
+                hintText: "Input English keywords",
+                onSearchPressed: _handleSearch,
+                height: 48,
+              ),
 
-            Divider(height: 20.sp),
+              Divider(height: 20),
 
-            /// 主列表，可上拉下拉刷新
-            buildRefreshList(),
-          ],
+              /// 主列表，可上拉下拉刷新
+              buildRefreshList(),
+            ],
+          ),
         ),
       ),
     );
@@ -251,12 +266,12 @@ class _USDAFoodDataCentralState extends State<USDAFoodDataCentral> {
     //   title: Text(
     //     "${item.fdcId}",
     //     maxLines: 4,
-    //     style: TextStyle(fontSize: 12.sp),
+    //     style: TextStyle(fontSize: 12),
     //   ),
     //   subtitle: Text(
     //     item.description,
     //     maxLines: 4,
-    //     style: TextStyle(fontSize: 12.sp),
+    //     style: TextStyle(fontSize: 12),
     //   ),
     // );
 
@@ -271,7 +286,7 @@ class _USDAFoodDataCentralState extends State<USDAFoodDataCentral> {
       },
       child: Card(
         child: Padding(
-          padding: EdgeInsets.all(5.sp),
+          padding: EdgeInsets.all(5),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -280,7 +295,7 @@ class _USDAFoodDataCentralState extends State<USDAFoodDataCentral> {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 18.sp,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).primaryColor,
                 ),
@@ -291,15 +306,15 @@ class _USDAFoodDataCentralState extends State<USDAFoodDataCentral> {
               // 几个atatype都有的测试栏位
               // Text(
               //   "食品编号：${item.fdcId}",
-              //   style: TextStyle(fontSize: 12.sp),
+              //   style: TextStyle(fontSize: 12),
               // ),
               // Text(
               //   "匹配程度：${item.score}",
-              //   style: TextStyle(fontSize: 12.sp),
+              //   style: TextStyle(fontSize: 12),
               // ),
               // Text(
               //   "发布日期：${item.publishedDate}",
-              //   style: TextStyle(fontSize: 12.sp),
+              //   style: TextStyle(fontSize: 12),
               // ),
             ],
           ),
@@ -313,40 +328,40 @@ class _USDAFoodDataCentralState extends State<USDAFoodDataCentral> {
     // NDB Number;	Description;	Most Recent Acquisition Date;	SR/Foundation Food Category
     if (selectedUSDADataType.enLabel == UDSADataType.foundation.name) {
       return [
-        Text("NDB编号：${item.ndbNumber}", style: TextStyle(fontSize: 12.sp)),
+        Text("NDB编号：${item.ndbNumber}", style: TextStyle(fontSize: 12)),
         Text(
           "获取时间：${item.mostRecentAcquisitionDate}",
-          style: TextStyle(fontSize: 12.sp),
+          style: TextStyle(fontSize: 12),
         ),
-        Text("食品类别：${item.foodCategory}", style: TextStyle(fontSize: 12.sp)),
+        Text("食品类别：${item.foodCategory}", style: TextStyle(fontSize: 12)),
       ];
     } else if (selectedUSDADataType.enLabel == UDSADataType.legacy.name) {
       return [
-        Text("NDB编号：${item.ndbNumber}", style: TextStyle(fontSize: 12.sp)),
-        Text("食品类别：${item.foodCategory}", style: TextStyle(fontSize: 12.sp)),
+        Text("NDB编号：${item.ndbNumber}", style: TextStyle(fontSize: 12)),
+        Text("食品类别：${item.foodCategory}", style: TextStyle(fontSize: 12)),
       ];
     }
     // Survey Foods (FNDDS)展示栏位：
     // Food Code;	Main Food Description;	Additional Food Description;	WWEIA Food Category
     else if (selectedUSDADataType.enLabel == UDSADataType.survey.name) {
       return [
-        Text("食品编号：${item.foodCode}", style: TextStyle(fontSize: 12.sp)),
+        Text("食品编号：${item.foodCode}", style: TextStyle(fontSize: 12)),
         Text(
           "额外描述：${item.additionalDescriptions}",
-          style: TextStyle(fontSize: 12.sp),
+          style: TextStyle(fontSize: 12),
         ),
-        Text("食品类别：${item.foodCategory}", style: TextStyle(fontSize: 12.sp)),
+        Text("食品类别：${item.foodCategory}", style: TextStyle(fontSize: 12)),
       ];
     }
     // Branded Foods 展示栏位：
     // GTIN/UPC;	Description;	Branded Food Category;	Brand Owner;	Brand;	Market Country
     else if (selectedUSDADataType.enLabel == UDSADataType.branded.name) {
       return [
-        Text("通用条码：${item.gtinUpc}", style: TextStyle(fontSize: 12.sp)),
-        Text("食品类别：${item.foodCategory}", style: TextStyle(fontSize: 12.sp)),
-        Text("品牌持有：${item.brandOwner}", style: TextStyle(fontSize: 12.sp)),
-        Text("品牌名称：${item.brandName}", style: TextStyle(fontSize: 12.sp)),
-        Text("品牌市场：${item.marketCountry}", style: TextStyle(fontSize: 12.sp)),
+        Text("通用条码：${item.gtinUpc}", style: TextStyle(fontSize: 12)),
+        Text("食品类别：${item.foodCategory}", style: TextStyle(fontSize: 12)),
+        Text("品牌持有：${item.brandOwner}", style: TextStyle(fontSize: 12)),
+        Text("品牌名称：${item.brandName}", style: TextStyle(fontSize: 12)),
+        Text("品牌市场：${item.marketCountry}", style: TextStyle(fontSize: 12)),
       ];
     } else {
       return [];

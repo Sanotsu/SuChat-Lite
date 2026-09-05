@@ -76,3 +76,9 @@ String? getDesktopHomePath() {
   final env = Platform.environment;
   return env['USERPROFILE'] ?? env['HOME'];
 }
+
+/// 2026-09-04 get_storage 容器文件收纳目录
+/// 历史版本所有 *.gs/*.bak 容器散落在文档目录根，
+/// 现统一收进私有区 `<documents>/SuChatApp/GetStorage`
+Future<Directory> getGetStorageDir() =>
+    getAppPrivateDir(subfolder: 'GetStorage');

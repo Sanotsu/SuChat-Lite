@@ -68,7 +68,7 @@ class ReadhubItem {
   String title;
 
   @JsonKey(name: 'summary')
-  String summary;
+  String? summary;
 
   @JsonKey(name: 'createdAt')
   String? createdAt;
@@ -108,7 +108,7 @@ class ReadhubItem {
   ReadhubItem({
     required this.uid,
     required this.title,
-    required this.summary,
+    this.summary,
     required this.createdAt,
     required this.publishDate,
     required this.siteNameDisplay,

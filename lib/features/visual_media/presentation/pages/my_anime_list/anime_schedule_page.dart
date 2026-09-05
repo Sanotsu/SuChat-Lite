@@ -1,10 +1,15 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import 'package:easy_refresh/easy_refresh.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../../../../core/network/dio_client/interceptor_error.dart';
 import '../../../../../shared/constants/constants.dart';
 import '../../../../../shared/widgets/cus_dropdown_button.dart';
 import '../../../../../shared/widgets/simple_tool_widget.dart';
+import '../../../../../shared/widgets/toast_utils.dart';
 import '../../../data/datasources/jikan/get_jikan_apis.dart';
 import '../../../data/models/jikan/jikan_data.dart';
 import '../../widgets/common_widgets.dart';
@@ -72,33 +77,43 @@ class _MALAnimeSchedulePageState extends State<MALAnimeSchedulePage> {
     // 如果历史季度查询打开，点击“查询”按钮就是历史季度的: /seasons/{year}/{season}
     // 关闭就是当前播放日期表: /schedules (数据很奇怪，感觉不太对)
     // 注意，播放日期表和当前季节 /seasons/now 数据不一样，后者打开历史季度但不选择任何数据时查询
-    var jkRst = _isExpanded
-        ? await getJikanSingleSeason(
-            year: selectedYear,
-            season: (selectedSeasonFilter?.value as String?),
-            filter: (selectedAnimeFilter?.value as String?),
-            page: _currentPage,
-            limit: _pageSize,
-          )
-        : await getJikanSchedules(
-            filter: (selectedWeekFilter?.value as String?),
-            page: _currentPage,
-            limit: _pageSize,
-          );
+    // 2026-09-04 补异常兜底：请求失败时复位loading，避免页面永远转圈(504等场景)
+    try {
+      var jkRst = _isExpanded
+          ? await getJikanSingleSeason(
+              year: selectedYear,
+              season: (selectedSeasonFilter?.value as String?),
+              filter: (selectedAnimeFilter?.value as String?),
+              page: _currentPage,
+              limit: _pageSize,
+            )
+          : await getJikanSchedules(
+              filter: (selectedWeekFilter?.value as String?),
+              page: _currentPage,
+              limit: _pageSize,
+            );
 
-    if (!mounted) return;
-    setState(() {
-      if (_currentPage == 1) {
-        subjectList = jkRst.data;
-      } else {
-        subjectList.addAll(jkRst.data);
+      if (!mounted) return;
+      setState(() {
+        if (_currentPage == 1) {
+          subjectList = jkRst.data;
+        } else {
+          subjectList.addAll(jkRst.data);
+        }
+        _hasMore = jkRst.pagination?.hasNextPage ?? false;
+      });
+    } on CusHttpException catch (e) {
+      // http连接相关的报错在拦截器就有弹窗报错了
+      debugPrint(e.toString());
+    } catch (e) {
+      if (mounted) ToastUtils.showError("查询失败: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isRefresh ? _isRefreshLoading = false : isLoading = false;
+        });
       }
-      _hasMore = jkRst.pagination?.hasNextPage ?? false;
-    });
-
-    setState(() {
-      isRefresh ? _isRefreshLoading = false : isLoading = false;
-    });
+    }
   }
 
   // 关键字查询
@@ -115,30 +130,33 @@ class _MALAnimeSchedulePageState extends State<MALAnimeSchedulePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('MAL番组计划'),
-        actions: [
-          buildInfoButtonOnAction(context, """默认查询最新的“每周番组”，可使用星期筛选。
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('MAL番组计划'),
+          actions: [
+            buildInfoButtonOnAction(context, """默认查询最新的“每周番组”，可使用星期筛选。
 \n展开“历史分季”后星期筛选无效。
 \n使用“历史分季”需要同时选中“年份”和“分季”，否则查询当前季度的动漫。       
 \n清空“历史分季”则查询当前季度的动漫。
 \n收起“历史分季”则查询最新放映日历表。"""),
-        ],
-      ),
-      body: Column(
-        children: [
-          /// 分类查询区域
-          buildDropdownAndQueryButtonArea(),
+          ],
+        ),
+        body: Column(
+          children: [
+            /// 分类查询区域
+            buildDropdownAndQueryButtonArea(),
 
-          /// 历史分季查询条件
-          buildSeasonSelectPanel(),
+            /// 历史分季查询条件
+            buildSeasonSelectPanel(),
 
-          Divider(height: 20.sp),
+            Divider(height: 20.sp),
 
-          /// 主列表，可上拉下拉刷新
-          buildRefreshList(),
-        ],
+            /// 主列表，可上拉下拉刷新
+            buildRefreshList(),
+          ],
+        ),
       ),
     );
   }
@@ -213,7 +231,7 @@ class _MALAnimeSchedulePageState extends State<MALAnimeSchedulePage> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               SizedBox(
-                width: (1.sw - 120.sp) / 3,
+                width: math.min((1.sw - 120.sp) / 3, 200.0),
                 child: buildDropdownButton2<int>(
                   value: selectedYear,
                   // 这个数据其实有专门的接口getJikanSeasons，这是偷懒
@@ -231,7 +249,7 @@ class _MALAnimeSchedulePageState extends State<MALAnimeSchedulePage> {
                 ),
               ),
               SizedBox(
-                width: (1.sw - 120.sp) / 3,
+                width: math.min((1.sw - 120.sp) / 3, 200.0),
                 child: buildDropdownButton2<CusLabel>(
                   value: selectedSeasonFilter,
                   items: malSeasonFilterTypes,
@@ -245,7 +263,7 @@ class _MALAnimeSchedulePageState extends State<MALAnimeSchedulePage> {
                 ),
               ),
               SizedBox(
-                width: (1.sw - 120.sp) / 3,
+                width: math.min((1.sw - 120.sp) / 3, 200.0),
                 child: buildDropdownButton2<CusLabel>(
                   value: selectedAnimeFilter,
                   items: malAnimeFilterTypes,
@@ -302,8 +320,8 @@ class _MALAnimeSchedulePageState extends State<MALAnimeSchedulePage> {
                     }
                   : null,
               child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 380,
                   childAspectRatio: 9 / 18, // 调整子组件的宽高比
                 ),
                 itemCount: subjectList.length,

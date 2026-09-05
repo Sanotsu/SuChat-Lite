@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import 'package:tmdb_api/tmdb_api.dart';
 
 import '../../../data/datasources/tmdb/tmdb_apis.dart';
@@ -42,20 +43,23 @@ class _TmdbCastCrewPageState extends State<TmdbCastCrewPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: [
-            Tab(text: '演员 (${widget.credits.cast?.length ?? 0})'),
-            Tab(text: '制作团队 (${widget.credits.crew?.length ?? 0})'),
-          ],
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.title),
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: [
+              Tab(text: '演员 (${widget.credits.cast?.length ?? 0})'),
+              Tab(text: '制作团队 (${widget.credits.crew?.length ?? 0})'),
+            ],
+          ),
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [_buildCastList(), _buildCrewList()],
+        body: TabBarView(
+          controller: _tabController,
+          children: [_buildCastList(), _buildCrewList()],
+        ),
       ),
     );
   }

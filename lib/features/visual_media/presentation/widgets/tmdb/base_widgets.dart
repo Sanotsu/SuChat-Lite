@@ -86,7 +86,10 @@ class TmdbItemCard extends StatelessWidget {
           bottom: isHorizontal ? 0 : 12,
         ),
         decoration: BoxDecoration(
-          color: Colors.white,
+          // 2026-09-04 暗色主题适配: 卡片底色跟随主题亮度
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey[850]
+              : Colors.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -598,10 +601,12 @@ class TmdbGridWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 2026-09-04 桌面端适配：改为按最大单元宽自适应列数
+    // (固定2列在宽屏每卡≈620px 过分拉伸)
     return GridView.builder(
       padding: const EdgeInsets.all(16),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 240,
         childAspectRatio: childAspectRatio,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
@@ -632,7 +637,10 @@ class TmdbSearchSuggestionWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        // 2026-09-04 暗色主题适配: 底色跟随主题亮度
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Colors.grey[850]
+            : Colors.white,
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(

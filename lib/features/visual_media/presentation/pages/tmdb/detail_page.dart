@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../shared/widgets/common_error_empty_widgets.dart';
@@ -222,17 +223,20 @@ class _TmdbDetailPageState extends State<TmdbDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? buildCommonErrorWidget(
-              error: _error,
-              onRetry: _loadDetailData,
-              showBack: true,
-              context: context,
-            )
-          : _buildDetailContent(),
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+            ? buildCommonErrorWidget(
+                error: _error,
+                onRetry: _loadDetailData,
+                showBack: true,
+                context: context,
+              )
+            : _buildDetailContent(),
+      ),
     );
   }
 
@@ -809,7 +813,10 @@ class _TmdbDetailPageState extends State<TmdbDetailPage> {
               margin: const EdgeInsets.only(bottom: 16),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.grey[100],
+                // 2026-09-04 暗色主题适配: 评论卡底色跟随主题亮度
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey[850]
+                    : Colors.grey[100],
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(

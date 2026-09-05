@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -218,45 +219,48 @@ class _BillAddPageState extends State<BillAddPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.editItem != null ? '编辑账单' : '添加账单'),
-        actions: [
-          TextButton(
-            onPressed: _isLoading ? null : _saveBill,
-            child: const Text('保存'),
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 类型选择器
-                    _buildTypeSelector(),
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.editItem != null ? '编辑账单' : '添加账单'),
+          actions: [
+            TextButton(
+              onPressed: _isLoading ? null : _saveBill,
+              child: const Text('保存'),
+            ),
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 类型选择器
+                      _buildTypeSelector(),
 
-                    // 日期时间选择
-                    _buildDateTimeSelector(),
+                      // 日期时间选择
+                      _buildDateTimeSelector(),
 
-                    // 金额输入
-                    _buildAmountInput(),
+                      // 金额输入
+                      _buildAmountInput(),
 
-                    // 分类选择器
-                    _buildCategorySelector(),
+                      // 分类选择器
+                      _buildCategorySelector(),
 
-                    // 账单名称输入
-                    _buildItemInput(),
+                      // 账单名称输入
+                      _buildItemInput(),
 
-                    // 备注输入
-                    _buildRemarkInput(),
-                  ],
+                      // 备注输入
+                      _buildRemarkInput(),
+                    ],
+                  ),
                 ),
               ),
-            ),
+      ),
     );
   }
 

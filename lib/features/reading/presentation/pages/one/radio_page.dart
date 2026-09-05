@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../shared/constants/constants.dart';
@@ -160,18 +161,21 @@ class _OneRadioPageState extends State<OneRadioPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('收音机'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('收音机'),
+          backgroundColor: Theme.of(context).primaryColor,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        body: _isLoading && _radioContents.isEmpty
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null && _radioContents.isEmpty
+            ? buildCommonErrorWidget(error: _error, onRetry: _loadRadioContents)
+            : _buildRadioList(),
       ),
-      body: _isLoading && _radioContents.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null && _radioContents.isEmpty
-          ? buildCommonErrorWidget(error: _error, onRetry: _loadRadioContents)
-          : _buildRadioList(),
     );
   }
 

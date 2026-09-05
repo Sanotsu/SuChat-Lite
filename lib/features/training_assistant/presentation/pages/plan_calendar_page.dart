@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:provider/provider.dart';
 
 import '../../domain/entities/training_plan.dart';
@@ -70,47 +71,50 @@ class _PlanCalendarPageState extends State<PlanCalendarPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: RichText(
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          text: TextSpan(
-            children: [
-              TextSpan(
-                text: '日历视图\n',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              TextSpan(
-                text: widget.plan.planName,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: RichText(
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  text: '日历视图\n',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                TextSpan(
+                  text: widget.plan.planName,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
+            ),
           ),
         ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+            ? Center(child: Text(_error!))
+            : TrainingCalendar(
+                plan: widget.plan,
+                planDetails: widget.planDetails,
+                records: _records,
+                onDaySelected: (date) {
+                  // 可以在这里处理日期选择事件
+                },
+                onRecordTap: (record) {
+                  // 点击训练记录时导航到详情页
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          TrainingRecordDetailPage(recordId: record.recordId),
+                    ),
+                  );
+                },
+              ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? Center(child: Text(_error!))
-          : TrainingCalendar(
-              plan: widget.plan,
-              planDetails: widget.planDetails,
-              records: _records,
-              onDaySelected: (date) {
-                // 可以在这里处理日期选择事件
-              },
-              onRecordTap: (record) {
-                // 点击训练记录时导航到详情页
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        TrainingRecordDetailPage(recordId: record.recordId),
-                  ),
-                );
-              },
-            ),
     );
   }
 }

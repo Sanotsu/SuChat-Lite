@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -82,131 +83,134 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('翻译历史'),
-        elevation: 0,
-        actions: [
-          if (_entries.isNotEmpty)
-            IconButton(
-              onPressed: _clearAll,
-              icon: const Icon(Icons.delete_sweep_outlined),
-              tooltip: '清空历史',
-            ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _entries.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.history, color: Colors.grey[400], size: 56),
-                  const SizedBox(height: 12),
-                  Text('暂无翻译历史', style: TextStyle(color: Colors.grey[600])),
-                ],
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('翻译历史'),
+          elevation: 0,
+          actions: [
+            if (_entries.isNotEmpty)
+              IconButton(
+                onPressed: _clearAll,
+                icon: const Icon(Icons.delete_sweep_outlined),
+                tooltip: '清空历史',
               ),
-            )
-          : RefreshIndicator(
-              onRefresh: _loadEntries,
-              child: ListView.separated(
-                padding: EdgeInsets.all(12.w),
-                itemCount: _entries.length,
-                separatorBuilder: (_, _) => SizedBox(height: 8.h),
-                itemBuilder: (context, index) {
-                  final e = _entries[index];
-                  final hasAudio =
-                      e.audioPath != null && File(e.audioPath!).existsSync();
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).cardColor,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    // 点击条目进入详情(长文本全文与音频在详情中查看)
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(10),
-                      onTap: () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                TranslationHistoryDetailPage(entry: e),
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _entries.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.history, color: Colors.grey[400], size: 56),
+                    const SizedBox(height: 12),
+                    Text('暂无翻译历史', style: TextStyle(color: Colors.grey[600])),
+                  ],
+                ),
+              )
+            : RefreshIndicator(
+                onRefresh: _loadEntries,
+                child: ListView.separated(
+                  padding: EdgeInsets.all(12.w),
+                  itemCount: _entries.length,
+                  separatorBuilder: (_, _) => SizedBox(height: 8.h),
+                  itemBuilder: (context, index) {
+                    final e = _entries[index];
+                    final hasAudio =
+                        e.audioPath != null && File(e.audioPath!).existsSync();
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).cardColor,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
                           ),
-                        );
-                        _loadEntries();
-                      },
-                      child: Padding(
-                        padding: EdgeInsets.all(12.w),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // 元信息行
-                            Row(
-                              children: [
-                                Text(
-                                  '${e.sourceLang} → ${e.targetLang}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w500,
+                        ],
+                      ),
+                      // 点击条目进入详情(长文本全文与音频在详情中查看)
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(10),
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  TranslationHistoryDetailPage(entry: e),
+                            ),
+                          );
+                          _loadEntries();
+                        },
+                        child: Padding(
+                          padding: EdgeInsets.all(12.w),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // 元信息行
+                              Row(
+                                children: [
+                                  Text(
+                                    '${e.sourceLang} → ${e.targetLang}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
-                                ),
-                                if (hasAudio) ...[
-                                  SizedBox(width: 6.w),
-                                  Icon(
-                                    Icons.volume_up,
-                                    size: 14,
-                                    color: AppColors.success,
+                                  if (hasAudio) ...[
+                                    SizedBox(width: 6.w),
+                                    Icon(
+                                      Icons.volume_up,
+                                      size: 14,
+                                      color: AppColors.success,
+                                    ),
+                                  ],
+                                  const Spacer(),
+                                  Text(
+                                    _formatTime(e.createdAt),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[500],
+                                    ),
                                   ),
                                 ],
-                                const Spacer(),
-                                Text(
-                                  _formatTime(e.createdAt),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[500],
-                                  ),
+                              ),
+                              SizedBox(height: 6.h),
+                              // 原文摘要
+                              Text(
+                                e.sourceText,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey[600],
                                 ),
-                              ],
-                            ),
-                            SizedBox(height: 6.h),
-                            // 原文摘要
-                            Text(
-                              e.sourceText,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey[600],
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            SizedBox(height: 4.h),
-                            // 译文摘要
-                            Text(
-                              e.translatedText,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
+                              SizedBox(height: 4.h),
+                              // 译文摘要
+                              Text(
+                                e.translatedText,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
+      ),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/utils/screen_helper.dart';
@@ -158,38 +159,41 @@ class _NotebookPageState extends State<NotebookPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        // 根据选择模式显示不同的标题
-        title: buildAppBarTitle(),
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          // 根据选择模式显示不同的标题
+          title: buildAppBarTitle(),
 
-        leading: buildAppBarLading(),
+          leading: buildAppBarLading(),
 
-        actions: _isSelectMode
-            // 选择模式下的操作按钮
-            ? buildMultiSelectActions()
-            // 非选择模式下的操作按钮
-            : buildNonMultiSelectActions(),
+          actions: _isSelectMode
+              // 选择模式下的操作按钮
+              ? buildMultiSelectActions()
+              // 非选择模式下的操作按钮
+              : buildNonMultiSelectActions(),
+        ),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 非选择模式才显示分类列表
+            if (!_isSelectMode) buildCategoryList(),
+
+            // 笔记列表
+            Expanded(child: buildNoteList()),
+          ],
+        ),
+        // 非选择模式才显示悬浮按钮
+        floatingActionButton: !_isSelectMode
+            ? buildFloatingActionButton(
+                _createNewNote,
+                context,
+                icon: Icons.add,
+                tooltip: '添加笔记',
+              )
+            : null,
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 非选择模式才显示分类列表
-          if (!_isSelectMode) buildCategoryList(),
-
-          // 笔记列表
-          Expanded(child: buildNoteList()),
-        ],
-      ),
-      // 非选择模式才显示悬浮按钮
-      floatingActionButton: !_isSelectMode
-          ? buildFloatingActionButton(
-              _createNewNote,
-              context,
-              icon: Icons.add,
-              tooltip: '添加笔记',
-            )
-          : null,
     );
   }
 

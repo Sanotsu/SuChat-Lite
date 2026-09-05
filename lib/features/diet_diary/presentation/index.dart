@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../shared/widgets/cus_content_width.dart';
 import '../../../core/entities/user_info.dart';
 import '../../../core/viewmodels/user_info_viewmodel.dart';
 import '../../../shared/constants/constants.dart';
@@ -85,95 +86,102 @@ class _DietDiaryPageState extends State<DietDiaryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('饮食日记'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person),
-            tooltip: '个人信息',
-            onPressed: () => _navigateToUserInfo(context),
-          ),
-          IconButton(
-            icon: const Icon(Icons.bar_chart),
-            tooltip: '图表统计',
-            onPressed: () => _navigateToStatistics(context),
-          ),
-          IconButton(
-            icon: const Icon(Icons.restaurant_menu),
-            tooltip: '食品管理',
-            onPressed: () => _navigateToFoodManagement(context),
-          ),
-        ],
-      ),
-      body: Consumer2<DietDiaryViewModel, UserInfoViewModel>(
-        builder: (context, dietViewModel, userViewModel, child) {
-          if (dietViewModel.isLoading || userViewModel.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    // 2026-09-04 桌面端适配：内容限宽
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('饮食日记'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.person),
+              tooltip: '个人信息',
+              onPressed: () => _navigateToUserInfo(context),
+            ),
+            IconButton(
+              icon: const Icon(Icons.bar_chart),
+              tooltip: '图表统计',
+              onPressed: () => _navigateToStatistics(context),
+            ),
+            IconButton(
+              icon: const Icon(Icons.restaurant_menu),
+              tooltip: '食品管理',
+              onPressed: () => _navigateToFoodManagement(context),
+            ),
+          ],
+        ),
+        body: Consumer2<DietDiaryViewModel, UserInfoViewModel>(
+          builder: (context, dietViewModel, userViewModel, child) {
+            if (dietViewModel.isLoading || userViewModel.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          if (dietViewModel.error != null &&
-              dietViewModel.errorContext == 'diet_diary_home') {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              commonExceptionDialog(
-                context,
-                "餐次数据错误",
-                dietViewModel.error.toString(),
-              );
-              dietViewModel.clearError();
-            });
-          }
+            if (dietViewModel.error != null &&
+                dietViewModel.errorContext == 'diet_diary_home') {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                commonExceptionDialog(
+                  context,
+                  "餐次数据错误",
+                  dietViewModel.error.toString(),
+                );
+                dietViewModel.clearError();
+              });
+            }
 
-          if (userViewModel.error != null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              commonExceptionDialog(
-                context,
-                "用户信息错误",
-                userViewModel.error.toString(),
-              );
-              userViewModel.clearError();
-            });
-          }
+            if (userViewModel.error != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                commonExceptionDialog(
+                  context,
+                  "用户信息错误",
+                  userViewModel.error.toString(),
+                );
+                userViewModel.clearError();
+              });
+            }
 
-          if (userViewModel.currentUser == null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.person_off_outlined,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    '需要完善用户信息才能使用饮食日记',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    '请先创建或完善您的个人信息，以便记录和分析您的饮食情况',
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: () => _navigateToUserInfo(context),
-                    icon: const Icon(Icons.person_add),
-                    label: const Text('完善个人信息'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
+            if (userViewModel.currentUser == null) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.person_off_outlined,
+                      size: 64,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      '需要完善用户信息才能使用饮食日记',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          }
+                    const SizedBox(height: 8),
+                    const Text(
+                      '请先创建或完善您的个人信息，以便记录和分析您的饮食情况',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () => _navigateToUserInfo(context),
+                      icon: const Icon(Icons.person_add),
+                      label: const Text('完善个人信息'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
 
-          return _buildBody(dietViewModel, userViewModel);
-        },
+            return _buildBody(dietViewModel, userViewModel);
+          },
+        ),
       ),
     );
   }

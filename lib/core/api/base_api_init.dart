@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:get_storage/get_storage.dart';
+import '../utils/storage_paths.dart';
 import 'base_api_config.dart';
 
 /// 通用API初始化基类
@@ -12,11 +13,14 @@ class BaseApiInit {
     if (_initializedModules[config.moduleName] == true) return;
 
     try {
+      // 2026-09-04 容器文件统一收纳进私有区目录
+      final gsPath = (await getGetStorageDir()).path;
+
       // 初始化缓存存储
-      await GetStorage.init(config.cacheKey);
+      await GetStorage(config.cacheKey, gsPath).initStorage;
 
       // 初始化请求日志存储
-      await GetStorage.init(config.requestLogKey);
+      await GetStorage(config.requestLogKey, gsPath).initStorage;
 
       _initializedModules[config.moduleName] = true;
       if (kDebugMode) {

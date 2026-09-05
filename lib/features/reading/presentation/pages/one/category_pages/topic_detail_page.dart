@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../../shared/widgets/cus_content_width.dart';
 
 import '../../../../../../shared/widgets/common_error_empty_widgets.dart';
 import '../../../../../../shared/widgets/image_preview_helper.dart';
@@ -67,14 +68,17 @@ class _TopicDetailPageState extends State<TopicDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.topic.title ?? '榜单详情'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.topic.title ?? '榜单详情'),
+          backgroundColor: Theme.of(context).primaryColor,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        body: _buildBody(),
       ),
-      body: _buildBody(),
     );
   }
 

@@ -6,6 +6,7 @@ import 'package:form_builder_validators/localization/l10n.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
+import '../core/utils/cus_scroll_behavior.dart';
 import '../core/utils/screen_helper.dart';
 import '../core/viewmodels/user_info_viewmodel.dart';
 import '../features/training_assistant/presentation/viewmodels/training_viewmodel.dart';
@@ -23,7 +24,17 @@ class SuChatApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 获取当前平台的设计尺寸
-    final designSize = ScreenHelper.getDesignSize();
+    // 2026-09-04 桌面端适配：桌面designSize动态取当前窗口尺寸，
+    // 使ScreenUtil缩放比恒为1 —— .sp/.w/.h不再随窗口拉伸(避免窗口变化字体/控件缩放溢出)，
+    // 调用点无需任何改动；.sw为屏幕宽比例语义不受影响
+    Size designSize = ScreenHelper.getDesignSize();
+    if (ScreenHelper.isDesktop()) {
+      final view = WidgetsBinding.instance.platformDispatcher.views.first;
+      final windowSize = view.physicalSize / view.devicePixelRatio;
+      if (windowSize.width > 0 && windowSize.height > 0) {
+        designSize = windowSize;
+      }
+    }
 
     var providerChild = ScreenUtilInit(
       designSize: designSize,
@@ -52,6 +63,9 @@ class SuChatApp extends StatelessWidget {
           ],
           // 初始化的locale
           locale: const Locale('zh', 'CN'),
+
+          // 2026-09-04 桌面端适配：鼠标拖拽overscroll+滚动条
+          scrollBehavior: const CusScrollBehavior(),
 
           /// 默认的主题
           theme: ThemeData(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:intl/intl.dart';
@@ -127,72 +128,75 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('图表统计'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.monitor_weight_rounded),
-            tooltip: '体重趋势',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const WeightTrendPage(),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // 日期范围选择器
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0.0),
-            child: Row(
-              children: [
-                const Icon(Icons.date_range),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '${DateFormat(formatToYMD).format(_startDate)} 至 ${DateFormat(formatToYMD).format(_endDate)}',
-                    style: const TextStyle(fontSize: 16),
+    return CusContentWidth(
+      maxWidth: 1000,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('图表统计'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.monitor_weight_rounded),
+              tooltip: '体重趋势',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const WeightTrendPage(),
                   ),
-                ),
-                TextButton(
-                  onPressed: _selectDateRange,
-                  child: const Text('选择日期'),
-                ),
-              ],
+                );
+              },
             ),
-          ),
-
-          // 图表内容
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _error?.isNotEmpty == true
-                ? Center(child: Text(_error!))
-                : _nutritionData.isEmpty
-                ? const Center(child: Text('没有数据'))
-                : SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          _buildCaloriesChart(),
-                          _buildCaloriesDeficitChart(),
-                          _buildNutrientsChart(),
-                          _buildCaloriesSummary(),
-                          _buildNutrientsSummary(),
-                          const SizedBox(height: 16),
-                        ],
-                      ),
+          ],
+        ),
+        body: Column(
+          children: [
+            // 日期范围选择器
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0.0),
+              child: Row(
+                children: [
+                  const Icon(Icons.date_range),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${DateFormat(formatToYMD).format(_startDate)} 至 ${DateFormat(formatToYMD).format(_endDate)}',
+                      style: const TextStyle(fontSize: 16),
                     ),
                   ),
-          ),
-        ],
+                  TextButton(
+                    onPressed: _selectDateRange,
+                    child: const Text('选择日期'),
+                  ),
+                ],
+              ),
+            ),
+
+            // 图表内容
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error?.isNotEmpty == true
+                  ? Center(child: Text(_error!))
+                  : _nutritionData.isEmpty
+                  ? const Center(child: Text('没有数据'))
+                  : SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          children: [
+                            _buildCaloriesChart(),
+                            _buildCaloriesDeficitChart(),
+                            _buildNutrientsChart(),
+                            _buildCaloriesSummary(),
+                            _buildNutrientsSummary(),
+                            const SizedBox(height: 16),
+                          ],
+                        ),
+                      ),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }

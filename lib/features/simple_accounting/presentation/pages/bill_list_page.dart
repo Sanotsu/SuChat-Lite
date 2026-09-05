@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
@@ -819,190 +820,202 @@ class _BillListPageState extends State<BillListPage> {
         }
 
         if (viewModel.error != null) {
-          return Scaffold(
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text('加载失败: ${viewModel.error}'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => viewModel.initialize(),
-                    child: const Text('重试'),
-                  ),
-                ],
+          return CusContentWidth(
+            maxWidth: 1000,
+            child: Scaffold(
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 16),
+                    Text('加载失败: ${viewModel.error}'),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => viewModel.initialize(),
+                      child: const Text('重试'),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
         }
 
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('极简记账'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.bar_chart),
-                onPressed: _viewStatistics,
-              ),
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert),
-                onSelected: (value) async {
-                  if (value == 'import') {
-                    await _importBills();
-                  } else if (value == 'export') {
-                    await _exportBills();
-                  } else if (value == 'clear') {
-                    await _clearAllBill();
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem<String>(
-                    value: 'import',
-                    child: Row(
-                      children: [
-                        Icon(Icons.upload_file),
-                        SizedBox(width: 8),
-                        Text('导入账单'),
-                      ],
+        // 2026-09-04 桌面端适配：主页面内容限宽
+        return CusContentWidth(
+          maxWidth: 1000,
+          child: Scaffold(
+            appBar: AppBar(
+              title: const Text('极简记账'),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.bar_chart),
+                  onPressed: _viewStatistics,
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (value) async {
+                    if (value == 'import') {
+                      await _importBills();
+                    } else if (value == 'export') {
+                      await _exportBills();
+                    } else if (value == 'clear') {
+                      await _clearAllBill();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem<String>(
+                      value: 'import',
+                      child: Row(
+                        children: [
+                          Icon(Icons.upload_file),
+                          SizedBox(width: 8),
+                          Text('导入账单'),
+                        ],
+                      ),
                     ),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'export',
-                    child: Row(
-                      children: [
-                        Icon(Icons.download),
-                        SizedBox(width: 8),
-                        Text('导出账单'),
-                      ],
+                    const PopupMenuItem<String>(
+                      value: 'export',
+                      child: Row(
+                        children: [
+                          Icon(Icons.download),
+                          SizedBox(width: 8),
+                          Text('导出账单'),
+                        ],
+                      ),
                     ),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'clear',
-                    child: Row(
-                      children: [
-                        Icon(Icons.download),
-                        SizedBox(width: 8),
-                        Text('清空账单', style: TextStyle(color: Colors.red)),
-                      ],
+                    const PopupMenuItem<String>(
+                      value: 'clear',
+                      child: Row(
+                        children: [
+                          Icon(Icons.download),
+                          SizedBox(width: 8),
+                          Text('清空账单', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          body: Column(
-            children: [
-              // 搜索栏
-              SearchBarWidget(onSearch: _searchBills, onClear: _clearSearch),
-
-              // 分类筛选和月份选择器
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  children: [
-                    // 新的筛选组件
-                    BillFilterWidget(
-                      expenseCategories: viewModel.expenseCategories,
-                      incomeCategories: viewModel.incomeCategories,
-                      selectedCategory: _selectedCategoryFilter,
-                      selectedType: _selectedTypeFilter,
-                      minAmount: _minAmountFilter,
-                      maxAmount: _maxAmountFilter,
-                      onFilter: _applyFilter,
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // 月份选择器和统计
-                    _buildMonthSelector(viewModel),
                   ],
                 ),
-              ),
+              ],
+            ),
+            body: Column(
+              children: [
+                // 搜索栏
+                SearchBarWidget(onSearch: _searchBills, onClear: _clearSearch),
 
-              const Divider(),
-
-              // 账单列表
-              Expanded(
-                child: _isSearchMode
-                    ? _isSearching
-                          ? const Center(child: CircularProgressIndicator())
-                          : RefreshIndicator(
-                              onRefresh: () async {
-                                _searchBills(_searchKeyword);
-                              },
-                              child: ListView(
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                children: _buildGroupedBillList(
-                                  _searchResults,
-                                  viewModel,
-                                ),
-                              ),
-                            )
-                    : RefreshIndicator(
-                        onRefresh: () async {
-                          final viewModel = Provider.of<BillViewModel>(
-                            context,
-                            listen: false,
-                          );
-                          await viewModel.loadNextMonthData(
-                            _selectedTypeFilter,
-                            _selectedCategoryFilter,
-                            minAmount: _minAmountFilter,
-                            maxAmount: _maxAmountFilter,
-                          );
-                        },
-                        child: ListView(
-                          controller: _scrollController,
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          children: [
-                            // 显示"正在加载更新数据"的提示
-                            if (_isLoadingNewer)
-                              const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                            // 账单列表
-                            ...(_buildGroupedBillList(
-                              viewModel.billItems,
-                              viewModel,
-                            )),
-
-                            // 显示"正在加载更多"的提示
-                            if (_isLoadingMore)
-                              const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
+                // 分类筛选和月份选择器
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    children: [
+                      // 新的筛选组件
+                      BillFilterWidget(
+                        expenseCategories: viewModel.expenseCategories,
+                        incomeCategories: viewModel.incomeCategories,
+                        selectedCategory: _selectedCategoryFilter,
+                        selectedType: _selectedTypeFilter,
+                        minAmount: _minAmountFilter,
+                        maxAmount: _maxAmountFilter,
+                        onFilter: _applyFilter,
                       ),
-              ),
-            ],
-          ),
-          floatingActionButton: buildFloatingActionButton(
-            _addBill,
-            context,
-            icon: Icons.add,
-            tooltip: '添加账单',
+
+                      const SizedBox(height: 8),
+
+                      // 月份选择器和统计
+                      _buildMonthSelector(viewModel),
+                    ],
+                  ),
+                ),
+
+                const Divider(),
+
+                // 账单列表
+                Expanded(
+                  child: _isSearchMode
+                      ? _isSearching
+                            ? const Center(child: CircularProgressIndicator())
+                            : RefreshIndicator(
+                                onRefresh: () async {
+                                  _searchBills(_searchKeyword);
+                                },
+                                child: ListView(
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  children: _buildGroupedBillList(
+                                    _searchResults,
+                                    viewModel,
+                                  ),
+                                ),
+                              )
+                      : RefreshIndicator(
+                          onRefresh: () async {
+                            final viewModel = Provider.of<BillViewModel>(
+                              context,
+                              listen: false,
+                            );
+                            await viewModel.loadNextMonthData(
+                              _selectedTypeFilter,
+                              _selectedCategoryFilter,
+                              minAmount: _minAmountFilter,
+                              maxAmount: _maxAmountFilter,
+                            );
+                          },
+                          child: ListView(
+                            controller: _scrollController,
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: [
+                              // 显示"正在加载更新数据"的提示
+                              if (_isLoadingNewer)
+                                const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                              // 账单列表
+                              ...(_buildGroupedBillList(
+                                viewModel.billItems,
+                                viewModel,
+                              )),
+
+                              // 显示"正在加载更多"的提示
+                              if (_isLoadingMore)
+                                const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                ),
+              ],
+            ),
+            floatingActionButton: buildFloatingActionButton(
+              _addBill,
+              context,
+              icon: Icons.add,
+              tooltip: '添加账单',
+            ),
           ),
         );
       },

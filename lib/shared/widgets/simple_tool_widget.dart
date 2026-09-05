@@ -120,12 +120,79 @@ void commonExceptionDialog(BuildContext context, String title, String message) {
 }
 
 /// 通用的底部信息弹窗
+/// 2026-09-04 桌面端适配：桌面改为居中弹窗(限宽)，移动端保持底部抽屉
 void commonMDHintModalBottomSheet(
   BuildContext context,
   String title,
   String message, {
   double? msgFontSize,
 }) {
+  // Markdown 内容主体(两端共用)
+  Widget mdBody = SingleChildScrollView(
+    child: Padding(
+      padding: EdgeInsets.all(10),
+      child: MarkdownBody(
+        data: message,
+        selectable: true,
+        // 设置Markdown文本全局样式
+        styleSheet: MarkdownStyleSheet(
+          // 普通段落文本颜色(假定用户输入就是普通段落文本)
+          p: TextStyle(fontSize: msgFontSize, color: Colors.black),
+          // ... 其他级别的标题样式
+          // 可以继续添加更多Markdown元素的样式
+        ),
+      ),
+    ),
+  );
+
+  Widget header = Padding(
+    padding: EdgeInsets.symmetric(horizontal: 20),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(title, style: TextStyle(fontSize: 18)),
+        TextButton(
+          child: const Text('关闭'),
+          onPressed: () {
+            Navigator.pop(context);
+            unfocusHandle();
+          },
+        ),
+      ],
+    ),
+  );
+
+  // 桌面端：居中弹窗(限宽，避免全宽贴底抽屉)
+  if (ScreenHelper.isDesktop()) {
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          child: Container(
+            width: 560,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.7,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(height: 12),
+                header,
+                Divider(height: 2, thickness: 2),
+                Flexible(child: mdBody),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    return;
+  }
+
+  // 移动端：保持底部抽屉
   showModalBottomSheet<void>(
     context: context,
     builder: (BuildContext context) {
@@ -142,41 +209,9 @@ void commonMDHintModalBottomSheet(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(title, style: TextStyle(fontSize: 18)),
-                  TextButton(
-                    child: const Text('关闭'),
-                    onPressed: () {
-                      Navigator.pop(context);
-                      unfocusHandle();
-                    },
-                  ),
-                ],
-              ),
-            ),
+            header,
             Divider(height: 2, thickness: 2),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: EdgeInsets.all(10),
-                  child: MarkdownBody(
-                    data: message,
-                    selectable: true,
-                    // 设置Markdown文本全局样式
-                    styleSheet: MarkdownStyleSheet(
-                      // 普通段落文本颜色(假定用户输入就是普通段落文本)
-                      p: TextStyle(fontSize: msgFontSize, color: Colors.black),
-                      // ... 其他级别的标题样式
-                      // 可以继续添加更多Markdown元素的样式
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            Expanded(child: mdBody),
           ],
         ),
       );

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
+
 import 'package:provider/provider.dart';
 
 import '../../../../shared/widgets/toast_utils.dart';
@@ -104,10 +106,14 @@ class PlanDetailPage extends StatelessWidget {
         );
 
         // 根据是否显示AppBar返回不同的布局
+        // 2026-09-04 桌面端适配：独立页时内容限宽(嵌入主页tab时由父级限宽)
         return showAppBar
-            ? Scaffold(
-                appBar: AppBar(title: Text(viewModel.selectedPlan!.planName)),
-                body: content,
+            ? CusContentWidth(
+                maxWidth: 1000,
+                child: Scaffold(
+                  appBar: AppBar(title: Text(viewModel.selectedPlan!.planName)),
+                  body: content,
+                ),
               )
             : content;
       },

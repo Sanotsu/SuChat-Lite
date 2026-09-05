@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -205,6 +206,35 @@ Widget _buildPhotoView(
   ImageProvider imageProvider, {
   bool enableRotation = true,
 }) {
+  // 2026-09-04 桌面端适配：
+  // 1. 鼠标滚轮缩放(Listener 捕获 PointerScrollEvent 驱动 scaleStateController)
+  // 2. 桌面禁用旋转(鼠标无法双指旋转，避免误触)
+  if (ScreenHelper.isDesktop()) {
+    final scaleController = PhotoViewScaleStateController();
+    return Listener(
+      onPointerSignal: (event) {
+        if (event is PointerScrollEvent) {
+          // 滚轮下: 放大；滚轮上: 缩回。通过切换缩放状态实现
+          scaleController.scaleState = event.scrollDelta.dy > 0
+              ? PhotoViewScaleState.zoomedIn
+              : PhotoViewScaleState.initial;
+        }
+      },
+      child: PhotoView(
+        imageProvider: imageProvider,
+        // 设置图片背景为透明
+        backgroundDecoration: const BoxDecoration(color: Colors.transparent),
+        // 桌面鼠标无法旋转手势，禁用
+        enableRotation: false,
+        scaleStateController: scaleController,
+        // 缩放的最大最小限制
+        minScale: PhotoViewComputedScale.contained * 0.8,
+        maxScale: PhotoViewComputedScale.covered * 2,
+        errorBuilder: (_, _, _) => const Icon(Icons.error),
+      ),
+    );
+  }
+
   return PhotoView(
     imageProvider: imageProvider,
     // 设置图片背景为透明
