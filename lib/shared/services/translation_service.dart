@@ -3,12 +3,8 @@
 import 'dart:async';
 import 'dart:ui';
 
-import '../../core/entities/cus_llm_model.dart';
-import './openai_compatible_apis.dart';
-import './chat_completion_response.dart';
-import './chat_service.dart';
-import '../../shared/constants/constant_llm_enum.dart';
-import '../../shared/widgets/toast_utils.dart';
+import '../widgets/toast_utils.dart';
+import 'unified_llm_service.dart';
 
 // 可供翻译的目标语言
 enum TargetLanguage {
@@ -30,6 +26,9 @@ enum TargetLanguage {
 }
 
 /// 翻译服务静态工具类
+/// 2026-09-07 旧 LLM 体系退役：模型入参改为统一模型库条目
+/// (UnifiedModelEntry = 模型 + 所属平台，来自聊天页平台管理)，
+/// 经 UnifiedLLMService 门面调用；qwen-mt 系列专用 translation_options 协议保留
 class TranslationService {
   TranslationService._();
 
@@ -69,36 +68,46 @@ class TranslationService {
     }
   }
 
-  /// 同步翻译方法
-  /// 2025-08-25 统一风格，不再支持手动传入翻译系统提示词，直接在这个service内嵌
+  /// 解析实际使用的模型条目：未指定时取统一库第一个可用对话模型
+  /// (2026-09-07 旧"内置默认模型"随作者 Key 一并退役，不再有免费默认)
+  static Future<UnifiedModelEntry> _resolveEntry(
+    UnifiedModelEntry? entry,
+  ) async {
+    if (entry != null) return entry;
+
+    final available = await UnifiedLLMService.loadModelEntries();
+    if (available.isEmpty) {
+      throw Exception('暂无可用模型，请先在聊天页-平台管理中配置对话模型');
+    }
+    return available.first;
+  }
+
+  /// 同步翻译方法（返回译文；失败弹错并返回原文）
   static Future<String> translate(
     String text,
     TargetLanguage targetLang, {
     TargetLanguage? sourceLang,
-    CusLLMSpec? model,
+    UnifiedModelEntry? entry,
   }) async {
     try {
-      final result = await _buildTranslationRequest(
+      final usedEntry = await _resolveEntry(entry);
+      final (messages, extraParams) = _buildTranslationRequest(
         text,
         targetLang,
         sourceLang: sourceLang,
-        model: model,
-        stream: false,
+        entry: usedEntry,
       );
 
-      final (stream, cancelFunc) = await getStreamResponse(
-        result["baseUrl"],
-        result["headers"],
-        result["requestBody"],
-        stream: false,
+      final response = await UnifiedLLMService.sendChat(
+        entry: usedEntry,
+        messages: messages,
+        extraParams: extraParams,
       );
 
-      // 处理流式响应的内容(简单获取最后结果)
-      String finalContent = "";
-      await for (final chunk in stream) {
-        finalContent += chunk.cusText;
-      }
-      return finalContent;
+      final content = response.choices.isNotEmpty
+          ? response.choices.first.message?.content
+          : null;
+      return content ?? response.customText;
     } catch (e) {
       // 大模型翻译报错的话，直接弹窗提示，然后返回原文
       ToastUtils.showError("翻译出错：${e.toString()}");
@@ -117,38 +126,39 @@ class TranslationService {
     );
   }
 
-  /// 流式翻译方法
-  static Future<(Stream<ChatCompletionResponse>, VoidCallback)> translateStream(
+  /// 流式翻译方法（返回完整响应流，思考模型的 reasoning_content 由页面分类展示）
+  static Future<(Stream, VoidCallback)> translateStream(
     String text,
     TargetLanguage targetLang, {
     TargetLanguage? sourceLang,
-    CusLLMSpec? model,
+    UnifiedModelEntry? entry,
   }) async {
     try {
-      final result = await _buildTranslationRequest(
+      final usedEntry = await _resolveEntry(entry);
+      final (messages, extraParams) = _buildTranslationRequest(
         text,
         targetLang,
         sourceLang: sourceLang,
-        model: model,
-        stream: true,
+        entry: usedEntry,
       );
 
-      return getStreamResponse(
-        result["baseUrl"],
-        result["headers"],
-        result["requestBody"],
-        stream: true,
+      return await UnifiedLLMService.sendChatStream(
+        entry: usedEntry,
+        messages: messages,
+        extraParams: extraParams,
       );
     } catch (e) {
       // 大模型翻译报错的话，直接弹窗提示，然后返回空流
       ToastUtils.showError("翻译出错：${e.toString()}");
-      return (Stream<ChatCompletionResponse>.empty(), () {});
+      return (const Stream.empty(), () {});
     }
   }
 
   /// 快速流式翻译到中文
-  static Future<(Stream<ChatCompletionResponse>, VoidCallback)>
-  translateStreamToChinese(String text, {bool simplified = true}) {
+  static Future<(Stream, VoidCallback)> translateStreamToChinese(
+    String text, {
+    bool simplified = true,
+  }) {
     return translateStream(
       text,
       simplified ? TargetLanguage.zh : TargetLanguage.zh_tw,
@@ -156,59 +166,41 @@ class TranslationService {
   }
 
   /// 统一的翻译请求构建方法
-  static Future<Map<String, dynamic>> _buildTranslationRequest(
+  /// 返回 (messages, extraParams)：qwen-mt 系列走专用 translation_options
+  /// 协议(不需要系统提示词)，普通模型注入内嵌翻译助手提示词
+  static (List<Map<String, dynamic>>, Map<String, dynamic>?)
+  _buildTranslationRequest(
     String text,
     TargetLanguage targetLang, {
     TargetLanguage? sourceLang,
-    CusLLMSpec? model,
-    required bool stream,
-  }) async {
-    // 确定使用的模型
-    final usedModel =
-        model ??
-        CusLLMSpec(
-          ApiPlatform.zhipu,
-          "glm-4-flash-250414",
-          LLModelType.cc,
-          cusLlmSpecId: 'zhipu_glm_4_flash_250414_builtin',
-        );
-
-    // 获取API配置
-    final headers = await ChatService.getHeaders(usedModel);
-    // 2026-09-03 模型自带baseUrl(统一平台getChatCompletionsUrl的完整端点)时优先使用
-    final base = (usedModel.baseUrl != null && usedModel.baseUrl!.isNotEmpty)
-        ? usedModel.baseUrl!
-        : ChatService.getBaseUrl(usedModel.platform);
-    final baseUrl = base.endsWith('/chat/completions')
-        ? base
-        : "$base/chat/completions";
-
-    // 构建请求体
-    Map<String, dynamic> requestBody = {
-      'model': usedModel.model,
-      'stream': stream,
-      'messages': [
-        {"role": "user", "content": text},
-      ],
-    };
-
+    required UnifiedModelEntry entry,
+  }) {
     // 如果是qwen-mt模型，使用专用配置（不需要系统提示词）
-    if (usedModel.model.contains("qwen-mt")) {
-      requestBody['translation_options'] = {
-        "source_lang": sourceLang?.name ?? TargetLanguage.auto.name,
-        "target_lang": targetLang.name,
+    if (entry.model.modelName.contains("qwen-mt")) {
+      final extraParams = {
+        'translation_options': {
+          "source_lang": sourceLang?.name ?? TargetLanguage.auto.name,
+          "target_lang": targetLang.name,
+        },
       };
-    } else {
-      // 普通对话模型配置处理提示词
-      final processedPrompt =
-          "你是一个翻译助手。请将用户输入的文本翻译成${_getTargetLanguageName(targetLang)}，保持原文的格式和风格。只返回翻译结果，不需要解释。";
-
-      requestBody['messages'] = [
-        {"role": "system", "content": processedPrompt},
-        {"role": "user", "content": text},
-      ];
+      return (
+        [
+          {"role": "user", "content": text},
+        ],
+        extraParams,
+      );
     }
 
-    return {"baseUrl": baseUrl, "headers": headers, "requestBody": requestBody};
+    // 普通对话模型配置处理提示词
+    final processedPrompt =
+        "你是一个翻译助手。请将用户输入的文本翻译成${_getTargetLanguageName(targetLang)}，保持原文的格式和风格。只返回翻译结果，不需要解释。";
+
+    return (
+      [
+        {"role": "system", "content": processedPrompt},
+        {"role": "user", "content": text},
+      ],
+      null,
+    );
   }
 }

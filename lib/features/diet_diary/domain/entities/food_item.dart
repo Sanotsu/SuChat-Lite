@@ -114,7 +114,10 @@ class FoodItem {
       id: map['id'],
       name: map['name'],
       imageUrl: map['imageUrl'],
-      foodCode: map['foodCode'] ?? identityHashCode(map['name']).toString(),
+      // 2026-09-07 修复：原兜底 identityHashCode(map['name']) 每次构建
+      // 都不同，导致同一行数据每次读出的 foodCode 不稳定；改为直接用
+      // 食物名兜底，保证同源数据编码稳定可用于去重
+      foodCode: (map['foodCode'] ?? map['name'] ?? '').toString(),
       caloriesPer100g: map['caloriesPer100g'] ?? 0.0,
       carbsPer100g: map['carbsPer100g'] ?? 0.0,
       proteinPer100g: map['proteinPer100g'] ?? 0.0,
@@ -172,7 +175,12 @@ class FoodItem {
     return FoodItem(
       name: json['foodName'] ?? '',
       imageUrl: json['imageUrl'],
-      foodCode: json['foodCode'] ?? identityHashCode(json['name']).toString(),
+      // 2026-09-07 修复 CFCD 导入去重失效：原兜底 identityHashCode(json['name'])
+      // 有两处错误——字段名错（CFCD 数据中名字字段是 foodName）且
+      // identityHashCode 对内容相同的不同实例返回不同值，导致每次导入
+      // 同一条食物生成不同 foodCode、去重永不命中。改用 foodName 的
+      // 稳定 hashCode 生成编码
+      foodCode: json['foodCode'] ?? 'cfcd_${(json['foodName'] ?? '').hashCode}',
       caloriesPer100g: _parseDouble(json['energyKCal']) ?? 0.0,
       proteinPer100g: _parseDouble(json['protein']) ?? 0.0,
       fatPer100g: _parseDouble(json['fat']) ?? 0.0,

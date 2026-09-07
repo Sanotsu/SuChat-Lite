@@ -1,15 +1,14 @@
 import 'package:sqflite/sqflite.dart';
 
-import '../entities/media_generation_history.dart';
-import '../../features/voice_recognition/domain/entities/voice_recognition_task_info.dart';
-import '../../shared/constants/constant_llm_enum.dart';
-import '../entities/cus_llm_model.dart';
 import '../entities/user_info.dart';
+import '../../features/voice_recognition/domain/entities/voice_recognition_task_info.dart';
 import 'db_init.dart';
 import 'db_ddl.dart';
 
 ///
 /// 数据库操作
+/// 2026-09-07 LLM旧体系退役：cus_llm_spec 与 media_generation_history 两死表
+/// 相关方法删除(查询/写入路径已随旧体系消失，主库不再建表，残留表无害)
 ///
 class DBHelper {
   // 单例模式
@@ -26,99 +25,6 @@ class DBHelper {
   ///
   ///  Helper 的相关方法
   ///
-
-  ///***********************************************/
-  /// 2025-02-14 简洁版本的 自定义的LLM信息管理
-  ///
-
-  // 查询所有模型信息
-  Future<List<CusLLMSpec>> queryCusLLMSpecList({
-    String? cusLlmSpecId, // 模型规格编号
-    ApiPlatform? platform, // 平台
-    String? name, // 模型名称
-    LLModelType? modelType, // 模型分类枚举
-    bool? isFree, // 是否收费(0要收费，1不收费)
-    bool? isBuiltin, // 是否内置(0不是，1是)
-  }) async {
-    Database db = await database;
-
-    // print("模型规格查询参数：");
-    // print("uuid $cusLlmSpecId");
-    // print("平台 $platform");
-    // print("cusLlm $cusLlm");
-    // print("name $name");
-    // print("modelType $modelType");
-    // print("isFree $isFree");
-
-    final where = <String>[];
-    final whereArgs = <dynamic>[];
-
-    if (cusLlmSpecId != null) {
-      where.add('cusLlmSpecId = ?');
-      whereArgs.add(cusLlmSpecId);
-    }
-
-    if (platform != null) {
-      where.add('platform = ?');
-      whereArgs.add(platform.toString());
-    }
-    if (name != null) {
-      where.add('name = ?');
-      whereArgs.add(name);
-    }
-    if (modelType != null) {
-      where.add('modelType = ?');
-      whereArgs.add(modelType.toString());
-    }
-
-    if (cusLlmSpecId != null) {
-      where.add('isFree = ?');
-      whereArgs.add(isFree == true ? 1 : 0);
-    }
-
-    if (isBuiltin != null) {
-      where.add('isBuiltin = ?');
-      whereArgs.add(isBuiltin == true ? 1 : 0);
-    }
-
-    final rows = await db.query(
-      DBDdl.tableCusLlmSpec,
-      where: where.isNotEmpty ? where.join(' AND ') : null,
-      whereArgs: whereArgs.isNotEmpty ? whereArgs : null,
-      orderBy: "gmtCreate DESC",
-    );
-
-    return rows.map((row) => CusLLMSpec.fromMap(row)).toList();
-  }
-
-  // 删除单条
-  Future<int> deleteCusLLMSpecById(String cusLlmSpecId) async =>
-      (await database).delete(
-        DBDdl.tableCusLlmSpec,
-        where: "cusLlmSpecId = ?",
-        whereArgs: [cusLlmSpecId],
-      );
-
-  // 清空所有模型信息
-  Future<int> clearCusLLMSpecs() async => (await database).delete(
-    DBDdl.tableCusLlmSpec,
-    where: "cusLlmSpecId != ?",
-    whereArgs: ["cusLlmSpecId"],
-  );
-
-  // 新增
-  // 2026-08-31 合并恢复需要：同主键数据用备份覆盖(replace)，不同主键的现有数据保留
-  Future<List<Object?>> saveCusLLMSpecs(List<CusLLMSpec> rsts) async {
-    var batch = (await database).batch();
-    for (var item in rsts) {
-      batch.insert(
-        DBDdl.tableCusLlmSpec,
-        item.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-    }
-    return await batch.commit();
-  }
 
   ///***********************************************/
   /// 统一用户信息表操作
@@ -230,115 +136,6 @@ class DBHelper {
     }
 
     return UserInfo.fromMap(maps.first);
-  }
-
-  ///***********************************************/
-  /// AI 媒体资源生成的相关操作
-  /// 文生视频（后续语音合成也可能）也用这个
-  ///
-
-  // 插入媒体资源生成历史
-  Future<String> saveMediaGenerationHistory(
-    MediaGenerationHistory history,
-  ) async {
-    Database db = await database;
-    await db.insert(DBDdl.tableMediaGenerationHistory, history.toMap());
-    return history.requestId;
-  }
-
-  // 批量插入媒体资源生成记录
-  // 2026-08-31 合并恢复需要：同主键数据用备份覆盖(replace)
-  Future<List<Object?>> saveMediaGenerationHistories(
-    List<MediaGenerationHistory> histories,
-  ) async {
-    var batch = (await database).batch();
-    for (var item in histories) {
-      batch.insert(
-        DBDdl.tableMediaGenerationHistory,
-        item.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-    }
-    return await batch.commit();
-  }
-
-  // 指定requestId更新媒体资源生成历史
-  Future<void> updateMediaGenerationHistoryByRequestId(
-    String requestId,
-    Map<String, dynamic> values,
-  ) async {
-    Database db = await database;
-    await db.update(
-      DBDdl.tableMediaGenerationHistory,
-      values,
-      where: 'requestId = ?',
-      whereArgs: [requestId],
-    );
-  }
-
-  // 实例更新媒体资源生成历史
-  Future<void> updateMediaGenerationHistory(MediaGenerationHistory item) async {
-    Database db = await database;
-    await db.update(
-      DBDdl.tableMediaGenerationHistory,
-      item.toMap(),
-      where: 'requestId = ?',
-      whereArgs: [item.requestId],
-    );
-  }
-
-  // 指定requestId删除媒体资源生成历史
-  Future<void> deleteMediaGenerationHistoryByRequestId(String requestId) async {
-    Database db = await database;
-    await db.delete(
-      DBDdl.tableMediaGenerationHistory,
-      where: 'requestId = ?',
-      whereArgs: [requestId],
-    );
-  }
-
-  // 查询媒体资源生成历史
-  Future<List<MediaGenerationHistory>> queryMediaGenerationHistory({
-    bool? isSuccess,
-    bool? isProcessing,
-    bool? isFailed,
-    List<LLModelType>? modelTypes, // 在调用处取枚举，可多个
-  }) async {
-    Database db = await database;
-
-    final where = <String>[];
-    final whereArgs = <dynamic>[];
-
-    if (isSuccess != null) {
-      where.add('isSuccess = ?');
-      whereArgs.add(isSuccess ? 1 : 0);
-    }
-
-    if (isProcessing != null) {
-      where.add('isProcessing = ?');
-      whereArgs.add(isProcessing ? 1 : 0);
-    }
-
-    if (isFailed != null) {
-      where.add('isFailed = ?');
-      whereArgs.add(isFailed ? 1 : 0);
-    }
-
-    if (modelTypes != null && modelTypes.isNotEmpty) {
-      where.add(
-        'modelType IN (${List.filled(modelTypes.length, '?').join(',')})',
-      );
-      whereArgs.addAll(modelTypes.map((e) => e.toString()));
-    }
-
-    final rows = await db.query(
-      DBDdl.tableMediaGenerationHistory,
-      where: where.isNotEmpty ? where.join(' AND ') : null,
-      whereArgs: whereArgs.isNotEmpty ? whereArgs : null,
-      orderBy: 'gmtCreate DESC',
-    );
-
-    return rows.map((row) => MediaGenerationHistory.fromMap(row)).toList();
   }
 
   ///***********************************************/

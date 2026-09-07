@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../../../../core/network/dio_client/interceptor_error.dart';
 import '../../../../../core/utils/simple_tools.dart';
 import '../../../../../shared/constants/constants.dart';
 import '../../../../../shared/widgets/cus_content_width.dart';
 import '../../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../../shared/widgets/simple_tool_widget.dart';
+import '../../../../../shared/widgets/toast_utils.dart';
 import '../../../../../shared/widgets/translatable_widgets.dart';
 import '../../../data/datasources/jikan/get_jikan_apis.dart';
 import '../../../data/models/jikan/jikan_data.dart';
@@ -67,6 +69,8 @@ class _MALItemDetailPageState extends State<MALItemDetailPage> {
   }
 
   // 查询当前mal条目的评分统计
+  // 2026-09-07 修复：原三个查询方法均无 try-catch，接口抛异常时
+  // loading 标志永远停在 true，页面永久卡在加载态
   Future<void> queryMALStatistic() async {
     if (isScoreLoading) return;
 
@@ -74,31 +78,40 @@ class _MALItemDetailPageState extends State<MALItemDetailPage> {
       isScoreLoading = true;
     });
 
-    var stat = await getAMStatistics(
-      jkdata.malId,
-      type: (widget.malType.value as MALType),
-    );
+    try {
+      var stat = await getAMStatistics(
+        jkdata.malId,
+        type: (widget.malType.value as MALType),
+      );
 
-    if (!mounted) return;
-    setState(() {
-      statisticData = stat.data;
+      if (!mounted) return;
+      setState(() {
+        statisticData = stat.data;
 
-      // 先清空
-      malScoreList.clear();
-      var tempList = stat.data.scores ?? [];
+        // 先清空
+        malScoreList.clear();
+        var tempList = stat.data.scores ?? [];
 
-      List<ChartData> tempScores = [];
-      for (var e in tempList) {
-        tempScores.add(ChartData("${e.score}星", e.percentage));
+        List<ChartData> tempScores = [];
+        for (var e in tempList) {
+          tempScores.add(ChartData("${e.score}星", e.percentage));
+        }
+
+        // 从左往右日期逐渐变大，所以数据要翻转
+        malScoreList.addAll([tempScores.reversed.toList()]);
+      });
+    } on CusHttpException catch (e) {
+      // http请求异常已在拦截器中给出提示，这里仅需记录
+      debugPrint(e.toString());
+    } catch (e) {
+      if (mounted) ToastUtils.showError("查询评分统计失败: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isScoreLoading = false;
+        });
       }
-
-      // 从左往右日期逐渐变大，所以数据要翻转
-      malScoreList.addAll([tempScores.reversed.toList()]);
-    });
-
-    setState(() {
-      isScoreLoading = false;
-    });
+    }
   }
 
   // 查询图片
@@ -109,20 +122,28 @@ class _MALItemDetailPageState extends State<MALItemDetailPage> {
       isPictureLoading = true;
     });
 
-    var pics = await getJikanPictures(
-      jkdata.malId,
-      type: (widget.malType.value as MALType),
-    );
+    try {
+      var pics = await getJikanPictures(
+        jkdata.malId,
+        type: (widget.malType.value as MALType),
+      );
 
-    if (!mounted) return;
-    setState(() {
-      // 添加图片
-      malPictureList = pics;
-    });
-
-    setState(() {
-      isPictureLoading = false;
-    });
+      if (!mounted) return;
+      setState(() {
+        // 添加图片
+        malPictureList = pics;
+      });
+    } on CusHttpException catch (e) {
+      debugPrint(e.toString());
+    } catch (e) {
+      if (mounted) ToastUtils.showError("查询图片失败: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isPictureLoading = false;
+        });
+      }
+    }
   }
 
   /// 查询角色
@@ -133,20 +154,28 @@ class _MALItemDetailPageState extends State<MALItemDetailPage> {
       isCharacterLoading = true;
     });
 
-    var temp = await getJikanRelatedCharacters(
-      widget.item.malId,
-      type: (widget.malType.value as MALType),
-    );
+    try {
+      var temp = await getJikanRelatedCharacters(
+        widget.item.malId,
+        type: (widget.malType.value as MALType),
+      );
 
-    if (!mounted) return;
-    setState(() {
-      // 添加图片
-      malCharacterList = temp.data;
-    });
-
-    setState(() {
-      isCharacterLoading = false;
-    });
+      if (!mounted) return;
+      setState(() {
+        // 添加图片
+        malCharacterList = temp.data;
+      });
+    } on CusHttpException catch (e) {
+      debugPrint(e.toString());
+    } catch (e) {
+      if (mounted) ToastUtils.showError("查询角色失败: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isCharacterLoading = false;
+        });
+      }
+    }
   }
 
   @override

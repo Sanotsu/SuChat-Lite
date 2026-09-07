@@ -72,6 +72,10 @@ class _UnofficialToutiaoNewsPageState
     }
 
     try {
+      // 2026-09-07 修复：刷新回到第一页时重置时间锚点，避免上一轮浏览
+      // 遗留的旧锚点导致后续"加载更多"取到重复的旧数据
+      if (currentPage == 1) maxBehotTime = null;
+
       // 如果是第一页或者往下拉加载最新数据时，不要传时间戳
       UoToutiaoNewsResp htRst = currentPage == 1
           ? await newsApiManager.getUoToutiaoNewsList(

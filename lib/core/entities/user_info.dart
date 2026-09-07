@@ -48,9 +48,9 @@ List<double> activityLevelValues = activityLevels
     .map((e) => e.value as double)
     .toList();
 
-CusLabel getActivityLevel(ActivityLevel level) {
-  return activityLevels.firstWhere((e) => e.value == level.name);
-}
+// 2026-09-07 A-4 删除 getActivityLevel：其 `e.value == level.name` 为
+// double 与 String 比较，恒 false 且 firstWhere 无 orElse 必抛 StateError；
+// 该函数自 2025-06-23 起无任何调用方，属休眠死代码，直接移除
 
 /// 统一用户信息实体类
 /// 合并了训练助手和饮食日记的用户信息

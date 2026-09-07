@@ -438,10 +438,18 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
           );
         } else if (i == _currentExerciseIndex && !_isCompleted) {
           // 当前动作更新为当前完成的组数
-          final isLastSet = _currentSet == _todaysExercises[i].sets;
+          // 2026-09-07 修复：提前结束训练时，正在跟练中的当前组此前
+          // 只有点击"下一组"才会计入（_completedSetsPerExercise 在
+          // _nextSet 中递增），导致当前组的努力被丢弃；现按休息状态
+          // 区分——休息中说明当前组已计入，跟练中则将进行中的当前组
+          // 视为已完成一并计入
+          final restingNow = _isResting || _isRestingBetweenExercises;
+          final doneSets = restingNow
+              ? _completedSetsPerExercise[i]
+              : _completedSetsPerExercise[i] + 1;
           _recordDetails[i] = _recordDetails[i].copyWith(
-            completed: isLastSet, // 如果是最后一组，则标记为已完成
-            actualSets: _completedSetsPerExercise[i], // 实际完成的组数
+            completed: doneSets >= _todaysExercises[i].sets, // 全部组完成才标记
+            actualSets: doneSets, // 实际完成的组数
           );
         }
 

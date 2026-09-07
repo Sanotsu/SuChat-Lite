@@ -1,8 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
 
-import '../../../../shared/constants/constant_llm_enum.dart';
-import '../../../../core/entities/cus_llm_model.dart';
-
 part 'branch_chat_export_data.g.dart';
 
 @JsonSerializable(explicitToJson: true)
@@ -23,8 +20,11 @@ class BranchChatSessionExport {
   final String title;
   final DateTime createTime;
   final DateTime updateTime;
-  final CusLLMSpec llmSpec;
-  final LLModelType modelType;
+  // 2026-09-07 旧LLM体系(CusLLMSpec)退役：旧备份中的模型规格保留原始JSON，
+  // 由导入器按需轻量解析(platform/model/modelType/name/baseUrl/apiKey)
+  final Map<String, dynamic> llmSpec;
+  // 旧LLModelType枚举名字符串(如 cc/reasoner/vision/tti...)
+  final String modelType;
   final List<BranchChatMessageExport> messages;
   final String? characterId;
 

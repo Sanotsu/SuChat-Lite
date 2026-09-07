@@ -4,11 +4,9 @@ import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/viewmodels/user_info_viewmodel.dart';
-import '../../../../shared/constants/constant_llm_enum.dart';
 import '../../../../shared/constants/constants.dart';
-import '../../../../shared/services/unified_model_bridge.dart';
+import '../../../../shared/services/unified_llm_service.dart';
 import '../../../../shared/widgets/cus_dropdown_button.dart';
 import '../../../../shared/widgets/cus_thinking_collapse.dart';
 import '../../../../shared/widgets/markdown_render/cus_markdown_renderer.dart';
@@ -30,8 +28,9 @@ class DietAnalysisPage extends StatefulWidget {
 
 class _DietAnalysisPageState extends State<DietAnalysisPage> {
   // 大模型相关状态
-  List<CusLLMSpec> _modelList = [];
-  CusLLMSpec? _selectedModel;
+  // 2026-09-07 旧LLM体系退役：模型列表改为统一模型库条目(模型+所属平台)
+  List<UnifiedModelEntry> _modelList = [];
+  UnifiedModelEntry? _selectedModel;
 
   // 分析状态
   bool _isAnalyzing = false;
@@ -71,8 +70,8 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
 
   Future<void> _initModels() async {
     try {
-      // 2026-09-03 接入平台管理统一模型库(无内置免费模型)
-      final availableModels = await UnifiedModelBridge.loadChatModels();
+      // 接入平台管理统一模型库(无内置免费模型)
+      final availableModels = await UnifiedLLMService.loadModelEntries();
 
       if (!mounted) return;
       setState(() {
@@ -175,7 +174,7 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
 
       // 调用分析服务
       final (stream, cancel) = await _analysisService.analyzeDailyDiet(
-        model: _selectedModel!,
+        entry: _selectedModel!,
         userInfo: userViewModel.currentUser!,
         mealFoodDetails: viewModel.mealFoodDetails,
         dailyNutrition: viewModel.dailyNutrition,
@@ -187,7 +186,7 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
 
       _cancelAnalysis = cancel;
 
-      // 订阅流式响应(完整响应：delta含reasoning_content与content，分类累积)
+      // 订阅流式响应(完整响应：delta含reasoningContent与content，分类累积)
       _analysisSubscription = stream.listen(
         (resp) {
           setState(() {
@@ -195,15 +194,15 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
                 ? resp.choices.first.delta
                 : null;
             if (delta != null) {
-              final reasoning = delta['reasoning_content'];
-              final content = delta['content'];
-              if (reasoning is String && reasoning.isNotEmpty) {
+              final reasoning = delta.reasoningContent;
+              final content = delta.content;
+              if (reasoning != null && reasoning.isNotEmpty) {
                 _thinkingStartTime ??= DateTime.now();
                 _thinkingResult += reasoning;
-              } else if (content is String && content.isNotEmpty) {
+              } else if (content != null && content.isNotEmpty) {
                 if (resp.id == 'error') {
-                  // 请求异常时cusText为完整错误信息(delta只是[ERROR]占位)
-                  _analysisResult += resp.cusText;
+                  // 请求异常时customText为完整错误信息(delta只是[ERROR]占位)
+                  _analysisResult += resp.customText;
                 } else {
                   if (_thinkingStartTime != null && _thinkingSeconds == null) {
                     _thinkingSeconds = DateTime.now()
@@ -227,7 +226,9 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
               try {
                 final savedAnalysis = await viewModel.saveDietAnalysis(
                   _analysisResult,
-                  _selectedModel?.name ?? '未知模型',
+                  _selectedModel?.model.displayName ??
+                      _selectedModel?.model.modelName ??
+                      '未知模型',
                 );
 
                 setState(() {
@@ -665,7 +666,7 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
               ],
             ),
             const SizedBox(height: 16),
-            buildDropdownButton2<CusLLMSpec?>(
+            buildDropdownButton2<UnifiedModelEntry?>(
               value: _selectedModel,
               items: _modelList,
               height: 56,
@@ -673,7 +674,7 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
               alignment: Alignment.centerLeft,
               onChanged: (value) => setState(() => _selectedModel = value!),
               itemToString: (e) =>
-                  "${(e as CusLLMSpec).platformLabel ?? CP_NAME_MAP[e.platform]} - ${e.name}",
+                  "${(e as UnifiedModelEntry).platform.displayName} - ${e.model.displayName}",
             ),
           ],
         ),
@@ -805,7 +806,7 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
             ),
 
             Text(
-              '使用模型: ${_displayedAnalysis?.modelName ?? _selectedModel?.name ?? "未知"}',
+              '使用模型: ${_displayedAnalysis?.modelName ?? _selectedModel?.model.displayName ?? "未知"}',
               style: Theme.of(context).textTheme.bodySmall,
             ),
 

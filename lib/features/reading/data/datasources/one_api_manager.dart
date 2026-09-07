@@ -590,4 +590,7 @@ class OneApiManager extends BaseApiManager<OneApiConfig> {
 }
 
 /// 便捷的全局访问方法
-OneApiManager get readingApiManager => OneApiManager();
+/// 2026-09-07 A-13 修复：原顶层 getter 误名 readingApiManager（复制粘贴
+/// 遗留），与 reading_api_manager.dart 的同名 getter 类型不同，两文件同时
+/// import 即编译冲突；改为与类型一致的 oneApiManager
+OneApiManager get oneApiManager => OneApiManager();

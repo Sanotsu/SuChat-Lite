@@ -2,12 +2,8 @@ import 'dart:async';
 import 'dart:ui';
 
 import '../../../../core/dao/user_info_dao.dart';
-import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/entities/user_info.dart';
-import '../../../../shared/constants/constant_llm_enum.dart';
-import '../../../../shared/services/chat_completion_response.dart';
-import '../../../../shared/services/openai_compatible_apis.dart';
-import '../../../../shared/services/chat_service.dart';
+import '../../../../shared/services/unified_llm_service.dart';
 import '../../domain/entities/meal_food_detail.dart';
 import '../../domain/entities/meal_type.dart';
 
@@ -15,14 +11,15 @@ class DietAnalysisService {
   /// 分析用户一日饮食数据
   ///
   /// 参数:
-  /// - model: 使用的大模型
+  /// - entry: 统一模型库条目(模型+所属平台，来自聊天页平台管理)
   /// - userInfo: 用户信息
   /// - mealFoodDetails: 一日四餐的食品详情
   /// - dailyNutrition: 一日营养摄入总量
   /// - dailyRecommended: 推荐的每日营养摄入量
   /// 2026-09-04 改返回完整响应流，思考模型的reasoning_content由页面分类展示
-  Future<(Stream<ChatCompletionResponse>, VoidCallback)> analyzeDailyDiet({
-    required CusLLMSpec model,
+  /// 2026-09-07 旧LLM体系退役：改经UnifiedLLMService门面调用
+  Future<(Stream, VoidCallback)> analyzeDailyDiet({
+    required UnifiedModelEntry entry,
     required UserInfo userInfo,
     required Map<int, List<MealFoodDetail>> mealFoodDetails,
     MacrosIntake? dailyNutrition,
@@ -31,26 +28,6 @@ class DietAnalysisService {
     required Map<int, MealType> mealTypes,
     String? customPrompt,
   }) async {
-    // 如果是自定义平台模型，url、apikey等直接在模型规格中
-    Map<String, String> headers;
-    String baseUrl;
-    if (model.platform == ApiPlatform.custom) {
-      headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${model.apiKey}',
-      };
-      baseUrl = "${model.baseUrl}/chat/completions";
-    } else {
-      headers = await ChatService.getHeaders(model);
-      // 2026-09-03 模型自带baseUrl(统一平台完整chat端点)优先
-      final base = (model.baseUrl != null && model.baseUrl!.isNotEmpty)
-          ? model.baseUrl!
-          : ChatService.getBaseUrl(model.platform);
-      baseUrl = base.endsWith('/chat/completions')
-          ? base
-          : '$base/chat/completions';
-    }
-
     // 构建提示词
     String prompt;
     // 如果用户有自定义提示词，则使用自定义提示词
@@ -67,22 +44,13 @@ class DietAnalysisService {
       );
     }
 
-    // 基础请求体
-    final Map<String, dynamic> requestBody = {
-      'model': model.model,
-      'messages': [
+    // 调用大模型API(完整响应流：delta含reasoningContent与content)
+    final (stream, cancel) = await UnifiedLLMService.sendChatStream(
+      entry: entry,
+      messages: [
         {'role': 'system', 'content': '你是一位专业的营养师和健康顾问，负责分析用户的一日饮食情况并提供专业的建议。'},
         {'role': 'user', 'content': prompt},
       ],
-      "stream": true,
-      // 'temperature': 0.7,
-    };
-
-    // 调用大模型API(完整响应流：delta含reasoning_content与content)
-    final (stream, cancel) = await getStreamResponse(
-      baseUrl,
-      headers,
-      requestBody,
     );
 
     return (stream, cancel);

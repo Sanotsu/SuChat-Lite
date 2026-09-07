@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/entities/user_info.dart';
 import '../../../../core/utils/screen_helper.dart';
 import '../../../../core/viewmodels/user_info_viewmodel.dart';
-import '../../../../shared/constants/constant_llm_enum.dart';
-import '../../../../shared/services/unified_model_bridge.dart';
+import '../../../../shared/services/unified_llm_service.dart';
 import '../../../../shared/widgets/cus_dropdown_button.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../shared/widgets/toast_utils.dart';
@@ -90,8 +88,8 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
   ];
 
   // 添加模型相关状态
-  List<CusLLMSpec> modelList = [];
-  CusLLMSpec? selectedModel;
+  List<UnifiedModelEntry> modelList = [];
+  UnifiedModelEntry? selectedModel;
 
   @override
   void initState() {
@@ -101,7 +99,7 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
 
   Future<void> initModels() async {
     // 2026-09-03 接入平台管理统一模型库(无内置免费模型)
-    final availableModels = await UnifiedModelBridge.loadChatModels();
+    final availableModels = await UnifiedLLMService.loadModelEntries();
 
     if (!mounted) return;
     setState(() {
@@ -550,7 +548,7 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
         Text('选择用于生成训练计划的大语言模型', style: Theme.of(context).textTheme.bodyMedium),
         const SizedBox(height: 16),
         SizedBox(
-          child: buildDropdownButton2<CusLLMSpec?>(
+          child: buildDropdownButton2<UnifiedModelEntry?>(
             value: selectedModel,
             items: modelList,
             height: 56,
@@ -558,7 +556,7 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
             alignment: Alignment.centerLeft,
             onChanged: (value) => setState(() => selectedModel = value!),
             itemToString: (e) =>
-                "${(e as CusLLMSpec).platformLabel ?? CP_NAME_MAP[e.platform]} - ${e.name}",
+                "${(e as UnifiedModelEntry).platform.displayName} - ${e.model.displayName}",
           ),
         ),
 
@@ -825,7 +823,7 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
           frequency: frequency,
           equipment: _equipment,
           customPrompt: _customPrompt.trim(),
-          model: selectedModel!,
+          entry: selectedModel!,
         );
       } else {
         // 使用标准提示词生成
@@ -837,7 +835,7 @@ class _PlanGeneratorFormState extends State<PlanGeneratorForm> {
           duration: _duration,
           frequency: frequency,
           equipment: _equipment,
-          model: selectedModel!,
+          entry: selectedModel!,
         );
       }
 

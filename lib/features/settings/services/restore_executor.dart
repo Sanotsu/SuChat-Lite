@@ -7,7 +7,6 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
-import '../../../core/entities/cus_llm_model.dart';
 import '../../../core/entities/user_info.dart';
 import '../../../core/storage/cus_get_storage.dart';
 import '../../../core/storage/db_config.dart';
@@ -20,7 +19,6 @@ import '../../../core/storage/ddl_training.dart';
 import '../../../core/utils/get_dir.dart';
 import '../../diet_diary/data/index.dart';
 import '../../diet_diary/domain/entities/index.dart';
-import '../../../core/entities/media_generation_history.dart';
 import '../../notebook/data/note_dao.dart';
 import '../../notebook/domain/entities/index.dart';
 import '../../simple_accounting/data/bill_dao.dart';
@@ -237,18 +235,12 @@ class RestoreExecutor {
     if (unifiedCount != null) return unifiedCount;
 
     // ===== 主库各表 =====
+    // 2026-09-07 LLM旧体系退役：旧备份中的 brief_cus_llm_spec /
+    // brief_media_generation_history 两表文件跳过(新版本已无对应表与读写)
     final jsonData = await file.readAsString();
     final jsonMapList = json.decode(jsonData) as List;
 
-    if (filename == "${DBDdl.tableCusLlmSpec}.json") {
-      await _dbHelper.saveCusLLMSpecs(
-        jsonMapList.map((e) => CusLLMSpec.fromMap(e)).toList(),
-      );
-    } else if (filename == "${DBDdl.tableMediaGenerationHistory}.json") {
-      await _dbHelper.saveMediaGenerationHistories(
-        jsonMapList.map((e) => MediaGenerationHistory.fromMap(e)).toList(),
-      );
-    } else if (filename == "${DBDdl.tableVoiceRecognitionTask}.json") {
+    if (filename == "${DBDdl.tableVoiceRecognitionTask}.json") {
       await _dbHelper.saveVoiceRecognitionTasks(
         jsonMapList.map((e) => VoiceRecognitionTaskInfo.fromMap(e)).toList(),
       );
@@ -603,8 +595,6 @@ class RestoreExecutor {
       '${UnifiedChatDdl.tableUnifiedConversation}.json' => '新版聊天-对话',
       '${UnifiedChatDdl.tableUnifiedChatMessage}.json' => '新版聊天-消息',
       '${UnifiedChatDdl.tableUnifiedApiKey}.json' => '新版聊天-密钥(跳过)',
-      '${DBDdl.tableCusLlmSpec}.json' => 'AI工具-模型配置',
-      '${DBDdl.tableMediaGenerationHistory}.json' => 'AI工具-生成历史',
       '${DBDdl.tableVoiceRecognitionTask}.json' => 'AI工具-语音任务',
       '${DBDdl.tableUserInfo}.json' => '用户信息',
       '${TrainingDdl.tableTrainingPlan}.json' => '训练助手',

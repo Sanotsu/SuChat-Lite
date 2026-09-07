@@ -64,8 +64,9 @@ class _ReadHubPageState extends BaseNewsPageState<ReadHubPage, ReadhubItem> {
           newsList.addAll(rst.items ?? []);
         }
 
-        // 暂时设定一定有下一页吧，因为没有看到总数说明
-        hasMore = true;
+        // 2026-09-07 修复假分页：原 hasMore 恒为 true，末页后反复加载
+        // 空数据；返回条数不足一页时判定没有更多
+        hasMore = (rst.items?.length ?? 0) >= pageSize;
 
         // 重新加载新闻列表都是未加载的状态
         isExpandedList = List.generate(newsList.length, (index) => false);

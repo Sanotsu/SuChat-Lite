@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../shared/widgets/cus_content_width.dart';
 import 'package:intl/intl.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../../shared/widgets/cus_dropdown_button.dart';
 import '../../../shared/widgets/toast_utils.dart';
@@ -10,12 +9,11 @@ import '../../../shared/widgets/cus_loading_indicator.dart';
 import '../../../shared/widgets/loading_overlay.dart';
 import '../../../shared/widgets/simple_tool_widget.dart';
 import '../../../shared/constants/constants.dart';
-import '../../../shared/constants/constant_llm_enum.dart';
-import '../../../core/entities/cus_llm_model.dart';
 import '../../../core/utils/screen_helper.dart';
 import '../../../core/storage/db_helper.dart';
 import '../../../core/theme/style/app_colors.dart';
 import '../../../shared/widgets/audio_operation_widgets.dart';
+import '../domain/entities/task_model_info.dart';
 import '../domain/entities/voice_recognition_task_info.dart';
 import '../data/repositories/voice_recognition_service.dart';
 import '../../unified_chat/data/database/unified_chat_dao.dart';
@@ -52,7 +50,8 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
   late RemoteAudioPlayer _remoteAudioPlayer;
 
   // 默认选中的模型
-  late CusLLMSpec _selectedModel;
+  // 2026-09-07 旧LLM体系退役：DashScope模型清单改为轻量记录(仅模型名+描述)
+  late TaskModelInfo _selectedModel;
 
   // 平台管理中配置的语音识别模型(2026-09-03 打通统一配置)：
   // 用户自建平台+asr模型可在此直接使用(同步识别，一般限制25MB内)
@@ -66,16 +65,10 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
   final TextEditingController _customModelController = TextEditingController();
 
   /// 构造实际提交用的模型规格：自定义名非空时优先生效
-  CusLLMSpec get _effectiveModel {
+  TaskModelInfo get _effectiveModel {
     final custom = _customModelController.text.trim();
     if (custom.isEmpty) return _selectedModel;
-    return CusLLMSpec(
-      ApiPlatform.aliyun,
-      custom,
-      LLModelType.asr,
-      description: '自定义模型',
-      cusLlmSpecId: const Uuid().v4(),
-    );
+    return TaskModelInfo(model: custom, description: '自定义模型');
   }
 
   // 支持的模型列表
@@ -83,63 +76,27 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
   // 所以模型预设好，但要检测到用户有自己的阿里云AK才能提交成功
   // 2026-09-03 按2026-09官方文档重写：sensevoice-v1已于2026-03-09下线(移除)；
   // 新增新一代Fun-ASR/Qwen3-ASR系；Paraformer为较早一代仍可用(存量保留)
-  final List<CusLLMSpec> _asrModels = [
-    CusLLMSpec(
-      ApiPlatform.aliyun,
-      "qwen-audio-3.0-asr-flash-filetrans",
-      LLModelType.asr,
+  final List<TaskModelInfo> _asrModels = const [
+    TaskModelInfo(
+      model: "qwen-audio-3.0-asr-flash-filetrans",
       description: '新·中英日韩粤等多语种方言/说话人分离/热词/上下文增强',
-      cusLlmSpecId: const Uuid().v4(),
     ),
-    CusLLMSpec(
-      ApiPlatform.aliyun,
-      "fun-asr",
-      LLModelType.asr,
-      description: '新·中(多方言)英日韩等50+语种/说话人分离/热词',
-      cusLlmSpecId: const Uuid().v4(),
-    ),
-    CusLLMSpec(
-      ApiPlatform.aliyun,
-      "fun-asr-mtl",
-      LLModelType.asr,
+    TaskModelInfo(model: "fun-asr", description: '新·中(多方言)英日韩等50+语种/说话人分离/热词'),
+    TaskModelInfo(
+      model: "fun-asr-mtl",
       description: '新·中(粤)英日韩等50+语种/说话人分离/热词',
-      cusLlmSpecId: const Uuid().v4(),
     ),
-    CusLLMSpec(
-      ApiPlatform.aliyun,
-      "qwen3-asr-flash-filetrans",
-      LLModelType.asr,
+    TaskModelInfo(
+      model: "qwen3-asr-flash-filetrans",
       description: '新·中(多方言)英日韩等27+语种/情感识别',
-      cusLlmSpecId: const Uuid().v4(),
     ),
-    CusLLMSpec(
-      ApiPlatform.aliyun,
-      "paraformer-v2",
-      LLModelType.asr,
-      description: '旧·中(部分方言)英日韩德法俄/说话人分离',
-      cusLlmSpecId: const Uuid().v4(),
-    ),
-    CusLLMSpec(
-      ApiPlatform.aliyun,
-      "paraformer-mtl-v1",
-      LLModelType.asr,
+    TaskModelInfo(model: "paraformer-v2", description: '旧·中(部分方言)英日韩德法俄/说话人分离'),
+    TaskModelInfo(
+      model: "paraformer-mtl-v1",
       description: '旧·中(部分方言)英日韩法意等/说话人分离',
-      cusLlmSpecId: const Uuid().v4(),
     ),
-    CusLLMSpec(
-      ApiPlatform.aliyun,
-      "paraformer-v1",
-      LLModelType.asr,
-      description: '旧·仅中英文/说话人分离',
-      cusLlmSpecId: const Uuid().v4(),
-    ),
-    CusLLMSpec(
-      ApiPlatform.aliyun,
-      "paraformer-8k-v2",
-      LLModelType.asr,
-      description: '旧·8k电话场景·仅中文',
-      cusLlmSpecId: const Uuid().v4(),
-    ),
+    TaskModelInfo(model: "paraformer-v1", description: '旧·仅中英文/说话人分离'),
+    TaskModelInfo(model: "paraformer-8k-v2", description: '旧·8k电话场景·仅中文'),
   ];
 
   /// 2025-05-07 暂时不支持选择录音语言，因为默认使用auto就足够了
@@ -291,7 +248,7 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
   }
 
   // 模型变更处理
-  void _onModelChanged(CusLLMSpec? value) {
+  void _onModelChanged(TaskModelInfo? value) {
     if (value == null) return;
     setState(() {
       _selectedModel = value;
@@ -634,7 +591,7 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
             Text('选择模型', style: TextStyle(fontWeight: FontWeight.bold)),
             SizedBox(width: 8),
             Expanded(
-              child: buildDropdownButton2<CusLLMSpec?>(
+              child: buildDropdownButton2<TaskModelInfo?>(
                 height: 48,
                 value: _selectedModel,
                 items: _asrModels,
@@ -642,7 +599,7 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
                 hintLabel: "选择模型",
                 onChanged: _onModelChanged,
                 itemToString: (e) =>
-                    "${(e as CusLLMSpec).model} (${e.description})",
+                    "${(e as TaskModelInfo).model} (${e.description})",
               ),
             ),
           ],

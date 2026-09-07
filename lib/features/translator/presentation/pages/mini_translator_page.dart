@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:flutter/material.dart';
 import '../../../../shared/widgets/cus_content_width.dart';
@@ -6,10 +6,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
-import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/theme/style/app_colors.dart';
 import '../../../../core/utils/screen_helper.dart';
-import '../../../../shared/constants/constant_llm_enum.dart';
 import '../../../../shared/services/translation_service.dart';
 import '../../../../shared/widgets/audio_player_widget.dart';
 import '../../../../shared/widgets/cus_dropdown_button.dart';
@@ -150,26 +148,6 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
         setState(() => _isLoadingModels = false);
       }
     }
-  }
-
-  /// 将统一配置的对话模型桥接为TranslationService使用的CusLLMSpec
-  /// (baseUrl为完整chat端点，apiKey从统一安全存储读取)
-  Future<CusLLMSpec?> _buildTranslationSpec(_ModelEntry? entry) async {
-    if (entry == null) return null;
-    final apiKey = await UnifiedSecureStorage.getApiKey(entry.platform.id);
-    if (apiKey == null || apiKey.isEmpty) {
-      throw Exception('平台[${entry.platform.displayName}]未配置API Key');
-    }
-    return CusLLMSpec(
-      // platform仅为枚举占位，实际地址与密钥由baseUrl/apiKey提供
-      ApiPlatform.aliyun,
-      entry.model.modelName,
-      LLModelType.cc,
-      name: entry.model.displayName,
-      baseUrl: entry.platform.getChatCompletionsUrl(),
-      apiKey: apiKey,
-      cusLlmSpecId: 'unified_${entry.platform.id}_${entry.model.id}',
-    );
   }
 
   // ============ 录音与同步识别 ============
@@ -322,16 +300,11 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
     });
 
     try {
-      CusLLMSpec? spec;
-      if (_selectedCc != null) {
-        spec = await _buildTranslationSpec(_selectedCc);
-      }
-
       final result = await TranslationService.translate(
         _inputText.trim(),
         _targetLanguage.value,
         sourceLang: _sourceLanguage.value,
-        model: spec,
+        entry: _selectedCc,
       );
 
       setState(() {
@@ -351,7 +324,7 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
             modelName:
                 _selectedCc?.model.displayName ??
                 _selectedCc?.model.modelName ??
-                '默认模型',
+                '自动选择的模型',
             platformName: _selectedCc?.platform.displayName,
           ),
         );
@@ -660,7 +633,7 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
                     title: '翻译模型',
                     entries: _ccEntries,
                     value: _selectedCc,
-                    hintLabel: '翻译模型(不选用内置默认)',
+                    hintLabel: '翻译模型(不选时自动选择)',
                     onChanged: (v) => setState(() => _selectedCc = v),
                   ),
                   SizedBox(height: spacing * 0.6),
@@ -981,7 +954,7 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
             ),
             _buildHelpItem(
               '3. 翻译模型',
-              '使用所选对话模型+翻译提示词完成翻译；qwen-mt系列自动使用其专用翻译参数。不选择时使用内置默认模型。',
+              '使用所选对话模型+翻译提示词完成翻译；qwen-mt系列自动使用其专用翻译参数。不选择时自动使用统一模型库中第一个可用对话模型。',
             ),
             _buildHelpItem('4. 翻译历史', '翻译完成后自动保存历史，点击右上角历史按钮查看、复制或删除。'),
           ],

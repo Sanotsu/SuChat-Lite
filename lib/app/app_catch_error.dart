@@ -9,6 +9,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:video_player_media_kit/video_player_media_kit.dart';
 
 import '../core/services/desktop_window_service.dart';
+import '../core/services/legacy_llm_migrator.dart';
 import '../core/services/upgrade_migrator.dart';
 import '../core/storage/cus_get_storage.dart';
 import '../core/utils/simple_tools.dart';
@@ -62,6 +63,10 @@ class AppCatchError {
     // if (CusGetStorage().isFirstLaunch()) {
     // await CusGetStorage().markLaunched();
     // }
+
+    // 2026-09-07 LLM旧体系退役：旧版user_ak_map中的平台AK转入secure storage
+    // (幂等，仅在未打标时执行；须先于任何扩展功能LLM调用)
+    await LegacyLLMMigrator.runIfNeeded();
 
     NetworkStatusService().initialize();
 

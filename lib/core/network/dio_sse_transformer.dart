@@ -35,7 +35,10 @@ class SseEventSink implements EventSink<String> {
       return;
     }
     if (event.startsWith("data:")) {
-      _data = event.substring(5);
+      // 2026-09-07 B-8 修复：SSE 规范中同一事件可有多行 data:，
+      // 应以换行拼接而非覆盖赋值（此前多行时只保留最后一行）
+      final payload = event.substring(5);
+      _data = _data.isEmpty ? payload : "$_data\n$payload";
       return;
     }
     if (event.startsWith("retry:")) {

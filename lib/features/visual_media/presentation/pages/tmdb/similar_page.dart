@@ -64,20 +64,30 @@ class _TmdbSimilarPageState extends State<TmdbSimilarPage> {
     try {
       TmdbResultResp? response;
 
+      // 2026-09-07 修复分页：原调用未传页码，滚动加载永远取第 1 页，
+      // 列表反复堆叠同一批数据
       if (widget.mediaType == 'movie') {
         if (widget.contentType == 'similar') {
-          response = await TmdbApiManager().getMovieSimilar(widget.mediaId);
+          response = await TmdbApiManager().getMovieSimilar(
+            widget.mediaId,
+            page: _currentPage,
+          );
         } else {
           response = await TmdbApiManager().getMovieRecommendations(
             widget.mediaId,
+            page: _currentPage,
           );
         }
       } else if (widget.mediaType == 'tv') {
         if (widget.contentType == 'similar') {
-          response = await TmdbApiManager().getTvSimilar(widget.mediaId);
+          response = await TmdbApiManager().getTvSimilar(
+            widget.mediaId,
+            page: _currentPage,
+          );
         } else {
           response = await TmdbApiManager().getTvRecommendations(
             widget.mediaId,
+            page: _currentPage,
           );
         }
       }

@@ -11,6 +11,7 @@ import 'package:sqflite/sqflite.dart';
 import '../../../core/storage/cus_get_storage.dart';
 import '../../../core/storage/db_config.dart';
 import '../../../core/storage/db_init.dart';
+import '../../../core/storage/ddl_notebook.dart';
 import '../../../core/utils/get_dir.dart';
 import '../../unified_chat/data/database/unified_chat_db_init.dart';
 import '../../unified_chat/data/database/unified_chat_ddl.dart';
@@ -86,6 +87,38 @@ class BackupUtils {
   ///   appearance_settings.json   外观设置(背景图base64内嵌)
   ///   backup_manifest.json       清单(备份机私有区根/媒体统计/排除清单)
   ///   files/...                  小媒体文件(消息引用的图片/语音等)
+  /// 小媒体配额分配：按最后修改时间降序保留较新的，超出的进入 cut 列表
+  /// 2026-09-07 修复"两头落空"：cut 的文件由 buildMediaPack 兜底打进媒体包，
+  /// 不再既不在数据包、也不在媒体包
+  static ({
+    List<MapEntry<File, String>> included,
+    List<MapEntry<File, String>> cut,
+  })
+  _applySmallQuota(List<MapEntry<File, String>> small) {
+    if (scanSmallBytes(small) <= kSmallMediaQuotaBytes) {
+      return (included: small, cut: <MapEntry<File, String>>[]);
+    }
+    final sorted = [...small]
+      ..sort(
+        (a, b) => b.key.lastModifiedSync().compareTo(a.key.lastModifiedSync()),
+      );
+    var acc = 0;
+    final kept = <MapEntry<File, String>>[];
+    final cut = <MapEntry<File, String>>[];
+    for (final e in sorted) {
+      if (acc + e.key.lengthSync() > kSmallMediaQuotaBytes) {
+        cut.add(e);
+        continue;
+      }
+      acc += e.key.lengthSync();
+      kept.add(e);
+    }
+    return (included: kept, cut: cut);
+  }
+
+  static int scanSmallBytes(List<MapEntry<File, String>> small) =>
+      small.fold(0, (s, e) => s + e.key.lengthSync());
+
   static Future<BackupBuildResult> buildDataPack({
     required String zipPath,
     bool includeMedia = true,
@@ -114,25 +147,11 @@ class BackupUtils {
       scan = const MediaScanResult(small: [], large: []);
     }
 
-    // 配额截断：超出后按最后修改时间保留较新的
-    var included = scan.small;
-    var quotaCut = 0;
-    if (scan.smallBytes > kSmallMediaQuotaBytes) {
-      final sorted = [...scan.small]
-        ..sort(
-          (a, b) =>
-              b.key.lastModifiedSync().compareTo(a.key.lastModifiedSync()),
-        );
-      var acc = 0;
-      final kept = <MapEntry<File, String>>[];
-      for (final e in sorted) {
-        acc += e.key.lengthSync();
-        if (acc > kSmallMediaQuotaBytes) break;
-        kept.add(e);
-      }
-      quotaCut = scan.small.length - kept.length;
-      included = kept;
-    }
+    // 配额截断：超出后按最后修改时间保留较新的（被截掉的由媒体包兜底）
+    final quota = _applySmallQuota(scan.small);
+    final included = quota.included;
+    final quotaCut = quota.cut.length;
+    final quotaCutBytes = scanSmallBytes(quota.cut);
 
     // ---------- 3. 清单 ----------
     onStage?.call('正在写入备份清单...');
@@ -145,6 +164,7 @@ class BackupUtils {
         'includedCount': included.length,
         'includedBytes': included.fold(0, (s, e) => s + e.key.lengthSync()),
         'quotaCut': quotaCut,
+        'quotaCutBytes': quotaCutBytes,
         'excludedCount': scan.large.length,
         'excludedBytes': scan.largeBytes,
         'excluded': scan.large
@@ -186,21 +206,25 @@ class BackupUtils {
   }
 
   /// 构建大媒体独立包(视频等超过阈值的消息媒体)
+  /// 2026-09-07 修复"两头落空"：数据包因 500MB 配额截断的小文件
+  /// 也在此兜底打包，确保备份完整
   static Future<BackupBuildResult> buildMediaPack({
     required String zipPath,
     void Function(String stage)? onStage,
   }) async {
     onStage?.call('正在扫描大媒体文件...');
     final scan = await scanMediaReferences();
-    if (scan.large.isEmpty) {
+    final quota = _applySmallQuota(scan.small);
+    final entries = [...scan.large, ...quota.cut];
+    if (entries.isEmpty) {
       return BackupBuildResult(zipPath: zipPath);
     }
 
-    onStage?.call('正在压缩打包(${scan.large.length}个文件)...');
+    onStage?.call('正在压缩打包(${entries.length}个文件)...');
     final encoder = ZipFileEncoder();
     encoder.create(zipPath);
     try {
-      for (final entry in scan.large) {
+      for (final entry in entries) {
         encoder.addFile(entry.key, entry.value);
       }
     } finally {
@@ -209,8 +233,8 @@ class BackupUtils {
 
     return BackupBuildResult(
       zipPath: zipPath,
-      includedCount: scan.large.length,
-      includedBytes: scan.largeBytes,
+      includedCount: entries.length,
+      includedBytes: entries.fold(0, (s, e) => s + e.key.lengthSync()),
     );
   }
 
@@ -260,13 +284,41 @@ class BackupUtils {
       print('扫描消息媒体引用失败: $e');
     }
 
-    // 2. 全局聊天背景
+    // 2. 主库：笔记媒体附件（录音/图片，2026-09-07 补笔记录音入备份）
+    try {
+      final dbPath = p.join(
+        (await getSqliteDbDir()).path,
+        DBInitConfig.databaseName,
+      );
+      if (File(dbPath).existsSync()) {
+        final db = await openDatabase(dbPath);
+        try {
+          final mediaRows = await db.rawQuery(
+            'SELECT media_path, thumbnail_path FROM '
+            '${NotebookDdl.tableNoteMedia}',
+          );
+          for (final row in mediaRows) {
+            for (final v in row.values) {
+              if (v is String) {
+                candidates.addAll(_extractFilePaths(v, roots));
+              }
+            }
+          }
+        } finally {
+          await db.close();
+        }
+      }
+    } catch (e) {
+      print('扫描笔记媒体引用失败: $e');
+    }
+
+    // 3. 全局聊天背景
     try {
       final bg = CusGetStorage().box.read('chat_background');
       if (bg is String) candidates.addAll(_extractFilePaths(bg, roots));
     } catch (_) {}
 
-    // 3. 存在性过滤 + 相对路径 + 分级
+    // 4. 存在性过滤 + 相对路径 + 分级
     final small = <MapEntry<File, String>>[];
     final large = <MapEntry<File, String>>[];
     for (final path in candidates) {

@@ -75,7 +75,7 @@ class SpeechSynthesisService {
             showLoading: false,
           );
 
-          return SpeechSynthesisResponse.fromBinaryData(
+          return await SpeechSynthesisResponse.fromBinaryData(
             audioBytes,
             format: request.responseFormat ?? 'mp3',
             source: platform.id,
@@ -92,7 +92,7 @@ class SpeechSynthesisService {
             showLoading: false,
           );
 
-          return SpeechSynthesisResponse.fromBinaryData(
+          return await SpeechSynthesisResponse.fromBinaryData(
             audioBytes,
             format: request.responseFormat ?? 'mp3',
             source: platform.id,

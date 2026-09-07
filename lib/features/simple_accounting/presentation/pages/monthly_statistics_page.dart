@@ -420,7 +420,7 @@ class MonthlyStatisticsPageState extends State<MonthlyStatisticsPage>
         0,
       );
 
-      return StatisticsUtils.getRankingData(
+      return await StatisticsUtils.getRankingData(
         viewModel: viewModel,
         startDate: firstDayOfMonth,
         endDate: lastDayOfMonth,

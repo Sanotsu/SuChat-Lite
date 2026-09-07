@@ -111,10 +111,12 @@ class UpgradeMigrator {
     // ---------- 4. 媒体移动 + 路径重写(可后台) ----------
     Future<void> heavyWork() async {
       try {
-        await _moveLegacyDirs(legacyRoot!);
-        await _rewritePaths(legacyRoot, dbFilesCopied);
-        await _rewriteGlobalBackgroundPath(legacyRoot);
-        await _sealLegacyRoot(legacyRoot);
+        // 闭包捕获的可空变量无法跨await保持类型提升，先接住一次断言
+        final root = legacyRoot!;
+        await _moveLegacyDirs(root);
+        await _rewritePaths(root, dbFilesCopied);
+        await _rewriteGlobalBackgroundPath(root);
+        await _sealLegacyRoot(root);
         await _markDone();
         print('[UpgradeMigrator] 迁移全部完成');
       } catch (e) {

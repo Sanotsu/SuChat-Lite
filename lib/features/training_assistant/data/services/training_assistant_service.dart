@@ -1,16 +1,13 @@
 import 'dart:convert';
 
-import '../../../../core/entities/cus_llm_model.dart';
-import '../../../../core/network/dio_client/cus_http_client.dart';
-import '../../../../core/network/dio_client/cus_http_request.dart';
-import '../../../../shared/constants/constant_llm_enum.dart';
 import '../../../../shared/constants/constants.dart';
-import '../../../../shared/services/chat_service.dart';
+import '../../../../shared/services/unified_llm_service.dart';
 import '../../domain/entities/training_plan.dart';
 import '../../domain/entities/training_plan_detail.dart';
 
 class TrainingAssistantService {
   /// 根据用户信息生成训练计划
+  /// 2026-09-07 旧LLM体系退役：改经UnifiedLLMService门面调用(保持非流式)
   Future<Map<String, dynamic>> generateTrainingPlan({
     required String userId,
     required String gender,
@@ -24,28 +21,8 @@ class TrainingAssistantService {
     required int duration,
     required String frequency,
     String? equipment,
-    required CusLLMSpec model,
+    required UnifiedModelEntry entry,
   }) async {
-    // 如果是自定义平台模型，url、apikey等直接在模型规格中
-    Map<String, String> headers;
-    String baseUrl;
-    if (model.platform == ApiPlatform.custom) {
-      headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${model.apiKey}',
-      };
-      baseUrl = "${model.baseUrl}/chat/completions";
-    } else {
-      headers = await ChatService.getHeaders(model);
-      // 2026-09-03 模型自带baseUrl(统一平台完整chat端点)优先
-      final base = (model.baseUrl != null && model.baseUrl!.isNotEmpty)
-          ? model.baseUrl!
-          : ChatService.getBaseUrl(model.platform);
-      baseUrl = base.endsWith('/chat/completions')
-          ? base
-          : '$base/chat/completions';
-    }
-
     // 构建提示词
     final prompt = buildTrainingPlanPrompt(
       gender: gender,
@@ -61,35 +38,18 @@ class TrainingAssistantService {
       equipment: equipment,
     );
 
-    // 基础请求体
-    final Map<String, dynamic> requestBody = {
-      'model': model.model,
-      'messages': [
+    final response = await UnifiedLLMService.sendChat(
+      entry: entry,
+      messages: [
         {'role': 'system', 'content': '你是一位专业的健身教练。'},
         {'role': 'user', 'content': prompt},
       ],
-      // 'temperature': 0.7,
-    };
-
-    // // ??? 注意，这里是非流式响应，很多模型无法正常配置和处理
-    // if (model.model.toLowerCase().contains("qwen3")) {
-    //   // requestBody['stream'] = false;
-    //   // requestBody['enable_thinking '] = false;
-    //   requestBody['parameters'] = {"enable_thinking": false};
-    //   requestBody['response_format '] = {'type': 'json_object'};
-    // }
-
-    final response = await HttpUtils.post(
-      path: baseUrl,
-      headers: headers,
-      data: requestBody,
-      responseType: CusRespType.json,
-      showLoading: false,
-      showErrorMessage: false,
     );
 
     // 解析响应
-    var content = response['choices'][0]['message']['content'];
+    var content = response.choices.isNotEmpty
+        ? response.choices.first.message?.content
+        : null;
     if (content is! String) {
       content = content.toString();
     }
@@ -115,48 +75,20 @@ class TrainingAssistantService {
     required String frequency,
     String? equipment,
     required String customPrompt,
-    required CusLLMSpec model,
+    required UnifiedModelEntry entry,
   }) async {
-    // 如果是自定义平台模型，url、apikey等直接在模型规格中
-    Map<String, String> headers;
-    String baseUrl;
-    if (model.platform == ApiPlatform.custom) {
-      headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${model.apiKey}',
-      };
-      baseUrl = "${model.baseUrl}/chat/completions";
-    } else {
-      headers = await ChatService.getHeaders(model);
-      // 2026-09-03 模型自带baseUrl(统一平台完整chat端点)优先
-      final base = (model.baseUrl != null && model.baseUrl!.isNotEmpty)
-          ? model.baseUrl!
-          : ChatService.getBaseUrl(model.platform);
-      baseUrl = base.endsWith('/chat/completions')
-          ? base
-          : '$base/chat/completions';
-    }
-
-    // 基础请求体
-    final Map<String, dynamic> requestBody = {
-      'model': model.model,
-      'messages': [
+    final response = await UnifiedLLMService.sendChat(
+      entry: entry,
+      messages: [
         {'role': 'system', 'content': '你是一位专业的健身教练。'},
         {'role': 'user', 'content': customPrompt},
       ],
-    };
-
-    final response = await HttpUtils.post(
-      path: baseUrl,
-      headers: headers,
-      data: requestBody,
-      responseType: CusRespType.json,
-      showLoading: false,
-      showErrorMessage: false,
     );
 
     // 解析响应
-    var content = response['choices'][0]['message']['content'];
+    var content = response.choices.isNotEmpty
+        ? response.choices.first.message?.content
+        : null;
     if (content is! String) {
       content = content.toString();
     }

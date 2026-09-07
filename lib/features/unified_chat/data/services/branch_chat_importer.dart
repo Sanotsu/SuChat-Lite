@@ -4,8 +4,6 @@ import 'dart:convert';
 
 import 'package:uuid/uuid.dart';
 
-import '../../../../core/entities/cus_llm_model.dart';
-import '../../../../shared/constants/constant_llm_enum.dart';
 import '../database/unified_chat_dao.dart';
 import '../models/branch_chat_export_data.dart';
 import '../models/character_card.dart';
@@ -130,7 +128,7 @@ class BranchChatImporter {
       extraParams: {
         'migratedFrom': 'branch_chat',
         'legacySessionId': sessionExport.id,
-        'legacyModelType': sessionExport.modelType.name,
+        'legacyModelType': sessionExport.modelType,
       },
       createdAt: sessionExport.createTime,
       updatedAt: sessionExport.updateTime,
@@ -145,7 +143,7 @@ class BranchChatImporter {
         role: UnifiedMessageRole.system,
         content: systemPrompt,
         contentType: UnifiedContentType.text,
-        modelNameUsed: spec.model,
+        modelNameUsed: legacySpecString(spec, 'model'),
         platformIdUsed: platformId,
         depth: -1,
         branchPath: '',
@@ -192,7 +190,7 @@ class BranchChatImporter {
     BranchChatMessageExport msg,
     String convId,
     String platformId,
-    CusLLMSpec spec,
+    Map<String, dynamic> spec,
   ) {
     // 多模态附件：旧版逗号分隔路径字符串 -> UnifiedContentItem列表
     final multimodalContent = <UnifiedContentItem>[];
@@ -247,7 +245,7 @@ class BranchChatImporter {
           ? multimodalContent
           : null,
       tokenCount: msg.totalTokens ?? msg.completionTokens ?? 0,
-      modelNameUsed: spec.model,
+      modelNameUsed: legacySpecString(spec, 'model'),
       platformIdUsed: platformId,
       searchReferences:
           (searchReferences != null && searchReferences.isNotEmpty)
@@ -275,8 +273,9 @@ class BranchChatImporter {
   }
 
   /// 平台映射：确保新版库中存在对应平台，返回平台id
-  Future<String> _ensurePlatform(CusLLMSpec spec) async {
-    final name = spec.platform.name;
+  /// 2026-09-07 旧LLM体系退役：旧备份模型规格改为原始Map轻量解析
+  Future<String> _ensurePlatform(Map<String, dynamic> spec) async {
+    final name = (spec['platform'] as String?) ?? 'custom';
 
     // 新版内置平台：id与旧版枚举名一致(siliconCloud驼峰也一致)
     // 2026-09-02 lingyiwanwu/infini已停服移除内置，旧数据迁移时走下方legacy补建分支
@@ -342,7 +341,7 @@ class BranchChatImporter {
     final customId = 'migrated_custom';
     var platform = await _dao.getPlatformSpec(customId);
     if (platform == null) {
-      final baseUrl = spec.baseUrl ?? '';
+      final baseUrl = (spec['baseUrl'] as String?) ?? '';
       String hostUrl = baseUrl;
       String ccPrefix = '/chat/completions';
       // 拆分比如 https://host.com/v1/chat/completions
@@ -371,42 +370,50 @@ class BranchChatImporter {
     }
 
     // 旧版自定义平台的apiKey存入新版SecureStorage
-    if (spec.apiKey != null && spec.apiKey!.isNotEmpty) {
-      await UnifiedSecureStorage.storeApiKey(customId, spec.apiKey!);
+    final legacyApiKey = spec['apiKey'] as String?;
+    if (legacyApiKey != null && legacyApiKey.isNotEmpty) {
+      await UnifiedSecureStorage.storeApiKey(customId, legacyApiKey);
     }
 
     return customId;
   }
 
   /// 模型映射：优先复用平台下已有的同名模型，否则创建自定义模型行
-  Future<String> _ensureModel(String platformId, CusLLMSpec spec) async {
+  Future<String> _ensureModel(
+    String platformId,
+    Map<String, dynamic> spec,
+  ) async {
+    final legacyModel = legacySpecString(spec, 'model');
     final models = await _dao.getModelSpecsByPlatformId(platformId);
-    final existing = models.where((m) => m.modelName == spec.model).firstOrNull;
+    final existing = models
+        .where((m) => m.modelName == legacyModel)
+        .firstOrNull;
     if (existing != null) return existing.id;
 
-    // 旧模型类型 -> 新模型类型映射
+    // 旧模型类型(枚举名字符串) -> 新模型类型映射
     // 2026-09-02 新版类型重构：图片/视频生成统一为任务类型，文生/图生差异
     // 由 supportsImageInput 表达(返回四元组第4位)
+    final legacyType = (spec['modelType'] as String?) ?? 'cc';
     final (
       modelType,
       supportsThinking,
       supportsVision,
       supportsImageInput,
-    ) = switch (spec.modelType) {
-      LLModelType.cc => ('cc', false, false, false),
-      LLModelType.reasoner => ('cc', true, false, false),
-      LLModelType.vision => ('cc', false, true, false),
-      LLModelType.vision_reasoner => ('cc', true, true, false),
-      LLModelType.omni => ('cc', true, true, false),
-      LLModelType.tti => ('image', false, false, false),
-      LLModelType.iti => ('image', false, false, true),
-      LLModelType.image => ('image', false, false, true),
-      LLModelType.ttv => ('video', false, false, false),
-      LLModelType.itv => ('video', false, false, true),
-      LLModelType.video => ('video', false, false, true),
-      LLModelType.tts => ('tts', false, false, false),
-      LLModelType.asr => ('asr', false, false, false),
-      LLModelType.asr_realtime => ('asr', false, false, false),
+    ) = switch (legacyType) {
+      'cc' => ('cc', false, false, false),
+      'reasoner' => ('cc', true, false, false),
+      'vision' => ('cc', false, true, false),
+      'vision_reasoner' => ('cc', true, true, false),
+      'omni' => ('cc', true, true, false),
+      'tti' => ('image', false, false, false),
+      'iti' => ('image', false, false, true),
+      'image' => ('image', false, false, true),
+      'ttv' => ('video', false, false, false),
+      'itv' => ('video', false, false, true),
+      'video' => ('video', false, false, true),
+      'tts' => ('tts', false, false, false),
+      'asr' => ('asr', false, false, false),
+      'asr_realtime' => ('asr', false, false, false),
       // 新版暂无对应类型，降级为cc并在extra_config保留原类型
       _ => ('cc', false, false, false),
     };
@@ -415,18 +422,22 @@ class BranchChatImporter {
     final model = UnifiedModelSpec(
       id: const Uuid().v4(),
       platformId: platformId,
-      modelName: spec.model,
-      displayName: spec.name ?? spec.model,
+      modelName: legacyModel,
+      displayName: legacySpecString(spec, 'name').isNotEmpty
+          ? legacySpecString(spec, 'name')
+          : legacyModel,
       modelType: modelType,
       supportsThinking: supportsThinking,
       supportsVision: supportsVision,
       supportsImageInput: supportsImageInput,
       isActive: true,
       isBuiltIn: false,
-      description: spec.description,
+      description: legacySpecString(spec, 'description').isNotEmpty
+          ? legacySpecString(spec, 'description')
+          : null,
       extraConfig: {
-        if (modelType != _directModelType(spec.modelType))
-          'legacyModelType': spec.modelType.name,
+        if (modelType != _directModelType(legacyType))
+          'legacyModelType': legacyType,
         'migratedFrom': 'branch_chat',
       },
       createdAt: now,
@@ -436,23 +447,29 @@ class BranchChatImporter {
     return model.id;
   }
 
+  /// 从旧版模型规格Map中取字符串字段(空安全)
+  String legacySpecString(Map<String, dynamic> spec, String key) {
+    final v = spec[key];
+    return v is String ? v : '';
+  }
+
   /// 判断旧模型类型是否有直接对应的新类型(用于extra_config标记)
-  String _directModelType(LLModelType type) {
+  String _directModelType(String type) {
     return switch (type) {
-      LLModelType.cc => 'cc',
-      LLModelType.reasoner => 'cc',
-      LLModelType.vision => 'cc',
-      LLModelType.vision_reasoner => 'cc',
-      LLModelType.omni => 'cc',
-      LLModelType.tti => 'image',
-      LLModelType.iti => 'image',
-      LLModelType.image => 'image',
-      LLModelType.ttv => 'video',
-      LLModelType.itv => 'video',
-      LLModelType.video => 'video',
-      LLModelType.tts => 'tts',
-      LLModelType.asr => 'asr',
-      LLModelType.asr_realtime => 'asr',
+      'cc' => 'cc',
+      'reasoner' => 'cc',
+      'vision' => 'cc',
+      'vision_reasoner' => 'cc',
+      'omni' => 'cc',
+      'tti' => 'image',
+      'iti' => 'image',
+      'image' => 'image',
+      'ttv' => 'video',
+      'itv' => 'video',
+      'video' => 'video',
+      'tts' => 'tts',
+      'asr' => 'asr',
+      'asr_realtime' => 'asr',
       _ => 'cc',
     };
   }

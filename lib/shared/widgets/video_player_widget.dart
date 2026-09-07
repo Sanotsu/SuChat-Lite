@@ -29,6 +29,10 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
 
+  // 2026-09-07 修复：异步初始化完成前销毁页面时，
+  // 初始化回调不得再访问已 dispose 的控制器
+  bool _disposed = false;
+
   @override
   void initState() {
     super.initState();
@@ -50,6 +54,9 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     }
 
     _controller.initialize().then((_) {
+      // 页面已销毁（控制器已释放），不再挂监听/刷新状态
+      if (_disposed) return;
+
       // 监听视频位置变化
       _controller.addListener(_videoListener);
 
@@ -345,6 +352,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 
   @override
   void dispose() {
+    _disposed = true;
     // media_kit(Windows)已知缺陷：播放器析构后native回调仍可能触发导致
     // "Callback invoked after it has been deleted"崩溃，销毁前先暂停降低竞态概率
     try {

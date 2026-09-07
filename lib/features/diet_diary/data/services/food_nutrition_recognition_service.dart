@@ -3,39 +3,16 @@ import 'dart:io';
 
 import 'package:mime/mime.dart';
 
-import '../../../../core/entities/cus_llm_model.dart';
-import '../../../../core/network/dio_client/cus_http_client.dart';
-import '../../../../core/network/dio_client/cus_http_request.dart';
-import '../../../../shared/constants/constant_llm_enum.dart';
-import '../../../../shared/services/chat_service.dart';
+import '../../../../shared/services/unified_llm_service.dart';
 import '../../domain/entities/food_item.dart';
 
 class FoodNutritionRecognitionService {
   /// 识别食品营养成分表图片
+  /// 2026-09-07 旧LLM体系退役：改经UnifiedLLMService门面调用(视觉模型)
   Future<FoodItem?> recognizeNutritionLabel({
     required File imageFile,
-    required CusLLMSpec model,
+    required UnifiedModelEntry entry,
   }) async {
-    // 如果是自定义平台模型，url、apikey等直接在模型规格中
-    Map<String, String> headers;
-    String baseUrl;
-    if (model.platform == ApiPlatform.custom) {
-      headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${model.apiKey}',
-      };
-      baseUrl = "${model.baseUrl}/chat/completions";
-    } else {
-      headers = await ChatService.getHeaders(model);
-      // 2026-09-03 模型自带baseUrl(统一平台完整chat端点)优先
-      final base = (model.baseUrl != null && model.baseUrl!.isNotEmpty)
-          ? model.baseUrl!
-          : ChatService.getBaseUrl(model.platform);
-      baseUrl = base.endsWith('/chat/completions')
-          ? base
-          : '$base/chat/completions';
-    }
-
     // 将图片转换为base64编码
     final bytes = await imageFile.readAsBytes();
     final base64Image = base64Encode(bytes);
@@ -46,10 +23,9 @@ class FoodNutritionRecognitionService {
     // 和数据库表栏位不一样，导入时需要指定转换
     final prompt = buildNutritionLabelPrompt();
 
-    // 基础请求体
-    final Map<String, dynamic> requestBody = {
-      'model': model.model,
-      'messages': [
+    final response = await UnifiedLLMService.sendChat(
+      entry: entry,
+      messages: [
         {
           'role': 'user',
           'content': [
@@ -61,28 +37,15 @@ class FoodNutritionRecognitionService {
           ],
         },
       ],
-      // 对于支持的模型，可以指定响应格式为JSON（视觉模型一般不支持？）
-      // 'response_format': {'type': 'json_object'},
-    };
-
-    final response = await HttpUtils.post(
-      path: baseUrl,
-      headers: headers,
-      data: requestBody,
-      responseType: CusRespType.json,
-      showLoading: false,
-      showErrorMessage: false,
     );
 
     // 解析响应
-    var content = response['choices'][0]['message']['content'];
+    final content = response.choices.isNotEmpty
+        ? response.choices.first.message?.content
+        : null;
 
-    if (content == null) {
+    if (content == null || content.isEmpty) {
       return null;
-    }
-
-    if (content is! String) {
-      content = content.toString();
     }
 
     // 解析响应

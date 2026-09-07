@@ -5,13 +5,12 @@ import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../shared/constants/constants.dart';
-import '../../../../shared/constants/constant_llm_enum.dart';
+import '../../domain/entities/task_model_info.dart';
 import '../../../unified_chat/data/models/speech_recognition_request.dart';
 import '../../../unified_chat/data/models/unified_model_spec.dart';
 import '../../../unified_chat/data/models/unified_platform_spec.dart';
 import '../../../unified_chat/data/services/speech_recognition_service.dart';
 import '../../../unified_chat/data/services/unified_secure_storage.dart';
-import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/network/dio_client/cus_http_client.dart';
 import '../../../../core/storage/db_helper.dart';
 import '../../../../shared/services/tmp_file_upload_service.dart';
@@ -58,7 +57,7 @@ class VoiceRecognitionService {
   /// [languageHint] - 语音中的语言代码，例如中文为"zh"，英文为"en"
   /// 返回识别任务ID
   static Future<String> submitRecognitionTask({
-    required CusLLMSpec model,
+    required TaskModelInfo model,
     required String audioPath,
     String? cloudAudioUrl,
     String? languageHint,
@@ -283,9 +282,6 @@ class VoiceRecognitionService {
     try {
       // 从数据库中删除任务记录
       await _dbHelper.deleteVoiceRecognitionTask(taskId);
-
-      // 从数据库中删除任务记录
-      await _dbHelper.deleteMediaGenerationHistoryByRequestId(taskId);
     } catch (e) {
       debugPrint('删除录音识别任务失败: $e');
       throw Exception('删除录音识别任务失败: $e');
@@ -360,13 +356,9 @@ class VoiceRecognitionService {
       languageHint: response.language,
       taskStatus: 'SUCCEEDED',
       gmtCreate: DateTime.now(),
-      llmSpec: CusLLMSpec(
-        // platform字段仅为展示(统一配置平台无对应枚举值，统一以阿里占位)
-        ApiPlatform.aliyun,
-        model.modelName,
-        LLModelType.asr,
+      llmSpec: TaskModelInfo(
+        model: model.modelName,
         description: '平台管理·${platform.displayName}',
-        cusLlmSpecId: const Uuid().v4(),
       ),
       recognitionResponse: recogResp,
     );
@@ -389,7 +381,7 @@ class VoiceRecognitionService {
 
   /// 根据选中的模型获取支持的语言列表
   /// https://help.aliyun.com/zh/model-studio/paraformer-recorded-speech-recognition-restful-api#1564da7efa42e
-  static List<CusLabel> getLanguageOptions(CusLLMSpec selectedModel) {
+  static List<CusLabel> getLanguageOptions(TaskModelInfo selectedModel) {
     final List<CusLabel> baseOptions = [
       CusLabel(cnLabel: "自动识别", value: "auto"),
       CusLabel(cnLabel: "中文", value: "zh"),

@@ -27,8 +27,8 @@ BranchChatSessionExport _$BranchChatSessionExportFromJson(
   title: json['title'] as String,
   createTime: DateTime.parse(json['createTime'] as String),
   updateTime: DateTime.parse(json['updateTime'] as String),
-  llmSpec: CusLLMSpec.fromJson(json['llmSpec'] as Map<String, dynamic>),
-  modelType: $enumDecode(_$LLModelTypeEnumMap, json['modelType']),
+  llmSpec: json['llmSpec'] as Map<String, dynamic>,
+  modelType: json['modelType'] as String,
   messages: (json['messages'] as List<dynamic>)
       .map((e) => BranchChatMessageExport.fromJson(e as Map<String, dynamic>))
       .toList(),
@@ -42,28 +42,10 @@ Map<String, dynamic> _$BranchChatSessionExportToJson(
   'title': instance.title,
   'createTime': instance.createTime.toIso8601String(),
   'updateTime': instance.updateTime.toIso8601String(),
-  'llmSpec': instance.llmSpec.toJson(),
-  'modelType': _$LLModelTypeEnumMap[instance.modelType]!,
+  'llmSpec': instance.llmSpec,
+  'modelType': instance.modelType,
   'messages': instance.messages.map((e) => e.toJson()).toList(),
   'characterId': instance.characterId,
-};
-
-const _$LLModelTypeEnumMap = {
-  LLModelType.cc: 'cc',
-  LLModelType.vision: 'vision',
-  LLModelType.reasoner: 'reasoner',
-  LLModelType.vision_reasoner: 'vision_reasoner',
-  LLModelType.tti: 'tti',
-  LLModelType.iti: 'iti',
-  LLModelType.image: 'image',
-  LLModelType.ttv: 'ttv',
-  LLModelType.itv: 'itv',
-  LLModelType.video: 'video',
-  LLModelType.audio: 'audio',
-  LLModelType.asr: 'asr',
-  LLModelType.asr_realtime: 'asr_realtime',
-  LLModelType.tts: 'tts',
-  LLModelType.omni: 'omni',
 };
 
 BranchChatMessageExport _$BranchChatMessageExportFromJson(

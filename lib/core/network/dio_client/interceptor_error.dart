@@ -92,8 +92,9 @@ class CusHttpException implements Exception {
       'errMessage': errMessage,
       'errRespString': errRespString,
       // 方便大模型响应体转型
+      // 2026-09-07 A-7 修正拼写：messgae -> message（类内无反序列化依赖此键）
       'code': cusCode.toString(),
-      'messgae': errRespString,
+      'message': errRespString,
     };
   }
 

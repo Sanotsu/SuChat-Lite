@@ -99,17 +99,22 @@ class DBInit {
   }
 
   // 创建数据库相关表
-  void _createDb(Database db, int newVersion) async {
+  // 2026-09-07 A-11 修复：sqflite 的 onCreate/onUpgrade 回调签名是
+  // FutureOr<void>，原 `void ... async` 写法使回调的异步部分不被等待，
+  // 数据库"建表完成"假象下首查询可能撞上表不存在；改为 Future<void>
+  Future<void> _createDb(Database db, int newVersion) async {
     print("开始创建表 _createDb……");
 
     /// 创建表
     await db.transaction((txn) async {
-      txn.execute(DBDdl.ddlForMediaGenerationHistory);
-      txn.execute(DBDdl.ddlForCusLlmSpec);
-      txn.execute(DBDdl.ddlForVoiceRecognitionTask);
+      // 2026-09-07 LLM旧体系退役：brief_media_generation_history/brief_cus_llm_spec
+      // 两死表不再创建(残留于旧用户库中无害)
+      // 2026-09-07 A-11 修复：事务内 execute 必须逐条 await，
+      // 否则事务提交时语句可能未执行
+      await txn.execute(DBDdl.ddlForVoiceRecognitionTask);
 
       // 创建统一用户表
-      txn.execute(DBDdl.ddlForUserInfo);
+      await txn.execute(DBDdl.ddlForUserInfo);
       // 创建用户表索引
       await _createUserInfoIndex(txn);
 
@@ -140,13 +145,14 @@ class DBInit {
   }
 
   // 数据库升级
-  void _upgradeDb(Database db, int oldVersion, int newVersion) async {
+  // 2026-09-07 A-11 修复：同 _createDb，onUpgrade 回调需可被等待
+  Future<void> _upgradeDb(Database db, int oldVersion, int newVersion) async {
     print("数据库升级 _upgradeDb 从 $oldVersion 到 $newVersion");
 
     if (oldVersion < 2) {
       await db.transaction((txn) async {
         // 创建新的统一用户表
-        txn.execute(DBDdl.ddlForUserInfo);
+        await txn.execute(DBDdl.ddlForUserInfo);
         // 创建用户表索引
         await _createUserInfoIndex(txn);
 
@@ -322,6 +328,12 @@ class DBInit {
       String tableName = table['name'];
       // 不是自建的表，不导出
       if (!tableName.startsWith(DBInitConfig.tablePerfix)) {
+        continue;
+      }
+
+      // 2026-09-07 LLM旧体系退役：两死表内容不导出(新版本已无对应读写与恢复逻辑)
+      if (tableName.endsWith('brief_media_generation_history') ||
+          tableName.endsWith('brief_cus_llm_spec')) {
         continue;
       }
 

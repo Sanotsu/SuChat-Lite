@@ -3,10 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/utils/image_picker_utils.dart';
-import '../../../../shared/constants/constant_llm_enum.dart';
-import '../../../../shared/services/unified_model_bridge.dart';
+import '../../../../shared/services/unified_llm_service.dart';
 import '../../../../shared/widgets/cus_dropdown_button.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/services/food_nutrition_recognition_service.dart';
@@ -22,8 +20,8 @@ class FoodRecognitionPage extends StatefulWidget {
 
 class _FoodRecognitionPageState extends State<FoodRecognitionPage> {
   // 大模型相关状态
-  List<CusLLMSpec> modelList = [];
-  CusLLMSpec? selectedModel;
+  List<UnifiedModelEntry> modelList = [];
+  UnifiedModelEntry? selectedModel;
 
   // 图片相关状态
   File? _selectedImage;
@@ -38,7 +36,7 @@ class _FoodRecognitionPageState extends State<FoodRecognitionPage> {
 
   Future<void> _initModels() async {
     // 2026-09-03 接入平台管理统一模型库(仅支持视觉的模型，无内置免费模型)
-    final availableModels = await UnifiedModelBridge.loadChatModels(
+    final availableModels = await UnifiedLLMService.loadModelEntries(
       visionOnly: true,
     );
 
@@ -104,7 +102,7 @@ class _FoodRecognitionPageState extends State<FoodRecognitionPage> {
       final service = FoodNutritionRecognitionService();
       final foodItem = await service.recognizeNutritionLabel(
         imageFile: _selectedImage!,
-        model: selectedModel!,
+        entry: selectedModel!,
       );
 
       if (!mounted) return;
@@ -226,7 +224,7 @@ class _FoodRecognitionPageState extends State<FoodRecognitionPage> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      buildDropdownButton2<CusLLMSpec?>(
+                      buildDropdownButton2<UnifiedModelEntry?>(
                         value: selectedModel,
                         items: modelList,
                         height: 56,
@@ -235,7 +233,7 @@ class _FoodRecognitionPageState extends State<FoodRecognitionPage> {
                         onChanged: (value) =>
                             setState(() => selectedModel = value!),
                         itemToString: (e) =>
-                            "${(e as CusLLMSpec).platformLabel ?? CP_NAME_MAP[e.platform]} - ${e.name}",
+                            "${(e as UnifiedModelEntry).platform.displayName} - ${e.model.displayName}",
                       ),
                     ],
                   ),

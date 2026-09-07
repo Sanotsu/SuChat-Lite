@@ -143,12 +143,17 @@ class NoteDao {
     return note;
   }
 
-  Future<Note> createNote(Note note) async {
+  // 2026-09-07 A-20 修复：新增 preserveTimestamps 参数。恢复备份时
+  // （batchCreateNote）必须保留备份里的原始创建/更新时间，不能被 now 覆盖；
+  // 正常新建笔记仍落当前时间
+  Future<Note> createNote(Note note, {bool preserveTimestamps = false}) async {
     final db = await dbInit.database;
 
     // 更新时间戳
-    note.createdAt = DateTime.now();
-    note.updatedAt = DateTime.now();
+    if (!preserveTimestamps) {
+      note.createdAt = DateTime.now();
+      note.updatedAt = DateTime.now();
+    }
 
     // 插入笔记
     final noteId = await db.insert(
@@ -180,7 +185,8 @@ class NoteDao {
     final List<Note> createdNotes = [];
 
     for (final item in items) {
-      final createdNote = await createNote(item);
+      // 2026-09-07 A-20 修复：批量导入（恢复备份）保留原始时间戳
+      final createdNote = await createNote(item, preserveTimestamps: true);
       createdNotes.add(createdNote);
     }
 
@@ -416,11 +422,10 @@ class NoteDao {
   Future<void> addTagToNote(int noteId, int tagId) async {
     final db = await dbInit.database;
 
-    await db.insert(
-      NotebookDdl.tableNoteTagRelation,
-      {'note_id': noteId, 'tag_id': tagId},
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert(NotebookDdl.tableNoteTagRelation, {
+      'note_id': noteId,
+      'tag_id': tagId,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   // 备份恢复时用到
@@ -433,11 +438,10 @@ class NoteDao {
         continue;
       }
 
-      batch.insert(
-        NotebookDdl.tableNoteTagRelation,
-        {'note_id': item['note_id'], 'tag_id': item['tag_id']},
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      batch.insert(NotebookDdl.tableNoteTagRelation, {
+        'note_id': item['note_id'],
+        'tag_id': item['tag_id'],
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
 
     final results = await batch.commit();

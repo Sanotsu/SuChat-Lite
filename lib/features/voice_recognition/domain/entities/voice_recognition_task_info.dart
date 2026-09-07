@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import '../../../../core/entities/cus_llm_model.dart';
+import 'task_model_info.dart';
 import '../../data/models/sense_voice.dart';
 
 /// 本地存储的任务模型，包含阿里云任务信息和本地信息
@@ -11,7 +11,7 @@ class VoiceRecognitionTaskInfo {
   final String? languageHint; // 语言类型
   final String? taskStatus; // 任务状态
   final DateTime? gmtCreate; // 创建时间
-  final CusLLMSpec? llmSpec; // 任务模型
+  final TaskModelInfo? llmSpec; // 任务模型
   final SenseVoiceJobResp? jobResponse; // 阿里云任务响应
   final SenseVoiceRecogResp? recognitionResponse; // 阿里云识别结果
 
@@ -39,7 +39,7 @@ class VoiceRecognitionTaskInfo {
           ? DateTime.parse(json['gmtCreate'])
           : null,
       llmSpec: json['llmSpec'] != null
-          ? CusLLMSpec.fromJson(jsonDecode(json['llmSpec']))
+          ? TaskModelInfo.fromJson(jsonDecode(json['llmSpec']))
           : null,
       jobResponse: json['jobResponse'] != null
           ? SenseVoiceJobResp.fromJson(jsonDecode(json['jobResponse']))
@@ -86,7 +86,7 @@ class VoiceRecognitionTaskInfo {
           ? SenseVoiceJobResp.fromJson(jsonDecode(map['jobResponse']))
           : null,
       llmSpec: map['llmSpec'] != null
-          ? CusLLMSpec.fromJson(jsonDecode(map['llmSpec']))
+          ? TaskModelInfo.fromJson(jsonDecode(map['llmSpec']))
           : null,
       recognitionResponse: map['recognitionResponse'] != null
           ? SenseVoiceRecogResp.fromJson(jsonDecode(map['recognitionResponse']))
@@ -116,7 +116,7 @@ class VoiceRecognitionTaskInfo {
     String? languageHint,
     String? taskStatus,
     DateTime? gmtCreate,
-    CusLLMSpec? llmSpec,
+    TaskModelInfo? llmSpec,
     SenseVoiceJobResp? jobResponse,
     SenseVoiceRecogResp? recognitionResponse,
   }) {

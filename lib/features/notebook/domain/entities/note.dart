@@ -88,21 +88,26 @@ class Note {
   }
 
   // 创建副本
+  // 2026-09-07 A-21 修复：可空字段（categoryId/category/color/reminderTime）
+  // 原 `field ?? this.field` 写法无法显式置空；改为 sentinel 哨兵默认值，
+  // 只有显式传 null 才会置空，未传仍保留原值
+  static const Object _unset = Object();
+
   Note copyWith({
     int? id,
     String? title,
     String? content,
     String? contentDelta,
-    int? categoryId,
-    NoteCategory? category,
+    Object? categoryId = _unset,
+    Object? category = _unset,
     bool? isTodo,
     bool? isCompleted,
     DateTime? createdAt,
     DateTime? updatedAt,
-    int? color,
+    Object? color = _unset,
     bool? isPinned,
     bool? isArchived,
-    DateTime? reminderTime,
+    Object? reminderTime = _unset,
     List<NoteTag>? tags,
     List<NoteMedia>? mediaList,
   }) {
@@ -111,16 +116,18 @@ class Note {
       title: title ?? this.title,
       content: content ?? this.content,
       contentDelta: contentDelta ?? this.contentDelta,
-      categoryId: categoryId ?? this.categoryId,
-      category: category ?? this.category,
+      categoryId: categoryId == _unset ? this.categoryId : categoryId as int?,
+      category: category == _unset ? this.category : category as NoteCategory?,
       isTodo: isTodo ?? this.isTodo,
       isCompleted: isCompleted ?? this.isCompleted,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      color: color ?? this.color,
+      color: color == _unset ? this.color : color as int?,
       isPinned: isPinned ?? this.isPinned,
       isArchived: isArchived ?? this.isArchived,
-      reminderTime: reminderTime ?? this.reminderTime,
+      reminderTime: reminderTime == _unset
+          ? this.reminderTime
+          : reminderTime as DateTime?,
       tags: tags ?? List.from(this.tags),
       mediaList: mediaList ?? List.from(this.mediaList),
     );

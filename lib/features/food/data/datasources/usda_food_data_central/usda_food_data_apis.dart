@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import '../../../../../core/network/dio_client/cus_http_client.dart';
 import '../../../../../core/utils/get_app_key_helper.dart';
-import '../../../../../shared/constants/default_models.dart';
+import '../../../../../shared/constants/default_api_keys.dart';
 import '../../models/usda_food_data/usda_food_item.dart';
 import '../../models/usda_food_data/usda_food_search_resp.dart';
 

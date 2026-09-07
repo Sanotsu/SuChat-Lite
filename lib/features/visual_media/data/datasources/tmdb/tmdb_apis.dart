@@ -2,7 +2,7 @@
 import 'package:tmdb_api/tmdb_api.dart';
 
 import '../../../../../core/utils/get_app_key_helper.dart';
-import '../../../../../shared/constants/default_models.dart';
+import '../../../../../shared/constants/default_api_keys.dart';
 import '../../models/tmdb/tmdb_all_image_resp.dart';
 import '../../models/tmdb/tmdb_movie_detail_resp.dart';
 import '../../models/tmdb/tmdb_mt_credit_resp.dart';
@@ -367,14 +367,15 @@ class TmdbApiManager {
   ///
 
   // 获取电影相似
-  Future<TmdbResultResp> getMovieSimilar(int id) async {
-    var map = await tmdb.v3.movies.getSimilar(id);
+  Future<TmdbResultResp> getMovieSimilar(int id, {int page = 1}) async {
+    // 2026-09-07 修复分页：原实现未传页码，相似页滚动加载永远取第 1 页
+    var map = await tmdb.v3.movies.getSimilar(id, page: page);
     return TmdbResultResp.fromJson(convertMap(map));
   }
 
   // 获取电影推荐
-  Future<TmdbResultResp> getMovieRecommendations(int id) async {
-    var map = await tmdb.v3.movies.getRecommended(id);
+  Future<TmdbResultResp> getMovieRecommendations(int id, {int page = 1}) async {
+    var map = await tmdb.v3.movies.getRecommended(id, page: page);
     return TmdbResultResp.fromJson(convertMap(map));
   }
 
@@ -493,14 +494,14 @@ class TmdbApiManager {
   ///
 
   // 获取电视剧相似
-  Future<TmdbResultResp> getTvSimilar(int id) async {
-    var map = await tmdb.v3.tv.getSimilar(id);
+  Future<TmdbResultResp> getTvSimilar(int id, {int page = 1}) async {
+    var map = await tmdb.v3.tv.getSimilar(id, page: page);
     return TmdbResultResp.fromJson(convertMap(map));
   }
 
   // 获取电视剧推荐
-  Future<TmdbResultResp> getTvRecommendations(int id) async {
-    var map = await tmdb.v3.tv.getRecommendations(id);
+  Future<TmdbResultResp> getTvRecommendations(int id, {int page = 1}) async {
+    var map = await tmdb.v3.tv.getRecommendations(id, page: page);
     return TmdbResultResp.fromJson(convertMap(map));
   }
 

@@ -9,7 +9,6 @@ import '../../../../core/network/dio_client/interceptor_error.dart';
 import '../../../../core/network/dio_sse_transformer.dart';
 import '../../../../core/utils/simple_tools.dart';
 import '../../../../shared/widgets/toast_utils.dart';
-import '../../../../shared/services/input_message_data.dart';
 import '../database/unified_chat_dao.dart';
 import '../models/unified_conversation.dart';
 import '../models/unified_model_spec.dart';
@@ -877,3 +876,24 @@ class _ToolCallStreamResult {
     required this.hasCompleteToolCalls,
   });
 }
+
+// 2025-09-10 阿里云百炼平台中支持联网的模型列表(2026-09-07 自旧shared/input_message_data迁入)
+// https://help.aliyun.com/zh/model-studio/web-search
+const List<String> aliyunWebSearchModels = [
+  "qwen3-max",
+  "qwen3-max-2025-09-23",
+  "qwen-max",
+  "qwen-max-latest",
+  "qwen-plus",
+  "qwen-plus-latest",
+  "qwen-plus-2025-07-14",
+  "qwen-plus-2025-07-28",
+  "qwen-plus-2025-09-11",
+  "qwen-flash",
+  "qwen-flash-2025-07-28",
+  "qwen-turbo",
+  "qwen-turbo-latest",
+  "qwen-turbo-2025-07-15",
+  "qwq-plus",
+  "Moonshot-Kimi-K2-Instruct",
+];

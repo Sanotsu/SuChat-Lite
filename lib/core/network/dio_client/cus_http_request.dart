@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 
 import '../../../shared/widgets/toast_utils.dart';
@@ -40,12 +41,14 @@ class HttpRequest {
 
     // 2024-03-11 因为测试，自签名证书一律放过
     // 参考文档：https://github.com/cfug/dio/blob/main/dio/README-ZH.md#https-%E8%AF%81%E4%B9%A6%E6%A0%A1%E9%AA%8C
+    // 2026-09-07 S-2 安全修复：证书全放行存在中间人风险，
+    // release 构建不再放行坏证书；debug 保持放行便于自签环境调试
     dio.httpClientAdapter = IOHttpClientAdapter(
       createHttpClient: () {
         final client = HttpClient();
         client.badCertificateCallback =
             (X509Certificate cert, String host, int port) {
-              return true;
+              return !kReleaseMode;
             };
         return client;
       },
@@ -149,7 +152,17 @@ class HttpRequest {
       return response.data;
     } on DioException catch (error) {
       // 2024-03-11 这里是要取得http的错误，但默认类型时Object?，所以要转一下
-      CusHttpException cusHttpException = error.error as CusHttpException;
+      // 2026-09-07 P0修复：error.error 未必是 CusHttpException（连接层错误/
+      // 请求取消等场景可能为 null 或原始异常），直接强转会抛 TypeError 掩盖
+      // 真实错误；改为类型判断，非预期类型时包装成 CusHttpException 上抛
+      final dynamic err = error.error;
+      CusHttpException cusHttpException = err is CusHttpException
+          ? err
+          : CusHttpException(
+              cusCode: -1,
+              cusMsg: error.message ?? '网络请求异常',
+              errMessage: err?.toString() ?? error.type.name,
+            );
 
       print("========================");
       print("这里是执行HttpRequest的request()方法在报错:");

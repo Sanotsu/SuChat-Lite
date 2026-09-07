@@ -1,6 +1,6 @@
 import '../../../../core/api/base_api_manager.dart';
 import '../../../../core/utils/get_app_key_helper.dart';
-import '../../../../shared/constants/default_models.dart';
+import '../../../../shared/constants/default_api_keys.dart';
 import '../models/baike_history_in_today_resp.dart';
 import '../models/duomoyu_resp.dart';
 import '../models/uo_ithome_resp.dart';

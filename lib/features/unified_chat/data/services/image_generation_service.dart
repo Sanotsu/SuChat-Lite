@@ -90,7 +90,7 @@ class ImageGenerationService {
           // 异步的图片生成url为  /text2image/image-synthesis (wanx2、wan2.5、flux等)
           return isAliyunSync
               ? ImageGenerationResponse.fromAliyunSyncResponse(responseData)
-              : _handleAliyunResponse(responseData, apiKey, url);
+              : await _handleAliyunResponse(responseData, apiKey, url);
         case 'siliconCloud':
           return ImageGenerationResponse.fromSiliconCloudResponse(responseData);
         case 'zhipu':

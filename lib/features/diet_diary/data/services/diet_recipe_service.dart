@@ -2,18 +2,14 @@ import 'dart:async';
 import 'dart:ui';
 
 import '../../../../core/dao/user_info_dao.dart';
-import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/entities/user_info.dart';
-import '../../../../shared/constants/constant_llm_enum.dart';
-import '../../../../shared/services/chat_completion_response.dart';
-import '../../../../shared/services/openai_compatible_apis.dart';
-import '../../../../shared/services/chat_service.dart';
+import '../../../../shared/services/unified_llm_service.dart';
 
 class DietRecipeService {
   /// 生成个性化食谱
   ///
   /// 参数:
-  /// - model: 使用的大模型
+  /// - entry: 统一模型库条目(模型+所属平台，来自聊天页平台管理)
   /// - userInfo: 用户信息
   /// - dailyNutrition: 一日营养摄入总量
   /// - dailyRecommended: 推荐的每日营养摄入量
@@ -21,9 +17,9 @@ class DietRecipeService {
   /// - mealCount: 需要生成的餐次数量（1-4）
   /// - days: 需要生成的天数（1-7）
   /// 2026-09-04 改返回完整响应流，思考模型的reasoning_content由页面分类展示
-  Future<(Stream<ChatCompletionResponse>, VoidCallback)>
-  generatePersonalizedRecipe({
-    required CusLLMSpec model,
+  /// 2026-09-07 旧LLM体系退役：改经UnifiedLLMService门面调用
+  Future<(Stream, VoidCallback)> generatePersonalizedRecipe({
+    required UnifiedModelEntry entry,
     required UserInfo userInfo,
     MacrosIntake? dailyNutrition,
     MacrosIntake? dailyRecommended,
@@ -32,26 +28,6 @@ class DietRecipeService {
     required int days,
     String? customPrompt,
   }) async {
-    // 如果是自定义平台模型，url、apikey等直接在模型规格中
-    Map<String, String> headers;
-    String baseUrl;
-    if (model.platform == ApiPlatform.custom) {
-      headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${model.apiKey}',
-      };
-      baseUrl = "${model.baseUrl}/chat/completions";
-    } else {
-      headers = await ChatService.getHeaders(model);
-      // 2026-09-03 模型自带baseUrl(统一平台完整chat端点)优先
-      final base = (model.baseUrl != null && model.baseUrl!.isNotEmpty)
-          ? model.baseUrl!
-          : ChatService.getBaseUrl(model.platform);
-      baseUrl = base.endsWith('/chat/completions')
-          ? base
-          : '$base/chat/completions';
-    }
-
     // 构建提示词
     String prompt;
     // 如果用户有自定义提示词，则使用自定义提示词
@@ -68,26 +44,17 @@ class DietRecipeService {
       );
     }
 
-    // 基础请求体
-    // 2026-09-04 食谱并无固定JSON结构限制，保持流式输出；
-    // 思考模型的reasoning_content已由cusText回退显示(见chat_completion_response)
-    final Map<String, dynamic> requestBody = {
-      'model': model.model,
-      'messages': [
+    // 调用大模型API(完整响应流：delta含reasoningContent与content)
+    // 食谱并无固定JSON结构限制，保持流式输出
+    final (stream, cancel) = await UnifiedLLMService.sendChatStream(
+      entry: entry,
+      messages: [
         {
           'role': 'system',
           'content': '你是一位专业的营养师和健康饮食顾问，负责根据用户的个人信息、健康目标和饮食偏好，设计个性化的健康食谱。',
         },
         {'role': 'user', 'content': prompt},
       ],
-      "stream": true,
-    };
-
-    // 调用大模型API(完整响应流：delta含reasoning_content与content)
-    final (stream, cancel) = await getStreamResponse(
-      baseUrl,
-      headers,
-      requestBody,
     );
 
     return (stream, cancel);

@@ -13,6 +13,13 @@ analyzer:
   exclude:
     # bak文件是手工备份(已被.gitignore忽略)，不参与静态分析
     - "**/*bak*"
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
 
 linter:
   # The lint rules applied to this project can be customized in the

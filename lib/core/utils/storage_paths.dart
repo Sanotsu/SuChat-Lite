@@ -47,7 +47,9 @@ Future<List<Directory>> getLegacyHomeCandidatesAsync() async {
   final docs = await getApplicationDocumentsDirectory();
   final docsLegacy = Directory(p.join(docs.path, 'SuChatFiles'));
   if (Platform.isAndroid) {
-    return [Directory('`/storage/emulated/0/SuChatFiles`'), docsLegacy];
+    // 2026-09-07 A-1 修复：原路径字面量两端带了反引号（Markdown 代码标记
+    // 误留），拼出的目录永远不存在，导致 0.1.5 数据迁移在 Android 失效
+    return [Directory('/storage/emulated/0/SuChatFiles'), docsLegacy];
   }
   // 旧桌面版数据在 用户文档/SuChatFiles，与应用文档目录一致（桌面二者同源）
   return [docsLegacy];

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/entities/cus_llm_model.dart';
+import '../../../../shared/services/unified_llm_service.dart';
 import '../../../../core/entities/user_info.dart';
 import '../../data/services/training_assistant_service.dart';
 import '../../data/training_dao.dart';
@@ -48,7 +48,7 @@ class TrainingViewModel extends ChangeNotifier {
     required int duration,
     required String frequency,
     String? equipment,
-    required CusLLMSpec model,
+    required UnifiedModelEntry entry,
   }) async {
     try {
       _isLoading = true;
@@ -68,7 +68,7 @@ class TrainingViewModel extends ChangeNotifier {
         duration: duration,
         frequency: frequency,
         equipment: equipment,
-        model: model,
+        entry: entry,
       );
 
       _selectedPlan = result['plan'] as TrainingPlan;
@@ -93,7 +93,7 @@ class TrainingViewModel extends ChangeNotifier {
     required String frequency,
     String? equipment,
     required String customPrompt,
-    required CusLLMSpec model,
+    required UnifiedModelEntry entry,
   }) async {
     try {
       _isLoading = true;
@@ -109,7 +109,7 @@ class TrainingViewModel extends ChangeNotifier {
             frequency: frequency,
             equipment: equipment,
             customPrompt: customPrompt,
-            model: model,
+            entry: entry,
           );
 
       _selectedPlan = result['plan'] as TrainingPlan;
@@ -252,6 +252,10 @@ class TrainingViewModel extends ChangeNotifier {
       await _trainingDao.deleteTrainingPlan(planId);
 
       // 如果删除的是当前选中的计划，清空选中状态
+      // 2026-09-07 A-2 修复：删除当前选中计划后 _selectedPlan 为 null，
+      // 原代码 `_selectedPlan!.userId` 必抛空指针（被 catch 吃掉表现为
+      // 列表不刷新）；改为删除前先留存 userId
+      final reloadUserId = _selectedPlan?.userId;
       if (_selectedPlan?.planId == planId) {
         _selectedPlan = null;
         _planDetails = [];
@@ -259,7 +263,9 @@ class TrainingViewModel extends ChangeNotifier {
       }
 
       // 重新加载用户的训练计划
-      await loadUserTrainingPlans(_selectedPlan!.userId);
+      if (reloadUserId != null) {
+        await loadUserTrainingPlans(reloadUserId);
+      }
 
       _isLoading = false;
       notifyListeners();

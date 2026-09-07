@@ -1,8 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-// 0.1.5: ObjectBox 注解已移除(纯数据模型，仅用于旧备份json解析/导入)
 
-import '../../../../core/entities/cus_llm_model.dart';
+// 0.1.5: ObjectBox 注解已移除(纯数据模型，仅用于旧备份json解析/导入)
 
 class CharacterCard {
   int id;
@@ -38,7 +37,8 @@ class CharacterCard {
   // @Transient() 的作用是避免字段被存储，但 ObjectBox 仍然会检查字段类型并发出警告。
   List<String>? _tags;
 
-  CusLLMSpec? _preferredModel;
+  // 2026-09-07 旧LLM体系退役：偏好模型保留原始JSON(轻量解析，仅迁移旧备份时使用)
+  Map<String, dynamic>? _preferredModel;
 
   Map<String, dynamic>? _additionalSettings;
 
@@ -71,14 +71,14 @@ class CharacterCard {
     }
   }
 
-  // 获取偏好模型
-  CusLLMSpec? get preferredModel {
+  // 获取偏好模型(原始JSON Map)
+  Map<String, dynamic>? get preferredModel {
     if (_preferredModel == null &&
         preferredModelJson != null &&
         preferredModelJson!.isNotEmpty) {
       try {
         final Map<String, dynamic> decoded = jsonDecode(preferredModelJson!);
-        _preferredModel = CusLLMSpec.fromJson(decoded);
+        _preferredModel = decoded;
       } catch (e) {
         if (kDebugMode) {
           print('解析preferredModel失败: $e');
@@ -90,11 +90,11 @@ class CharacterCard {
   }
 
   // 设置偏好模型
-  set preferredModel(CusLLMSpec? value) {
+  set preferredModel(Map<String, dynamic>? value) {
     _preferredModel = value;
     if (value != null) {
       try {
-        preferredModelJson = jsonEncode(value.toJson());
+        preferredModelJson = jsonEncode(value);
       } catch (e) {
         if (kDebugMode) {
           print('序列化preferredModel失败: $e');
@@ -150,7 +150,7 @@ class CharacterCard {
     this.firstMessage = '',
     this.exampleDialogue = '',
     List<String>? tags,
-    CusLLMSpec? preferredModel,
+    Map<String, dynamic>? preferredModel,
     DateTime? createTime,
     DateTime? updateTime,
     this.isSystem = false,
@@ -252,7 +252,7 @@ class CharacterCard {
       'firstMessage': firstMessage,
       'exampleDialogue': exampleDialogue,
       'tags': tags,
-      'preferredModel': preferredModel?.toJson(),
+      'preferredModel': preferredModel,
       'createTime': createTime.toIso8601String(),
       'updateTime': updateTime.toIso8601String(),
       'isSystem': isSystem,
@@ -275,9 +275,7 @@ class CharacterCard {
       firstMessage: json['firstMessage'] ?? '',
       exampleDialogue: json['exampleDialogue'] ?? '',
       tags: List<String>.from(json['tags'] ?? []),
-      preferredModel: json['preferredModel'] != null
-          ? CusLLMSpec.fromJson(json['preferredModel'])
-          : null,
+      preferredModel: json['preferredModel'] as Map<String, dynamic>?,
       createTime: json['createTime'] != null
           ? DateTime.parse(json['createTime'])
           : null,

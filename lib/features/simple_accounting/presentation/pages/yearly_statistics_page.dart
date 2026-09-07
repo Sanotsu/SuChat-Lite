@@ -335,7 +335,7 @@ class YearlyStatisticsPageState extends State<YearlyStatisticsPage>
       final firstDayOfYear = DateTime(viewModel.selectedYear, 1, 1);
       final lastDayOfYear = DateTime(viewModel.selectedYear, 12, 31);
 
-      return StatisticsUtils.getRankingData(
+      return await StatisticsUtils.getRankingData(
         viewModel: viewModel,
         startDate: firstDayOfYear,
         endDate: lastDayOfYear,

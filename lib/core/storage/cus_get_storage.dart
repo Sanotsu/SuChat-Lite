@@ -3,8 +3,6 @@ import 'dart:convert';
 import 'package:get_storage/get_storage.dart';
 
 import '../entities/message_font_color.dart';
-import '../../shared/constants/constant_llm_enum.dart';
-import '../entities/cus_llm_model.dart';
 
 class CusGetStorage {
   static const String _firstLaunchKey = 'is_first_launch';
@@ -47,7 +45,10 @@ class CusGetStorage {
   double getChatMessageTextScale() => box.read(chatMessageTextScaleKey) ?? 1.0;
 
   ///
-  /// 如果用户有输入自己的API KEY的话，就存入缓存中
+  /// 用户自定义的第三方内容源密钥存储(TMDB/USDA/NewsAPI等，用户自定义优先)
+  /// 2026-09-07 LLM旧体系退役：旧版同时在该Map存LLM平台Key
+  /// (USER_ALIYUN_API_KEY等5个)，迁移器已将其转入 flutter_secure_storage，
+  /// 本Map此后仅存内容源Key(见 get_app_key_helper.getStoredUserKey)
   ///
   static const String userAkMapKey = 'user_ak_map';
   Future<void> setUserAKMap(Map<String, String>? info) async {
@@ -56,57 +57,6 @@ class CusGetStorage {
 
   Map<String, String> getUserAKMap() =>
       Map<String, String>.from(box.read(userAkMapKey) ?? {});
-
-  // 清空用户的 API Keys
-  Future<void> clearUserAKMap() async {
-    await box.remove(userAkMapKey); // 直接删除整个 map
-  }
-
-  // 删除单个 API Key
-  Future<void> removeUserAK(String key) async {
-    if (key.startsWith('USER_')) {
-      await box.remove(key);
-    }
-  }
-
-  ///
-  /// 大模型高级选项的启用状态(不同模型分开存储)
-  ///
-  Future<void> setAdvancedOptionsEnabled(CusLLMSpec model, bool enabled) async {
-    await box.write(
-      "advanced_options_enabled_${model.platform.name}_${model.modelType.name}",
-      enabled,
-    );
-  }
-
-  bool getAdvancedOptionsEnabled(CusLLMSpec model) =>
-      box.read(
-        "advanced_options_enabled_${model.platform.name}_${model.modelType.name}",
-      ) ??
-      false;
-
-  ///
-  /// 高级选项的参数值(不同模型分开存储)
-  ///
-  Future<void> setAdvancedOptions(
-    CusLLMSpec model,
-    Map<String, dynamic>? options,
-  ) async {
-    final key =
-        "advanced_options_${model.platform.name}_${model.modelType.name}";
-    if (options != null) {
-      await box.write(key, options);
-    } else {
-      await box.remove(key);
-    }
-  }
-
-  Map<String, dynamic>? getAdvancedOptions(CusLLMSpec model) {
-    final data = box.read(
-      "advanced_options_${model.platform.name}_${model.modelType.name}",
-    );
-    return data != null ? Map<String, dynamic>.from(data) : null;
-  }
 
   ///
   /// 统一聊天模块的简洁显示开关
@@ -166,18 +116,6 @@ class CusGetStorage {
   }
 
   ///
-  /// 更新指定平台的 API Key
-  ///
-  Future<void> updatePlatformApiKey(
-    ApiPlatformAKLabel label,
-    String apiKey,
-  ) async {
-    final userKeys = getUserAKMap();
-    userKeys[label.name] = apiKey;
-    await setUserAKMap(userKeys);
-  }
-
-  ///
   /// 2025-04-11 用户自行配置的消息体颜色
   ///
   static const messageFontColorKey = 'message_font_color';
@@ -199,17 +137,6 @@ class CusGetStorage {
 
     return MessageFontColor.defaultConfig();
   }
-
-  ///
-  /// 2025-04-16 把文件上传到智谱开发平台的文件管理中去
-  /// 那么只能使用用户自己的API KEY，所以需要缓存
-  ///
-  static const String bigmodelApiKey = 'bigmodel_api_key';
-  Future<void> setBigmodelApiKey(String? key) async {
-    await box.write(bigmodelApiKey, key);
-  }
-
-  String? getBigmodelApiKey() => box.read(bigmodelApiKey);
 
   ///
   /// GitHub存储配置相关

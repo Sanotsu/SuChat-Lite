@@ -45,6 +45,12 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   Duration _duration = Duration.zero;
   String? _tempAssetPath;
 
+  // 2026-09-07 修复：_initializeController 为 async（asset 分支需先复制
+  // 临时文件），快速进出页面时 dispose 可能先于控制器赋值执行，
+  // 访问未初始化的 late 字段会抛 LateInitializationError
+  bool _controllerAssigned = false;
+  bool _disposed = false;
+
   @override
   void initState() {
     super.initState();
@@ -53,7 +59,10 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    _disposed = true;
+    if (_controllerAssigned) {
+      _controller.dispose();
+    }
     _cleanupTempAsset();
     super.dispose();
   }
@@ -91,10 +100,16 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
         ),
         _ => VideoPlayerController.file(File(widget.audioUrl)),
       };
+      _controllerAssigned = true;
 
       await _controller.initialize();
 
-      if (!mounted) return;
+      // 页面已销毁：若 dispose 时控制器尚未赋值则此处补释放
+      if (_disposed) return;
+      if (!mounted) {
+        await _controller.dispose();
+        return;
+      }
       setState(() {
         _isInitialized = true;
         _duration = _controller.value.duration;

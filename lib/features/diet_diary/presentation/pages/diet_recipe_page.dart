@@ -5,12 +5,10 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/entities/user_info.dart';
 import '../../../../core/viewmodels/user_info_viewmodel.dart';
-import '../../../../shared/constants/constant_llm_enum.dart';
 import '../../../../shared/constants/constants.dart';
-import '../../../../shared/services/unified_model_bridge.dart';
+import '../../../../shared/services/unified_llm_service.dart';
 import '../../../../shared/widgets/cus_dropdown_button.dart';
 import '../../../../shared/widgets/cus_thinking_collapse.dart';
 import '../../../../shared/widgets/markdown_render/cus_markdown_renderer.dart';
@@ -36,8 +34,9 @@ class DietRecipePage extends StatefulWidget {
 
 class _DietRecipePageState extends State<DietRecipePage> {
   // 大模型相关状态
-  List<CusLLMSpec> _modelList = [];
-  CusLLMSpec? _selectedModel;
+  // 2026-09-07 旧LLM体系退役：模型列表改为统一模型库条目(模型+所属平台)
+  List<UnifiedModelEntry> _modelList = [];
+  UnifiedModelEntry? _selectedModel;
 
   // 食谱生成状态
   bool _isGenerating = false;
@@ -84,8 +83,8 @@ class _DietRecipePageState extends State<DietRecipePage> {
 
   Future<void> _initModels() async {
     try {
-      // 2026-09-03 接入平台管理统一模型库(无内置免费模型)
-      final availableModels = await UnifiedModelBridge.loadChatModels();
+      // 接入平台管理统一模型库(无内置免费模型)
+      final availableModels = await UnifiedLLMService.loadModelEntries();
 
       if (!mounted) return;
       setState(() {
@@ -185,7 +184,7 @@ class _DietRecipePageState extends State<DietRecipePage> {
     try {
       // 调用食谱生成服务
       final (stream, cancel) = await _recipeService.generatePersonalizedRecipe(
-        model: _selectedModel!,
+        entry: _selectedModel!,
         userInfo: userViewModel.currentUser!,
         dailyNutrition: viewModel.dailyNutrition,
         dailyRecommended: userViewModel.dailyRecommendedIntake,
@@ -197,7 +196,7 @@ class _DietRecipePageState extends State<DietRecipePage> {
 
       _cancelGeneration = cancel;
 
-      // 订阅流式响应(完整响应：delta含reasoning_content与content，分类累积)
+      // 订阅流式响应(完整响应：delta含reasoningContent与content，分类累积)
       _recipeSubscription = stream.listen(
         (resp) {
           setState(() {
@@ -205,15 +204,15 @@ class _DietRecipePageState extends State<DietRecipePage> {
                 ? resp.choices.first.delta
                 : null;
             if (delta != null) {
-              final reasoning = delta['reasoning_content'];
-              final content = delta['content'];
-              if (reasoning is String && reasoning.isNotEmpty) {
+              final reasoning = delta.reasoningContent;
+              final content = delta.content;
+              if (reasoning != null && reasoning.isNotEmpty) {
                 _thinkingStartTime ??= DateTime.now();
                 _thinkingResult += reasoning;
-              } else if (content is String && content.isNotEmpty) {
+              } else if (content != null && content.isNotEmpty) {
                 if (resp.id == 'error') {
-                  // 请求异常时cusText为完整错误信息(delta只是[ERROR]占位)
-                  _recipeResult += resp.cusText;
+                  // 请求异常时customText为完整错误信息(delta只是[ERROR]占位)
+                  _recipeResult += resp.customText;
                 } else {
                   if (_thinkingStartTime != null && _thinkingSeconds == null) {
                     _thinkingSeconds = DateTime.now()
@@ -237,7 +236,10 @@ class _DietRecipePageState extends State<DietRecipePage> {
               try {
                 final savedRecipe = await viewModel.saveDietRecipe(
                   content: _recipeResult,
-                  modelName: _selectedModel?.name ?? '未知模型',
+                  modelName:
+                      _selectedModel?.model.displayName ??
+                      _selectedModel?.model.modelName ??
+                      '未知模型',
                   days: _selectedDays,
                   mealsPerDay: _selectedMealCount,
                   dietaryPreference: _preferencesController.text,
@@ -795,7 +797,7 @@ class _DietRecipePageState extends State<DietRecipePage> {
               ],
             ),
             const SizedBox(height: 16),
-            buildDropdownButton2<CusLLMSpec?>(
+            buildDropdownButton2<UnifiedModelEntry?>(
               value: _selectedModel,
               items: _modelList,
               height: 56,
@@ -803,7 +805,7 @@ class _DietRecipePageState extends State<DietRecipePage> {
               alignment: Alignment.centerLeft,
               onChanged: (value) => setState(() => _selectedModel = value!),
               itemToString: (e) =>
-                  "${(e as CusLLMSpec).platformLabel ?? CP_NAME_MAP[e.platform]} - ${e.name}",
+                  "${(e as UnifiedModelEntry).platform.displayName} - ${e.model.displayName}",
             ),
           ],
         ),
