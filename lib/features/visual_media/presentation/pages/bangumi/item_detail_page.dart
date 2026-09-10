@@ -142,7 +142,6 @@ class _BangumiItemDetailPageState extends State<BangumiItemDetailPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         resizeToAvoidBottomInset: false,
         appBar: AppBar(title: Text("${widget.subType}详情")),
@@ -150,7 +149,6 @@ class _BangumiItemDetailPageState extends State<BangumiItemDetailPage> {
             ? buildLoader(isLoading)
             // 2026-09-04 桌面端适配：详情骨架限宽居中
             : CusContentWidth(
-                maxWidth: 900,
                 child: ListView(
                   children: [
                     /// 标题

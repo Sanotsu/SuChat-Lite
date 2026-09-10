@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../../shared/widgets/toast_utils.dart';
 import '../services/backup_utils.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import '../services/restore_executor.dart';
 
 /// 恢复向导预览条目
@@ -256,14 +257,17 @@ class _RestoreWizardPageState extends State<RestoreWizardPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('恢复备份')),
-      body: switch (_step) {
-        0 => _buildParsingView(),
-        2 => _buildProgressView(),
-        3 => _buildResultView(),
-        _ => _buildPreviewView(),
-      },
+    // 2026-09-07 桌面适配：限宽居中
+    return CusContentWidth.form(
+      child: Scaffold(
+        appBar: AppBar(title: const Text('恢复备份')),
+        body: switch (_step) {
+          0 => _buildParsingView(),
+          2 => _buildProgressView(),
+          3 => _buildResultView(),
+          _ => _buildPreviewView(),
+        },
+      ),
     );
   }
 

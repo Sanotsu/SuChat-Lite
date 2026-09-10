@@ -104,7 +104,6 @@ abstract class BaseNewsPageState<T extends StatefulWidget, U> extends State<T> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: getAppBarTitleWidget(),

@@ -160,7 +160,6 @@ class _NotebookPageState extends State<NotebookPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           // 根据选择模式显示不同的标题

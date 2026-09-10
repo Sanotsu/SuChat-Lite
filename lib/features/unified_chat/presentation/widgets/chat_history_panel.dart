@@ -120,7 +120,9 @@ class _ChatHistoryPanelState extends State<ChatHistoryPanel> {
     return Container(
       height: widget.width != null ? 88 : 100,
       width: double.infinity,
-      color: Theme.of(context).colorScheme.primaryContainer,
+      // 2026-09-07 移除原 primaryContainer 实色底：与透明侧栏/自定义背景冲突，
+      // 透明后图标文字改用 primaryColor 保证可读
+      color: Colors.transparent,
       padding: EdgeInsets.only(
         left: 16,
         right: 16,
@@ -132,13 +134,13 @@ class _ChatHistoryPanelState extends State<ChatHistoryPanel> {
           Icon(
             Icons.smart_toy,
             size: 32,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
+            color: Theme.of(context).primaryColor,
           ),
           const SizedBox(width: 12),
           Text(
             'SuChat',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
+              color: Theme.of(context).primaryColor,
             ),
           ),
           const Spacer(),
@@ -408,6 +410,25 @@ class _ChatHistoryPanelState extends State<ChatHistoryPanel> {
               //       ).then((value) async {
               //         viewModel.refreshPlatformsAndModels();
               //       });
+              //     }),
+              //   ),
+              // ),
+
+              // 媒体面板(2026-09-09 跨会话查看AI生成的图片/视频/语音及生成条件)
+              // 在右侧边栏有了，这里可以不显示
+              // Expanded(
+              //   child: IconButton(
+              //     icon: const Icon(Icons.perm_media),
+              //     tooltip: '媒体面板',
+              //     onPressed: () => _navigate(() {
+              //       Navigator.push(
+              //         context,
+              //         MaterialPageRoute(
+              //           // 2026-09-09 传入聊天页局部viewModel实例(本组件即在
+              //           // 聊天页Provider.value作用域内，Consumer拿到的是它)
+              //           builder: (_) => MediaLibraryPage(viewModel: viewModel),
+              //         ),
+              //       );
               //     }),
               //   ),
               // ),

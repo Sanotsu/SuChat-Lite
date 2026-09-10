@@ -88,7 +88,6 @@ class _TrainingRecordDetailPageState extends State<TrainingRecordDetailPage> {
     // 显示加载状态
     if (_isLoading) {
       return CusContentWidth(
-        maxWidth: 1000,
         child: Scaffold(
           appBar: AppBar(
             title: const Text('训练记录详情'),

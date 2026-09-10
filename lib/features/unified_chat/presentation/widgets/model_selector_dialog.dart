@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/utils/screen_helper.dart';
@@ -115,72 +114,107 @@ class _ModelSelectorDialogState extends State<ModelSelectorDialog> {
     final hasResults =
         filteredFavorites.isNotEmpty || filteredByPlatform.isNotEmpty;
 
-    return AlertDialog(
-      title: const Text('选择模型'),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      content: SizedBox(
-        // 桌面限宽为紧凑弹窗，避免超宽单列(移动端满宽)
-        width: ScreenHelper.isDesktop() ? 500.0 : double.maxFinite,
-        height: ScreenHelper.isDesktop() ? 560.0 : 0.6.sh,
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-                children: [
-                  // 搜索框
-                  TextField(
-                    onChanged: (v) => setState(() => _searchQuery = v),
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.search, size: 20),
-                      hintText: '搜索模型或平台名称',
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      suffixIcon: _searchQuery.isEmpty
-                          ? null
-                          : IconButton(
-                              icon: const Icon(Icons.clear, size: 18),
-                              onPressed: () =>
-                                  setState(() => _searchQuery = ''),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
+    // 2026-09-09 弹窗重叠修复：此前用AlertDialog三段式(title/content/
+    // actions)+固定高度SizedBox——当0.6.sh超过AlertDialog给content的
+    // 高度预算(总高-标题-按钮)时SizedBox无视约束强行溢出，列表绘制
+    // 盖住标题/搜索框/取消按钮。改为自定义Dialog：标题/搜索框/列表/
+    // 按钮同处一个受约束Column，列表用Expanded天然不越界
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isDesktop = ScreenHelper.isDesktop();
 
-                  // 模型列表
-                  Expanded(
-                    child: hasResults
-                        ? SingleChildScrollView(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // 收藏模型区域
-                                if (filteredFavorites.isNotEmpty)
-                                  _buildFavoriteSection(filteredFavorites),
-
-                                // 按平台分组的模型
-                                ...filteredByPlatform.entries.map((entry) {
-                                  return _buildPlatformSection(
-                                    entry.key,
-                                    entry.value,
-                                  );
-                                }),
-                              ],
-                            ),
-                          )
-                        : const Center(child: Text('没有匹配的模型')),
-                  ),
-                ],
+    return Dialog(
+      child: Material(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        clipBehavior: Clip.antiAlias,
+        child: Container(
+          width: isDesktop ? 500.0 : screenWidth - 32,
+          constraints: BoxConstraints(
+            maxHeight: isDesktop ? 600.0 : screenHeight * 0.75,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 标题栏
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Row(
+                  children: [
+                    Text('选择模型', style: Theme.of(context).textTheme.titleLarge),
+                  ],
+                ),
               ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
+
+              // 搜索框
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextField(
+                  onChanged: (v) => setState(() => _searchQuery = v),
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    hintText: '搜索模型或平台名称',
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    suffixIcon: _searchQuery.isEmpty
+                        ? null
+                        : IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () => setState(() => _searchQuery = ''),
+                          ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // 模型列表(Expanded约束，不与标题/按钮重叠)
+              Expanded(
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : hasResults
+                    ? SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 收藏模型区域
+                            if (filteredFavorites.isNotEmpty)
+                              _buildFavoriteSection(filteredFavorites),
+
+                            // 按平台分组的模型
+                            ...filteredByPlatform.entries.map((entry) {
+                              return _buildPlatformSection(
+                                entry.key,
+                                entry.value,
+                              );
+                            }),
+                          ],
+                        ),
+                      )
+                    : const Center(child: Text('没有匹配的模型')),
+              ),
+
+              // 底部按钮栏
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 4, 16, 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('取消'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      ],
+      ),
     );
   }
 
@@ -254,25 +288,31 @@ class _ModelSelectorDialogState extends State<ModelSelectorDialog> {
   Widget _buildModelItem(UnifiedModelSpec model, {bool inFavorite = false}) {
     final isSelected = widget.currentModel?.id == model.id;
 
-    // InkWell 提供桌面 hover 高亮与点击反馈
+    // 2026-09-09 滚动重叠修复：此前用Ink(decoration)——Ink把装饰画在
+    // 最近的Material祖先(弹窗根部)表面而非自身，列表滚动后decoration
+    // 仍停留在原位置(不跟随滚动偏移)，产生越界鬼影盖住标题/搜索框/按钮。
+    // 改为每项自带独立Material(shape画边框与底色)，装饰随项一起
+    // 被viewport裁剪平移，永不错位
     return Container(
       margin: EdgeInsets.only(bottom: 8),
       height: 36,
-      child: InkWell(
-        onTap: () {
-          widget.onModelSelected(model);
-          Navigator.of(context).pop();
-        },
-        borderRadius: BorderRadius.circular(8),
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isSelected ? Colors.blue : Colors.grey,
-              width: isSelected ? 2 : 1,
-            ),
-            color: isSelected ? Colors.blue.withValues(alpha: 0.1) : null,
+      child: Material(
+        color: isSelected
+            ? Colors.blue.withValues(alpha: 0.1)
+            : Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(
+            color: isSelected ? Colors.blue : Colors.grey,
+            width: isSelected ? 2 : 1,
           ),
+        ),
+        child: InkWell(
+          onTap: () {
+            widget.onModelSelected(model);
+            Navigator.of(context).pop();
+          },
+          borderRadius: BorderRadius.circular(8),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

@@ -13,6 +13,8 @@ import '../widgets/chat_input_widget.dart';
 import '../widgets/chat_history_drawer.dart';
 import '../widgets/chat_history_panel.dart';
 import '../widgets/chat_app_bar.dart';
+import '../widgets/chat_desktop_toolbar.dart';
+import '../widgets/draggable_partner_avatar_preview.dart';
 import '../widgets/partner_horizontal_list.dart';
 import 'platform_list_page.dart';
 
@@ -263,6 +265,14 @@ class _UnifiedChatPageState extends State<UnifiedChatPage> {
           final isDesktop = ScreenHelper.isDesktop();
           return Stack(
             children: [
+              // 2026-09-05 修复移动端自定义背景"一片黑"：Android 窗口底为黑色，
+              // 半透明背景图叠在黑底上整体发暗且看不清内容；
+              // 补一层主题底色后再叠背景图，两端表现一致
+              Positioned.fill(
+                child: ColoredBox(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                ),
+              ),
               // ChatBackground内部自带Positioned.fill，铺满整个页面
               ChatBackground(
                 backgroundImage: viewModel.backgroundImage,
@@ -284,6 +294,20 @@ class _UnifiedChatPageState extends State<UnifiedChatPage> {
                 drawer: isDesktop ? null : const ChatHistoryDrawer(),
                 body: isDesktop ? _buildDesktopBody(hasBg, child) : child,
               ),
+              // 搭档立绘：选中搭档且头像非空时显示，
+              // 小立绘可点击放大为可拖动/缩放的悬浮预览(旧版特性)
+              // 2026-09-07 移动端也显示(组件内已有单指拖动/双指缩放分支)
+              if (viewModel.currentPartner?.avatarUrl != null &&
+                  viewModel.currentPartner!.avatarUrl!.trim().isNotEmpty)
+                DraggablePartnerAvatarPreview(
+                  key: ValueKey(viewModel.currentPartner!.avatarUrl),
+                  partner: viewModel.currentPartner!,
+                  // 桌面端距左侧随会话侧栏可见性让位(侧栏固定宽280)；
+                  // 移动端侧栏为抽屉无常驻面板，恒贴左缘
+                  left: isDesktop && _sidebarVisible && _sidebarReady ? 284 : 4,
+                  width: isDesktop ? 48 : 36,
+                  height: isDesktop ? 64 : 48,
+                ),
             ],
           );
         },
@@ -291,18 +315,20 @@ class _UnifiedChatPageState extends State<UnifiedChatPage> {
     );
   }
 
-  /// 桌面布局：左侧常驻会话侧栏 + 主内容区
+  /// 桌面布局：左侧常驻会话侧栏 + 主内容区 + 右侧功能工具栏
   /// 内容区默认限宽880居中保证宽屏可读性；宽屏模式(_widescreen)铺满
+  /// 2026-09-05 两侧面板改为透明，让自定义背景延伸覆盖，消除割裂感
   Widget _buildDesktopBody(bool hasBg, Widget? content) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (_sidebarVisible && _sidebarReady)
           Material(
-            color: Theme.of(context).colorScheme.surface,
+            color: Colors.transparent,
             child: ChatHistoryPanel(width: 280),
           ),
-        if (_sidebarVisible && _sidebarReady) const VerticalDivider(width: 1),
+        if (_sidebarVisible && _sidebarReady)
+          VerticalDivider(width: 1, color: Theme.of(context).dividerColor),
         Expanded(
           child: Center(
             child: ConstrainedBox(
@@ -312,6 +338,12 @@ class _UnifiedChatPageState extends State<UnifiedChatPage> {
               child: content ?? const SizedBox.shrink(),
             ),
           ),
+        ),
+        // 2026-09-05 恢复旧版桌面右侧功能工具栏(条目对齐"更多操作"菜单)
+        VerticalDivider(width: 1, color: Theme.of(context).dividerColor),
+        Material(
+          color: Colors.transparent,
+          child: SizedBox(width: 76, child: ChatDesktopToolbar()),
         ),
       ],
     );

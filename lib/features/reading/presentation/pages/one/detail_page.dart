@@ -243,7 +243,6 @@ class _OneDetailPageState extends State<OneDetailPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Theme(
         data: _isDarkMode ? ThemeData.dark() : ThemeData.light(),
         child: Scaffold(

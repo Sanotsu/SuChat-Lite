@@ -39,8 +39,10 @@ class UnifiedChatPartner {
   final bool isFavorite;
 
   // ============ 对话参数 ============
+  /// 2026-09-09 null=不限制上下文消息数(携带全部历史，避免记忆丢失)；
+  /// 0=仅携带最新一条；仅会话设置/搭档显式配置时才有值
   @JsonKey(name: 'context_message_length')
-  final int contextMessageLength;
+  final int? contextMessageLength;
 
   @JsonKey(name: 'temperature')
   final double? temperature;
@@ -106,7 +108,7 @@ class UnifiedChatPartner {
     this.isBuiltIn = false,
     this.isActive = true,
     this.isFavorite = false,
-    this.contextMessageLength = 6,
+    this.contextMessageLength,
     this.temperature,
     this.topP,
     this.maxTokens,
@@ -299,10 +301,12 @@ class UnifiedChatPartner {
       isBuiltIn: (map['is_built_in'] as int) == 1,
       isActive: (map['is_active'] as int) == 1,
       isFavorite: (map['is_favorite'] as int) == 1,
-      contextMessageLength: map['context_message_length'] as int? ?? 6,
-      temperature: (map['temperature'] as num?)?.toDouble() ?? 0.7,
-      topP: (map['top_p'] as num?)?.toDouble() ?? 1.0,
-      maxTokens: map['max_tokens'] as int? ?? 4096,
+      contextMessageLength: map['context_message_length'] as int?,
+      // 2026-09-09 去掉0.7/1.0/4096兜底：null=未设置(不传→平台API默认值)，
+      // 否则清空参数保存后重新读取又会被回填成预设值
+      temperature: (map['temperature'] as num?)?.toDouble(),
+      topP: (map['top_p'] as num?)?.toDouble(),
+      maxTokens: map['max_tokens'] as int?,
       isStream: (map['is_stream'] as int) == 1,
       description: map['description'] as String?,
       personality: map['personality'] as String?,

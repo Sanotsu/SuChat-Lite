@@ -51,8 +51,8 @@ class UnifiedChatDBInit {
     var db = await openDatabase(
       path,
       // TODO(发布前): 当前版本未发布过，无线上旧库；正式发布时将version固定为最终值
-      // 并移除下方全部_upgradeToV2/_upgradeToV3升级逻辑(开发期保留以便调试，免于反复卸载重装)
-      version: 3,
+      // 并移除下方全部_upgradeToV2/_upgradeToV3/_upgradeToV4升级逻辑(开发期保留以便调试，免于反复卸载重装)
+      version: 4,
       onCreate: _createDb,
       onUpgrade: _upgradeDb,
     );
@@ -98,6 +98,59 @@ class UnifiedChatDBInit {
       // TODO(发布前): 移除(v3为翻译历史表，开发期数据库可能存在无audio_path列的中间结构)
       await _upgradeToV3(db);
     }
+
+    if (oldVersion < 4) {
+      await _upgradeToV4(db);
+    }
+  }
+
+  /// v3 -> v4: 会话表 max_tokens/context_message_length 两列去 NOT NULL 约束
+  /// (2026-09-09 对话参数混合方案：null=未设置→请求不传该参数/上下文不限制；
+  /// temperature/top_p 两列原本就可空无需处理)
+  /// SQLite 不支持 ALTER 修改列约束，标准做法：建新表→拷贝→删旧表→改名
+  Future<void> _upgradeToV4(Database db) async {
+    // 按最新DDL建临时表(列顺序与旧表完全一致，仅两列约束不同)
+    final newTableDdl = UnifiedChatDdl.ddlForUnifiedConversation.replaceAll(
+      UnifiedChatDdl.tableUnifiedConversation,
+      '${UnifiedChatDdl.tableUnifiedConversation}_v4_new',
+    );
+
+    await db.transaction((txn) async {
+      await txn.execute(newTableDdl);
+      // 显式列出列名拷贝，不依赖 SELECT * 的列序
+      await txn.execute('''
+        INSERT INTO ${UnifiedChatDdl.tableUnifiedConversation}_v4_new
+        (id, title, model_id, platform_id, partner_id, system_prompt,
+         temperature, max_tokens, top_p, frequency_penalty, presence_penalty,
+         context_message_length, is_stream, extra_params, message_count,
+         total_tokens, total_cost, is_pinned, is_archived,
+         current_branch_path, created_at, updated_at)
+        SELECT
+         id, title, model_id, platform_id, partner_id, system_prompt,
+         temperature, max_tokens, top_p, frequency_penalty, presence_penalty,
+         context_message_length, is_stream, extra_params, message_count,
+         total_tokens, total_cost, is_pinned, is_archived,
+         current_branch_path, created_at, updated_at
+        FROM ${UnifiedChatDdl.tableUnifiedConversation}
+        ''');
+      await txn.execute(
+        'DROP TABLE ${UnifiedChatDdl.tableUnifiedConversation}',
+      );
+      await txn.execute(
+        'ALTER TABLE ${UnifiedChatDdl.tableUnifiedConversation}_v4_new '
+        'RENAME TO ${UnifiedChatDdl.tableUnifiedConversation}',
+      );
+
+      // 2026-09-09 内置搭档参数默认全空(使用平台默认/上下文不限制)：
+      // 存量行是老代码以默认值6插入的，清掉使其回到"未设置"语义；
+      // 对话中的参数由用户在对话设置中显式配置
+      await txn.execute(
+        'UPDATE ${UnifiedChatDdl.tableUnifiedChatPartner} SET '
+        'context_message_length = NULL, temperature = NULL, '
+        'top_p = NULL, max_tokens = NULL '
+        'WHERE is_built_in = 1',
+      );
+    });
   }
 
   /// v2 -> v3: 新增翻译历史表(2026-09-03 快速翻译改造)

@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../shared/widgets/cus_content_width.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/models/unified_chat_partner.dart';
 import '../../data/database/unified_chat_dao.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
-import '../widgets/add_partner_dialog.dart';
+import 'partner_detail_page.dart';
+import 'partner_edit_page.dart';
 
 /// 我的搭档页面
 /// 在侧边栏和对话主页面新建对话时查看所有搭档会跳转到这个页面
-/// 但是只有查看所有搭档时，点击某个搭档才将搭档数据返回上一页，其他的点击暂不操作
+/// 但是只有查看所有搭档时，点击某个搭档才将搭档数据返回上一页，其他的点击进详情页
+/// 2026-09-07 重构：
+/// 点击列表项进入搭档详情页(内置/自制均可查看)，编辑/删除收敛到详情页；
+/// 新建搭档由弹窗改为独立编辑页；列表项仅保留收藏按钮；
+/// 页面包 CusContentWidth 做桌面限宽适配
 class MyPartnersPage extends StatefulWidget {
   final bool? shouldReturnPartner;
   const MyPartnersPage({this.shouldReturnPartner = false, super.key});
@@ -71,10 +77,11 @@ class _MyPartnersPageState extends State<MyPartnersPage> {
     }
   }
 
+  /// 新建搭档：跳转编辑页，返回搭档对象后保存
   Future<void> _addNewPartner() async {
-    final result = await showDialog<UnifiedChatPartner>(
-      context: context,
-      builder: (context) => const AddPartnerDialog(),
+    final result = await Navigator.push<UnifiedChatPartner>(
+      context,
+      MaterialPageRoute(builder: (context) => const PartnerEditPage()),
     );
 
     if (result != null) {
@@ -84,78 +91,54 @@ class _MyPartnersPageState extends State<MyPartnersPage> {
     }
   }
 
-  Future<void> _editPartner(UnifiedChatPartner partner) async {
-    final result = await showDialog<UnifiedChatPartner>(
-      context: context,
-      builder: (context) => AddPartnerDialog(partner: partner),
-    );
-
-    if (result != null) {
-      await _chatDao.saveChatPartner(result);
-      _loadPartners();
-      ToastUtils.showSuccess('搭档更新成功');
-    }
-  }
-
-  Future<void> _deletePartner(UnifiedChatPartner partner) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('删除搭档'),
-        content: Text('确定要删除搭档"${partner.name}"吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('删除', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      await _chatDao.deleteChatPartner(partner.id);
-      _loadPartners();
-      ToastUtils.showSuccess('搭档已删除');
-    }
-  }
-
   Future<void> _toggleFavorite(UnifiedChatPartner partner) async {
     await _chatDao.togglePartnerFavorite(partner.id);
     _loadPartners();
   }
 
+  /// 点击列表项：选择模式下返回搭档数据，否则进详情页
+  Future<void> _openPartnerDetail(UnifiedChatPartner partner) async {
+    if (widget.shouldReturnPartner == true) {
+      Navigator.of(context).pop(partner);
+      return;
+    }
+
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PartnerDetailPage(partner: partner),
+      ),
+    );
+
+    // 详情页内发生编辑/删除时刷新列表
+    if (changed == true) _loadPartners();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Consumer<UnifiedChatViewModel>(
-      builder: (context, viewModel, child) {
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('我的搭档'),
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black,
-            elevation: 0,
-          ),
-          body: _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 设置开关
-                      _buildShowSwitch(viewModel),
+    return CusContentWidth.form(
+      child: Consumer<UnifiedChatViewModel>(
+        builder: (context, viewModel, child) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('我的搭档'), elevation: 0),
+            body: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 设置开关
+                        _buildShowSwitch(viewModel),
 
-                      // 搭档列表
-                      ..._buildPartnerList(),
-                    ],
+                        // 搭档列表
+                        ..._buildPartnerList(),
+                      ],
+                    ),
                   ),
-                ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -255,6 +238,7 @@ class _MyPartnersPageState extends State<MyPartnersPage> {
     ];
   }
 
+  /// 列表项：2026-09-07 移除编辑/删除按钮(收敛到详情页)，点击进详情
   Widget _buildPartnerItem(UnifiedChatPartner partner) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -263,7 +247,7 @@ class _MyPartnersPageState extends State<MyPartnersPage> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
+        contentPadding: const EdgeInsets.fromLTRB(8, 0, 12, 0),
 
         leading: buildUserCircleAvatar(
           partner.avatarUrl,
@@ -274,9 +258,22 @@ class _MyPartnersPageState extends State<MyPartnersPage> {
             style: const TextStyle(color: Colors.white),
           ),
         ),
-        title: Text(
-          partner.name,
-          style: const TextStyle(fontWeight: FontWeight.w500),
+        title: Row(
+          children: [
+            Flexible(
+              child: Text(
+                partner.name,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+            ),
+            const SizedBox(width: 6),
+            if (partner.isBuiltIn)
+              Text(
+                '(内置)',
+                style: TextStyle(fontSize: 11, color: Colors.blue.shade400),
+              ),
+          ],
         ),
         subtitle: Text(
           partner.prompt,
@@ -284,35 +281,14 @@ class _MyPartnersPageState extends State<MyPartnersPage> {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
         ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              onPressed: () => _toggleFavorite(partner),
-              icon: Icon(
-                partner.isFavorite ? Icons.star : Icons.star_border,
-                color: partner.isFavorite ? Colors.orange : Colors.grey,
-              ),
-            ),
-
-            if (!partner.isBuiltIn) ...[
-              IconButton(
-                onPressed: () => _editPartner(partner),
-                icon: const Icon(Icons.edit, color: Colors.blue),
-              ),
-              IconButton(
-                onPressed: () => _deletePartner(partner),
-                icon: const Icon(Icons.delete, color: Colors.red),
-              ),
-            ],
-          ],
+        trailing: IconButton(
+          onPressed: () => _toggleFavorite(partner),
+          icon: Icon(
+            partner.isFavorite ? Icons.star : Icons.star_border,
+            color: partner.isFavorite ? Colors.orange : Colors.grey,
+          ),
         ),
-        onTap: () {
-          // 点击搭档进入对话页面
-          if (widget.shouldReturnPartner == true) {
-            Navigator.of(context).pop(partner);
-          }
-        },
+        onTap: () => _openPartnerDetail(partner),
       ),
     );
   }

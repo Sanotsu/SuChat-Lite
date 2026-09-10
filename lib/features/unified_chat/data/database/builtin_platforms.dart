@@ -53,5 +53,4 @@ List<Map<String, dynamic>> BUILD_IN_PLATFORMS = [
     'host_url': 'https://api.deepseek.com',
     'cc_prefix': '/v1/chat/completions',
   },
-  // 2026-09-02 移除已停服的内置平台：零一万物(lingyiwanwu)、无问芯穹(infini)
 ];

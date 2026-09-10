@@ -28,7 +28,6 @@ class _TmdbReviewsPageState extends State<TmdbReviewsPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(title: Text(widget.title)),
         body: widget.reviews.isEmpty

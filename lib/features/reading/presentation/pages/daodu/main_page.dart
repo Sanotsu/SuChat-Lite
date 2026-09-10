@@ -28,7 +28,6 @@ class _DaoduMainPageState extends State<DaoduMainPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         body: IndexedStack(index: _currentIndex, children: _pages),
         bottomNavigationBar: BottomNavigationBar(

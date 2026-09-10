@@ -19,8 +19,14 @@ class UnifiedSecureStorage {
   static const String _conversationSettingsPrefix =
       'unified_chat_conversation_settings_';
   static const String _searchApiKeyPrefix = 'unified_chat_search_api_key_';
+
+  // 2026-09-09 平台自带联网搜索策略
+  static const String _searchModePrefix = 'unified_chat_search_mode_';
   static const String _preferredSearchToolKey =
       'unified_chat_preferred_search_tool';
+
+  // 2026-09-09 百度千帆AI搜索模式(retrieval=纯检索/intelligent=智能搜索生成)
+  static const String _baiduSearchModeKey = 'unified_chat_baidu_search_mode';
 
   /// 存储API密钥
   static Future<void> storeApiKey(String platformId, String apiKey) async {
@@ -281,6 +287,35 @@ class UnifiedSecureStorage {
   /// 删除首选搜索工具设置
   static Future<void> deletePreferredSearchTool() async {
     await _storage.delete(key: _preferredSearchToolKey);
+  }
+
+  /// 2026-09-09 存储平台自带联网搜索策略(auto/builtinOnly/thirdPartyOnly)
+  /// 按 platformId 通用化存储，任意平台都可设置(仅注册了自带搜索适配器的平台生效)
+  static Future<void> setPlatformSearchMode(
+    String platformId,
+    String mode,
+  ) async {
+    await _storage.write(key: '$_searchModePrefix$platformId', value: mode);
+  }
+
+  /// 获取平台自带联网搜索策略(未设置返回null，调用方按auto处理)
+  static Future<String?> getPlatformSearchMode(String platformId) async {
+    return await _storage.read(key: '$_searchModePrefix$platformId');
+  }
+
+  /// 删除平台自带联网搜索策略(恢复auto)
+  static Future<void> deletePlatformSearchMode(String platformId) async {
+    await _storage.delete(key: '$_searchModePrefix$platformId');
+  }
+
+  /// 2026-09-09 存储百度千帆AI搜索模式(retrieval/intelligent)
+  static Future<void> setBaiduSearchMode(String mode) async {
+    await _storage.write(key: _baiduSearchModeKey, value: mode);
+  }
+
+  /// 获取百度千帆AI搜索模式(未设置返回null，调用方按retrieval纯检索处理)
+  static Future<String?> getBaiduSearchMode() async {
+    return await _storage.read(key: _baiduSearchModeKey);
   }
 
   /// 获取存储统计信息

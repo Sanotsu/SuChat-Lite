@@ -129,7 +129,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('图表统计'),

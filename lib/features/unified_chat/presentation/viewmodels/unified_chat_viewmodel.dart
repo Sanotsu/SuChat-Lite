@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/storage/cus_get_storage.dart';
+import '../../../../core/network/dio_client/interceptor_error.dart';
 import '../../../../core/services/media_save_service.dart';
 import '../../../../core/utils/get_dir.dart';
 import '../../../../core/utils/simple_tools.dart';
@@ -22,6 +23,7 @@ import '../../data/services/unified_chat_service.dart';
 import '../../data/services/unified_branch_utils.dart';
 import '../../data/services/image_generation_service.dart';
 import '../../data/models/image_generation_request.dart';
+import '../../data/models/media_library_item.dart';
 import '../../data/services/video_generation_service.dart';
 import '../../data/services/speech_synthesis_service.dart';
 import '../../data/models/speech_synthesis_request.dart';
@@ -29,6 +31,7 @@ import '../../data/services/speech_recognition_service.dart';
 import '../../data/models/speech_recognition_request.dart';
 import '../../data/services/unified_secure_storage.dart';
 import '../../data/services/web_search_tool_manager.dart';
+import '../../data/services/builtin_web_search_registry.dart';
 
 /// 统一聊天状态管理
 class UnifiedChatViewModel extends ChangeNotifier {
@@ -61,11 +64,22 @@ class UnifiedChatViewModel extends ChangeNotifier {
   /// 对话是否开启联网搜索
   bool _isWebSearchEnabled = false;
 
+  /// 2026-09-09 用户是否手动切换过联网开关：
+  /// 手动切过则永久尊重其选择(不再跟随能力自动开)；
+  /// 未切过时启动/切模型/切会话会跟随联网能力自动开关
+  bool _webSearchManuallyToggled = false;
+  static const String _webSearchManuallyToggledKey =
+      'unified_chat_web_search_manually_toggled';
+
   /// 加载和流式状态
   bool _isLoading = false;
   bool _isStreaming = false;
   String? _error;
   StreamSubscription? _streamSubscription;
+
+  /// 2026-09-09 用户手动中断标志：stopStreaming置位、新流监听开始时复位；
+  /// 取消类错误到达onError时据此静默处理(不显示报错)
+  bool _manualStopRequested = false;
 
   /// 搭档显示状态
   bool _showPartnersInNewChat = true;
@@ -221,6 +235,18 @@ class UnifiedChatViewModel extends ChangeNotifier {
       await switchModel(_availableModels.first);
     }
 
+    // 2026-09-09 联网开关默认值跟随能力：
+    // 读取用户是否手动切换过的标记；未手动切过且当前具备联网能力
+    // (平台自带搜索/第三方Key+工具调用)时默认开启，避免"提示词要求
+    // 联网搜索却因开关未开导致结果不符预期"
+    try {
+      _webSearchManuallyToggled =
+          CusGetStorage().box.read(_webSearchManuallyToggledKey) == true;
+    } catch (_) {
+      _webSearchManuallyToggled = false;
+    }
+    _syncWebSearchWithCapability();
+
     _setLoading(false);
   }
 
@@ -370,9 +396,10 @@ class UnifiedChatViewModel extends ChangeNotifier {
         platformId: _currentPlatform?.id ?? '',
         // 如果没有指定系统提示词，使用默认搭档的提示词
         systemPrompt: systemPrompt ?? defaultPartner.prompt,
-        temperature: defaultPartner.temperature ?? 0.7,
-        topP: defaultPartner.topP ?? 1.0,
-        maxTokens: defaultPartner.maxTokens ?? 4096,
+        // 2026-09-09 参数未显式设置时保持null(不传→平台API默认值)
+        temperature: defaultPartner.temperature,
+        topP: defaultPartner.topP,
+        maxTokens: defaultPartner.maxTokens,
         contextMessageLength: defaultPartner.contextMessageLength,
         isStream: defaultPartner.isStream ?? true,
         createdAt: DateTime.now(),
@@ -394,35 +421,6 @@ class UnifiedChatViewModel extends ChangeNotifier {
     } catch (e) {
       _setError('创建新对话失败: $e');
     }
-  }
-
-  /// 按模型类型新建对话(2026-09-02 媒体生成并入聊天的快捷入口)
-  /// 自动选用首个可用(已配Key)的指定类型模型；无可用模型时提示并保持普通新对话
-  void createNewConversationForType(UnifiedModelType type) {
-    if (type == UnifiedModelType.cc) {
-      createNewConversation();
-      return;
-    }
-
-    final model = _availableModels.cast<UnifiedModelSpec?>().firstWhere(
-      (m) => m!.type == type,
-      orElse: () => null,
-    );
-
-    if (model == null) {
-      ToastUtils.showError(
-        '没有可用的${UMT_NAME_MAP[type]}模型，请先在模型选择器确认已配置对应平台的API Key',
-      );
-      createNewConversation();
-      return;
-    }
-
-    _currentModel = model;
-    _currentPlatform = _availablePlatforms
-        .cast<UnifiedPlatformSpec?>()
-        .firstWhere((p) => p?.id == model.platformId, orElse: () => null);
-
-    createNewConversation(title: '新${UMT_NAME_MAP[type]}');
   }
 
   ///初始化时（即在用户首次发送消息时）保存对话到数据库
@@ -523,6 +521,9 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
         // 恢复未完成的视频生成任务(任务态持久化在消息metadata，重进对话续查)
         _resumeUnfinishedVideoTasks();
+
+        // 2026-09-09 未手动切换过联网开关时，跟随会话模型的能力自动开关
+        _syncWebSearchWithCapability();
       }
       _clearError();
     } catch (e) {
@@ -724,7 +725,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
         }
       }
 
-      _currentConversation = _currentConversation!.copyWith(
+      var updated = _currentConversation!.copyWith(
         title: settings['title'] as String?,
         systemPrompt: newSystemPrompt,
         contextMessageLength: settings['contextMessageLength'] as int?,
@@ -738,6 +739,17 @@ class UnifiedChatViewModel extends ChangeNotifier {
         updatedAt: DateTime.now(),
       );
 
+      // 2026-09-09 "上下文消息数=不限制"为null：copyWith无法写null，
+      // 显式传入该键时经Map绕行写入(含清空为null)
+      if (settings.containsKey('contextMessageLength')) {
+        final convMap = updated.toMap();
+        convMap['context_message_length'] =
+            settings['contextMessageLength'] as int?;
+        updated = UnifiedConversation.fromMap(convMap);
+      }
+
+      _currentConversation = updated;
+
       // 如果系统提示词发生变化，更新对应的系统消息
       if (oldSystemPrompt != newSystemPrompt) {
         await _updateSystemMessage(newSystemPrompt);
@@ -747,6 +759,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _setError('更新设置失败: $e');
+      debugPrint(e.toString());
     }
   }
 
@@ -986,8 +999,11 @@ class UnifiedChatViewModel extends ChangeNotifier {
     List<UnifiedChatMessage> messagesToSend = List.from(messages);
 
     // 应用上下文消息列表长度限制
+    // 2026-09-09 null=不限制(携带全部历史，避免记忆丢失)；
+    // 0=仅携带最新一条消息("每次都是最新的")；正数=保留最近N条(含系统消息豁免)
     final contextMessageLength = _currentConversation!.contextMessageLength;
-    if (messagesToSend.length > contextMessageLength) {
+    if (contextMessageLength != null &&
+        messagesToSend.length > contextMessageLength) {
       // 保留最近的 contextMessageLength 条消息，但保留系统消息
       final systemMessages = messagesToSend
           .where((m) => m.role == UnifiedMessageRole.system)
@@ -996,17 +1012,17 @@ class UnifiedChatViewModel extends ChangeNotifier {
           .where((m) => m.role != UnifiedMessageRole.system)
           .toList();
 
-      // 取最近的消息
-      final recentMessages =
-          nonSystemMessages.length >
-              (contextMessageLength - systemMessages.length)
-          ? nonSystemMessages.sublist(
-              nonSystemMessages.length -
-                  (contextMessageLength - systemMessages.length),
-            )
-          : nonSystemMessages;
-
-      messagesToSend = [...systemMessages, ...recentMessages];
+      // 取最近的消息(配额至少为1，避免0配置时出现负数越界)
+      final quota = contextMessageLength - systemMessages.length;
+      if (quota <= 0) {
+        // 上下文配额全被系统消息占用(或为0)：仅保留系统消息与最新一条消息
+        messagesToSend = [...systemMessages, nonSystemMessages.last];
+      } else if (nonSystemMessages.length > quota) {
+        messagesToSend = [
+          ...systemMessages,
+          ...nonSystemMessages.sublist(nonSystemMessages.length - quota),
+        ];
+      }
     }
 
     // 验证并修复消息序列
@@ -1015,15 +1031,22 @@ class UnifiedChatViewModel extends ChangeNotifier {
   }
 
   /// 创建用户消息
+  /// [parentIsExplicit] 2026-09-07 编辑消息场景：显式指定父节点(含根级)——
+  /// 原(被编辑)消息为根级(parentId==null)时新消息也应挂根级成为新根分支，
+  /// 不允许回退到当前分支叶子(fallback仅用于常规发送的追加场景)。
+  /// 此前编辑根级用户消息时parent=null被误判为常规发送，新消息挂到
+  /// 当前分支叶子之后，表现为"消息列表最后新加一轮对话"而非新建分支
   UnifiedChatMessage _createUserPlaceholder(
     String content, {
     UnifiedContentType? contentType,
     List<UnifiedContentItem>? multimodalContent,
     Map<String, dynamic>? metadata,
     UnifiedChatMessage? parent,
+    bool parentIsExplicit = false,
   }) {
-    // 计算分支信息：默认父节点为当前分支视图的最后一条非system消息
-    final parentNode = parent ?? _lastNonSystemMessage;
+    // 计算分支信息：常规发送默认父节点为当前分支视图的最后一条非system消息
+    final parentNode =
+        parent ?? (parentIsExplicit ? null : _lastNonSystemMessage);
     final branch = _branchInfoForNewChild(parentNode, UnifiedMessageRole.user);
 
     return UnifiedChatMessage(
@@ -1117,6 +1140,9 @@ class UnifiedChatViewModel extends ChangeNotifier {
     UnifiedChatMessage assistantMessage,
     bool isWebSearch,
   ) async {
+    // 新流监听开始，复位手动停止标志(上一次停止的标记不应影响本次)
+    _manualStopRequested = false;
+
     // 流式响应累加的文本内容
     String accumulatedContent = '';
     // 流式响应累加的思考内容
@@ -1399,6 +1425,16 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
   /// 处理流式错误
   void _handleStreamError(Object error, UnifiedChatMessage assistantMessage) {
+    // 2026-09-09 用户手动中断是正常业务逻辑，不该显示报错：
+    // 停止时token.cancel引发的取消错误若仍能到达监听(未先取消订阅等时序)，
+    // 静默收尾即可——消息已由stopStreaming保存为[手动终止]状态
+    if (_manualStopRequested && _isUserCancelError(error)) {
+      pl.d('流式响应被用户手动取消，静默处理');
+      _chatService.clearLastSearchReferences();
+      _setStreaming(false);
+      return;
+    }
+
     // print('流式响应错误, 类型:${error.runtimeType} 内容:$error');
 
     // 在对话中显示错误而不是统一错误页面
@@ -1418,6 +1454,14 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
     _chatService.clearLastSearchReferences();
     _setStreaming(false);
+  }
+
+  /// 判断是否用户主动取消类错误(dio cancel / CusHttpException -2)
+  bool _isUserCancelError(Object error) {
+    final text = error.toString();
+    return (error is CusHttpException && error.cusCode == -2) ||
+        text.contains('manually cancelled by the user') ||
+        text.contains('请求被取消');
   }
 
   /// 处理发送请求异常
@@ -1584,7 +1628,8 @@ class UnifiedChatViewModel extends ChangeNotifier {
             ? '生成了 ${response.data.length} 张图片'
             : '图片生成完成',
         isStreaming: false,
-        metadata: {'images': newUrls},
+        // 2026-09-09 genParams：本次生成的实际参数落库(媒体面板展示生成条件)
+        metadata: {'images': newUrls, 'genParams': ?settings},
       );
 
       // 更新消息列表
@@ -1647,10 +1692,12 @@ class UnifiedChatViewModel extends ChangeNotifier {
     await _chatDao.saveMessage(userMessage);
 
     // 助手占位消息(任务卡片，metadata记录任务态)
+    // 2026-09-09 params：本次生成的分辨率/时长等参数落库(媒体面板展示生成条件)
     final videoTask = <String, dynamic>{
       'platformId': _currentPlatform!.id,
       'modelName': _currentModel!.modelName,
       'status': 'submitting',
+      'params': ?settings,
     };
     final assistantMessage = _createAssistantPlaceholder(
       content: '正在提交视频生成任务...\n',
@@ -1857,7 +1904,11 @@ class UnifiedChatViewModel extends ChangeNotifier {
     await _initSaveConversation(text.trim());
 
     // 创建用户消息
-    final userMessage = _createUserPlaceholder(text);
+    // 2026-09-09 补记model/platform：媒体面板可展示合成模型(与其他媒体生成一致)
+    final userMessage = _createUserPlaceholder(
+      text,
+      metadata: {'model': _currentModel, 'platform': _currentPlatform},
+    );
 
     // 添加用户消息到列表
     _messages.add(userMessage);
@@ -2061,6 +2112,125 @@ class UnifiedChatViewModel extends ChangeNotifier {
     }
 
     notifyListeners();
+  }
+
+  /// 2026-09-09 媒体面板：扫描消息记录构建AI生成媒体列表
+  /// 产物取助手消息metadata(images/videos/audio)，生成条件(prompt/模型/
+  /// 参数)取同轮用户消息与消息自身——资源与条件一并可见；
+  /// 每次进入面板重扫(只遍历含产物的会话，个人应用量级可接受)，
+  /// 避免维护缓存失效点
+  Future<List<MediaLibraryItem>> loadMediaLibrary() async {
+    final items = <MediaLibraryItem>[];
+
+    final conversationIds = await _chatDao.getMediaConversationIds();
+    if (conversationIds.isEmpty) return items;
+
+    // 会话标题映射
+    final conversations = await _chatDao.getConversations();
+    final titleMap = {for (final c in conversations) c.id: c.title};
+
+    for (final conversationId in conversationIds) {
+      final messages = await _chatDao.getMessagesByConversationId(
+        conversationId,
+      );
+
+      // 同轮用户消息的提示词/合成文本(prompt)；时间正序下取最近一条非空user消息
+      String lastUserPrompt = '';
+      for (final message in messages) {
+        if (message.role == UnifiedMessageRole.user) {
+          final content = message.content ?? '';
+          if (content.trim().isNotEmpty) {
+            lastUserPrompt = content.trim();
+          }
+          continue;
+        }
+        if (message.role != UnifiedMessageRole.assistant) continue;
+
+        final metadata = message.metadata;
+        if (metadata == null) continue;
+
+        // 图片：metadata.images为本地路径列表，每张一个条目
+        final images = metadata['images'];
+        if (images is List && images.isNotEmpty) {
+          for (final path in images.whereType<String>()) {
+            items.add(
+              _buildMediaItem(
+                MediaLibraryType.image,
+                path,
+                message,
+                lastUserPrompt,
+                titleMap[conversationId],
+                metadata['genParams'],
+              ),
+            );
+          }
+        }
+
+        // 视频：metadata.videos，参数在videoTask.params
+        final videos = metadata['videos'];
+        if (videos is List && videos.isNotEmpty) {
+          final task = metadata['videoTask'];
+          final taskParams = task is Map<String, dynamic>
+              ? task['params']
+              : null;
+          for (final path in videos.whereType<String>()) {
+            items.add(
+              _buildMediaItem(
+                MediaLibraryType.video,
+                path,
+                message,
+                lastUserPrompt,
+                titleMap[conversationId],
+                taskParams,
+              ),
+            );
+          }
+        }
+
+        // 语音合成产物：metadata.audio为本地路径
+        // (语音识别的录音在user消息且SQL已限定assistant，不会误纳入)
+        final audio = metadata['audio'];
+        if (audio is String && audio.isNotEmpty) {
+          items.add(
+            _buildMediaItem(
+              MediaLibraryType.audio,
+              audio,
+              message,
+              lastUserPrompt,
+              titleMap[conversationId],
+              metadata['synthesis_settings'],
+            ),
+          );
+        }
+      }
+    }
+
+    // 新生成的在前
+    items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return items;
+  }
+
+  MediaLibraryItem _buildMediaItem(
+    MediaLibraryType type,
+    String path,
+    UnifiedChatMessage message,
+    String prompt,
+    String? conversationTitle,
+    dynamic rawParams,
+  ) {
+    return MediaLibraryItem(
+      type: type,
+      filePath: path,
+      prompt: prompt,
+      modelName: message.modelNameUsed,
+      platformId: message.platformIdUsed,
+      conversationId: message.conversationId,
+      conversationTitle: conversationTitle ?? '',
+      createdAt: message.createdAt,
+      genParams: rawParams is Map
+          ? rawParams.cast<String, dynamic>()
+          : const {},
+    );
   }
 
   /// 重新生成响应消息
@@ -2421,6 +2591,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
           contentType: UnifiedContentType.multimodal,
           multimodalContent: multimodalContent,
           parent: parentMsg,
+          parentIsExplicit: true,
           metadata: {
             'model': _currentModel,
             'platform': _currentPlatform,
@@ -2434,7 +2605,11 @@ class UnifiedChatViewModel extends ChangeNotifier {
         );
       } else {
         // 文本消息
-        newUserMessage = _createUserPlaceholder(newContent, parent: parentMsg);
+        newUserMessage = _createUserPlaceholder(
+          newContent,
+          parent: parentMsg,
+          parentIsExplicit: true,
+        );
       }
 
       // 保存新用户消息并切换分支到新消息
@@ -2530,6 +2705,9 @@ class UnifiedChatViewModel extends ChangeNotifier {
       'speechRecognitionParams': null,
     });
 
+    // 2026-09-09 未手动切换过联网开关时，跟随新模型/平台的能力自动开关
+    _syncWebSearchWithCapability();
+
     notifyListeners();
   }
 
@@ -2539,6 +2717,9 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
   /// 停止流式生成
   void stopStreaming() async {
+    // 2026-09-09 先置手动停止标志，取消错误到达onError时据此静默处理
+    _manualStopRequested = true;
+
     _streamSubscription?.cancel();
     _streamSubscription = null;
     _chatService.cancelStreaming();
@@ -2667,9 +2848,10 @@ class UnifiedChatViewModel extends ChangeNotifier {
     if (_currentConversation != null && _messages.isEmpty) {
       var updated = _currentConversation!.copyWith(
         systemPrompt: defaultPartner.prompt,
-        temperature: defaultPartner.temperature ?? 0.7,
-        topP: defaultPartner.topP ?? 1.0,
-        maxTokens: defaultPartner.maxTokens ?? 4096,
+        // 2026-09-09 默认搭档未设置参数时copyWith保持会话当前值，不再回填预设
+        temperature: defaultPartner.temperature,
+        topP: defaultPartner.topP,
+        maxTokens: defaultPartner.maxTokens,
         contextMessageLength: defaultPartner.contextMessageLength,
         isStream: defaultPartner.isStream ?? true,
         updatedAt: DateTime.now(),
@@ -2772,9 +2954,42 @@ class UnifiedChatViewModel extends ChangeNotifier {
   /// ******************************************
 
   /// 切换联网搜索状态
-  void toggleWebSearch() {
+  /// [manual] 用户手动切换(true)时记录标记，此后不再跟随能力自动开关；
+  /// 程序自动关(如切到无联网能力的模型，见chat_input_widget)传false
+  void toggleWebSearch({bool manual = true}) {
     _isWebSearchEnabled = !_isWebSearchEnabled;
+    if (manual) {
+      _webSearchManuallyToggled = true;
+      CusGetStorage().box.write(_webSearchManuallyToggledKey, true);
+    }
     notifyListeners();
+  }
+
+  /// 2026-09-09 当前环境是否具备联网搜索能力
+  /// (与chat_input_widget原_canToggleWebSearch判定一致，逻辑收口到viewmodel)：
+  /// 1 平台注册了自带联网搜索适配器(智谱/阿里/火山等，见builtin_web_search_registry)
+  /// 2 或 模型支持工具调用且已配置至少一个第三方搜索Key
+  bool hasWebSearchCapability() {
+    final hasBuiltin = BuiltinWebSearchRegistry.supportsBuiltinSearch(
+      _currentPlatform?.id ?? '',
+    );
+    if (hasBuiltin) return true;
+    return hasAvailableSearchTools() &&
+        (_currentModel?.supportsToolCalling ?? false);
+  }
+
+  /// 联网开关跟随能力同步(仅在用户从未手动切换时生效)：
+  /// 具备能力自动开、失去能力自动关；手动切过则完全尊重用户选择
+  void _syncWebSearchWithCapability() {
+    if (_webSearchManuallyToggled) return;
+    final capable = hasWebSearchCapability();
+    if (capable && !_isWebSearchEnabled) {
+      _isWebSearchEnabled = true;
+      notifyListeners();
+    } else if (!capable && _isWebSearchEnabled) {
+      _isWebSearchEnabled = false;
+      notifyListeners();
+    }
   }
 
   /// 获取搜索工具状态
@@ -2821,6 +3036,38 @@ class UnifiedChatViewModel extends ChangeNotifier {
   /// 清除首选搜索工具设置
   Future<void> clearPreferredSearchTool() async {
     await UnifiedSecureStorage.deletePreferredSearchTool();
+    notifyListeners();
+  }
+
+  /// 2026-09-09 已注册自带联网搜索能力的平台(供设置页动态生成策略配置项)
+  Map<String, String> get builtinSearchPlatforms =>
+      BuiltinWebSearchRegistry.registeredPlatforms;
+
+  /// 2026-09-09 获取平台自带联网搜索策略(未设置时默认auto)
+  Future<BuiltinWebSearchMode> getPlatformSearchMode(String platformId) async {
+    return await _searchToolManager.getPlatformSearchMode(platformId);
+  }
+
+  /// 保存平台自带联网搜索策略
+  Future<void> setPlatformSearchMode(
+    String platformId,
+    BuiltinWebSearchMode mode,
+  ) async {
+    await _searchToolManager.setPlatformSearchMode(
+      platformId,
+      mode.toStorage(),
+    );
+    notifyListeners();
+  }
+
+  /// 2026-09-09 获取百度搜索模式('retrieval'纯检索/'intelligent'智能生成)
+  Future<String> getBaiduSearchMode() async {
+    return await _searchToolManager.getBaiduSearchMode();
+  }
+
+  /// 保存百度搜索模式
+  Future<void> setBaiduSearchMode(String mode) async {
+    await _searchToolManager.setBaiduSearchMode(mode);
     notifyListeners();
   }
 

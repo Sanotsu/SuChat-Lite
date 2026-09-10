@@ -319,32 +319,22 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   }
 
   // 可启用联网搜索的条件
-  // 1 模型是阿里百炼、智谱平台(平台自带联网搜索)
-  // 2 非百炼智谱平台时，模型支持工具调用，且第三方搜索工具API至少存在一个
+  // 2026-09-09 判定逻辑收口到viewmodel.hasWebSearchCapability()(注册表判定)：
+  // 1 平台注册了自带联网搜索适配器(见builtin_web_search_registry.dart，后续新平台注册即可)
+  // 2 无自带搜索的平台时，模型支持工具调用，且第三方搜索工具API至少存在一个
   bool _canToggleWebSearch(UnifiedChatViewModel viewModel) {
-    // 1 模型是阿里百炼、智谱平台
-    bool isSupportedModel = false;
-    if (viewModel.currentPlatform?.id == UnifiedPlatformId.aliyun.name ||
-        viewModel.currentPlatform?.id == UnifiedPlatformId.zhipu.name) {
-      isSupportedModel = true;
-    }
-
-    //  2 非百炼智谱平台时，模型支持工具调用，且第三方搜索工具API至少存在一个
-    bool isSupportTool = false;
-    if (!isSupportedModel) {
-      isSupportTool =
-          viewModel.hasAvailableSearchTools() &&
-          (viewModel.currentModel?.supportsToolCalling ?? false);
-    }
+    final canToggle = viewModel.hasWebSearchCapability();
 
     // 如果是不可联网，则还需要先恢复不可联网的状态
-    if (!isSupportedModel && !isSupportTool && viewModel.isWebSearchEnabled) {
+    // 2026-09-09 自动关传manual:false——不写"用户手动切换"标记，
+    // 否则之后具备联网能力时不会再自动开启
+    if (!canToggle && viewModel.isWebSearchEnabled) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        viewModel.toggleWebSearch();
+        viewModel.toggleWebSearch(manual: false);
       });
     }
 
-    return isSupportedModel || isSupportTool;
+    return canToggle;
   }
 
   // 是否可以发送
@@ -1456,7 +1446,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             "1 智谱平台使用自带的联网搜索工具\n\n"
             "2 阿里百炼部分模型支持联网搜索\n\n"
             "3 硅基流动等不支持联网搜索的平台，使用tools调用外部搜索工具来实现联网搜索，"
-            "需要右上角‘搜索工具设置’中进行设置，且模型支持工具调用\n\n"
+            "需要右上角‘搜索设置’中进行设置，且模型支持工具调用\n\n"
             "4 非百炼、智谱等自带联网搜索的平台的Qwen3、GLM4.5、DeepSeek3.1等模型，"
             "对话时最好不要同时开启联网搜索和思考模式，因为可能出现同时使用工具调用和思考模式冲突异常问题\n\n",
           ),
@@ -1525,11 +1515,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         contextMessageLength:
             conversation?.contextMessageLength ??
             effectivePartner.contextMessageLength,
-        temperature:
-            conversation?.temperature ?? effectivePartner.temperature ?? 0.7,
-        topP: conversation?.topP ?? effectivePartner.topP ?? 1.0,
-        maxTokens:
-            conversation?.maxTokens ?? effectivePartner.maxTokens ?? 4096,
+        // 2026-09-09 参数null=未设置(平台默认)，由设置对话框内部处理显示兜底
+        temperature: conversation?.temperature ?? effectivePartner.temperature,
+        topP: conversation?.topP ?? effectivePartner.topP,
+        maxTokens: conversation?.maxTokens ?? effectivePartner.maxTokens,
         isStream: conversation?.isStream ?? effectivePartner.isStream ?? true,
         // 这个启用思考不是最初的设计，就放在extraParams里，也不放在partner里
         enableThinking: conversation?.extraParams?['enableThinking'],

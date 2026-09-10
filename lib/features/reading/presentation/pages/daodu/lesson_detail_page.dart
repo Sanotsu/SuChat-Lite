@@ -137,7 +137,6 @@ class _DaoduLessonDetailPageState extends State<DaoduLessonDetailPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         // backgroundColor: _isDarkMode ? Colors.black : Colors.white,
         backgroundColor: _isDarkMode ? Colors.black : _lightBgColor,

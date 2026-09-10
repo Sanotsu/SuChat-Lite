@@ -383,7 +383,8 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
                         widget.thinkingColor ??
                         Theme.of(context).colorScheme.primary,
                     fontSize: 12,
-                    fontStyle: FontStyle.italic,
+                    // 不用斜体了，太斜了不好看，万一有人想看思考内容呢
+                    // fontStyle: FontStyle.italic,
                   ),
                   selectable: ScreenHelper.isDesktop(),
                 ),

@@ -280,7 +280,6 @@ class _DietAnalysisPageState extends State<DietAnalysisPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('饮食分析'),

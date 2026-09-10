@@ -108,7 +108,6 @@ class _FoodManagementPageState extends State<FoodManagementPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('食品管理'),

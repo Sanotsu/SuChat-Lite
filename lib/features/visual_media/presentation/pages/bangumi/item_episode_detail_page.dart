@@ -106,7 +106,6 @@ class _BangumiEpisodeDetailPageState extends State<BangumiEpisodeDetailPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(title: const Text('分集剧情')),
         body: Column(

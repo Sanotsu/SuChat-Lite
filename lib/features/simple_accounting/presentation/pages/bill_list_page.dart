@@ -821,7 +821,6 @@ class _BillListPageState extends State<BillListPage> {
 
         if (viewModel.error != null) {
           return CusContentWidth(
-            maxWidth: 1000,
             child: Scaffold(
               body: Center(
                 child: Column(
@@ -848,7 +847,6 @@ class _BillListPageState extends State<BillListPage> {
 
         // 2026-09-04 桌面端适配：主页面内容限宽
         return CusContentWidth(
-          maxWidth: 1000,
           child: Scaffold(
             appBar: AppBar(
               title: const Text('极简记账'),

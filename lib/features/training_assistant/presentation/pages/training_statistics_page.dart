@@ -169,14 +169,12 @@ class _TrainingStatisticsPageState extends State<TrainingStatisticsPage> {
     // 2026-09-04 桌面端适配：内容限宽(两个分支均为独立Scaffold页)
     return widget.showAppBar
         ? CusContentWidth(
-            maxWidth: 1000,
             child: Scaffold(
               appBar: AppBar(title: const Text('训练统计'), actions: actions),
               body: content,
             ),
           )
         : CusContentWidth(
-            maxWidth: 1000,
             child: Scaffold(
               appBar: AppBar(
                 automaticallyImplyLeading: false,

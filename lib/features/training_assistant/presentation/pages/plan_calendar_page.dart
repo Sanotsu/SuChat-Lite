@@ -72,7 +72,6 @@ class _PlanCalendarPageState extends State<PlanCalendarPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: RichText(

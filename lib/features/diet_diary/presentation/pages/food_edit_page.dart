@@ -174,7 +174,6 @@ class _FoodEditPageState extends State<FoodEditPage> {
     };
 
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: Text(isEditing ? '编辑食品' : '添加食品'),

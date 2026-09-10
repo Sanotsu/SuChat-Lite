@@ -207,6 +207,24 @@ class UnifiedChatDao {
     });
   }
 
+  /// 2026-09-09 媒体面板：粗筛含AI生成产物(metadata带images/videos/audio)的
+  /// 助手消息所在会话id。LIKE粗筛仅用于缩小会话范围，产物与prompt关联
+  /// 由上层按会话全量取消息后精确判断
+  Future<List<String>> getMediaConversationIds() async {
+    final db = await dbInit.database;
+    final maps = await db.rawQuery('''
+      SELECT DISTINCT conversation_id FROM ${UnifiedChatDdl.tableUnifiedChatMessage}
+      WHERE role = 'assistant' AND (
+        metadata LIKE '%"images"%' OR metadata LIKE '%"videos"%' OR metadata LIKE '%"audio"%'
+      )
+      ORDER BY conversation_id
+      ''');
+    return maps
+        .map((row) => row['conversation_id'] as String?)
+        .whereType<String>()
+        .toList();
+  }
+
   /// 删除消息
   Future<void> deleteMessage(String id) async {
     final db = await dbInit.database;

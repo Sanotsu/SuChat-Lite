@@ -53,7 +53,25 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
   late TextEditingController _maxTokensController;
   late TextEditingController _customParamsController;
 
-  late double _contextMessageLength;
+  // 2026-09-09 上下文消息数：null=不限制(携带全部历史)；
+  // 左侧滑条为预设档位，右侧输入框可自由输入任意值
+  static const List<int?> _ctxPresets = [
+    0,
+    2,
+    4,
+    8,
+    10,
+    20,
+    50,
+    100,
+    200,
+    500,
+    null,
+  ];
+  int? _contextMessageLength;
+  double _ctxSliderIndex = 10;
+  late TextEditingController _contextLengthController;
+
   late double _temperature;
   late double _topP;
   bool _isStream = true;
@@ -69,6 +87,28 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
   bool get isOmniModel =>
       widget.viewModel.currentModel?.modelName.toLowerCase().contains('omni') ??
       false;
+
+  /// 2026-09-09 当前是否由自制搭档托管对话参数：
+  /// 选中自制搭档时参数随搭档配置生效，对话设置不再展示/修改高级配置
+  bool get _isCustomPartnerManaged =>
+      widget.selectedPartner != null &&
+      widget.selectedPartner!.isBuiltIn == false;
+
+  /// 值对应的预设档位index(不在预设中的值定位到最近的较大档，null=不限制档)
+  double _indexForValue(int? value) {
+    if (value == null) return (_ctxPresets.length - 1).toDouble();
+    final idx = _ctxPresets.indexOf(value);
+    if (idx >= 0) return idx.toDouble();
+    // 非预设值(如手输15)：定位到第一个大于它的预设档
+    for (var i = 0; i < _ctxPresets.length; i++) {
+      final preset = _ctxPresets[i];
+      if (preset != null && preset >= value) return i.toDouble();
+    }
+    return (_ctxPresets.length - 1).toDouble();
+  }
+
+  /// 档位显示文本(null显示"不限制")
+  String _ctxDisplayText(int? value) => value?.toString() ?? '不限制';
 
   @override
   void initState() {
@@ -86,7 +126,11 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
           : const JsonEncoder.withIndent('  ').convert(widget.customParams),
     );
 
-    _contextMessageLength = (widget.contextMessageLength ?? 6).toDouble();
+    _contextMessageLength = widget.contextMessageLength;
+    _ctxSliderIndex = _indexForValue(_contextMessageLength);
+    _contextLengthController = TextEditingController(
+      text: _ctxDisplayText(_contextMessageLength),
+    );
     _temperature = widget.temperature ?? 0.7;
     _topP = widget.topP ?? 1.0;
     _isStream = widget.isStream ?? true;
@@ -116,7 +160,9 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
       _maxTokensController.text = (widget.maxTokens ?? 4096).toString();
     }
     if (oldWidget.contextMessageLength != widget.contextMessageLength) {
-      _contextMessageLength = (widget.contextMessageLength ?? 6).toDouble();
+      _contextMessageLength = widget.contextMessageLength;
+      _ctxSliderIndex = _indexForValue(_contextMessageLength);
+      _contextLengthController.text = _ctxDisplayText(_contextMessageLength);
     }
     if (oldWidget.temperature != widget.temperature) {
       _temperature = widget.temperature ?? 0.7;
@@ -136,6 +182,7 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
     _titleController.dispose();
     _systemPromptController.dispose();
     _maxTokensController.dispose();
+    _contextLengthController.dispose();
     _customParamsController.dispose();
     super.dispose();
   }
@@ -158,15 +205,20 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
       }
     }
 
-    final settings = {
+    // 2026-09-09 自制搭档托管参数时：不回传高级参数键
+    // (updateConversationSettings 对缺失键不做修改，搭档配置保持生效)
+    final settings = <String, dynamic>{
       'title': _titleController.text,
       'systemPrompt': _systemPromptController.text,
-      'contextMessageLength': _contextMessageLength.round(),
-      'temperature': _temperature,
-      'topP': _topP,
-      'maxTokens': int.tryParse(_maxTokensController.text) ?? 4096,
-      'isStream': _isStream,
-      'enableThinking': _enableThinking,
+      if (!_isCustomPartnerManaged) ...{
+        // 可为null(不限制)，updateConversationSettings已支持显式写null
+        'contextMessageLength': _contextMessageLength,
+        'temperature': _temperature,
+        'topP': _topP,
+        'maxTokens': int.tryParse(_maxTokensController.text) ?? 4096,
+        'isStream': _isStream,
+        'enableThinking': _enableThinking,
+      },
       // qwen-omni模型还可以指定
       'modalities': _isOutputAudio ? ['text', 'audio'] : ['text'],
       if (_isOutputAudio) 'audio': {'voice': _audioVoice, 'format': 'wav'},
@@ -244,7 +296,10 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
               ),
               const SizedBox(height: 8),
 
-              _buildCollapsibleSection(),
+              // 2026-09-09 选中自制搭档时隐藏高级配置：搭档自身配置即参数唯一
+              // 来源(选搭档时已应用到会话)，此处单独修改语义冲突不应生效；
+              // 内置搭档/未选搭档时正常显示可配置
+              if (!_isCustomPartnerManaged) _buildCollapsibleSection(),
             ],
           ),
         ),
@@ -315,9 +370,11 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
           : const Icon(Icons.keyboard_arrow_down),
       trailing: TextButton(
         onPressed: () {
-          // 重置当前对话使用的模型设置为预设的
+          // 重置当前对话使用的模型设置为默认(2026-09-09 上下文数重置为"不限制")
           setState(() {
-            _contextMessageLength = 6;
+            _contextMessageLength = null;
+            _ctxSliderIndex = _indexForValue(null);
+            _contextLengthController.text = _ctxDisplayText(null);
             _temperature = 0.7;
             _topP = 1.0;
             _maxTokensController.text = '4096';
@@ -353,32 +410,62 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
         ),
         Row(
           children: [
+            // 2026-09-09 左侧：预设档位滑条(0/2/4/8/10/20/50/100/200/500/不限制)
             Expanded(
               child: Slider(
-                value: _contextMessageLength,
-                min: 1,
-                max: 20,
-                divisions: 19,
+                value: _ctxSliderIndex,
+                min: 0,
+                max: (_ctxPresets.length - 1).toDouble(),
+                divisions: _ctxPresets.length - 1,
+                label: _ctxDisplayText(_ctxPresets[_ctxSliderIndex.round()]),
                 onChanged: (value) {
                   setState(() {
-                    _contextMessageLength = value;
+                    _ctxSliderIndex = value;
+                    _contextMessageLength = _ctxPresets[value.round()];
+                    _contextLengthController.text = _ctxDisplayText(
+                      _contextMessageLength,
+                    );
                   });
                 },
               ),
             ),
             const SizedBox(width: 12),
-            Container(
-              width: 50,
-              height: 32,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Center(
-                child: Text(
-                  _contextMessageLength.round().toString(),
-                  style: const TextStyle(fontSize: 14),
+            // 2026-09-09 右侧：自由输入框(任意正整数，"不限制"或空=不限)
+            SizedBox(
+              width: 80,
+              height: 36,
+              child: TextField(
+                controller: _contextLengthController,
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: '不限',
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 8,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  isDense: true,
                 ),
+                onChanged: (text) {
+                  setState(() {
+                    if (text.trim().isEmpty) {
+                      // 清空输入视为"不限制"
+                      _contextMessageLength = null;
+                      _ctxSliderIndex = _indexForValue(null);
+                      return;
+                    }
+                    final v = int.tryParse(text.trim());
+                    if (v != null && v >= 0) {
+                      _contextMessageLength = v;
+                      _ctxSliderIndex = _indexForValue(v);
+                    }
+                    // 非法输入暂不更新状态，保存时以 _contextMessageLength 为准
+                  });
+                },
               ),
             ),
           ],

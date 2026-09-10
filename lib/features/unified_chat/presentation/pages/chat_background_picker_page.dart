@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
+import '../../../../shared/widgets/cus_content_width.dart';
 import '../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
@@ -75,6 +76,12 @@ class _ChatBackgroundPickerPageState extends State<ChatBackgroundPickerPage>
 
   @override
   Widget build(BuildContext context) {
+    // 2026-09-07 桌面适配：限宽居中(对齐ai_tool_page的CusContentWidth模式)，
+    // 预览/背景网格/滑杆不再在宽窗口横向拉伸
+    return CusContentWidth.form(child: buildPickerScaffold(context));
+  }
+
+  Widget buildPickerScaffold(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }

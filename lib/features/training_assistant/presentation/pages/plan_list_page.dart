@@ -177,7 +177,6 @@ class _PlanListPageState extends State<PlanListPage> {
         // 2026-09-04 桌面端适配：独立页时内容限宽(嵌入主页tab时由父级限宽)
         return widget.showAppBar
             ? CusContentWidth(
-                maxWidth: 1000,
                 child: Scaffold(
                   appBar: AppBar(title: const Text('训练计划列表')),
                   body: content,

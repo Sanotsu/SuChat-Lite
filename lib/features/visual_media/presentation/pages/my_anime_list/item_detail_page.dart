@@ -181,7 +181,6 @@ class _MALItemDetailPageState extends State<MALItemDetailPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         resizeToAvoidBottomInset: false,
         appBar: AppBar(title: Text("${widget.malType.cnLabel}详情")),
@@ -194,7 +193,6 @@ class _MALItemDetailPageState extends State<MALItemDetailPage> {
   /// 2026-09-04 桌面端适配：详情骨架限宽居中
   Widget buildBodyDetail(JKData item, MALType malType) {
     return CusContentWidth(
-      maxWidth: 900,
       child: ListView(
         children: [
           /// 标题

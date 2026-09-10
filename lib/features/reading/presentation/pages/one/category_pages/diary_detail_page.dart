@@ -19,7 +19,6 @@ class DiaryDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('小记详情'),

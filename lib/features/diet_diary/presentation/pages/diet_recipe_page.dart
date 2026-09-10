@@ -295,7 +295,6 @@ class _DietRecipePageState extends State<DietRecipePage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('定制食谱'),

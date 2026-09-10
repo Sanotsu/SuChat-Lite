@@ -190,6 +190,107 @@ Map<String, dynamic> _$SerperSearchResponseToJson(
   'credits': instance.credits,
 };
 
+BochaSearchRequest _$BochaSearchRequestFromJson(Map<String, dynamic> json) =>
+    BochaSearchRequest(
+      query: json['query'] as String,
+      freshness: json['freshness'] as String? ?? 'noLimit',
+      summary: json['summary'] as bool? ?? true,
+      count: (json['count'] as num?)?.toInt() ?? 10,
+      page: (json['page'] as num?)?.toInt() ?? 1,
+    );
+
+Map<String, dynamic> _$BochaSearchRequestToJson(BochaSearchRequest instance) =>
+    <String, dynamic>{
+      'query': instance.query,
+      'freshness': instance.freshness,
+      'summary': instance.summary,
+      'count': instance.count,
+      'page': instance.page,
+    };
+
+BochaSearchResponse _$BochaSearchResponseFromJson(Map<String, dynamic> json) =>
+    BochaSearchResponse(
+      query: json['query'] as String?,
+      results: (json['results'] as List<dynamic>?)
+          ?.map((e) => SearchResultItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      data: json['data'] as Map<String, dynamic>?,
+    );
+
+Map<String, dynamic> _$BochaSearchResponseToJson(
+  BochaSearchResponse instance,
+) => <String, dynamic>{
+  'query': instance.query,
+  'results': instance.results?.map((e) => e.toJson()).toList(),
+  'data': instance.data,
+};
+
+BaiduSearchRequest _$BaiduSearchRequestFromJson(Map<String, dynamic> json) =>
+    BaiduSearchRequest(
+      messages: (json['messages'] as List<dynamic>)
+          .map((e) => BaiduSearchMessage.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      edition: json['edition'] as String? ?? 'standard',
+      searchSource: json['search_source'] as String? ?? 'baidu_search_v2',
+      resourceTypeFilter: (json['resource_type_filter'] as List<dynamic>)
+          .map(
+            (e) =>
+                BaiduSearchResourceFilter.fromJson(e as Map<String, dynamic>),
+          )
+          .toList(),
+      searchRecencyFilter: json['search_recency_filter'] as String?,
+    );
+
+Map<String, dynamic> _$BaiduSearchRequestToJson(BaiduSearchRequest instance) =>
+    <String, dynamic>{
+      'messages': instance.messages.map((e) => e.toJson()).toList(),
+      'edition': instance.edition,
+      'search_source': instance.searchSource,
+      'resource_type_filter': instance.resourceTypeFilter
+          .map((e) => e.toJson())
+          .toList(),
+      'search_recency_filter': instance.searchRecencyFilter,
+    };
+
+BaiduSearchMessage _$BaiduSearchMessageFromJson(Map<String, dynamic> json) =>
+    BaiduSearchMessage(
+      role: json['role'] as String,
+      content: json['content'] as String,
+    );
+
+Map<String, dynamic> _$BaiduSearchMessageToJson(BaiduSearchMessage instance) =>
+    <String, dynamic>{'role': instance.role, 'content': instance.content};
+
+BaiduSearchResourceFilter _$BaiduSearchResourceFilterFromJson(
+  Map<String, dynamic> json,
+) => BaiduSearchResourceFilter(
+  type: json['type'] as String,
+  topK: (json['top_k'] as num).toInt(),
+);
+
+Map<String, dynamic> _$BaiduSearchResourceFilterToJson(
+  BaiduSearchResourceFilter instance,
+) => <String, dynamic>{'type': instance.type, 'top_k': instance.topK};
+
+BaiduSearchResponse _$BaiduSearchResponseFromJson(Map<String, dynamic> json) =>
+    BaiduSearchResponse(
+      query: json['query'] as String?,
+      results: (json['results'] as List<dynamic>?)
+          ?.map((e) => SearchResultItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      references: (json['references'] as List<dynamic>?)
+          ?.map((e) => e as Map<String, dynamic>)
+          .toList(),
+    );
+
+Map<String, dynamic> _$BaiduSearchResponseToJson(
+  BaiduSearchResponse instance,
+) => <String, dynamic>{
+  'query': instance.query,
+  'results': instance.results?.map((e) => e.toJson()).toList(),
+  'references': instance.references,
+};
+
 UnifiedSearchResponse _$UnifiedSearchResponseFromJson(
   Map<String, dynamic> json,
 ) => UnifiedSearchResponse(
@@ -219,6 +320,8 @@ Map<String, dynamic> _$UnifiedSearchResponseToJson(
 };
 
 const _$SearchToolTypeEnumMap = {
+  SearchToolType.bocha: 'bocha',
+  SearchToolType.baidu: 'baidu',
   SearchToolType.tavily: 'tavily',
   SearchToolType.serpapi: 'serpapi',
   SearchToolType.serper: 'serper',

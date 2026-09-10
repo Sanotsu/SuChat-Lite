@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../core/utils/file_picker_utils.dart';
 import '../../../../core/utils/simple_tools.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import '../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../shared/widgets/toast_utils.dart';
@@ -259,74 +260,77 @@ ${UnifiedModelType.values.map((e) => e.name).join(", ")}
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('设置'),
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        elevation: 0,
-        actions: [
-          IconButton(
-            onPressed: _reloadBuiltInPlatforms,
-            icon: const Icon(Icons.refresh),
-            tooltip: '重新加载内置平台和模型',
-          ),
-          if (_isImporting)
-            Padding(
-              padding: EdgeInsets.only(right: 16),
-              child: SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            )
-          else
+    // 2026-09-07 桌面适配：限宽居中，设置列表不在宽窗口横向拉伸
+    return CusContentWidth.form(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('设置'),
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          elevation: 0,
+          actions: [
             IconButton(
-              icon: const Icon(Icons.upload_file_outlined),
-              onPressed: () => _importFromJson(),
-              tooltip: '导入模型配置json',
+              onPressed: _reloadBuiltInPlatforms,
+              icon: const Icon(Icons.refresh),
+              tooltip: '重新加载内置平台和模型',
             ),
+            if (_isImporting)
+              Padding(
+                padding: EdgeInsets.only(right: 16),
+                child: SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            else
+              IconButton(
+                icon: const Icon(Icons.upload_file_outlined),
+                onPressed: () => _importFromJson(),
+                tooltip: '导入模型配置json',
+              ),
 
-          IconButton(
-            onPressed: () {
-              commonMarkdwonHintDialog(
-                context,
-                "使用说明",
-                note,
-                insetPadding: const EdgeInsets.symmetric(horizontal: 16),
-              );
-            },
-            icon: const Icon(Icons.info_outline),
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              // 下方有添加按钮，所以长度+1
-              itemCount: _platforms.length + 1,
-              itemBuilder: (context, index) {
-                if (index == _platforms.length) {
-                  // 添加平台按钮
-                  return Container(
-                    margin: const EdgeInsets.only(top: 16),
-                    child: OutlinedButton.icon(
-                      onPressed: _showAddPlatformDialog,
-                      icon: const Icon(Icons.add),
-                      label: const Text('添加'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        side: BorderSide(
-                          color: Theme.of(context).colorScheme.primary,
+            IconButton(
+              onPressed: () {
+                commonMarkdwonHintDialog(
+                  context,
+                  "使用说明",
+                  note,
+                  insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+                );
+              },
+              icon: const Icon(Icons.info_outline),
+            ),
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                // 下方有添加按钮，所以长度+1
+                itemCount: _platforms.length + 1,
+                itemBuilder: (context, index) {
+                  if (index == _platforms.length) {
+                    // 添加平台按钮
+                    return Container(
+                      margin: const EdgeInsets.only(top: 16),
+                      child: OutlinedButton.icon(
+                        onPressed: _showAddPlatformDialog,
+                        icon: const Icon(Icons.add),
+                        label: const Text('添加'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          side: BorderSide(
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                }
+                    );
+                  }
 
-                return _buildPlatformItem(_platforms[index]);
-              },
-            ),
+                  return _buildPlatformItem(_platforms[index]);
+                },
+              ),
+      ),
     );
   }
 

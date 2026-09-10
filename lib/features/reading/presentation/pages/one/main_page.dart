@@ -57,7 +57,6 @@ class _OneMainPageState extends State<OneMainPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         body: PageView(
           controller: _pageController,

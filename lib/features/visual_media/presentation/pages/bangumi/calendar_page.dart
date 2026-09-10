@@ -135,7 +135,6 @@ class _BangumiCalendarPageState extends State<BangumiCalendarPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Bangumi番组计划'),

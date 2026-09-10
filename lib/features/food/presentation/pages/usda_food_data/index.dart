@@ -163,7 +163,6 @@ class _USDAFoodDataCentralState extends State<USDAFoodDataCentral> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('USDA食品数据中心'),

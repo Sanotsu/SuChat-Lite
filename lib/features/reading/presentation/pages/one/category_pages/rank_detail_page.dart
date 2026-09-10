@@ -62,7 +62,6 @@ class _RankDetailPageState extends State<RankDetailPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: Text(widget.rank.title ?? '榜单详情'),

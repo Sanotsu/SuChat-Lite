@@ -133,7 +133,6 @@ class _MALTopPageState extends State<MALTopPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('MAL排行榜'),

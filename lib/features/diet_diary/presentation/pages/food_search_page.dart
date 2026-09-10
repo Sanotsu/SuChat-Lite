@@ -95,7 +95,6 @@ class _FoodSearchPageState extends State<FoodSearchPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: Text('添加食品到${_getMealTypeName(widget.mealType)}'),

@@ -83,7 +83,6 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         resizeToAvoidBottomInset: true,
         appBar: AppBar(

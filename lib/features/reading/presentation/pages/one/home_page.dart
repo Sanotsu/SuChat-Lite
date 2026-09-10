@@ -144,7 +144,6 @@ class _OneHomePageState extends State<OneHomePage>
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('ONE·一个'),

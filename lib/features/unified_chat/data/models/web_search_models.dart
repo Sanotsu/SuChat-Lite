@@ -3,7 +3,7 @@ import 'package:json_annotation/json_annotation.dart';
 part 'web_search_models.g.dart';
 
 /// 搜索工具类型枚举
-enum SearchToolType { tavily, serpapi, serper }
+enum SearchToolType { bocha, baidu, tavily, serpapi, serper }
 
 /// 搜索结果基类
 abstract class SearchResult {
@@ -373,6 +373,232 @@ class SerperSearchResponse extends SearchResult {
   @override
   double get responseTime {
     return 0.0; // Serper API不提供响应时间信息
+  }
+}
+
+/// 博查搜索请求
+/// https://open.bochaai.com (国内直连的AI搜索API，响应兼容Bing Search API格式)
+/// POST https://api.bochaai.com/v1/web-search (Authorization: Bearer)
+@JsonSerializable(explicitToJson: true)
+class BochaSearchRequest {
+  // 搜索关键词
+  final String query;
+
+  // 搜索时间范围: noLimit(默认)/oneDay/oneWeek/oneMonth/oneYear
+  final String freshness;
+
+  // 是否返回正文摘要(summary比snippet内容更全)
+  final bool summary;
+
+  // 返回结果条数(1-50，默认10)
+  final int count;
+
+  // 页码(从1开始)
+  final int page;
+
+  const BochaSearchRequest({
+    required this.query,
+    this.freshness = 'noLimit',
+    this.summary = true,
+    this.count = 10,
+    this.page = 1,
+  });
+
+  factory BochaSearchRequest.fromJson(Map<String, dynamic> json) =>
+      _$BochaSearchRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$BochaSearchRequestToJson(this);
+}
+
+/// 博查搜索响应(Bing Search API兼容格式)
+/// 结构: { code, log_id, data: { webPages: { value: [...] } } }
+@JsonSerializable(explicitToJson: true)
+class BochaSearchResponse extends SearchResult {
+  final Map<String, dynamic>? data;
+
+  const BochaSearchResponse({super.query, super.results, this.data});
+
+  factory BochaSearchResponse.fromJson(Map<String, dynamic> json) =>
+      _$BochaSearchResponseFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$BochaSearchResponseToJson(this);
+
+  factory BochaSearchResponse.fromRawJson(Map<String, dynamic> json) {
+    final webPages = json['data']?['webPages'] as Map<String, dynamic>?;
+    final value = webPages?['value'] as List? ?? [];
+
+    final results = value
+        .whereType<Map<String, dynamic>>()
+        .map(
+          (item) => SearchResultItem(
+            title: item['name'] ?? '',
+            url: item['url'] ?? '',
+            // summary是正文摘要，snippet是搜索片段，优先取更全的summary
+            content: item['summary'] ?? item['snippet'] ?? '',
+            favicon: item['favicon'],
+            publishedDate: item['dateLastCrawled'],
+          ),
+        )
+        .toList();
+
+    return BochaSearchResponse(
+      query: json['query'] ?? '',
+      results: results,
+      data: json['data'],
+    );
+  }
+}
+
+/// 百度搜索请求(千帆AppBuilder"百度搜索"组件，纯检索模式)
+/// https://ai.baidu.com/ai-doc/AppBuilder/pmaxd1hvy
+/// POST https://qianfan.baidubce.com/v2/ai_search/web_search
+/// (X-Appbuilder-)Authorization: Bearer + AppBuilder API Key
+/// 计费：每日免费100次，超额按量后付费
+/// 注意：不接入"智能搜索生成"(/v2/ai_search/chat/completions，百度用自有模型
+/// 总结回答)——我们的架构是把检索结果喂给对话中的大模型自己总结，避免双重生成
+@JsonSerializable(explicitToJson: true)
+class BaiduSearchRequest {
+  // 搜索输入；该接口仅支持单轮，以最后一条user的content为查询词
+  @JsonKey(name: 'messages')
+  final List<BaiduSearchMessage> messages;
+
+  // 搜索版本：standard完整版(默认) / lite简化版(时延更好效果略弱)
+  final String edition;
+
+  // 使用的搜索引擎版本，固定baidu_search_v2
+  @JsonKey(name: 'search_source')
+  final String searchSource;
+
+  // 各模态最大返回数量，网页top_k最大50
+  @JsonKey(name: 'resource_type_filter')
+  final List<BaiduSearchResourceFilter> resourceTypeFilter;
+
+  // 网页发布时间筛选：week/month/semiyear/year，null=不限制
+  @JsonKey(name: 'search_recency_filter')
+  final String? searchRecencyFilter;
+
+  const BaiduSearchRequest({
+    required this.messages,
+    this.edition = 'standard',
+    this.searchSource = 'baidu_search_v2',
+    required this.resourceTypeFilter,
+    this.searchRecencyFilter,
+  });
+
+  factory BaiduSearchRequest.fromJson(Map<String, dynamic> json) =>
+      _$BaiduSearchRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$BaiduSearchRequestToJson(this);
+}
+
+/// 百度搜索请求的消息对象
+@JsonSerializable(explicitToJson: true)
+class BaiduSearchMessage {
+  final String role;
+  final String content;
+
+  const BaiduSearchMessage({required this.role, required this.content});
+
+  factory BaiduSearchMessage.fromJson(Map<String, dynamic> json) =>
+      _$BaiduSearchMessageFromJson(json);
+
+  Map<String, dynamic> toJson() => _$BaiduSearchMessageToJson(this);
+}
+
+/// 百度搜索的资源类型过滤(web最大50)
+@JsonSerializable(explicitToJson: true)
+class BaiduSearchResourceFilter {
+  // 搜索资源类型：web网页 / video视频 / image图片 / aladdin阿拉丁
+  final String type;
+
+  @JsonKey(name: 'top_k')
+  final int topK;
+
+  const BaiduSearchResourceFilter({required this.type, required this.topK});
+
+  factory BaiduSearchResourceFilter.fromJson(Map<String, dynamic> json) =>
+      _$BaiduSearchResourceFilterFromJson(json);
+
+  Map<String, dynamic> toJson() => _$BaiduSearchResourceFilterToJson(this);
+}
+
+/// 百度搜索响应(纯检索模式，返回引用列表references)
+@JsonSerializable(explicitToJson: true)
+class BaiduSearchResponse extends SearchResult {
+  @JsonKey(name: 'references')
+  final List<Map<String, dynamic>>? references;
+
+  const BaiduSearchResponse({
+    super.query,
+    super.results,
+    super.answer,
+    this.references,
+  });
+
+  factory BaiduSearchResponse.fromJson(Map<String, dynamic> json) =>
+      _$BaiduSearchResponseFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$BaiduSearchResponseToJson(this);
+
+  factory BaiduSearchResponse.fromRawJson(Map<String, dynamic> json) {
+    final refs = json['references'] as List? ?? [];
+
+    final results = refs
+        .whereType<Map<String, dynamic>>()
+        .map(
+          (item) => SearchResultItem(
+            title: item['title'] ?? '',
+            url: item['url'] ?? '',
+            // 网页内容原文片段(纯检索模式2000字以内，比智能生成模式的200字更全)
+            content: item['content'] ?? '',
+            favicon: item['icon'],
+            publishedDate: item['date'],
+            // 原文片段相关性评分[0,1]，仅web/video/image类型存在
+            score: item['rerank_score']?.toDouble(),
+          ),
+        )
+        .toList();
+
+    return BaiduSearchResponse(
+      query: json['query'] ?? '',
+      results: results,
+      references: refs.whereType<Map<String, dynamic>>().toList(),
+    );
+  }
+
+  /// 2026-09-09 智能搜索生成模式响应
+  /// (POST /v2/ai_search/chat/completions)：百度先整合生成一段答案放在
+  /// choices的assistant消息里，references字段形状与纯检索模式一致，
+  /// 复用同一套解析，答案文本进answer供toToolCallResult输出
+  factory BaiduSearchResponse.fromIntelligentRawJson(
+    Map<String, dynamic> json,
+  ) {
+    // 错误响应形状：{requestId, code, message}且无references
+    if (json['code'] != null && (json['references'] as List?) == null) {
+      throw Exception('百度智能搜索失败[${json['code']}]: ${json['message']}');
+    }
+
+    // 提取choices里的assistant整合答案
+    String answer = '';
+    final choices = json['choices'] as List? ?? [];
+    for (final choice in choices.whereType<Map<String, dynamic>>()) {
+      final messages = choice['messages'] as List? ?? [];
+      for (final msg in messages.whereType<Map<String, dynamic>>()) {
+        if (msg['role'] == 'assistant' && msg['content'] is String) {
+          answer = msg['content'] as String;
+        }
+      }
+    }
+
+    final parsed = BaiduSearchResponse.fromRawJson(json);
+    return BaiduSearchResponse(
+      query: parsed.query,
+      results: parsed.results,
+      references: parsed.references,
+      answer: answer.isNotEmpty ? answer : null,
+    );
   }
 }
 

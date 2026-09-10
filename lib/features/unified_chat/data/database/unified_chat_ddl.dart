@@ -155,12 +155,14 @@ class UnifiedChatDdl {
         platform_id                 TEXT      NOT NULL,
         partner_id                  TEXT,
         system_prompt               TEXT,
+        -- 2026-09-09 v4: temperature/max_tokens/top_p/context_message_length
+        -- 可空(null=未设置→请求不传该参数/上下文不限制)，去掉NOT NULL
         temperature                 REAL                    DEFAULT 0.7,
-        max_tokens                  INTEGER   NOT NULL      DEFAULT 4096,
+        max_tokens                  INTEGER                 DEFAULT 4096,
         top_p                       REAL                    DEFAULT 1.0,
         frequency_penalty           REAL                    DEFAULT 0.0,
         presence_penalty            REAL                    DEFAULT 0.0,
-        context_message_length      INTEGER   NOT NULL      DEFAULT 6,
+        context_message_length      INTEGER                 DEFAULT 6,
         is_stream                   INTEGER   NOT NULL      DEFAULT 1,
         extra_params                TEXT,
         message_count               INTEGER   NOT NULL      DEFAULT 0,

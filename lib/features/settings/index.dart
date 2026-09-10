@@ -7,6 +7,7 @@ import '../../core/services/upgrade_migrator.dart';
 import '../../core/utils/screen_helper.dart';
 import '../../core/utils/simple_tools.dart';
 import '../../core/viewmodels/user_info_viewmodel.dart';
+import '../../shared/widgets/cus_content_width.dart';
 import '../../shared/widgets/toast_utils.dart';
 import 'pages/backup_and_restore_page.dart';
 import 'pages/user_info_page.dart';
@@ -47,84 +48,90 @@ class _UserAndSettingsState extends State<UserAndSettings> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('用户设置'),
-        centerTitle: true,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              buildUserInfoSection(theme),
-              const SizedBox(height: 24),
-              _buildSectionTitle('数据', theme),
-              CusSettingCard(
-                icon: Icons.backup_outlined,
-                title: "备份恢复",
-                description: "导出或恢复您的聊天数据",
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => BackupAndRestorePage(
-                      packageVersion: _packageInfo.version,
+    // 2026-09-07 桌面适配：限宽居中，设置分组不在宽窗口横向拉伸
+    return CusContentWidth.form(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('用户设置'),
+          centerTitle: true,
+          elevation: 0,
+        ),
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                buildUserInfoSection(theme),
+                const SizedBox(height: 24),
+                _buildSectionTitle('数据', theme),
+                CusSettingCard(
+                  icon: Icons.backup_outlined,
+                  title: "备份恢复",
+                  description: "导出或恢复您的聊天数据",
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => BackupAndRestorePage(
+                        packageVersion: _packageInfo.version,
+                      ),
                     ),
                   ),
+                  accentColor: Colors.blue,
                 ),
-                accentColor: Colors.blue,
-              ),
-              CusSettingCard(
-                icon: Icons.move_up,
-                title: "旧版数据迁移",
-                description: "从 0.1.4 旧版迁移数据到当前版本",
-                onTap: () => _showLegacyMigrationSheet(context),
-                accentColor: Colors.teal,
-              ),
-              const SizedBox(height: 24),
-              _buildSectionTitle('支持', theme),
-              CusSettingCard(
-                icon: Icons.info_outline,
-                title: '应用信息',
-                description: '应用相关基础信息',
-                onTap: _showAboutDialog,
-                accentColor: Colors.orangeAccent,
-              ),
-              CusSettingCard(
-                icon: Icons.help_outline,
-                title: '常见问题(TBD)',
-                description: '查看使用过程中常见问题的解答',
-                onTap: () {},
-                accentColor: Colors.green,
-              ),
-              const SizedBox(height: 24),
-              _buildSectionTitle('关于', theme),
-              CusSettingCard(
-                icon: Icons.article_outlined,
-                title: '用户协议(TBD)',
-                description: '查看应用使用条款和条件',
-                accentColor: Colors.purple,
-                onTap: () {},
-              ),
-              CusSettingCard(
-                icon: Icons.privacy_tip_outlined,
-                title: '隐私政策(TBD)',
-                description: '了解我们如何处理您的数据',
-                accentColor: Colors.teal,
-                onTap: () {},
-              ),
-              CusSettingCard(
-                icon: Icons.security_outlined,
-                title: '应用权限(TBD)',
-                description: '管理应用所需的权限',
-                accentColor: Colors.red,
-                onTap: () {},
-              ),
-              const SizedBox(height: 24),
-              _buildAppVersionInfo(),
-            ],
+                CusSettingCard(
+                  icon: Icons.move_up,
+                  title: "旧版数据迁移",
+                  description: "从 0.1.4 旧版迁移数据到当前版本",
+                  onTap: () => _showLegacyMigrationSheet(context),
+                  accentColor: Colors.teal,
+                ),
+                const SizedBox(height: 24),
+                _buildSectionTitle('支持', theme),
+                CusSettingCard(
+                  icon: Icons.info_outline,
+                  title: '应用信息',
+                  description: '应用相关基础信息',
+                  onTap: _showAboutDialog,
+                  accentColor: Colors.orangeAccent,
+                ),
+                CusSettingCard(
+                  icon: Icons.help_outline,
+                  title: '常见问题(TBD)',
+                  description: '查看使用过程中常见问题的解答',
+                  onTap: () {},
+                  accentColor: Colors.green,
+                ),
+                const SizedBox(height: 24),
+                _buildSectionTitle('关于', theme),
+                CusSettingCard(
+                  icon: Icons.article_outlined,
+                  title: '用户协议(TBD)',
+                  description: '查看应用使用条款和条件',
+                  accentColor: Colors.purple,
+                  onTap: () {},
+                ),
+                CusSettingCard(
+                  icon: Icons.privacy_tip_outlined,
+                  title: '隐私政策(TBD)',
+                  description: '了解我们如何处理您的数据',
+                  accentColor: Colors.teal,
+                  onTap: () {},
+                ),
+                CusSettingCard(
+                  icon: Icons.security_outlined,
+                  title: '应用权限(TBD)',
+                  description: '管理应用所需的权限',
+                  accentColor: Colors.red,
+                  onTap: () {},
+                ),
+                const SizedBox(height: 24),
+                _buildAppVersionInfo(),
+              ],
+            ),
           ),
         ),
       ),

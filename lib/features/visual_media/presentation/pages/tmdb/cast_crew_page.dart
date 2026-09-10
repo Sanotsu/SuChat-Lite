@@ -44,7 +44,6 @@ class _TmdbCastCrewPageState extends State<TmdbCastCrewPage>
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: Text(widget.title),

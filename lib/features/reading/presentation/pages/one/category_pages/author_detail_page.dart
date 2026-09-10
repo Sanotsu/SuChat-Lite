@@ -105,7 +105,6 @@ class _AuthorDetailPageState extends State<AuthorDetailPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: Text(widget.author.userName ?? '作者作品'),

@@ -277,7 +277,6 @@ class _TmdbHomePageState extends State<TmdbHomePage>
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('TMDB'),

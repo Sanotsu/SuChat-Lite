@@ -514,7 +514,6 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
   Widget build(BuildContext context) {
     if (_todaysExercises.isEmpty) {
       return CusContentWidth(
-        maxWidth: 1000,
         child: Scaffold(
           appBar: AppBar(title: const Text('训练模式')),
           body: const Center(child: Text('今天没有安排训练内容')),

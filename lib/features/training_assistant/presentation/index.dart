@@ -99,7 +99,6 @@ class _TrainingAssistantPageState extends State<TrainingAssistantPage> {
   Widget build(BuildContext context) {
     // 2026-09-04 桌面端适配：内容限宽
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('训练助手'),

@@ -335,7 +335,6 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
   Widget build(BuildContext context) {
     // 2026-09-04 桌面端适配：内容限宽
     return CusContentWidth(
-      maxWidth: 1000,
       child: PopScope(
         canPop: !(_isEdited && !_isReadOnly),
         onPopInvokedWithResult: (didPop, Object? result) async {

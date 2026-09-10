@@ -7,7 +7,6 @@ import '../../../../core/utils/simple_tools.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/models/unified_chat_message.dart';
-import '../../data/models/unified_model_spec.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
 import 'chat_message_item.dart';
 
@@ -240,7 +239,7 @@ class _ChatMessageListState extends State<ChatMessageList> {
             // 悬浮新建对话按钮
             // 用 Align 相对消息列表区域居中(之前用 0.5.sw 按全屏宽计算，
             // 桌面有侧栏+内容列限宽时不在消息区中心)
-            // 2026-09-02 媒体生成并入聊天：点击弹出类型菜单(对齐Chatbox"新图片"入口模式)
+            // 2026-09-09 直接新建普通对话，不再弹出类型菜单
             Align(
               alignment: Alignment.bottomCenter,
               child: Padding(
@@ -254,73 +253,23 @@ class _ChatMessageListState extends State<ChatMessageList> {
     );
   }
 
-  /// 新建对话按钮：点击弹出类型菜单(普通对话/图片生成/视频生成/语音合成)
-  /// 选择生成类会自动切换到对应类型的可用模型
+  /// 新建对话按钮
+  /// 2026-09-09 交互简化：直接新建普通对话(对齐桌面端右侧工具栏"新建会话")。
+  /// 此前2026-09-02曾弹出类型菜单(普通对话/图片生成/视频生成/语音合成)，
+  /// 但多媒体生成需要专门配置对应类型模型，未配置时只会提示"没有可用模型"
+  /// ——快捷入口价值有限。用户需要多媒体功能时在模型选择器自行切换即可
   Widget _buildNewConversationButton(UnifiedChatViewModel viewModel) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return PopupMenuButton<String>(
-      tooltip: '新建对话',
-      position: PopupMenuPosition.under,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: colorScheme.surface,
-      onSelected: (value) {
-        final type = UnifiedModelType.values.firstWhere(
-          (t) => t.name == value,
-          orElse: () => UnifiedModelType.cc,
-        );
-        viewModel.createNewConversationForType(type);
+    return InkWell(
+      onTap: () {
+        viewModel.createNewConversation();
         setState(() {
           _showScrollToTop = false;
           _showScrollToBottom = false;
         });
       },
-      itemBuilder: (context) => const [
-        PopupMenuItem(
-          value: 'cc',
-          height: 44,
-          child: Row(
-            children: [
-              Icon(Icons.chat_bubble_outline, size: 20),
-              SizedBox(width: 12),
-              Text('普通对话'),
-            ],
-          ),
-        ),
-        PopupMenuItem(
-          value: 'image',
-          height: 44,
-          child: Row(
-            children: [
-              Icon(Icons.image_outlined, size: 20),
-              SizedBox(width: 12),
-              Text('图片生成'),
-            ],
-          ),
-        ),
-        PopupMenuItem(
-          value: 'video',
-          height: 44,
-          child: Row(
-            children: [
-              Icon(Icons.video_camera_back_outlined, size: 20),
-              SizedBox(width: 12),
-              Text('视频生成'),
-            ],
-          ),
-        ),
-        PopupMenuItem(
-          value: 'tts',
-          height: 44,
-          child: Row(
-            children: [
-              Icon(Icons.record_voice_over, size: 20),
-              SizedBox(width: 12),
-              Text('语音合成'),
-            ],
-          ),
-        ),
-      ],
+      borderRadius: BorderRadius.circular(16),
       child: Container(
         // 小按钮尺寸为40*40,不够小，手动32*32包裹
         width: 32,

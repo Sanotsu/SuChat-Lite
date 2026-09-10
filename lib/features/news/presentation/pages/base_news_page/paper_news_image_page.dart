@@ -72,7 +72,6 @@ class _PaperNewsImagePageState extends State<PaperNewsImagePage> {
   Widget build(BuildContext context) {
     // 2026-09-04 桌面端适配：整体限宽居中
     return CusContentWidth(
-      maxWidth: 1000,
       child: isLoading
           ? Scaffold(
               appBar: AppBar(title: Text(widget.title)),

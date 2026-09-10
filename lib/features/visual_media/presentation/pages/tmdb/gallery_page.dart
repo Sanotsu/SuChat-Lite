@@ -111,7 +111,6 @@ class _TmdbGalleryPageState extends State<TmdbGalleryPage>
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         backgroundColor: Colors.black,
         appBar: AppBar(

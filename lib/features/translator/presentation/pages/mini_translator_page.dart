@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import '../../../../shared/widgets/cus_content_width.dart';
@@ -412,7 +412,6 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
     final sectionSpacing = isDesktop ? 16.0 : 8.0;
 
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('快速翻译'),

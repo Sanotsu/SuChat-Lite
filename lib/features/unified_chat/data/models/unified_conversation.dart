@@ -25,13 +25,15 @@ class UnifiedConversation {
   @JsonKey(name: 'system_prompt')
   final String? systemPrompt;
 
-  final double temperature;
+  /// 2026-09-09 混合参数方案：null=不传，请求体不含该字段，由各平台API默认值生效；
+  /// 仅有会话设置/搭档偏好显式设置时才传（原0.7/4096/1.0为代码硬编码预设，已移除）
+  final double? temperature;
 
   @JsonKey(name: 'max_tokens')
-  final int maxTokens;
+  final int? maxTokens;
 
   @JsonKey(name: 'top_p')
-  final double topP;
+  final double? topP;
 
   @JsonKey(name: 'frequency_penalty')
   final double frequencyPenalty;
@@ -39,8 +41,9 @@ class UnifiedConversation {
   @JsonKey(name: 'presence_penalty')
   final double presencePenalty;
 
+  /// 2026-09-09 null=不限制上下文消息数(携带全部历史)；0=仅最新一条
   @JsonKey(name: 'context_message_length')
-  final int contextMessageLength;
+  final int? contextMessageLength;
 
   @JsonKey(name: 'is_stream')
   final bool isStream;
@@ -80,12 +83,12 @@ class UnifiedConversation {
     required this.platformId,
     this.partnerId,
     this.systemPrompt,
-    this.temperature = 0.7,
-    this.maxTokens = 4096,
-    this.topP = 1.0,
+    this.temperature,
+    this.maxTokens,
+    this.topP,
     this.frequencyPenalty = 0.0,
     this.presencePenalty = 0.0,
-    this.contextMessageLength = 6,
+    this.contextMessageLength,
     this.isStream = true,
     this.extraParams,
     this.messageCount = 0,
@@ -111,12 +114,12 @@ class UnifiedConversation {
       platformId: map['platform_id'] as String,
       partnerId: map['partner_id'] as String?,
       systemPrompt: map['system_prompt'] as String?,
-      temperature: (map['temperature'] as num?)?.toDouble() ?? 0.7,
-      maxTokens: map['max_tokens'] as int? ?? 4096,
-      topP: (map['top_p'] as num?)?.toDouble() ?? 1.0,
+      temperature: (map['temperature'] as num?)?.toDouble(),
+      maxTokens: map['max_tokens'] as int?,
+      topP: (map['top_p'] as num?)?.toDouble(),
       frequencyPenalty: (map['frequency_penalty'] as num?)?.toDouble() ?? 0.0,
       presencePenalty: (map['presence_penalty'] as num?)?.toDouble() ?? 0.0,
-      contextMessageLength: map['context_message_length'] as int? ?? 6,
+      contextMessageLength: map['context_message_length'] as int?,
       isStream: (map['is_stream'] as int? ?? 1) == 1,
       extraParams: map['extra_params'] != null
           ? Map<String, dynamic>.from(json.decode(map['extra_params']))
@@ -278,16 +281,17 @@ class UnifiedConversation {
   }
 
   /// 验证对话参数
+  /// 2026-09-09 参数可空化：null=未设置视为有效(平台默认值生效)，
+  /// 仅校验显式设置的值
   bool get isValidConfiguration {
-    return temperature >= 0.0 &&
-        temperature <= 2.0 &&
-        topP >= 0.0 &&
-        topP <= 1.0 &&
+    return (temperature == null ||
+            (temperature! >= 0.0 && temperature! <= 2.0)) &&
+        (topP == null || (topP! >= 0.0 && topP! <= 1.0)) &&
         frequencyPenalty >= -2.0 &&
         frequencyPenalty <= 2.0 &&
         presencePenalty >= -2.0 &&
         presencePenalty <= 2.0 &&
-        maxTokens > 0;
+        (maxTokens == null || maxTokens! > 0);
   }
 
   /// 获取对话配置摘要

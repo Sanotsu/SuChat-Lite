@@ -14,6 +14,7 @@ import '../../../shared/widgets/simple_tool_widget.dart';
 import '../../../core/utils/file_picker_utils.dart';
 import '../../../core/utils/screen_helper.dart';
 import '../services/backup_utils.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'restore_wizard_page.dart';
 
 class BackupAndRestorePage extends StatefulWidget {
@@ -198,55 +199,58 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("备份恢复"),
-        actions: [
-          IconButton(
-            onPressed: () {
-              commonMarkdwonHintDialog(
-                context,
-                "备份恢复说明",
-                note,
-                msgFontSize: 15,
-              );
-            },
-            icon: const Icon(Icons.info_outline),
-            tooltip: '帮助',
-          ),
-        ],
-      ),
-      body: isLoading
-          ? buildLoader(isLoading)
-          : Center(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      _buildHeaderSection(),
-                      const SizedBox(height: 40),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            _buildBackupCard(),
-                            SizedBox(width: 20),
-                            _buildRestoreCard(),
-                            SizedBox(width: 20),
-                            _buildMediaPackCard(),
-                          ],
+    // 2026-09-07 桌面适配：限宽居中
+    return CusContentWidth.form(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text("备份恢复"),
+          actions: [
+            IconButton(
+              onPressed: () {
+                commonMarkdwonHintDialog(
+                  context,
+                  "备份恢复说明",
+                  note,
+                  msgFontSize: 15,
+                );
+              },
+              icon: const Icon(Icons.info_outline),
+              tooltip: '帮助',
+            ),
+          ],
+        ),
+        body: isLoading
+            ? buildLoader(isLoading)
+            : Center(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        _buildHeaderSection(),
+                        const SizedBox(height: 40),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _buildBackupCard(),
+                              SizedBox(width: 20),
+                              _buildRestoreCard(),
+                              SizedBox(width: 20),
+                              _buildMediaPackCard(),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 40),
-                      _buildInfoSection(),
-                    ],
+                        const SizedBox(height: 40),
+                        _buildInfoSection(),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
+      ),
     );
   }
 

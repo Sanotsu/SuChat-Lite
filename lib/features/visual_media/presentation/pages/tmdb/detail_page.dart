@@ -224,7 +224,6 @@ class _TmdbDetailPageState extends State<TmdbDetailPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())

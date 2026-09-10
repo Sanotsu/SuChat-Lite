@@ -35,7 +35,6 @@ class _PlanDetailEditPageState extends State<PlanDetailEditPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: Text('编辑${dayWeekMapping[widget.day]}训练'),

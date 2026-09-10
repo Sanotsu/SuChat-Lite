@@ -31,7 +31,6 @@ class _AIToolPageState extends State<AIToolPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         // 2026-09-03 旧"模型配置"入口移除：模型/AK配置统一到聊天页-平台管理
         // (扩展功能的内置免费模型链路不依赖该页，仍正常可用)

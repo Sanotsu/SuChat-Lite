@@ -283,7 +283,6 @@ class _OneUserDetailPageState extends State<OneUserDetailPage>
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())

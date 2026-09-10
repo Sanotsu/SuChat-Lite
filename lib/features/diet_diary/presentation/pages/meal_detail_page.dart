@@ -142,7 +142,6 @@ class _MealDetailPageState extends State<MealDetailPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: Text('${_getMealTypeName(_currentMealRecord.mealType)}详情'),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/cus_content_width.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/models/unified_platform_spec.dart';
@@ -527,36 +528,39 @@ class _PlatformDetailPageState extends State<PlatformDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('设置'),
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        elevation: 0,
-        actions: [
-          // 保存按钮(自定义平台改任意字段 / 内置平台修改了请求地址)
-          if (_isFormModified &&
-              (!widget.platform.isBuiltIn || _isEditingBuiltInUrl)) ...[
-            TextButton(
-              onPressed: _cancelChanges,
-              child: const Text('取消', style: TextStyle(color: Colors.grey)),
-            ),
-            ElevatedButton(
-              onPressed: _savePlatform,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
+    // 2026-09-07 桌面适配：限宽居中，平台表单不在宽窗口横向拉伸
+    return CusContentWidth.form(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('设置'),
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          elevation: 0,
+          actions: [
+            // 保存按钮(自定义平台改任意字段 / 内置平台修改了请求地址)
+            if (_isFormModified &&
+                (!widget.platform.isBuiltIn || _isEditingBuiltInUrl)) ...[
+              TextButton(
+                onPressed: _cancelChanges,
+                child: const Text('取消', style: TextStyle(color: Colors.grey)),
               ),
-              child: const Text('保存'),
-            ),
-            const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: _savePlatform,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('保存'),
+              ),
+              const SizedBox(width: 8),
+            ],
           ],
-        ],
-      ),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: buildPlatformForm(),
+        ),
+        body: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: buildPlatformForm(),
+          ),
         ),
       ),
     );

@@ -82,19 +82,28 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
 
   @override
   Widget build(BuildContext context) {
+    final isUser = widget.message.isUser;
+
+    // 2026-09-07 微信式对齐：用户消息整体靠右(气泡在前头像在后)，
+    // system/AI消息靠左(头像在前)；下方元信息与分支切换器同向对齐
     Widget content = Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
           // AI头像(简洁显示时隐藏，保留缩进占位；区域不随文字缩放)
-          _buildAvatarArea(context),
+          if (!isUser) _buildAvatarArea(context),
 
           SizedBox(width: 4),
           // Flexible(loose)约束：内容窄时气泡按内容收缩，内容宽时钳制到
           // 剩余空间换行。Row 直接给子项的横向约束是无限宽，不包 Flexible
           // 会导致气泡无法换行而溢出
           Flexible(child: _buildMessageBubble()),
+
+          if (isUser) ...[SizedBox(width: 4), _buildAvatarArea(context)],
         ],
       ),
     );
@@ -162,7 +171,10 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
                 showMessageOptions(widget.message, details.globalPosition)
           : null,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        // 2026-09-07 用户消息气泡下方的元信息/分支切换器靠右
+        crossAxisAlignment: isUser
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         children: [
           // 消息气泡(背景图模式下透明底色+描边，对齐旧版)
           // 气泡宽度取父级真实约束(桌面内容列已限宽，不能再用全屏宽计算)
@@ -224,13 +236,33 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
   }
 
   // 分支切换器区域反向固定不缩放；简洁显示时隐藏
+  // Widget _buildBranchSwitcherArea() {
+  //   if (_isBrief) return const SizedBox.shrink();
+  //   return MediaQuery(
+  //     data: MediaQuery.of(
+  //       context,
+  //     ).copyWith(textScaler: const TextScaler.linear(1)),
+  //     child: _buildBranchSwitcher(),
+  //   );
+  // }
   Widget _buildBranchSwitcherArea() {
     if (_isBrief) return const SizedBox.shrink();
+    // 2026-09-07 按消息类型对齐：用户消息靠右，system/AI消息靠左
+    // (原实现写死centerRight，导致AI消息的分支切换器也跑到右侧)
+    final isUser = widget.message.isUser;
     return MediaQuery(
       data: MediaQuery.of(
         context,
       ).copyWith(textScaler: const TextScaler.linear(1)),
-      child: _buildBranchSwitcher(),
+      child: Align(
+        alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+        // child: Padding(
+        //   padding: isUser
+        //       ? const EdgeInsets.only(right: 16)
+        //       : const EdgeInsets.only(left: 16),
+        child: _buildBranchSwitcher(),
+        // ),
+      ),
     );
   }
 
@@ -419,12 +451,13 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
     return Material(
       type: MaterialType.transparency,
       child: ExpansionTile(
+        initiallyExpanded: false,
         title: Row(
           children: [
-            Icon(Icons.link, color: _secondaryColor()),
+            Icon(Icons.newspaper, color: _secondaryColor()),
             const SizedBox(width: 4),
             Text(
-              '参考链接',
+              '搜索结果',
               style: TextStyle(
                 fontWeight: FontWeight.w500,
                 color: _secondaryColor(alpha: 0.8),
@@ -532,6 +565,10 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
     // 简洁显示：只保留相对时间，隐藏tokens/耗时/模型等元信息
     if (_isBrief) {
       return Row(
+        // 2026-09-07 用户消息元信息靠右
+        mainAxisAlignment: widget.message.isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
           const SizedBox(width: 8),
           Text(
@@ -563,12 +600,20 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: 0.8.sw),
       child: Row(
+        // 2026-09-07 用户消息元信息靠右
+        mainAxisAlignment: widget.message.isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
           const SizedBox(width: 8),
-          Expanded(
+          Flexible(
             child: RichText(
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
+              // 2026-09-07 用户消息元信息文字右对齐(微信式)
+              textAlign: widget.message.isUser
+                  ? TextAlign.right
+                  : TextAlign.left,
               text: TextSpan(
                 children: [
                   TextSpan(

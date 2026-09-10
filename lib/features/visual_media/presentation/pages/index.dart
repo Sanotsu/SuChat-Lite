@@ -26,7 +26,6 @@ class _VisualMediaIndexState extends State<VisualMediaIndex> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         resizeToAvoidBottomInset: false,
         appBar: AppBar(title: const Text('动漫资讯')),

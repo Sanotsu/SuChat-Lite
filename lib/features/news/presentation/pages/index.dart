@@ -57,7 +57,6 @@ class _NewsIndexState extends State<NewsIndex> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         resizeToAvoidBottomInset: false,
         appBar: AppBar(title: const Text('新闻热榜')),

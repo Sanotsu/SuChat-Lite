@@ -424,7 +424,6 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
     final isDesktop = ScreenHelper.isDesktop();
 
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('录音文件识别'),

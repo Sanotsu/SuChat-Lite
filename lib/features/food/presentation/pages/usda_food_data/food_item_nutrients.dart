@@ -42,7 +42,6 @@ https://www.ars.usda.gov/northeast-area/beltsville-md-bhnrc/beltsville-human-nut
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           // title: const Text("食品成分表(每100克)"),

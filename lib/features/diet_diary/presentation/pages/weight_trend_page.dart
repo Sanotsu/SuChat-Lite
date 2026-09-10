@@ -253,7 +253,6 @@ class _WeightTrendPageState extends State<WeightTrendPage> {
     final userInfo = userViewModel.currentUser;
 
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(title: const Text('体重趋势')),
         body: _isLoading

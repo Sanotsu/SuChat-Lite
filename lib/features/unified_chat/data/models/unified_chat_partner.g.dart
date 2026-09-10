@@ -15,8 +15,7 @@ UnifiedChatPartner _$UnifiedChatPartnerFromJson(Map<String, dynamic> json) =>
       isBuiltIn: json['is_built_in'] as bool? ?? false,
       isActive: json['is_active'] as bool? ?? true,
       isFavorite: json['is_favorite'] as bool? ?? false,
-      contextMessageLength:
-          (json['context_message_length'] as num?)?.toInt() ?? 6,
+      contextMessageLength: (json['context_message_length'] as num?)?.toInt(),
       temperature: (json['temperature'] as num?)?.toDouble(),
       topP: (json['top_p'] as num?)?.toDouble(),
       maxTokens: (json['max_tokens'] as num?)?.toInt(),

@@ -2,12 +2,14 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:video_player_media_kit/video_player_media_kit.dart';
 
+import '../core/network/dio_client/interceptor_error.dart';
 import '../core/services/desktop_window_service.dart';
 import '../core/services/legacy_llm_migrator.dart';
 import '../core/services/upgrade_migrator.dart';
@@ -101,6 +103,20 @@ class AppCatchError {
     debugPrint('AppCatchError>>>>>>>>>> [ Message ] $error');
     pl.d(error);
     debugPrint('AppCatchError>>>>>>>>>> [ Stack ] \n$stack');
+
+    // 2026-09-09 用户主动中断是正常业务逻辑，不该按错误提示：
+    // 流式请求被手动取消时，dio错误在生成器已取消状态下抛出无人接收，
+    // 逃逸到Zone进入本方法；静默记录即可，不弹错误toast
+    final errorText = error.toString();
+    final isUserCancelled =
+        (error is DioException && error.type == DioExceptionType.cancel) ||
+        (error is CusHttpException && error.cusCode == -2) ||
+        errorText.contains('manually cancelled by the user') ||
+        errorText.contains('请求被取消');
+    if (isUserCancelled) {
+      debugPrint('AppCatchError>>>>>>>>>> 用户主动取消，静默处理不提示');
+      return;
+    }
 
     // 判断是否可以显示Toast
     try {

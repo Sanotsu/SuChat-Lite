@@ -7,6 +7,7 @@ import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/database/unified_chat_db_init.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
 import '../pages/chat_background_picker_page.dart';
+import '../pages/media_library_page.dart';
 import '../pages/search_tools_settings_page.dart';
 import 'appearance_tool_widgets.dart';
 
@@ -117,94 +118,108 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
 
             // 更多操作菜单
-            PopupMenuButton<String>(
-              onSelected: (value) =>
-                  _handleMenuAction(context, value, viewModel),
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'more_tools',
-                  child: Row(
-                    children: [
-                      Icon(Icons.apps),
-                      SizedBox(width: 8),
-                      Text('更多功能'),
-                    ],
+            // 2026-09-05 桌面端不再显示：入口已由右侧功能工具栏承担
+            if (ScreenHelper.isMobile())
+              PopupMenuButton<String>(
+                onSelected: (value) =>
+                    _handleMenuAction(context, value, viewModel),
+                constraints: BoxConstraints(maxWidth: 120, minWidth: 120),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'more_tools',
+                    child: Row(
+                      children: [
+                        Icon(Icons.apps),
+                        SizedBox(width: 8),
+                        Text('更多功能'),
+                      ],
+                    ),
                   ),
-                ),
-                const PopupMenuItem(
-                  value: 'search_tools',
-                  child: Row(
-                    children: [
-                      Icon(Icons.search),
-                      SizedBox(width: 8),
-                      Text('搜索工具设置'),
-                    ],
+                  const PopupMenuItem(
+                    value: 'search_tools',
+                    child: Row(
+                      children: [
+                        Icon(Icons.search),
+                        SizedBox(width: 8),
+                        Text('搜索设置'),
+                      ],
+                    ),
                   ),
-                ),
-                // ===== 外观设置(从旧版branch_chat移植) =====
-                const PopupMenuItem(
-                  value: 'text_size',
-                  child: Row(
-                    children: [
-                      Icon(Icons.format_size),
-                      SizedBox(width: 8),
-                      Text('文字大小'),
-                    ],
+                  const PopupMenuItem(
+                    value: 'media_library',
+                    child: Row(
+                      children: [
+                        Icon(Icons.perm_media),
+                        SizedBox(width: 8),
+                        Text('媒体面板'),
+                      ],
+                    ),
                   ),
-                ),
-                PopupMenuItem(
-                  value: 'background',
-                  child: const Row(
-                    children: [
-                      Icon(Icons.image),
-                      SizedBox(width: 8),
-                      Text('切换背景'),
-                    ],
+                  const PopupMenuDivider(),
+                  // ===== 外观设置(从旧版branch_chat移植) =====
+                  const PopupMenuItem(
+                    value: 'text_size',
+                    child: Row(
+                      children: [
+                        Icon(Icons.format_size),
+                        SizedBox(width: 8),
+                        Text('文字大小'),
+                      ],
+                    ),
                   ),
-                ),
-                PopupMenuItem(
-                  value: 'brief_mode',
-                  child: Row(
-                    children: [
-                      const Icon(Icons.visibility_off),
-                      const SizedBox(width: 8),
-                      Text(viewModel.isBriefDisplay ? '详细显示' : '简洁显示'),
-                    ],
+                  PopupMenuItem(
+                    value: 'background',
+                    child: const Row(
+                      children: [
+                        Icon(Icons.image),
+                        SizedBox(width: 8),
+                        Text('切换背景'),
+                      ],
+                    ),
                   ),
-                ),
-                const PopupMenuDivider(),
-                const PopupMenuItem(
-                  value: 'clear',
-                  child: Row(
-                    children: [
-                      Icon(Icons.clear_all),
-                      SizedBox(width: 8),
-                      Text('清空对话'),
-                    ],
+                  PopupMenuItem(
+                    value: 'brief_mode',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.visibility_off),
+                        const SizedBox(width: 8),
+                        Text(viewModel.isBriefDisplay ? '详细显示' : '简洁显示'),
+                      ],
+                    ),
                   ),
-                ),
-                const PopupMenuItem(
-                  value: 'new',
-                  child: Row(
-                    children: [
-                      Icon(Icons.add),
-                      SizedBox(width: 8),
-                      Text('新建对话'),
-                    ],
+                  const PopupMenuDivider(),
+                  const PopupMenuItem(
+                    value: 'clear',
+                    child: Row(
+                      children: [
+                        Icon(Icons.clear_all),
+                        SizedBox(width: 8),
+                        Text('清空对话'),
+                      ],
+                    ),
                   ),
-                ),
-                const PopupMenuItem(
-                  value: 'export',
-                  child: Row(
-                    children: [
-                      Icon(Icons.download),
-                      SizedBox(width: 8),
-                      Text('导出数据'),
-                    ],
+                  const PopupMenuItem(
+                    value: 'new',
+                    child: Row(
+                      children: [
+                        Icon(Icons.add),
+                        SizedBox(width: 8),
+                        Text('新建对话'),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
+                  const PopupMenuItem(
+                    value: 'export',
+                    child: Row(
+                      children: [
+                        Icon(Icons.download),
+                        SizedBox(width: 8),
+                        Text('导出数据'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
           ],
         );
       },
@@ -245,6 +260,15 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
         break;
       case 'export':
         _exportConversation(context, viewModel);
+        break;
+      case 'media_library':
+        Navigator.push(
+          context,
+          // 2026-09-09 传入聊天页局部viewModel实例(详见MediaLibraryPage注释)
+          MaterialPageRoute(
+            builder: (_) => MediaLibraryPage(viewModel: viewModel),
+          ),
+        );
         break;
     }
   }

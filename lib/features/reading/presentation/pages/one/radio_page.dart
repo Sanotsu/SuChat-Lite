@@ -162,7 +162,6 @@ class _OneRadioPageState extends State<OneRadioPage> {
   @override
   Widget build(BuildContext context) {
     return CusContentWidth(
-      maxWidth: 1000,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('收音机'),
