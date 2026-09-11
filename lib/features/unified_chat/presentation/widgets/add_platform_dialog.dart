@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/cus_content_width.dart';
 import '../../data/models/unified_platform_spec.dart';
 
 /// 添加自定义平台对话框
@@ -41,81 +42,94 @@ class _AddPlatformDialogState extends State<AddPlatformDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('添加模型提供平台', style: TextStyle(fontSize: 20)),
-      // 调整水平内边距，让弹窗更大些
-      insetPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 10),
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: '平台名称',
-                    hintText: '例如：阿里百炼',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return '请输入平台名称';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 10),
-                TextFormField(
-                  controller: _descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: '描述',
-                    hintText: '例如：阿里云百炼平台',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: Colors.blue.shade700,
-                        size: 20,
+    // 2026-09-10 桌面端弹窗限宽：此前content的width:double.maxFinite
+    // 使弹窗撑满窗口宽(inset仅16px)。
+    // 注意showDialog的builder结果处于tight全屏约束中，直接外包
+    // ConstrainedBox会被enforce规则覆盖而失效，须先Align获得loose
+    // 约束再限宽；移动端窗口窄于640时约束不生效，行为不变
+    return Align(
+      alignment: Alignment.center,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: CusContentWidth.dialogWidth,
+        ),
+        child: AlertDialog(
+          title: const Text('添加模型提供平台', style: TextStyle(fontSize: 20)),
+          // 调整水平内边距，让弹窗更大些
+          insetPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: '平台名称',
+                        hintText: '例如：阿里百炼',
+                        border: OutlineInputBorder(),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '自定义平台需要兼容OpenAI API格式\n且只支持对话(ChatCompletions)模型',
-                          style: TextStyle(
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return '请输入平台名称';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: _descriptionController,
+                      decoration: const InputDecoration(
+                        labelText: '描述',
+                        hintText: '例如：阿里云百炼平台',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
                             color: Colors.blue.shade700,
-                            fontSize: 12,
+                            size: 20,
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '自定义平台需要兼容OpenAI API格式\n且只支持对话(ChatCompletions)模型',
+                              style: TextStyle(
+                                color: Colors.blue.shade700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
+            ),
+            ElevatedButton(onPressed: _submit, child: const Text('添加')),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
-        ),
-        ElevatedButton(onPressed: _submit, child: const Text('添加')),
-      ],
     );
   }
 }

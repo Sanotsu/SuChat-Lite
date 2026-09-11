@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../core/utils/screen_helper.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/models/unified_chat_partner.dart';
@@ -232,85 +233,104 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16),
-      title: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: const BoxDecoration(
-              color: Colors.blue,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.smart_toy, color: Colors.white, size: 24),
-          ),
-          const SizedBox(width: 12),
-          const Text(
-            '对话设置',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const Spacer(),
-          Tooltip(
-            message: '注意: 因模型不同，部分设置可能不会生效。',
-            triggerMode: TooltipTriggerMode.tap,
-            showDuration: Duration(seconds: 20),
-            margin: EdgeInsets.all(24),
-            child: Icon(Icons.info_outline, size: 24, color: Colors.grey),
-          ),
-        ],
-      ),
-      content: ConstrainedBox(
-        constraints: BoxConstraints(
-          // 桌面限宽为紧凑弹窗，避免超宽横条(移动端满宽)
-          maxWidth: ScreenHelper.isDesktop() ? 520.0 : double.maxFinite,
-          maxHeight: ScreenHelper.isDesktop() ? 560.0 : 0.6.sh,
+    // 2026-09-10 弹窗宽度统一(dialogWidth=640)：限宽必须加在AlertDialog
+    // 外层(showDialog处于tight全屏约束，须Align先转loose)；
+    // content用maxFinite撑满，视觉宽度=640-2x16(inset)=608，全项目一致
+    return Align(
+      alignment: Alignment.center,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: CusContentWidth.dialogWidth,
         ),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+          title: Row(
             children: [
-              // 搭档信息显示(搭档的标题和提示词都放在输入框里了,这里不必再显示)
-              // if (widget.selectedPartner != null) buildPartnerInfo(),
-
-              // 名称
-              const Text('名称', style: TextStyle(color: Colors.grey)),
-              TextField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.all(8),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: Colors.blue,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.smart_toy,
+                  color: Colors.white,
+                  size: 24,
                 ),
               ),
-              const SizedBox(height: 8),
-
-              // 系统提示
-              const Text('系统提示（角色设定）', style: TextStyle(color: Colors.grey)),
-              TextField(
-                controller: _systemPromptController,
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.all(12),
-                ),
+              const SizedBox(width: 12),
+              const Text(
+                '对话设置',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 8),
-
-              // 2026-09-09 选中自制搭档时隐藏高级配置：搭档自身配置即参数唯一
-              // 来源(选搭档时已应用到会话)，此处单独修改语义冲突不应生效；
-              // 内置搭档/未选搭档时正常显示可配置
-              if (!_isCustomPartnerManaged) _buildCollapsibleSection(),
+              const Spacer(),
+              Tooltip(
+                message: '注意: 因模型不同，部分设置可能不会生效。',
+                triggerMode: TooltipTriggerMode.tap,
+                showDuration: Duration(seconds: 20),
+                margin: EdgeInsets.all(24),
+                child: Icon(Icons.info_outline, size: 24, color: Colors.grey),
+              ),
             ],
           ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: ScreenHelper.isDesktop() ? 560.0 : 0.6.sh,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 搭档信息显示(搭档的标题和提示词都放在输入框里了,这里不必再显示)
+                    // if (widget.selectedPartner != null) buildPartnerInfo(),
+
+                    // 名称
+                    const Text('名称', style: TextStyle(color: Colors.grey)),
+                    TextField(
+                      controller: _titleController,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.all(8),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // 系统提示
+                    const Text(
+                      '系统提示（角色设定）',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    TextField(
+                      controller: _systemPromptController,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.all(12),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // 2026-09-09 选中自制搭档时隐藏高级配置：搭档自身配置即参数唯一
+                    // 来源(选搭档时已应用到会话)，此处单独修改语义冲突不应生效；
+                    // 内置搭档/未选搭档时正常显示可配置
+                    if (!_isCustomPartnerManaged) _buildCollapsibleSection(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
+            ),
+            ElevatedButton(onPressed: _handleSave, child: const Text('保存')),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
-        ),
-        ElevatedButton(onPressed: _handleSave, child: const Text('保存')),
-      ],
     );
   }
 

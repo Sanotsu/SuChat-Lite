@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/utils/screen_helper.dart';
+import 'cus_content_width.dart';
 import 'markdown_render/cus_markdown_renderer.dart';
 import 'toast_utils.dart';
 
@@ -237,78 +238,88 @@ Widget _buildDesktopPromptDialog(
   required String previewHint,
   required String editHint,
 }) {
-  return AlertDialog(
-    title: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(isEditMode ? editTitle : previewTitle),
-        Row(
+  // 2026-09-10 弹窗宽度统一：桌面此前0.8倍窗口宽超宽，归一到
+  // Align+CB(dialogWidth)模式，视觉宽=640-2x16=608
+  return Align(
+    alignment: Alignment.center,
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: CusContentWidth.dialogWidth),
+      child: AlertDialog(
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            IconButton(
-              icon: const Icon(Icons.copy),
-              tooltip: copyTooltip,
-              onPressed: onCopy,
-            ),
-            IconButton(
-              icon: Icon(isEditMode ? Icons.visibility : Icons.edit),
-              tooltip: isEditMode ? previewButtonTooltip : editButtonTooltip,
-              onPressed: onModeChanged,
-            ),
-            IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () => Navigator.of(context).pop(),
+            Text(isEditMode ? editTitle : previewTitle),
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.copy),
+                  tooltip: copyTooltip,
+                  onPressed: onCopy,
+                ),
+                IconButton(
+                  icon: Icon(isEditMode ? Icons.visibility : Icons.edit),
+                  tooltip: isEditMode
+                      ? previewButtonTooltip
+                      : editButtonTooltip,
+                  onPressed: onModeChanged,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
             ),
           ],
         ),
-      ],
-    ),
-    content: SizedBox(
-      width: MediaQuery.of(context).size.width * 0.8,
-      height: MediaQuery.of(context).size.height * 0.6,
-      child: Column(
-        children: [
-          Text(
-            isEditMode ? editHint : previewHint,
-            style: const TextStyle(fontSize: 14, color: Colors.grey),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: isEditMode
-                ? TextField(
-                    controller: promptController,
-                    maxLines: null,
-                    expands: true,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: '请输入自定义提示词...',
-                    ),
-                  )
-                : RepaintBoundary(
-                    child: SingleChildScrollView(
-                      child: CusMarkdownRenderer.instance.render(
-                        promptController.text,
-                        textStyle: TextStyle(fontSize: 14),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: MediaQuery.of(context).size.height * 0.6,
+          child: Column(
+            children: [
+              Text(
+                isEditMode ? editHint : previewHint,
+                style: const TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: isEditMode
+                    ? TextField(
+                        controller: promptController,
+                        maxLines: null,
+                        expands: true,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          hintText: '请输入自定义提示词...',
+                        ),
+                      )
+                    : RepaintBoundary(
+                        child: SingleChildScrollView(
+                          child: CusMarkdownRenderer.instance.render(
+                            promptController.text,
+                            textStyle: TextStyle(fontSize: 14),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(cancelButtonText),
+          ),
+          ElevatedButton(
+            onPressed: onConfirm,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+            ),
+            child: Text(confirmButtonText),
           ),
         ],
       ),
     ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.of(context).pop(),
-        child: Text(cancelButtonText),
-      ),
-      ElevatedButton(
-        onPressed: onConfirm,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          foregroundColor: Theme.of(context).colorScheme.onPrimary,
-        ),
-        child: Text(confirmButtonText),
-      ),
-    ],
   );
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../../../shared/widgets/cus_content_width.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/models/unified_model_spec.dart';
 import '../../data/models/unified_platform_spec.dart';
@@ -145,79 +146,93 @@ class _FetchModelsDialogState extends State<FetchModelsDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text(
-        '编辑模型',
-        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-      ),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16),
-      content: SizedBox(
-        width: double.maxFinite,
-        height: 0.5.sh,
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-                children: [
-                  // 搜索框
-                  Padding(
-                    padding: const EdgeInsets.all(0),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: const InputDecoration(
-                        hintText: '搜索模型...',
-                        prefixIcon: Icon(Icons.search),
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.all(4),
-                      ),
-                    ),
-                  ),
-                  // 模型列表
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      children: [
-                        // 已添加的模型
-                        if (_getExistingFilteredModels().isNotEmpty) ...[
-                          Text(
-                            '已添加的模型',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green.shade700,
-                            ),
-                          ),
-
-                          ..._getExistingFilteredModels().map(
-                            (modelName) => _buildModelItem(modelName, true),
-                          ),
-                        ],
-
-                        // 未添加的模型
-                        if (_getNotExistingFilteredModels().isNotEmpty) ...[
-                          Text(
-                            '未添加的模型',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange.shade700,
-                            ),
-                          ),
-                          ..._getNotExistingFilteredModels().map(
-                            (modelName) => _buildModelItem(modelName, false),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('关闭'),
+    // 2026-09-10 桌面端弹窗限宽：此前content的width:double.maxFinite
+    // 使弹窗撑满窗口宽(inset仅16px)。
+    // 注意showDialog的builder结果处于tight全屏约束中，直接外包
+    // ConstrainedBox会被enforce规则覆盖而失效，须先Align获得loose
+    // 约束再限宽；移动端窗口窄于640时约束不生效，行为不变
+    return Align(
+      alignment: Alignment.center,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: CusContentWidth.dialogWidth,
         ),
-      ],
+        child: AlertDialog(
+          title: const Text(
+            '编辑模型',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 0.5.sh,
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : Column(
+                    children: [
+                      // 搜索框
+                      Padding(
+                        padding: const EdgeInsets.all(0),
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: const InputDecoration(
+                            hintText: '搜索模型...',
+                            prefixIcon: Icon(Icons.search),
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.all(4),
+                          ),
+                        ),
+                      ),
+                      // 模型列表
+                      Expanded(
+                        child: ListView(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          children: [
+                            // 已添加的模型
+                            if (_getExistingFilteredModels().isNotEmpty) ...[
+                              Text(
+                                '已添加的模型',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green.shade700,
+                                ),
+                              ),
+
+                              ..._getExistingFilteredModels().map(
+                                (modelName) => _buildModelItem(modelName, true),
+                              ),
+                            ],
+
+                            // 未添加的模型
+                            if (_getNotExistingFilteredModels().isNotEmpty) ...[
+                              Text(
+                                '未添加的模型',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange.shade700,
+                                ),
+                              ),
+                              ..._getNotExistingFilteredModels().map(
+                                (modelName) =>
+                                    _buildModelItem(modelName, false),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('关闭'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

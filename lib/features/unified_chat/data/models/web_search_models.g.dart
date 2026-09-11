@@ -278,6 +278,7 @@ BaiduSearchResponse _$BaiduSearchResponseFromJson(Map<String, dynamic> json) =>
       results: (json['results'] as List<dynamic>?)
           ?.map((e) => SearchResultItem.fromJson(e as Map<String, dynamic>))
           .toList(),
+      answer: json['answer'] as String?,
       references: (json['references'] as List<dynamic>?)
           ?.map((e) => e as Map<String, dynamic>)
           .toList(),
@@ -288,6 +289,7 @@ Map<String, dynamic> _$BaiduSearchResponseToJson(
 ) => <String, dynamic>{
   'query': instance.query,
   'results': instance.results?.map((e) => e.toJson()).toList(),
+  'answer': instance.answer,
   'references': instance.references,
 };
 

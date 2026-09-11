@@ -7,6 +7,7 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 import '../../core/utils/screen_helper.dart';
 import '../services/network_service.dart';
+import 'cus_content_width.dart';
 import 'image_preview_helper.dart';
 
 // 绘制转圈圈
@@ -59,38 +60,44 @@ Future<void> commonMarkdwonHintDialog(
   showDialog(
     context: context,
     builder: (context) {
-      // 获取屏幕尺寸
-      final size = MediaQuery.of(context).size;
-      // 计算显示最大宽度
-      final maxWidth = ScreenHelper.isDesktop() ? size.width * 0.6 : size.width;
-
-      return AlertDialog(
-        title: Text(title),
-        insetPadding: insetPadding,
-        content: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: maxWidth),
-          child: SingleChildScrollView(
-            child: MarkdownBody(
-              data: message,
-              selectable: true,
-              // 设置Markdown文本全局样式
-              styleSheet: MarkdownStyleSheet(
-                // 普通段落文本颜色(假定用户输入就是普通段落文本)
-                p: TextStyle(fontSize: msgFontSize, color: Colors.black),
-                // ... 其他级别的标题样式
-                // 可以继续添加更多Markdown元素的样式
+      // 2026-09-10 弹窗宽度统一(dialogWidth=640)：桌面此前0.6倍窗口宽
+      // 超宽；须Align先转loose再限宽(tight下CB失效)，视觉宽=640-2x16
+      return Align(
+        alignment: Alignment.center,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: CusContentWidth.dialogWidth,
+          ),
+          child: AlertDialog(
+            title: Text(title),
+            insetPadding:
+                insetPadding ?? const EdgeInsets.symmetric(horizontal: 16),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: MarkdownBody(
+                  data: message,
+                  selectable: true,
+                  // 设置Markdown文本全局样式
+                  styleSheet: MarkdownStyleSheet(
+                    // 普通段落文本颜色(假定用户输入就是普通段落文本)
+                    p: TextStyle(fontSize: msgFontSize, color: Colors.black),
+                    // ... 其他级别的标题样式
+                    // 可以继续添加更多Markdown元素的样式
+                  ),
+                ),
               ),
             ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text("确定"),
+              ),
+            ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text("确定"),
-          ),
-        ],
       );
     },
   );
@@ -167,23 +174,34 @@ void commonMDHintModalBottomSheet(
     showDialog<void>(
       context: context,
       builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          child: Container(
-            width: 560,
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.7,
+        // 2026-09-10 弹窗宽度统一：桌面560→dialogWidth(640)同模式限宽，
+        // 视觉宽=640-2x16=608与其他弹窗一致
+        return Align(
+          alignment: Alignment.center,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: CusContentWidth.dialogWidth,
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(height: 12),
-                header,
-                Divider(height: 2, thickness: 2),
-                Flexible(child: mdBody),
-              ],
+            child: Dialog(
+              insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Container(
+                width: double.maxFinite,
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.7,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(height: 12),
+                    header,
+                    Divider(height: 2, thickness: 2),
+                    Flexible(child: mdBody),
+                  ],
+                ),
+              ),
             ),
           ),
         );

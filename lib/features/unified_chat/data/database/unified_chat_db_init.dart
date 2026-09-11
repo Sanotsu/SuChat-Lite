@@ -53,7 +53,7 @@ class UnifiedChatDBInit {
       path,
       // TODO(发布前): 当前版本未发布过，无线上旧库；正式发布时将version固定为最终值
       // 并移除下方全部_upgradeToV2/_upgradeToV3/_upgradeToV4升级逻辑(开发期保留以便调试，免于反复卸载重装)
-      version: 5,
+      version: 6,
       onCreate: _createDb,
       onUpgrade: _upgradeDb,
     );
@@ -107,6 +107,10 @@ class UnifiedChatDBInit {
     if (oldVersion < 5) {
       await _upgradeToV5(db);
     }
+
+    if (oldVersion < 6) {
+      await _upgradeToV6(db);
+    }
   }
 
   /// v4 -> v5: 2026-09-10 新增内置平台"小米MiMo"(对话/语音识别/语音合成，
@@ -116,6 +120,16 @@ class UnifiedChatDBInit {
     await UnifiedChatDdl.initDefaultPlatforms(
       db,
       platformId: UnifiedPlatformId.mimo,
+    );
+  }
+
+  /// v5 -> v6: 2026-09-10 全面移除embedding/reranker模型类型——本应用
+  /// 为聊天客户端，这两类模型从无任何调用流程，存量行删除
+  /// (字符串解析处已有default兜底为cc，双保险)
+  Future<void> _upgradeToV6(Database db) async {
+    await db.delete(
+      UnifiedChatDdl.tableUnifiedModelSpec,
+      where: "model_type IN ('embedding', 'reranker')",
     );
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/cus_content_width.dart';
 import '../../data/models/unified_model_spec.dart';
 
 /// 编辑(新增或修改)模型对话框
@@ -104,155 +105,173 @@ class _EditModelDialogState extends State<EditModelDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('编辑模型'),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 模型ID字段
-                TextFormField(
-                  controller: _idController,
-                  decoration: const InputDecoration(
-                    labelText: '*模型ID',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return '请输入模型ID';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // 显示名称字段
-                TextFormField(
-                  controller: _displayNameController,
-                  decoration: const InputDecoration(
-                    labelText: '显示名称(可选)',
-                    hintText: '可选',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // 模型类型下拉框
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedModelType,
-                  decoration: const InputDecoration(
-                    labelText: '模型类型',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: UnifiedModelType.values
-                      .map(
-                        (type) => DropdownMenuItem(
-                          value: type.name,
-                          child: Text(UMT_NAME_MAP[type]!),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedModelType = value!;
-                      if (value != UnifiedModelType.cc.name) {
-                        _supportsVision = false;
-                        _supportsThinking = false;
-                        _supportsToolCalling = false;
-                      }
-                      if (value != UnifiedModelType.image.name &&
-                          value != UnifiedModelType.video.name) {
-                        _supportsImageInput = false;
-                      }
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // 图片/视频生成模型的参考图输入能力(图生图/图生视频)
-                if (_selectedModelType == UnifiedModelType.image.name ||
-                    _selectedModelType == UnifiedModelType.video.name) ...[
-                  CheckboxListTile(
-                    title: const Text('支持参考图输入(图生图/图生视频)'),
-                    subtitle: const Text(
-                      '关闭则为纯文生模式',
-                      style: TextStyle(fontSize: 12),
+    // 2026-09-10 桌面端弹窗限宽：此前content的width:double.maxFinite
+    // 使弹窗撑满窗口宽(inset仅16px)。
+    // 注意showDialog的builder结果处于tight全屏约束中，直接外包
+    // ConstrainedBox会被enforce规则覆盖而失效，须先Align获得loose
+    // 约束再限宽；移动端窗口窄于640时约束不生效，行为不变
+    return Align(
+      alignment: Alignment.center,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: CusContentWidth.dialogWidth,
+        ),
+        child: AlertDialog(
+          title: const Text('编辑模型'),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 模型ID字段
+                    TextFormField(
+                      controller: _idController,
+                      decoration: const InputDecoration(
+                        labelText: '*模型ID',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return '请输入模型ID';
+                        }
+                        return null;
+                      },
                     ),
-                    value: _supportsImageInput,
-                    onChanged: (value) =>
-                        setState(() => _supportsImageInput = value ?? false),
-                    contentPadding: EdgeInsets.zero,
-                    controlAffinity: ListTileControlAffinity.leading,
-                  ),
-                  const SizedBox(height: 8),
-                ],
+                    const SizedBox(height: 16),
 
-                // 能力标题
-                if (_selectedModelType == UnifiedModelType.cc.name) ...[
-                  const Text(
-                    '能力',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 8),
+                    // 显示名称字段
+                    TextFormField(
+                      controller: _displayNameController,
+                      decoration: const InputDecoration(
+                        labelText: '显示名称(可选)',
+                        hintText: '可选',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
 
-                  // 能力复选框
-                  Row(
-                    children: [
-                      SizedBox(
-                        width: 90,
-                        child: CheckboxListTile(
-                          title: const Text('视觉'),
-                          value: _supportsVision,
-                          onChanged: (value) =>
-                              setState(() => _supportsVision = value ?? false),
-                          contentPadding: EdgeInsets.zero,
-                          controlAffinity: ListTileControlAffinity.leading,
+                    // 模型类型下拉框
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedModelType,
+                      decoration: const InputDecoration(
+                        labelText: '模型类型',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: UnifiedModelType.values
+                          .map(
+                            (type) => DropdownMenuItem(
+                              value: type.name,
+                              child: Text(UMT_NAME_MAP[type]!),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedModelType = value!;
+                          if (value != UnifiedModelType.cc.name) {
+                            _supportsVision = false;
+                            _supportsThinking = false;
+                            _supportsToolCalling = false;
+                          }
+                          if (value != UnifiedModelType.image.name &&
+                              value != UnifiedModelType.video.name) {
+                            _supportsImageInput = false;
+                          }
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 图片/视频生成模型的参考图输入能力(图生图/图生视频)
+                    if (_selectedModelType == UnifiedModelType.image.name ||
+                        _selectedModelType == UnifiedModelType.video.name) ...[
+                      CheckboxListTile(
+                        title: const Text('支持参考图输入(图生图/图生视频)'),
+                        subtitle: const Text(
+                          '关闭则为纯文生模式',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        value: _supportsImageInput,
+                        onChanged: (value) => setState(
+                          () => _supportsImageInput = value ?? false,
+                        ),
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+
+                    // 能力标题
+                    if (_selectedModelType == UnifiedModelType.cc.name) ...[
+                      const Text(
+                        '能力',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      SizedBox(
-                        width: 90,
-                        child: CheckboxListTile(
-                          title: const Text('推理'),
-                          value: _supportsThinking,
-                          onChanged: (value) => setState(
-                            () => _supportsThinking = value ?? false,
+                      const SizedBox(height: 8),
+
+                      // 能力复选框
+                      Row(
+                        children: [
+                          SizedBox(
+                            width: 90,
+                            child: CheckboxListTile(
+                              title: const Text('视觉'),
+                              value: _supportsVision,
+                              onChanged: (value) => setState(
+                                () => _supportsVision = value ?? false,
+                              ),
+                              contentPadding: EdgeInsets.zero,
+                              controlAffinity: ListTileControlAffinity.leading,
+                            ),
                           ),
-                          contentPadding: EdgeInsets.zero,
-                          controlAffinity: ListTileControlAffinity.leading,
-                        ),
-                      ),
-                      Expanded(
-                        child: CheckboxListTile(
-                          title: const Text('工具使用'),
-                          value: _supportsToolCalling,
-                          onChanged: (value) => setState(
-                            () => _supportsToolCalling = value ?? false,
+                          SizedBox(
+                            width: 90,
+                            child: CheckboxListTile(
+                              title: const Text('推理'),
+                              value: _supportsThinking,
+                              onChanged: (value) => setState(
+                                () => _supportsThinking = value ?? false,
+                              ),
+                              contentPadding: EdgeInsets.zero,
+                              controlAffinity: ListTileControlAffinity.leading,
+                            ),
                           ),
-                          contentPadding: EdgeInsets.zero,
-                          controlAffinity: ListTileControlAffinity.leading,
-                        ),
+                          Expanded(
+                            child: CheckboxListTile(
+                              title: const Text('工具使用'),
+                              value: _supportsToolCalling,
+                              onChanged: (value) => setState(
+                                () => _supportsToolCalling = value ?? false,
+                              ),
+                              contentPadding: EdgeInsets.zero,
+                              controlAffinity: ListTileControlAffinity.leading,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
-                  ),
-                ],
-              ],
+                  ],
+                ),
+              ),
             ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
+            ),
+            ElevatedButton(onPressed: _submit, child: const Text('保存')),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
-        ),
-        ElevatedButton(onPressed: _submit, child: const Text('保存')),
-      ],
     );
   }
 }

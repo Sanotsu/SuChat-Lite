@@ -14,10 +14,6 @@ class ModelTypeIcon extends StatelessWidget {
     switch (type) {
       case UnifiedModelType.cc:
         return Colors.blue.shade600; // 对话使用蓝色
-      case UnifiedModelType.embedding:
-        return Colors.purple.shade600; // 嵌入使用紫色
-      case UnifiedModelType.reranker:
-        return Colors.orange.shade600; // 重排使用橙色
       case UnifiedModelType.image:
         return Colors.green.shade600; // 图片生成使用绿色
       case UnifiedModelType.video:
@@ -34,10 +30,6 @@ class ModelTypeIcon extends StatelessWidget {
     switch (type) {
       case UnifiedModelType.cc:
         return Icons.chat_bubble_outline; // 对话气泡
-      case UnifiedModelType.embedding:
-        return Icons.integration_instructions; // 嵌入代码
-      case UnifiedModelType.reranker:
-        return Icons.import_export; // 排序交换
       case UnifiedModelType.image:
         return Icons.image_outlined; // 图片
       case UnifiedModelType.video:
@@ -74,10 +66,6 @@ String _getTooltipText(UnifiedModelType type) {
   switch (type) {
     case UnifiedModelType.cc:
       return '对话完成模型';
-    case UnifiedModelType.embedding:
-      return '文本嵌入模型';
-    case UnifiedModelType.reranker:
-      return '重排序模型';
     case UnifiedModelType.image:
       return '图片生成模型';
     case UnifiedModelType.video:

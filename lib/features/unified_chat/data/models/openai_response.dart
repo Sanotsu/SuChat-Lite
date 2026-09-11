@@ -377,46 +377,6 @@ class OpenAIModelsResponse {
   Map<String, dynamic> toJson() => _$OpenAIModelsResponseToJson(this);
 }
 
-/// 嵌入数据
-@JsonSerializable(explicitToJson: true)
-class OpenAIEmbeddingData {
-  final String object;
-  final List<double> embedding;
-  final int index;
-
-  const OpenAIEmbeddingData({
-    required this.object,
-    required this.embedding,
-    required this.index,
-  });
-
-  factory OpenAIEmbeddingData.fromJson(Map<String, dynamic> json) =>
-      _$OpenAIEmbeddingDataFromJson(json);
-
-  Map<String, dynamic> toJson() => _$OpenAIEmbeddingDataToJson(this);
-}
-
-/// 嵌入响应
-@JsonSerializable(explicitToJson: true)
-class OpenAIEmbeddingResponse {
-  final String object;
-  final List<OpenAIEmbeddingData> data;
-  final String model;
-  final OpenAIUsage usage;
-
-  const OpenAIEmbeddingResponse({
-    required this.object,
-    required this.data,
-    required this.model,
-    required this.usage,
-  });
-
-  factory OpenAIEmbeddingResponse.fromJson(Map<String, dynamic> json) =>
-      _$OpenAIEmbeddingResponseFromJson(json);
-
-  Map<String, dynamic> toJson() => _$OpenAIEmbeddingResponseToJson(this);
-}
-
 /// 图片数据
 @JsonSerializable(explicitToJson: true)
 class OpenAIImageData {

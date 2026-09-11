@@ -467,30 +467,6 @@ class OpenAIModelsRequest {
   Map<String, dynamic> toJson() => _$OpenAIModelsRequestToJson(this);
 }
 
-/// 嵌入请求
-@JsonSerializable(explicitToJson: true)
-class OpenAIEmbeddingRequest {
-  final String model;
-  final dynamic input; // string or array of strings
-  @JsonKey(name: 'encoding_format')
-  final String? encodingFormat;
-  final int? dimensions;
-  final String? user;
-
-  const OpenAIEmbeddingRequest({
-    required this.model,
-    required this.input,
-    this.encodingFormat,
-    this.dimensions,
-    this.user,
-  });
-
-  factory OpenAIEmbeddingRequest.fromJson(Map<String, dynamic> json) =>
-      _$OpenAIEmbeddingRequestFromJson(json);
-
-  Map<String, dynamic> toJson() => _$OpenAIEmbeddingRequestToJson(this);
-}
-
 /// 图片生成请求
 @JsonSerializable(explicitToJson: true)
 class OpenAIImageGenerationRequest {

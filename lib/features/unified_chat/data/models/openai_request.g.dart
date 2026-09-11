@@ -151,26 +151,6 @@ Map<String, dynamic> _$OpenAIModelsRequestToJson(
   OpenAIModelsRequest instance,
 ) => <String, dynamic>{};
 
-OpenAIEmbeddingRequest _$OpenAIEmbeddingRequestFromJson(
-  Map<String, dynamic> json,
-) => OpenAIEmbeddingRequest(
-  model: json['model'] as String,
-  input: json['input'],
-  encodingFormat: json['encoding_format'] as String?,
-  dimensions: (json['dimensions'] as num?)?.toInt(),
-  user: json['user'] as String?,
-);
-
-Map<String, dynamic> _$OpenAIEmbeddingRequestToJson(
-  OpenAIEmbeddingRequest instance,
-) => <String, dynamic>{
-  'model': instance.model,
-  'input': instance.input,
-  'encoding_format': instance.encodingFormat,
-  'dimensions': instance.dimensions,
-  'user': instance.user,
-};
-
 OpenAIImageGenerationRequest _$OpenAIImageGenerationRequestFromJson(
   Map<String, dynamic> json,
 ) => OpenAIImageGenerationRequest(

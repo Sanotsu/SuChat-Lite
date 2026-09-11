@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/utils/screen_helper.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 
 import '../../data/models/unified_platform_spec.dart';
@@ -105,146 +105,154 @@ class _SpeechRecognitionSettingsDialogState
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16),
-      title: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: const BoxDecoration(
-              color: Colors.blue,
-              shape: BoxShape.circle,
+    // 2026-09-10 弹窗宽度统一(dialogWidth=640)：限宽必须加在AlertDialog
+    // 外层(showDialog处于tight全屏约束，须Align先转loose)；
+    // content用maxFinite撑满，视觉宽度=640-2x16(inset)=608，全项目一致
+    return Align(
+      alignment: Alignment.center,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: CusContentWidth.dialogWidth,
+        ),
+        child: AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+          title: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: Colors.blue,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.image, color: Colors.white, size: 24),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                '语音识别设置',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              Tooltip(
+                message: '注意: 因模型不同，部分设置可能不会生效。',
+                triggerMode: TooltipTriggerMode.tap,
+                showDuration: Duration(seconds: 20),
+                margin: EdgeInsets.all(24),
+                child: Icon(Icons.info_outline, size: 24, color: Colors.grey),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: FormBuilder(
+              key: _formKey,
+              initialValue: _initialValues,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 语言设置
+                    if (_shouldShowLanguageSettings())
+                      FormBuilderDropdown<String>(
+                        name: 'language',
+                        decoration: const InputDecoration(
+                          labelText: '识别语言',
+                          hintText: '选择要识别的语言',
+                        ),
+                        initialValue: _initialValues['language'] as String?,
+                        items: _getLanguageOptions()
+                            .map(
+                              (lang) => DropdownMenuItem(
+                                value: lang['value']!,
+                                child: Text(lang['label']!),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    const SizedBox(height: 16),
+
+                    // 流式输出（阿里云、智谱平台）
+                    if (widget.currentPlatform?.id == 'zhipu' ||
+                        widget.currentPlatform?.id == 'aliyun')
+                      FormBuilderSwitch(
+                        name: 'stream',
+                        title: const Text('流式输出'),
+                        subtitle: const Text('是否启用流式输出'),
+                      ),
+                    const SizedBox(height: 16),
+
+                    // 阿里百炼特有设置
+                    if (widget.currentPlatform?.id == 'aliyun') ...[
+                      FormBuilderSwitch(
+                        name: 'enableLid',
+                        title: const Text('语种识别'),
+                        subtitle: const Text('是否在识别结果中显示语种信息'),
+                      ),
+                      const SizedBox(height: 16),
+                      FormBuilderSwitch(
+                        name: 'enableItn',
+                        title: const Text('逆文本规范化'),
+                        subtitle: const Text('将数字等转换为标准格式（仅支持中英文）'),
+                      ),
+                      const SizedBox(height: 16),
+                      FormBuilderTextField(
+                        name: 'context',
+                        decoration: const InputDecoration(
+                          labelText: '上下文',
+                          hintText: '输入上下文信息以提高识别准确率',
+                        ),
+                        maxLines: 3,
+                      ),
+                    ],
+
+                    // 智谱平台特有设置
+                    if (widget.currentPlatform?.id == 'zhipu') ...[
+                      // 采样温度
+                      FormBuilderSlider(
+                        name: 'temperature',
+                        decoration: const InputDecoration(
+                          labelText: '采样温度',
+                          helperText: '控制输出的随机性，值越大越随机',
+                        ),
+                        initialValue:
+                            (_initialValues['temperature'] as double?) ?? 0.95,
+                        min: 0.0,
+                        max: 1.0,
+                        divisions: 20,
+                        valueTransformer: (value) => value?.toDouble(),
+                      ),
+                      const SizedBox(height: 16),
+                      FormBuilderTextField(
+                        name: 'requestId',
+                        decoration: const InputDecoration(
+                          labelText: '请求ID',
+                          hintText: '可选的唯一请求标识符',
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      FormBuilderTextField(
+                        name: 'userId',
+                        decoration: const InputDecoration(
+                          labelText: '用户ID',
+                          hintText: '终端用户的唯一ID（6-128字符）',
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
-            child: const Icon(Icons.image, color: Colors.white, size: 24),
           ),
-          const SizedBox(width: 12),
-          const Text(
-            '语音识别设置',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const Spacer(),
-          Tooltip(
-            message: '注意: 因模型不同，部分设置可能不会生效。',
-            triggerMode: TooltipTriggerMode.tap,
-            showDuration: Duration(seconds: 20),
-            margin: EdgeInsets.all(24),
-            child: Icon(Icons.info_outline, size: 24, color: Colors.grey),
-          ),
-        ],
-      ),
-      content: SizedBox(
-        // 桌面限宽避免超宽横条(移动端保持 0.8 屏宽)
-        width: ScreenHelper.isDesktop()
-            ? 640.0
-            : MediaQuery.of(context).size.width * 0.8,
-        child: FormBuilder(
-          key: _formKey,
-          initialValue: _initialValues,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 语言设置
-                if (_shouldShowLanguageSettings())
-                  FormBuilderDropdown<String>(
-                    name: 'language',
-                    decoration: const InputDecoration(
-                      labelText: '识别语言',
-                      hintText: '选择要识别的语言',
-                    ),
-                    initialValue: _initialValues['language'] as String?,
-                    items: _getLanguageOptions()
-                        .map(
-                          (lang) => DropdownMenuItem(
-                            value: lang['value']!,
-                            child: Text(lang['label']!),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                const SizedBox(height: 16),
-
-                // 流式输出（阿里云、智谱平台）
-                if (widget.currentPlatform?.id == 'zhipu' ||
-                    widget.currentPlatform?.id == 'aliyun')
-                  FormBuilderSwitch(
-                    name: 'stream',
-                    title: const Text('流式输出'),
-                    subtitle: const Text('是否启用流式输出'),
-                  ),
-                const SizedBox(height: 16),
-
-                // 阿里百炼特有设置
-                if (widget.currentPlatform?.id == 'aliyun') ...[
-                  FormBuilderSwitch(
-                    name: 'enableLid',
-                    title: const Text('语种识别'),
-                    subtitle: const Text('是否在识别结果中显示语种信息'),
-                  ),
-                  const SizedBox(height: 16),
-                  FormBuilderSwitch(
-                    name: 'enableItn',
-                    title: const Text('逆文本规范化'),
-                    subtitle: const Text('将数字等转换为标准格式（仅支持中英文）'),
-                  ),
-                  const SizedBox(height: 16),
-                  FormBuilderTextField(
-                    name: 'context',
-                    decoration: const InputDecoration(
-                      labelText: '上下文',
-                      hintText: '输入上下文信息以提高识别准确率',
-                    ),
-                    maxLines: 3,
-                  ),
-                ],
-
-                // 智谱平台特有设置
-                if (widget.currentPlatform?.id == 'zhipu') ...[
-                  // 采样温度
-                  FormBuilderSlider(
-                    name: 'temperature',
-                    decoration: const InputDecoration(
-                      labelText: '采样温度',
-                      helperText: '控制输出的随机性，值越大越随机',
-                    ),
-                    initialValue:
-                        (_initialValues['temperature'] as double?) ?? 0.95,
-                    min: 0.0,
-                    max: 1.0,
-                    divisions: 20,
-                    valueTransformer: (value) => value?.toDouble(),
-                  ),
-                  const SizedBox(height: 16),
-                  FormBuilderTextField(
-                    name: 'requestId',
-                    decoration: const InputDecoration(
-                      labelText: '请求ID',
-                      hintText: '可选的唯一请求标识符',
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  FormBuilderTextField(
-                    name: 'userId',
-                    decoration: const InputDecoration(
-                      labelText: '用户ID',
-                      hintText: '终端用户的唯一ID（6-128字符）',
-                    ),
-                  ),
-                ],
-              ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
             ),
-          ),
+            TextButton(onPressed: _resetSettings, child: const Text('重置')),
+            ElevatedButton(onPressed: _saveSettings, child: const Text('保存')),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
-        ),
-        TextButton(onPressed: _resetSettings, child: const Text('重置')),
-        ElevatedButton(onPressed: _saveSettings, child: const Text('保存')),
-      ],
     );
   }
 }

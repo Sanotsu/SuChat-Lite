@@ -291,43 +291,6 @@ Map<String, dynamic> _$OpenAIModelsResponseToJson(
   'data': instance.data.map((e) => e.toJson()).toList(),
 };
 
-OpenAIEmbeddingData _$OpenAIEmbeddingDataFromJson(Map<String, dynamic> json) =>
-    OpenAIEmbeddingData(
-      object: json['object'] as String,
-      embedding: (json['embedding'] as List<dynamic>)
-          .map((e) => (e as num).toDouble())
-          .toList(),
-      index: (json['index'] as num).toInt(),
-    );
-
-Map<String, dynamic> _$OpenAIEmbeddingDataToJson(
-  OpenAIEmbeddingData instance,
-) => <String, dynamic>{
-  'object': instance.object,
-  'embedding': instance.embedding,
-  'index': instance.index,
-};
-
-OpenAIEmbeddingResponse _$OpenAIEmbeddingResponseFromJson(
-  Map<String, dynamic> json,
-) => OpenAIEmbeddingResponse(
-  object: json['object'] as String,
-  data: (json['data'] as List<dynamic>)
-      .map((e) => OpenAIEmbeddingData.fromJson(e as Map<String, dynamic>))
-      .toList(),
-  model: json['model'] as String,
-  usage: OpenAIUsage.fromJson(json['usage'] as Map<String, dynamic>),
-);
-
-Map<String, dynamic> _$OpenAIEmbeddingResponseToJson(
-  OpenAIEmbeddingResponse instance,
-) => <String, dynamic>{
-  'object': instance.object,
-  'data': instance.data.map((e) => e.toJson()).toList(),
-  'model': instance.model,
-  'usage': instance.usage.toJson(),
-};
-
 OpenAIImageData _$OpenAIImageDataFromJson(Map<String, dynamic> json) =>
     OpenAIImageData(
       url: json['url'] as String?,

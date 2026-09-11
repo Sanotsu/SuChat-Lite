@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/utils/screen_helper.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 
 class TextEditDialog extends StatefulWidget {
@@ -79,11 +80,21 @@ class _TextEditDialogState extends State<TextEditDialog> {
     );
 
     // 桌面用固定尺寸窗口弹窗，移动端保持全屏
+    // 2026-09-10 弹窗宽度统一：720→dialogWidth(640)同模式，视觉宽608
     if (ScreenHelper.isDesktop()) {
-      return Dialog(
+      return Align(
+        alignment: Alignment.center,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720, maxHeight: 560),
-          child: content,
+          constraints: const BoxConstraints(
+            maxWidth: CusContentWidth.dialogWidth,
+          ),
+          child: Dialog(
+            insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 560),
+              child: content,
+            ),
+          ),
         ),
       );
     }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/utils/screen_helper.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 
@@ -88,94 +88,102 @@ class _ImageGenerationSettingsDialogState
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16),
-      title: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: const BoxDecoration(
-              color: Colors.blue,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.image, color: Colors.white, size: 24),
+    // 2026-09-10 弹窗宽度统一(dialogWidth=640)：限宽必须加在AlertDialog
+    // 外层(showDialog处于tight全屏约束，须Align先转loose)；
+    // content用maxFinite撑满，视觉宽度=640-2x16(inset)=608，全项目一致
+    return Align(
+      alignment: Alignment.center,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: CusContentWidth.dialogWidth,
+        ),
+        child: AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+          title: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: Colors.blue,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.image, color: Colors.white, size: 24),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                '图片生成设置',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              Tooltip(
+                message: '注意: 因模型不同，部分设置可能不会生效。',
+                triggerMode: TooltipTriggerMode.tap,
+                showDuration: Duration(seconds: 20),
+                margin: EdgeInsets.all(24),
+                child: Icon(Icons.info_outline, size: 24, color: Colors.grey),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          const Text(
-            '图片生成设置',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const Spacer(),
-          Tooltip(
-            message: '注意: 因模型不同，部分设置可能不会生效。',
-            triggerMode: TooltipTriggerMode.tap,
-            showDuration: Duration(seconds: 20),
-            margin: EdgeInsets.all(24),
-            child: Icon(Icons.info_outline, size: 24, color: Colors.grey),
-          ),
-        ],
-      ),
-      content: SizedBox(
-        // 桌面限宽避免超宽横条(移动端保持 0.8 屏宽)
-        width: ScreenHelper.isDesktop()
-            ? 640.0
-            : MediaQuery.of(context).size.width * 0.8,
-        child: FormBuilder(
-          key: _formKey,
-          initialValue: _initialValues,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 尺寸选择
-                const SizedBox(height: 10),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: FormBuilder(
+              key: _formKey,
+              initialValue: _initialValues,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 尺寸选择
+                    const SizedBox(height: 10),
 
-                if (!isQwenMtImage) _buildSizeSelector(),
+                    if (!isQwenMtImage) _buildSizeSelector(),
 
-                // 数量选择
-                const SizedBox(height: 10),
-                _buildImageCountSlider(),
-                const SizedBox(height: 10),
+                    // 数量选择
+                    const SizedBox(height: 10),
+                    _buildImageCountSlider(),
+                    const SizedBox(height: 10),
 
-                // 质量选择
-                if (isZhipuPlatform) _buildQualitySelector(),
-                // 智谱、火山方舟的没有负面提示词栏位
-                if ((isAliyunPlatform || isSiliconCloudPlatform) &&
-                    !isQwenMtImage)
-                  _buildNegativePromptField(),
-                // 硅基流动的没有水印栏位
-                if (!isSiliconCloudPlatform && !isQwenMtImage)
-                  _buildWatermarkField(),
+                    // 质量选择
+                    if (isZhipuPlatform) _buildQualitySelector(),
+                    // 智谱、火山方舟的没有负面提示词栏位
+                    if ((isAliyunPlatform || isSiliconCloudPlatform) &&
+                        !isQwenMtImage)
+                      _buildNegativePromptField(),
+                    // 硅基流动的没有水印栏位
+                    if (!isSiliconCloudPlatform && !isQwenMtImage)
+                      _buildWatermarkField(),
 
-                // 只有阿里云的qwen-mt-image有语言选择
-                if (isAliyunPlatform && isQwenMtImage) ...[
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(child: _buildSourceLanguageSelector()),
-                      const SizedBox(width: 8),
-                      Expanded(child: _buildTargetLanguageSelector()),
+                    // 只有阿里云的qwen-mt-image有语言选择
+                    if (isAliyunPlatform && isQwenMtImage) ...[
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(child: _buildSourceLanguageSelector()),
+                          const SizedBox(width: 8),
+                          Expanded(child: _buildTargetLanguageSelector()),
+                        ],
+                      ),
                     ],
-                  ),
-                ],
 
-                // 高级设置
-                // TEST 暂时只有硅基流动的
-                if (isSiliconCloudPlatform) _buildAdvancedSettings(),
-              ],
+                    // 高级设置
+                    // TEST 暂时只有硅基流动的
+                    if (isSiliconCloudPlatform) _buildAdvancedSettings(),
+                  ],
+                ),
+              ),
             ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
+            ),
+            TextButton(onPressed: _resetToDefaults, child: const Text('重置')),
+            ElevatedButton(onPressed: _saveSettings, child: const Text('保存')),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
-        ),
-        TextButton(onPressed: _resetToDefaults, child: const Text('重置')),
-        ElevatedButton(onPressed: _saveSettings, child: const Text('保存')),
-      ],
     );
   }
 

@@ -353,27 +353,42 @@ class _ChatBackgroundPickerPageState extends State<ChatBackgroundPickerPage>
 
     Color? newColor = await showDialog<Color>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('选择颜色'),
-        content: SingleChildScrollView(
-          child: ColorPicker(
-            pickerColor: currentColor,
-            onColorChanged: (color) {
-              currentColor = color;
-            },
-            pickerAreaHeightPercent: 0.8,
+      // 2026-09-10 弹窗宽度统一：ColorPicker内部Row含固定宽子元素，
+      // 固有最小宽约640(608下溢出80px实测)，是统一档的唯一例外——
+      // 放宽到表单档720(视觉688，ColorPicker恰得640)；仍须Align转loose
+      builder: (context) => Align(
+        alignment: Alignment.center,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: CusContentWidth.formWidth,
+          ),
+          child: AlertDialog(
+            title: const Text('选择颜色'),
+            insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: ColorPicker(
+                  pickerColor: currentColor,
+                  onColorChanged: (color) {
+                    currentColor = color;
+                  },
+                  pickerAreaHeightPercent: 0.8,
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, currentColor),
+                child: const Text('确定'),
+              ),
+            ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, currentColor),
-            child: const Text('确定'),
-          ),
-        ],
       ),
     );
 

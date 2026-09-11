@@ -257,9 +257,6 @@ class UnifiedPlatformSpec {
         return getTextToSpeechUrl();
       case UnifiedModelType.asr:
         return getSpeechToTextUrl();
-      case UnifiedModelType.embedding:
-      case UnifiedModelType.reranker:
-        return getChatCompletionsUrl(); // 暂时使用聊天端点
     }
   }
 

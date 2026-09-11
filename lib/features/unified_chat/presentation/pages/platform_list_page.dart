@@ -1,16 +1,9 @@
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
 
-import '../../../../core/utils/file_picker_utils.dart';
-import '../../../../core/utils/simple_tools.dart';
 import '../../../../shared/widgets/cus_content_width.dart';
 import '../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../shared/widgets/toast_utils.dart';
-import '../../data/models/unified_model_spec.dart';
 import '../../data/models/unified_platform_spec.dart';
 import '../../data/database/unified_chat_dao.dart';
 import '../../data/services/unified_chat_service.dart';
@@ -32,29 +25,6 @@ class _PlatformListPageState extends State<PlatformListPage> {
 
   List<UnifiedPlatformSpec> _platforms = [];
   bool _isLoading = true;
-  bool _isImporting = false;
-
-  String get note =>
-      '''
-导入的json文件**必填**栏位如下:
-```json
-[
-  {
-    "platform": "aliyun",
-    "model": "qwen-tts-latest",
-    "modelType": "tts",
-  },
-  // ...
-]
-```
-其中，**platform**可选值:
-
-${UnifiedPlatformId.values.map((e) => e.name).join(", ")}
-
-**modelType**可选值:
-
-${UnifiedModelType.values.map((e) => e.name).join(", ")}
-''';
 
   @override
   void initState() {
@@ -107,128 +77,6 @@ ${UnifiedModelType.values.map((e) => e.name).join(", ")}
     }
   }
 
-  // 从JSON文件导入模型
-  Future<void> _importFromJson() async {
-    File? file = await FilePickerUtils.pickAndSaveFile(
-      fileType: CusFileType.custom,
-      allowedExtensions: ['json'],
-      overwrite: true,
-    );
-
-    if (file == null) return;
-
-    setState(() => _isImporting = true);
-    try {
-      final jsonStr = await file.readAsString();
-      final jsonList = json.decode(jsonStr) as List;
-
-      // 验证模型配置
-      for (final item in jsonList) {
-        if (!validateModelConfig(item)) {
-          throw '模型配置格式错误';
-        }
-      }
-
-      // 默认导入的json文件中是没有模型规格编号的，而该类为必要属性，所以需要先生成一个
-      for (final item in jsonList) {
-        item['id'] = item['model'] ?? const Uuid().v4();
-
-        // 模型类型需要统一
-        String type = item['modelType'] ?? 'cc';
-        // 这几个都是cc，模型需要自行指定功能支持
-        if (['cc', 'reasoner', 'vision', 'vision_reasoner'].contains(type)) {
-          item['modelType'] = 'cc';
-        }
-      }
-
-      // 转换为模型列表(json格式名称简单点，但和数据库中的不一致)
-      // json文件只需要 platform model modelType ,其他属性猜着来
-      var models = jsonList.map((e) {
-        return UnifiedModelSpec(
-          id: e['id'] as String,
-          platformId: e['platform'] as String,
-          modelName: e['model'] as String,
-          displayName: e['name'] ?? capitalizeWords(e['model']),
-          modelType: e['modelType'] as String,
-          // 这几个默认都没有，用户自行修改
-          supportsThinking: (e['supportsThinking'] as int? ?? 0) == 1,
-          supportsVision: (e['supportsVision'] as int? ?? 0) == 1,
-          supportsToolCalling: (e['supportsToolCalling'] as int? ?? 0) == 1,
-          isActive: true,
-          isBuiltIn: false,
-          isFavorite: false,
-          description: e['description'] as String?,
-          extraConfig: e['extraConfig'] != null
-              ? Map<String, dynamic>.from(json.decode(e['extraConfig']))
-              : null,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
-      }).toList();
-
-      // 查询是否存在同名模型
-      List<UnifiedModelSpec> duplicateModels = [];
-      // 不支持的模型(按照模型类型类)
-      List<UnifiedModelSpec> notSupportModels = [];
-      final existModels = await _chatDao.getModelSpecs();
-      for (final model in models) {
-        if (existModels.any(
-          (e) =>
-              e.platformId == model.platformId &&
-              e.modelName == model.modelName,
-        )) {
-          duplicateModels.add(model);
-        } else {
-          if (!UnifiedModelType.values.any((e) => e.name == model.modelType)) {
-            notSupportModels.add(model);
-          } else {
-            await _chatDao.saveModelSpec(model);
-          }
-        }
-      }
-
-      if (!mounted) return;
-      commonHintDialog(context, '导入成功', """成功导入 ${models.length} 个模型，其中
-          \n ${duplicateModels.length} 个模型 [名称已存在]
-          \n ${notSupportModels.length} 个模型 [类型不支持]
-          \n实际导入 ${models.length - duplicateModels.length - notSupportModels.length} 个模型。
-          """);
-
-      _loadPlatforms();
-    } catch (e) {
-      if (!mounted) return;
-      commonExceptionDialog(context, "导入失败", e.toString());
-      _loadPlatforms();
-    } finally {
-      setState(() => _isImporting = false);
-    }
-  }
-
-  // 检测导入的json格式是否正确
-  bool validateModelConfig(Map<String, dynamic> json) {
-    try {
-      // 验证平台是否支持（这里找不到就会报错，在catch中会抛出）
-      UnifiedPlatformId.values.firstWhere(
-        (e) => e.name == json['platform'],
-        orElse: () => throw Exception('不支持的云平台'),
-      );
-
-      // 2025-03-07 字段验证简化一下，就平台、模型、模型类型即可
-      if (json['platform'] == null ||
-          (json['platform'] as String).trim().isEmpty ||
-          json['model'] == null ||
-          (json['model'] as String).trim().isEmpty ||
-          json['modelType'] == null ||
-          (json['modelType'] as String).trim().isEmpty) {
-        return false;
-      }
-
-      return true;
-    } catch (e) {
-      rethrow;
-    }
-  }
-
   // 测试连接状态
   // 1 从缓存中获取到指定平台的密钥
   // 2 测试该平台的连接
@@ -264,7 +112,7 @@ ${UnifiedModelType.values.map((e) => e.name).join(", ")}
     return CusContentWidth.form(
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('设置'),
+          title: const Text('平台管理'),
           backgroundColor: Theme.of(context).colorScheme.surface,
           elevation: 0,
           actions: [
@@ -272,33 +120,6 @@ ${UnifiedModelType.values.map((e) => e.name).join(", ")}
               onPressed: _reloadBuiltInPlatforms,
               icon: const Icon(Icons.refresh),
               tooltip: '重新加载内置平台和模型',
-            ),
-            if (_isImporting)
-              Padding(
-                padding: EdgeInsets.only(right: 16),
-                child: SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              )
-            else
-              IconButton(
-                icon: const Icon(Icons.upload_file_outlined),
-                onPressed: () => _importFromJson(),
-                tooltip: '导入模型配置json',
-              ),
-
-            IconButton(
-              onPressed: () {
-                commonMarkdwonHintDialog(
-                  context,
-                  "使用说明",
-                  note,
-                  insetPadding: const EdgeInsets.symmetric(horizontal: 16),
-                );
-              },
-              icon: const Icon(Icons.info_outline),
             ),
           ],
         ),

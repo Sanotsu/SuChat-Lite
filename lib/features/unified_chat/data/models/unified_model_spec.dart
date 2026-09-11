@@ -11,13 +11,16 @@ part 'unified_model_spec.g.dart';
 /// (同一模型常同时支持两者)，统一为任务类型 image/video，
 /// 是否可接受参考图(图生图/首帧图)由能力标志 supports_image_input 表达；
 /// 旧值 tti/iti 仅作存量数据兼容映射(见 [type] getter)
-enum UnifiedModelType { cc, embedding, reranker, image, video, tts, asr }
+/// 2026-09-10 全面移除embedding/reranker类型：本应用为聊天客户端，
+/// 检索需求已由平台自带web_search与第三方搜索API覆盖，个人量级资料
+/// 直接进长上下文即可，这两类模型无任何调用流程(仅有分类壳)。
+/// DB存量行的'embedding'/'reranker'字符串经[type] getter兜底为cc，
+/// 并由DB升级v6清理该类存量行
+enum UnifiedModelType { cc, image, video, tts, asr }
 
 // 模型类型对应的中文名
 final Map<UnifiedModelType, String> UMT_NAME_MAP = {
   UnifiedModelType.cc: '对话',
-  UnifiedModelType.embedding: '嵌入',
-  UnifiedModelType.reranker: '重排',
   UnifiedModelType.image: '图片生成',
   UnifiedModelType.video: '视频生成',
   UnifiedModelType.tts: '语音合成',
@@ -40,7 +43,7 @@ class UnifiedModelSpec {
   @JsonKey(name: 'display_name')
   final String displayName;
 
-  // 模型类型：cc对话模型、image图片生成、video视频生成、tts/asr语音、embedder嵌入、reranker重排
+  // 模型类型：cc对话模型、image图片生成、video视频生成、tts/asr语音
   @JsonKey(name: 'model_type')
   final String modelType;
 
@@ -201,15 +204,12 @@ class UnifiedModelSpec {
     return 'UnifiedModelSpec(id: $id, modelName: $modelName, displayName: $displayName)';
   }
 
-  /// 获取模型类型枚举(旧值 tti/iti 兼容映射为 image)
+  /// 获取模型类型枚举(旧值 tti/iti 兼容映射为 image；
+  /// 已移除的embedding/reranker存量值兜底为cc，由DB升级清理)
   UnifiedModelType get type {
     switch (modelType) {
       case 'cc':
         return UnifiedModelType.cc;
-      case 'embedding':
-        return UnifiedModelType.embedding;
-      case 'reranker':
-        return UnifiedModelType.reranker;
       case 'image':
       case 'tti':
       case 'iti':

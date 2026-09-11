@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../../core/utils/screen_helper.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import '../../data/models/unified_model_spec.dart';
 import '../../data/models/unified_platform_spec.dart';
 
@@ -145,135 +145,148 @@ class _VideoGenerationSettingsDialogState
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return AlertDialog(
-      title: const Text('视频生成设置'),
-      content: SizedBox(
-        width: ScreenHelper.isDesktop() ? 460 : double.maxFinite,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: colorScheme.errorContainer.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      size: 18,
-                      color: colorScheme.error,
+    // 2026-09-10 弹窗宽度统一(dialogWidth=640)：限宽必须加在AlertDialog
+    // 外层(showDialog处于tight全屏约束，须Align先转loose)；
+    // content用maxFinite撑满，视觉宽度=640-2x16(inset)=608，全项目一致
+    return Align(
+      alignment: Alignment.center,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: CusContentWidth.dialogWidth,
+        ),
+        child: AlertDialog(
+          title: const Text('视频生成设置'),
+          // 移动端与其他弹窗统一：近全宽(屏宽-32)
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: colorScheme.errorContainer.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '分辨率与时长直接影响生成费用(按分辨率×秒计费)，未配置时默认720P',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // 分辨率
-              _buildLabel('分辨率'),
-              Wrap(
-                spacing: 8,
-                children: _resolutionOptions
-                    .map(
-                      (r) => ChoiceChip(
-                        label: Text(r),
-                        selected: _resolution == r,
-                        onSelected: (_) => setState(() => _resolution = r),
-                      ),
-                    )
-                    .toList(),
-              ),
-              const SizedBox(height: 16),
-
-              // 宽高比
-              if (_ratioOptions.length > 1) ...[
-                _buildLabel('宽高比'),
-                Wrap(
-                  spacing: 8,
-                  children: _ratioOptions
-                      .map(
-                        (r) => ChoiceChip(
-                          label: Text(r),
-                          selected: _ratio == r,
-                          onSelected: (_) => setState(() => _ratio = r),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 18,
+                          color: colorScheme.error,
                         ),
-                      )
-                      .toList(),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // 时长
-              _buildLabel('时长(秒)：$_duration'),
-              Slider(
-                value: _duration.toDouble().clamp(
-                  _minDuration.toDouble(),
-                  _maxDuration.toDouble(),
-                ),
-                min: _minDuration.toDouble(),
-                max: _maxDuration.toDouble(),
-                divisions: _maxDuration - _minDuration,
-                label: '$_duration',
-                onChanged: (v) => setState(() => _duration = v.round()),
-              ),
-              const SizedBox(height: 8),
-
-              // 开关们
-              SwitchListTile(
-                title: const Text('添加水印'),
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                value: _watermark,
-                onChanged: (v) => setState(() => _watermark = v),
-              ),
-              // 万相3.0/PixVerse等支持输出音频(万相3.0开关同价)
-              if (_isAliyun)
-                SwitchListTile(
-                  title: const Text('生成音频'),
-                  subtitle: const Text(
-                    '部分模型支持音画同出',
-                    style: TextStyle(fontSize: 12),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '分辨率与时长直接影响生成费用(按分辨率×秒计费)，未配置时默认720P',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  value: _audio,
-                  onChanged: (v) => setState(() => _audio = v),
-                ),
-              const SizedBox(height: 8),
+                  const SizedBox(height: 16),
 
-              // 种子
-              _buildLabel('随机种子(可选，固定可复现)'),
-              TextField(
-                controller: _seedController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(
-                  hintText: '留空随机',
-                  border: OutlineInputBorder(),
-                  isDense: true,
-                ),
+                  // 分辨率
+                  _buildLabel('分辨率'),
+                  Wrap(
+                    spacing: 8,
+                    children: _resolutionOptions
+                        .map(
+                          (r) => ChoiceChip(
+                            label: Text(r),
+                            selected: _resolution == r,
+                            onSelected: (_) => setState(() => _resolution = r),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 宽高比
+                  if (_ratioOptions.length > 1) ...[
+                    _buildLabel('宽高比'),
+                    Wrap(
+                      spacing: 8,
+                      children: _ratioOptions
+                          .map(
+                            (r) => ChoiceChip(
+                              label: Text(r),
+                              selected: _ratio == r,
+                              onSelected: (_) => setState(() => _ratio = r),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // 时长
+                  _buildLabel('时长(秒)：$_duration'),
+                  Slider(
+                    value: _duration.toDouble().clamp(
+                      _minDuration.toDouble(),
+                      _maxDuration.toDouble(),
+                    ),
+                    min: _minDuration.toDouble(),
+                    max: _maxDuration.toDouble(),
+                    divisions: _maxDuration - _minDuration,
+                    label: '$_duration',
+                    onChanged: (v) => setState(() => _duration = v.round()),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // 开关们
+                  SwitchListTile(
+                    title: const Text('添加水印'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    value: _watermark,
+                    onChanged: (v) => setState(() => _watermark = v),
+                  ),
+                  // 万相3.0/PixVerse等支持输出音频(万相3.0开关同价)
+                  if (_isAliyun)
+                    SwitchListTile(
+                      title: const Text('生成音频'),
+                      subtitle: const Text(
+                        '部分模型支持音画同出',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      value: _audio,
+                      onChanged: (v) => setState(() => _audio = v),
+                    ),
+                  const SizedBox(height: 8),
+
+                  // 种子
+                  _buildLabel('随机种子(可选，固定可复现)'),
+                  TextField(
+                    controller: _seedController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: const InputDecoration(
+                      hintText: '留空随机',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
+            ),
+            ElevatedButton(onPressed: _save, child: const Text('保存')),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
-        ),
-        ElevatedButton(onPressed: _save, child: const Text('保存')),
-      ],
     );
   }
 

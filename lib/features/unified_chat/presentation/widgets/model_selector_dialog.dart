@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/utils/screen_helper.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import '../../data/models/unified_model_spec.dart';
 import '../../data/models/unified_platform_spec.dart';
 import '../../data/database/unified_chat_dao.dart';
@@ -119,99 +120,114 @@ class _ModelSelectorDialogState extends State<ModelSelectorDialog> {
     // 高度预算(总高-标题-按钮)时SizedBox无视约束强行溢出，列表绘制
     // 盖住标题/搜索框/取消按钮。改为自定义Dialog：标题/搜索框/列表/
     // 按钮同处一个受约束Column，列表用Expanded天然不越界
-    final screenWidth = MediaQuery.of(context).size.width;
+    // 2026-09-10 弹窗宽度统一(dialogWidth=640)：与其他AlertDialog弹窗
+    // 同模式——外层Align+ConstrainedBox限宽(内部Dialog的insetPadding16
+    // 在640内扣除，视觉宽度=608)，Container改maxFinite撑满
     final screenHeight = MediaQuery.of(context).size.height;
     final isDesktop = ScreenHelper.isDesktop();
 
-    return Dialog(
-      child: Material(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        clipBehavior: Clip.antiAlias,
-        child: Container(
-          width: isDesktop ? 500.0 : screenWidth - 32,
-          constraints: BoxConstraints(
-            maxHeight: isDesktop ? 600.0 : screenHeight * 0.75,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 标题栏
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Row(
-                  children: [
-                    Text('选择模型', style: Theme.of(context).textTheme.titleLarge),
-                  ],
-                ),
+    return Align(
+      alignment: Alignment.center,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: CusContentWidth.dialogWidth,
+        ),
+        child: Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Material(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            clipBehavior: Clip.antiAlias,
+            child: Container(
+              width: double.maxFinite,
+              constraints: BoxConstraints(
+                maxHeight: isDesktop ? 600.0 : screenHeight * 0.75,
               ),
-
-              // 搜索框
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: TextField(
-                  onChanged: (v) => setState(() => _searchQuery = v),
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    hintText: '搜索模型或平台名称',
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    suffixIcon: _searchQuery.isEmpty
-                        ? null
-                        : IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () => setState(() => _searchQuery = ''),
-                          ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // 模型列表(Expanded约束，不与标题/按钮重叠)
-              Expanded(
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : hasResults
-                    ? SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // 收藏模型区域
-                            if (filteredFavorites.isNotEmpty)
-                              _buildFavoriteSection(filteredFavorites),
-
-                            // 按平台分组的模型
-                            ...filteredByPlatform.entries.map((entry) {
-                              return _buildPlatformSection(
-                                entry.key,
-                                entry.value,
-                              );
-                            }),
-                          ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 标题栏
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Row(
+                      children: [
+                        Text(
+                          '选择模型',
+                          style: Theme.of(context).textTheme.titleLarge,
                         ),
-                      )
-                    : const Center(child: Text('没有匹配的模型')),
-              ),
-
-              // 底部按钮栏
-              const Divider(height: 1),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 4, 16, 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('取消'),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+
+                  // 搜索框
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: TextField(
+                      onChanged: (v) => setState(() => _searchQuery = v),
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search, size: 20),
+                        hintText: '搜索模型或平台名称',
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        suffixIcon: _searchQuery.isEmpty
+                            ? null
+                            : IconButton(
+                                icon: const Icon(Icons.clear, size: 18),
+                                onPressed: () =>
+                                    setState(() => _searchQuery = ''),
+                              ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // 模型列表(Expanded约束，不与标题/按钮重叠)
+                  Expanded(
+                    child: _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : hasResults
+                        ? SingleChildScrollView(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // 收藏模型区域
+                                if (filteredFavorites.isNotEmpty)
+                                  _buildFavoriteSection(filteredFavorites),
+
+                                // 按平台分组的模型
+                                ...filteredByPlatform.entries.map((entry) {
+                                  return _buildPlatformSection(
+                                    entry.key,
+                                    entry.value,
+                                  );
+                                }),
+                              ],
+                            ),
+                          )
+                        : const Center(child: Text('没有匹配的模型')),
+                  ),
+
+                  // 底部按钮栏
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 4, 16, 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('取消'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

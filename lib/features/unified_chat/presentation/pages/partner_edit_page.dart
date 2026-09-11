@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../core/utils/get_dir.dart';
 import '../../../../core/utils/image_picker_utils.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import '../../../../core/utils/screen_helper.dart';
 import '../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../shared/widgets/toast_utils.dart';
@@ -280,31 +281,35 @@ class _PartnerEditPageState extends State<PartnerEditPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEditing ? '编辑搭档' : '创建搭档'),
-        actions: [
-          if (_isSaving)
-            const Padding(
-              padding: EdgeInsets.all(12),
-              child: Center(
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+    // 2026-09-10 与其他桌面端页面统一：CusContentWidth.form包在Scaffold
+    // 外层，整个页面(AppBar+内容)限宽720居中，窄屏原样铺满
+    return CusContentWidth.form(
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(_isEditing ? '编辑搭档' : '创建搭档'),
+          actions: [
+            if (_isSaving)
+              const Padding(
+                padding: EdgeInsets.all(12),
+                child: Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
                 ),
               ),
+            TextButton(
+              onPressed: _isSaving ? null : _handleSave,
+              child: Text(_isEditing ? '保存' : '创建'),
             ),
-          TextButton(
-            onPressed: _isSaving ? null : _handleSave,
-            child: Text(_isEditing ? '保存' : '创建'),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: ScreenHelper.isDesktop()
-            ? _buildDesktopLayout()
-            : _buildMobileLayout(),
+          ],
+        ),
+        body: SafeArea(
+          child: ScreenHelper.isDesktop()
+              ? _buildDesktopLayout()
+              : _buildMobileLayout(),
+        ),
       ),
     );
   }
@@ -703,12 +708,22 @@ class _PartnerEditPageState extends State<PartnerEditPage> {
     );
 
     if (ScreenHelper.isDesktop()) {
+      // 2026-09-10 弹窗宽度统一：桌面此前0.4倍窗口宽，归一到
+      // Align+CB(dialogWidth)模式
       showDialog(
         context: context,
         builder: (dialogContext) {
-          final screenWidth = MediaQuery.of(dialogContext).size.width;
-          return AlertDialog(
-            content: SizedBox(width: screenWidth * 0.4, child: list),
+          return Align(
+            alignment: Alignment.center,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: CusContentWidth.dialogWidth,
+              ),
+              child: AlertDialog(
+                insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+                content: SizedBox(width: double.maxFinite, child: list),
+              ),
+            ),
           );
         },
       );

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/utils/screen_helper.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 
 import '../../data/models/unified_platform_spec.dart';
@@ -184,138 +184,148 @@ class _SpeechSynthesisSettingsDialogState
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16),
-      title: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: const BoxDecoration(
-              color: Colors.blue,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.image, color: Colors.white, size: 24),
-          ),
-          const SizedBox(width: 12),
-          const Text(
-            '语音合成设置',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const Spacer(),
-          Tooltip(
-            message: '注意: 因模型不同，部分设置可能不会生效。',
-            triggerMode: TooltipTriggerMode.tap,
-            showDuration: Duration(seconds: 20),
-            margin: EdgeInsets.all(24),
-            child: Icon(Icons.info_outline, size: 24, color: Colors.grey),
-          ),
-        ],
-      ),
-      content: SizedBox(
-        // 桌面限宽避免超宽横条(移动端保持 0.8 屏宽)
-        width: ScreenHelper.isDesktop()
-            ? 640.0
-            : MediaQuery.of(context).size.width * 0.8,
-        child: FormBuilder(
-          key: _formKey,
-          initialValue: _initialValues,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 语音选择
-                const SizedBox(height: 10),
-                FormBuilderDropdown<String>(
-                  name: 'voice',
-                  decoration: const InputDecoration(
-                    labelText: '语音',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: _getVoiceOptions()
-                      .map(
-                        (voice) =>
-                            DropdownMenuItem(value: voice, child: Text(voice)),
-                      )
-                      .toList(),
+    // 2026-09-10 弹窗宽度统一(dialogWidth=640)：限宽必须加在AlertDialog
+    // 外层(showDialog处于tight全屏约束，须Align先转loose)；
+    // content用maxFinite撑满，视觉宽度=640-2x16(inset)=608，全项目一致
+    return Align(
+      alignment: Alignment.center,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: CusContentWidth.dialogWidth,
+        ),
+        child: AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+          title: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: Colors.blue,
+                  shape: BoxShape.circle,
                 ),
+                child: const Icon(Icons.image, color: Colors.white, size: 24),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                '语音合成设置',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              Tooltip(
+                message: '注意: 因模型不同，部分设置可能不会生效。',
+                triggerMode: TooltipTriggerMode.tap,
+                showDuration: Duration(seconds: 20),
+                margin: EdgeInsets.all(24),
+                child: Icon(Icons.info_outline, size: 24, color: Colors.grey),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: FormBuilder(
+              key: _formKey,
+              initialValue: _initialValues,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 语音选择
+                    const SizedBox(height: 10),
+                    FormBuilderDropdown<String>(
+                      name: 'voice',
+                      decoration: const InputDecoration(
+                        labelText: '语音',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _getVoiceOptions()
+                          .map(
+                            (voice) => DropdownMenuItem(
+                              value: voice,
+                              child: Text(voice),
+                            ),
+                          )
+                          .toList(),
+                    ),
 
-                // 音频格式
-                const SizedBox(height: 10),
-                FormBuilderDropdown<String>(
-                  name: 'responseFormat',
-                  decoration: const InputDecoration(
-                    labelText: '音频格式',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: _getFormatOptions()
-                      .map(
-                        (format) => DropdownMenuItem(
-                          value: format,
-                          child: Text(format.toUpperCase()),
-                        ),
-                      )
-                      .toList(),
+                    // 音频格式
+                    const SizedBox(height: 10),
+                    FormBuilderDropdown<String>(
+                      name: 'responseFormat',
+                      decoration: const InputDecoration(
+                        labelText: '音频格式',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _getFormatOptions()
+                          .map(
+                            (format) => DropdownMenuItem(
+                              value: format,
+                              child: Text(format.toUpperCase()),
+                            ),
+                          )
+                          .toList(),
+                    ),
+
+                    // 语速(智谱和硅基流动)
+                    if (widget.currentPlatform?.id !=
+                        UnifiedPlatformId.aliyun.name) ...[
+                      const SizedBox(height: 10),
+                      FormBuilderSlider(
+                        name: 'speed',
+                        initialValue:
+                            double.tryParse(
+                              _initialValues['speed']?.toString() ?? '1',
+                            ) ??
+                            1.0,
+                        decoration: const InputDecoration(labelText: '语速'),
+                        min: _getSpeedRange()['min']!,
+                        max: _getSpeedRange()['max']!,
+                        divisions: 20,
+                        displayValues: DisplayValues.current,
+                      ),
+                    ],
+
+                    // 音量（仅智谱支持）
+                    if (widget.currentPlatform?.id ==
+                        UnifiedPlatformId.zhipu.name) ...[
+                      const SizedBox(height: 10),
+                      FormBuilderSlider(
+                        name: 'volume',
+                        initialValue:
+                            double.tryParse(
+                              _initialValues['volume']?.toString() ?? '1',
+                            ) ??
+                            1.0,
+                        decoration: const InputDecoration(labelText: '音量'),
+                        min: 0.1,
+                        max: 10.0,
+                        divisions: 19,
+                        displayValues: DisplayValues.current,
+                      ),
+                    ],
+                  ],
                 ),
-
-                // 语速(智谱和硅基流动)
-                if (widget.currentPlatform?.id !=
-                    UnifiedPlatformId.aliyun.name) ...[
-                  const SizedBox(height: 10),
-                  FormBuilderSlider(
-                    name: 'speed',
-                    initialValue:
-                        double.tryParse(
-                          _initialValues['speed']?.toString() ?? '1',
-                        ) ??
-                        1.0,
-                    decoration: const InputDecoration(labelText: '语速'),
-                    min: _getSpeedRange()['min']!,
-                    max: _getSpeedRange()['max']!,
-                    divisions: 20,
-                    displayValues: DisplayValues.current,
-                  ),
-                ],
-
-                // 音量（仅智谱支持）
-                if (widget.currentPlatform?.id ==
-                    UnifiedPlatformId.zhipu.name) ...[
-                  const SizedBox(height: 10),
-                  FormBuilderSlider(
-                    name: 'volume',
-                    initialValue:
-                        double.tryParse(
-                          _initialValues['volume']?.toString() ?? '1',
-                        ) ??
-                        1.0,
-                    decoration: const InputDecoration(labelText: '音量'),
-                    min: 0.1,
-                    max: 10.0,
-                    divisions: 19,
-                    displayValues: DisplayValues.current,
-                  ),
-                ],
-              ],
+              ),
             ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () {
+                if (_formKey.currentState?.saveAndValidate() ?? false) {
+                  final settings = _formKey.currentState!.value;
+                  widget.onSave(settings);
+                  Navigator.of(context).pop();
+                }
+              },
+              child: const Text('保存'),
+            ),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
-        ),
-        TextButton(
-          onPressed: () {
-            if (_formKey.currentState?.saveAndValidate() ?? false) {
-              final settings = _formKey.currentState!.value;
-              widget.onSave(settings);
-              Navigator.of(context).pop();
-            }
-          },
-          child: const Text('保存'),
-        ),
-      ],
     );
   }
 }
