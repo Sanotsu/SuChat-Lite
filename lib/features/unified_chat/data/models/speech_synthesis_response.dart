@@ -63,7 +63,13 @@ class SpeechSynthesisResponse {
   }) async {
     try {
       // 1. 保存文件到本地
-      final filePath = await _saveAudioToFile(audioBytes, format);
+      // 2026-09-10 修复：source此前未传入_saveAudioToFile，文件名恒用
+      // 其默认值siliconCloud(如MiMo合成的文件名错误显示为tts_siliconCloud)
+      final filePath = await _saveAudioToFile(
+        audioBytes,
+        format,
+        source: source,
+      );
 
       // 2. 可选：如果需要Base64，使用dart内置方法
       final audioBase64 = base64Encode(audioBytes);

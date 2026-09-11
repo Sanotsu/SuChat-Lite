@@ -459,6 +459,8 @@ ${UnifiedModelType.values.map((e) => e.name).join(", ")}
         return '${commonIcon}aliyun.png';
       case 'siliconCloud':
         return '${commonIcon}siliconcloud.png';
+      case 'mimo':
+        return '${commonIcon}mimo.png';
       default:
         return '';
     }

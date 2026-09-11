@@ -1067,11 +1067,15 @@ class _SearchToolsSettingsPageState extends State<SearchToolsSettingsPage> {
     String platformId,
     String displayName,
   ) {
-    // 2026-09-09 平台前置条件提示(如火山方舟自带搜索基于Responses API开发中)
+    // 2026-09-09 平台前置条件提示(如需先在控制台开通服务)，行内小字展示
     final setupHint = BuiltinWebSearchRegistry.setupHintFor(platformId);
 
-    // 如果是火山方舟，暂时不显示
-    if (setupHint != null) {
+    // 2026-09-10 仅隐藏自带搜索未落地的平台(如火山方舟，选了策略也不生效)。
+    // 此前错误地按setupHint非空隐藏整行——hint的本意是行内前置条件提示，
+    // 导致小米MiMo(有开通提示但自带搜索可用)的策略行也被隐藏，
+    // 无法配置"平台自带"而始终走auto优先第三方
+    final adapter = BuiltinWebSearchRegistry.adapterFor(platformId);
+    if (adapter == null || !adapter.isConfigurable) {
       return SizedBox.shrink();
     }
 

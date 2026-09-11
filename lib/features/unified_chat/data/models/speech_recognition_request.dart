@@ -122,6 +122,48 @@ class SpeechRecognitionRequest {
     };
   }
 
+  /// 转换为小米MiMo API格式(2026-09-10 chat completions风格，不走audio端点)
+  /// 音频以input_audio内容块放在user消息中，仅支持mp3/wav
+  Map<String, dynamic> toMimoFormat({
+    required String base64Audio,
+    required String format,
+  }) {
+    // MiMo的asr_options.language仅支持auto/zh/en，其他值不传走自动检测
+    String? languageCode;
+    if (language != null && language!.isNotEmpty) {
+      final normalized = language!.toLowerCase().replaceAll('_', '-');
+      if (normalized == 'auto') {
+        languageCode = 'auto';
+      } else if (normalized.startsWith('zh')) {
+        languageCode = 'zh';
+      } else if (normalized.startsWith('en')) {
+        languageCode = 'en';
+      }
+    }
+
+    return {
+      'model': model,
+      'messages': [
+        {
+          'role': 'user',
+          'content': [
+            {
+              'type': 'input_audio',
+              'input_audio': {
+                // data URL形式的base64(与format字段需匹配)
+                'data':
+                    'data:audio/${format == 'mp3' ? 'mpeg' : 'wav'};base64,$base64Audio',
+                'format': format,
+              },
+            },
+          ],
+        },
+      ],
+      if (languageCode != null) 'asr_options': {'language': languageCode},
+      'stream': stream ?? false,
+    };
+  }
+
   /// 获取音频文件
   File? getAudioFile() {
     if (audioPath != null) {

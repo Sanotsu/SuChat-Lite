@@ -101,6 +101,9 @@ class OpenAIChatCompletionRequest {
     if (platform?.id == UnifiedPlatformId.volcengine.name) {
       return _applyCustomParams(toVolcengineBody());
     }
+    if (platform?.id == UnifiedPlatformId.mimo.name) {
+      return _applyCustomParams(toMimoBody());
+    }
 
     final json = toJson();
     json.removeWhere((key, value) => value == null);
@@ -200,6 +203,29 @@ class OpenAIChatCompletionRequest {
       json['thinking'] = {'type': 'enabled'};
     }
     json.remove('enable_thinking');
+
+    return json;
+  }
+
+  // 2026-09-10 小米MiMo：OpenAI兼容，但思考开关用thinking:{type:enabled}
+  // (同智谱/火山)，限长参数用max_completion_tokens，不支持stream_options
+  Map<String, dynamic> toMimoBody() {
+    final json = toJson();
+    json.removeWhere((key, value) => value == null);
+
+    json.remove('stream_options');
+
+    // 获得thinking参数：仅开启时转换，关闭时移除(走模型默认行为)
+    final enableThinking = json['enable_thinking'];
+    if (enableThinking == true) {
+      json['thinking'] = {'type': 'enabled'};
+    }
+    json.remove('enable_thinking');
+
+    // MiMo文档示例使用max_completion_tokens
+    if (json['max_tokens'] != null) {
+      json['max_completion_tokens'] = json.remove('max_tokens');
+    }
 
     return json;
   }

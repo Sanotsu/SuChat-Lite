@@ -87,7 +87,7 @@ class CustomLogInterceptor extends Interceptor {
     if (options.headers.isNotEmpty) {
       logPrint('╔ Headers ');
       options.headers.forEach((key, value) {
-        logPrint('╟ $key: $value');
+        logPrint('╟ $key: ${_maskHeaderValue(key, value.toString())}');
       });
       logPrint('╚${'═' * maxWidth}╝');
     }
@@ -119,7 +119,7 @@ class CustomLogInterceptor extends Interceptor {
     if (response.headers.map.isNotEmpty) {
       logPrint('╔ Headers ');
       response.headers.map.forEach((key, value) {
-        logPrint('╟ $key: $value');
+        logPrint('╟ $key: ${_maskHeaderValue(key, value.toString())}');
       });
       logPrint('╚${'═' * maxWidth}╝');
     }
@@ -133,25 +133,13 @@ class CustomLogInterceptor extends Interceptor {
         // 处理二进制数据
         _logBinaryData(response.data);
       } else {
-        // 处理文本数据
-        // final responseBody = response.data.toString();
-        // if (responseBody.length > 1000) {
-        //   logPrint('║ ${responseBody.substring(0, 1000)}...[响应过长，已截断]');
-        // } else {
-        //   logPrint('║ $responseBody');
-        // }
-
-        // // 和自定义请求一样的处理
-        // final processedData = _processDataForLog(response.data);
-        // final jsonString = _formatJson(processedData);
-        // _safePrint(jsonString);
-
-        // logPrint(
-        //   "处理非二进制数据 ${response.runtimeType} ${response.data.runtimeType}}",
-        // );
-
-        // // 这个是pretty_dio_looger中的显示方法(直接复制的代码)
-        _printResponse(response);
+        // 2026-09-10 响应体先过敏感字段截断再打印：
+        // 此前直接走_printPrettyMap，其对字符串值只折行不截断，
+        // 如小米MiMo语音合成响应中message.audio.data的巨大base64音频
+        // 会把终端刷屏。复用请求体的_processDataForLog(敏感字段含
+        // data/url等，截断只作用日志副本，不影响原始response.data)
+        final processedData = _processDataForLog(response.data);
+        _printResponseData(processedData);
       }
       logPrint('║');
       logPrint('╚${'═' * maxWidth}╝');
@@ -299,8 +287,8 @@ class CustomLogInterceptor extends Interceptor {
   dynamic _processDataForLog(dynamic data) {
     if (data == null) return null;
 
-    if (data is Map<String, dynamic>) {
-      final Map<String, dynamic> processedMap = {};
+    if (data is Map) {
+      final Map<dynamic, dynamic> processedMap = {};
       data.forEach((key, value) {
         if (sensitiveKeys.contains(key) &&
             value is String &&
@@ -335,6 +323,24 @@ class CustomLogInterceptor extends Interceptor {
     }
 
     return data;
+  }
+
+  /// 请求头脱敏(2026-09-10)：认证类头的值只保留前缀和末尾4字符，
+  /// 避免API Key随日志完整暴露(如"Bearer sk-xxxx…xxxx" → "Bearer****xxxx")
+  static const List<String> _maskedHeaderNames = [
+    'authorization',
+    'api-key',
+    'x-api-key',
+    'x-appbuilder-authorization',
+  ];
+
+  String _maskHeaderValue(String name, String value) {
+    if (!_maskedHeaderNames.contains(name.toLowerCase())) {
+      return value;
+    }
+    if (value.length <= 12) return '******';
+    return '${value.substring(0, math.min(7, value.length))}'
+        '****${value.substring(value.length - 4)}';
   }
 
   /// 格式化JSON输出
@@ -384,26 +390,17 @@ class CustomLogInterceptor extends Interceptor {
   /// *******************************************************************
   /// 以下 这个打印response相关辅助函数，直接复制处理pretty_dio_looger的代码
   /// *******************************************************************
-  void _printResponse(Response response) async {
-    if (response.data != null) {
-      if (response.data is Map) {
-        _printPrettyMap(response.data as Map);
-      } else if (response.data is Uint8List) {
-        logPrint('║${_indent()}[');
-        _printUint8List(response.data as Uint8List);
-        logPrint('║${_indent()}]');
-      } else if (response.data is List) {
-        logPrint('║${_indent()}[');
-        _printList(response.data as List);
-        logPrint('║${_indent()}]');
-      } else if (response.data is ResponseBody) {
-        _printBlock(response.data.toString());
-
-        // 注意：流只能单次消费，也不能深拷贝，所以这里不处理流式响应的内容(留着可以测试时使用)
-        // await printResponseBody(response.data);
-      } else {
-        _printBlock(response.data.toString());
-      }
+  /// 打印响应数据(2026-09-10 入口数据已先经_processDataForLog截断，
+  /// 二进制/流式类型在上层_isBinaryData已分流，这里只剩Map/List/其他)
+  void _printResponseData(dynamic data) {
+    if (data is Map) {
+      _printPrettyMap(data);
+    } else if (data is List) {
+      logPrint('║${_indent()}[');
+      _printList(data);
+      logPrint('║${_indent()}]');
+    } else {
+      _printBlock(data.toString());
     }
   }
 
@@ -483,21 +480,6 @@ class CustomLogInterceptor extends Interceptor {
     }
 
     logPrint('║$initialIndent}${isListItem && !isLast ? ',' : ''}');
-  }
-
-  void _printUint8List(Uint8List list, {int tabs = kInitialTab}) {
-    var chunks = [];
-    for (var i = 0; i < list.length; i += chunkSize) {
-      chunks.add(
-        list.sublist(
-          i,
-          i + chunkSize > list.length ? list.length : i + chunkSize,
-        ),
-      );
-    }
-    for (var element in chunks) {
-      logPrint('║${_indent(tabs)} ${element.join(", ")}');
-    }
   }
 
   void _printList(List list, {int tabs = kInitialTab}) {

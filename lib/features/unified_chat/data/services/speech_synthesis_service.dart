@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../../../../core/network/dio_client/cus_http_client.dart';
 import '../../../../core/network/dio_client/cus_http_request.dart';
 import '../models/speech_synthesis_request.dart';
@@ -42,6 +44,9 @@ class SpeechSynthesisService {
       case 'zhipu':
         requestBody = request.toZhipuFormat();
         break;
+      case 'mimo':
+        requestBody = request.toMimoFormat();
+        break;
       default:
         requestBody = request.toSiliconCloudFormat();
     }
@@ -78,6 +83,34 @@ class SpeechSynthesisService {
           return await SpeechSynthesisResponse.fromBinaryData(
             audioBytes,
             format: request.responseFormat ?? 'mp3',
+            source: platform.id,
+          );
+
+        case 'mimo':
+          // 2026-09-10 小米MiMo：chat completions风格，返回JSON，
+          // 合成音频以base64编码在choices[0].message.audio.data
+          final responseData = await HttpUtils.post(
+            path: url,
+            headers: headers,
+            data: requestBody,
+            showLoading: false,
+          );
+
+          final choices = responseData['choices'] as List<dynamic>?;
+          final message = choices?.isNotEmpty == true
+              ? (choices!.first as Map<String, dynamic>)['message']
+                    as Map<String, dynamic>?
+              : null;
+          final audio = message?['audio'] as Map<String, dynamic>?;
+          final audioBase64 = audio?['data'] as String?;
+
+          if (audioBase64 == null || audioBase64.isEmpty) {
+            throw Exception('MiMo语音合成响应中无音频数据');
+          }
+
+          return await SpeechSynthesisResponse.fromBinaryData(
+            base64Decode(audioBase64),
+            format: request.responseFormat ?? 'wav',
             source: platform.id,
           );
 

@@ -8,7 +8,14 @@ import 'unified_model_spec.dart';
 part 'unified_platform_spec.g.dart';
 
 /// 内置的平台
-enum UnifiedPlatformId { aliyun, siliconCloud, deepseek, zhipu, volcengine }
+enum UnifiedPlatformId {
+  aliyun,
+  siliconCloud,
+  deepseek,
+  zhipu,
+  volcengine,
+  mimo,
+}
 
 // 内置的平台对应的中文名
 final Map<UnifiedPlatformId, String> UPI_NAME_MAP = {
@@ -17,6 +24,7 @@ final Map<UnifiedPlatformId, String> UPI_NAME_MAP = {
   UnifiedPlatformId.deepseek: 'DeepSeek',
   UnifiedPlatformId.zhipu: '智谱',
   UnifiedPlatformId.volcengine: '火山方舟',
+  UnifiedPlatformId.mimo: '小米 MiMo',
 };
 
 /// 统一平台规格模型

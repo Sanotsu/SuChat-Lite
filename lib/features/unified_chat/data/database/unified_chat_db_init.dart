@@ -9,6 +9,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../../../core/storage/db_config.dart';
 import '../../../../core/utils/get_dir.dart';
+import '../models/unified_platform_spec.dart';
 import 'unified_chat_ddl.dart';
 
 class UnifiedChatDBInit {
@@ -52,7 +53,7 @@ class UnifiedChatDBInit {
       path,
       // TODO(发布前): 当前版本未发布过，无线上旧库；正式发布时将version固定为最终值
       // 并移除下方全部_upgradeToV2/_upgradeToV3/_upgradeToV4升级逻辑(开发期保留以便调试，免于反复卸载重装)
-      version: 4,
+      version: 5,
       onCreate: _createDb,
       onUpgrade: _upgradeDb,
     );
@@ -102,6 +103,20 @@ class UnifiedChatDBInit {
     if (oldVersion < 4) {
       await _upgradeToV4(db);
     }
+
+    if (oldVersion < 5) {
+      await _upgradeToV5(db);
+    }
+  }
+
+  /// v4 -> v5: 2026-09-10 新增内置平台"小米MiMo"(对话/语音识别/语音合成，
+  /// 三者共用chat completions端点)，存量库补插该平台与内置模型种子数据
+  /// (仅replace mimo自身的行，不影响其他平台及其模型收藏)
+  Future<void> _upgradeToV5(Database db) async {
+    await UnifiedChatDdl.initDefaultPlatforms(
+      db,
+      platformId: UnifiedPlatformId.mimo,
+    );
   }
 
   /// v3 -> v4: 会话表 max_tokens/context_message_length 两列去 NOT NULL 约束

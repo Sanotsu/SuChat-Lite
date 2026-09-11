@@ -53,4 +53,15 @@ List<Map<String, dynamic>> BUILD_IN_PLATFORMS = [
     'host_url': 'https://api.deepseek.com',
     'cc_prefix': '/v1/chat/completions',
   },
+  {
+    'id': 'mimo',
+    'display_name': '小米 MiMo',
+    'host_url': 'https://api.xiaomimimo.com',
+    'cc_prefix': '/v1/chat/completions',
+    // 2026-09-10 MiMo的语音合成/识别不走OpenAI audio端点，与对话共用
+    // chat completions(chat风格：ASR用input_audio内容块传base64音频，
+    // TTS用user/assistant消息对，合成音频以base64返回在message.audio.data)
+    'tts_prefix': '/v1/chat/completions',
+    'asr_prefix': '/v1/chat/completions',
+  },
 ];

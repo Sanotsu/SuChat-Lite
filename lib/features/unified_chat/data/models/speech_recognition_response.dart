@@ -119,6 +119,26 @@ class SpeechRecognitionResponse {
     );
   }
 
+  /// 从小米MiMo响应创建(2026-09-10 chat completions格式，
+  /// 识别文本在choices[0].message.content)
+  factory SpeechRecognitionResponse.fromMimoResponse(
+    Map<String, dynamic> json,
+  ) {
+    final choices = json['choices'] as List<dynamic>?;
+    final firstChoice = choices?.isNotEmpty == true
+        ? choices!.first as Map<String, dynamic>
+        : null;
+    final message = firstChoice?['message'] as Map<String, dynamic>?;
+
+    return SpeechRecognitionResponse(
+      text: message?['content'] as String? ?? '',
+      taskId: json['id'] as String?,
+      created: json['created'] as int?,
+      model: json['model'] as String?,
+      metadata: json,
+    );
+  }
+
   /// 复制并修改参数
   SpeechRecognitionResponse copyWith({
     String? text,

@@ -150,6 +150,25 @@ class SpeechSynthesisRequest {
     return data;
   }
 
+  /// 转换为小米MiMo API格式(2026-09-10 chat completions风格，不走audio端点)
+  /// 要合成的文本放在assistant消息中，音色/格式放在audio对象；
+  /// 仅mimo-v2.5-tts-voicedesign需要user消息(音色描述)，内置tts模型不需要
+  Map<String, dynamic> toMimoFormat() {
+    return {
+      'model': model,
+      'messages': [
+        {'role': 'assistant', 'content': input},
+      ],
+      'audio': {
+        // 内置音色，默认mimo_default；支持：冰糖/茉莉/苏打/白桦/Mia/Chloe/Milo/Dean
+        'voice': voice ?? 'mimo_default',
+        // 仅支持wav/mp3/pcm/pcm16，默认wav
+        'format': responseFormat ?? 'wav',
+      },
+      'stream': stream ?? false,
+    };
+  }
+
   SpeechSynthesisRequest copyWith({
     String? model,
     String? input,

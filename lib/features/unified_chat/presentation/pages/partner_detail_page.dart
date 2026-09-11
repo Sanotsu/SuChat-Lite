@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/utils/screen_helper.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import '../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../shared/widgets/toast_utils.dart';
@@ -116,60 +116,56 @@ class _PartnerDetailPageState extends State<PartnerDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop = ScreenHelper.isDesktop();
-    final maxWidth = isDesktop ? 720.0 : double.infinity;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_partner.isBuiltIn ? '内置搭档详情' : '搭档详情'),
-        actions: [
-          IconButton(
-            onPressed: _partner.isBuiltIn ? null : _toggleFavorite,
-            icon: Icon(
-              _partner.isFavorite ? Icons.star : Icons.star_border,
-              color: _partner.isFavorite ? Colors.orange : null,
-            ),
-            tooltip: _partner.isFavorite ? '取消收藏' : '收藏',
-          ),
-          if (!_partner.isBuiltIn)
+    // 2026-09-10 与其他桌面端页面统一：CusContentWidth.form包在Scaffold外层，
+    // 整个页面(AppBar+内容)限宽居中，窄屏原样铺满
+    return CusContentWidth.form(
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(_partner.isBuiltIn ? '内置搭档详情' : '搭档详情'),
+          actions: [
             IconButton(
-              onPressed: _editPartner,
-              icon: const Icon(Icons.edit),
-              tooltip: '编辑',
+              onPressed: _partner.isBuiltIn ? null : _toggleFavorite,
+              icon: Icon(
+                _partner.isFavorite ? Icons.star : Icons.star_border,
+                color: _partner.isFavorite ? Colors.orange : null,
+              ),
+              tooltip: _partner.isFavorite ? '取消收藏' : '收藏',
             ),
-          if (!_partner.isBuiltIn)
-            IconButton(
-              onPressed: _deletePartner,
-              icon: const Icon(Icons.delete, color: Colors.red),
-              tooltip: '删除',
-            ),
-          const SizedBox(width: 4),
-        ],
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: maxWidth),
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _buildHeader(),
-              _buildSection('人物设定（Prompt）', _partner.prompt),
-              if (_partner.description != null)
-                _buildSection('角色背景描述', _partner.description!),
-              if (_partner.personality != null)
-                _buildSection('性格特点', _partner.personality!),
-              if (_partner.scenario != null)
-                _buildSection('场景设定', _partner.scenario!),
-              if (_partner.firstMessage != null)
-                _buildSection('开场白', _partner.firstMessage!),
-              if (_partner.exampleDialogue != null)
-                _buildSection('对话示例', _partner.exampleDialogue!),
-              if (_partner.tagList.isNotEmpty) _buildTags(),
-              _buildBackgroundSection(),
-              _buildParamsSection(),
-              const SizedBox(height: 32),
-            ],
-          ),
+            if (!_partner.isBuiltIn)
+              IconButton(
+                onPressed: _editPartner,
+                icon: const Icon(Icons.edit),
+                tooltip: '编辑',
+              ),
+            if (!_partner.isBuiltIn)
+              IconButton(
+                onPressed: _deletePartner,
+                icon: const Icon(Icons.delete, color: Colors.red),
+                tooltip: '删除',
+              ),
+            const SizedBox(width: 4),
+          ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _buildHeader(),
+            _buildSection('人物设定（Prompt）', _partner.prompt),
+            if (_partner.description != null)
+              _buildSection('角色背景描述', _partner.description!),
+            if (_partner.personality != null)
+              _buildSection('性格特点', _partner.personality!),
+            if (_partner.scenario != null)
+              _buildSection('场景设定', _partner.scenario!),
+            if (_partner.firstMessage != null)
+              _buildSection('开场白', _partner.firstMessage!),
+            if (_partner.exampleDialogue != null)
+              _buildSection('对话示例', _partner.exampleDialogue!),
+            if (_partner.tagList.isNotEmpty) _buildTags(),
+            _buildBackgroundSection(),
+            _buildParamsSection(),
+            const SizedBox(height: 32),
+          ],
         ),
       ),
     );

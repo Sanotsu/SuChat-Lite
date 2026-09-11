@@ -46,6 +46,8 @@ String _getPlatformIcon(String platformId) {
       return '${commonIcon}aliyun.png';
     case 'siliconCloud':
       return '${commonIcon}siliconcloud.png';
+    case 'mimo':
+      return '${commonIcon}mimo.png';
     default:
       return '';
   }

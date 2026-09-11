@@ -46,34 +46,56 @@ abstract class BuiltinWebSearchAdapter {
   /// 2026-09-09 平台使用前置条件提示(如需先在控制台开通服务)；
   /// null表示无特殊前置条件，设置页策略行展示
   String? get setupHint => null;
+
+  /// 2026-09-10 自带搜索是否可用、平台策略是否可配置。
+  /// false用于自带搜索未落地的平台(如火山方舟仅Responses API提供)——
+  /// 选了策略也不会生效，设置页策略行整体隐藏；
+  /// 有前置条件但可用的平台(如小米MiMo需先开通联网插件)保持true，
+  /// [setupHint]作为行内小字提示展示
+  bool get isConfigurable => true;
 }
 
 /// 阿里百炼适配器
 /// 注意: OpenAI兼容-Chat Completions协议不支持返回搜索来源/角标标注，
 /// 所以本适配器parseReferences恒为null(引用展示走第三方工具搜索)
 class AliyunWebSearchAdapter extends BuiltinWebSearchAdapter {
-  /// 2026-09-09 按官方"联网搜索-支持的模型"文档核对并全面重写。
-  /// 官方口径: 2025年7月后发布的千问Max/Plus/Flash全系自动支持联网搜索；
-  /// 直供第三方模型中DeepSeek-V4系列支持；GLM/Kimi仅Responses API支持；
-  /// MiniMax-M3、MiMo官方未列入(不启用，避免请求报错，这类模型走第三方工具搜索)。
-  /// 匹配规则: 精确相等 或 前缀+日期快照后缀(如 qwen3.8-max-0902)
+  /// 2026-09-10 按官方"联网搜索-支持的模型"文档全面更新
+  /// (https://docs.bailian.console.aliyun.com/zh/model-studio/web-search)。
+  /// 官方口径: "2025年7月后发布的千问Max/Plus/Flash模型都自动支持联网搜索"，
+  /// 清单已扩展到qwen3.5~3.8全系/老商业系列/QwQ/角色扮演及更多直供第三方。
+  /// 排除说明(仅CC通道白名单)：
+  /// - glm-5.2/kimi-k3仅Responses API支持联网搜索，不列入；
+  ///   FAQ明确Kimi系列不支持enable_search参数，不列入
+  /// - MiMo官方清单未提及，不列入(避免请求报错，走第三方工具搜索)
+  /// - MiniMax-M2.1已列入支持(但与Qwen3.8系列/角色扮演一样不支持agent策略，
+  ///   本项目仅对qwen3.5-omni发agent，其余恒turbo，天然安全)
+  /// 匹配规则(统一小写比较): 精确相等 或 前缀+日期快照后缀(如 qwen3.8-max-0902)
   static const List<String> _supportedModelPrefixes = [
-    // 千问商业版系列
-    'qwen3.8-max',
-    'qwen3.8-flash',
-    'qwen3.7-plus',
-    'qwen3.5-plus',
-    'qwen3.5-flash',
-    // 千问Omni(qwen3.5-omni系列搜索策略必须为agent)
-    'qwen3.5-omni-plus',
-    // 直供DeepSeek
-    'deepseek-v4-pro',
-    'deepseek-v4-flash',
+    // 千问Qwen3.5~3.8系列(系列级前缀覆盖各尺寸与快照；
+    // qwen3.5前缀同时覆盖omni系列，其agent策略在buildConfig单独判断)
+    'qwen3.8', 'qwen3.7', 'qwen3.6', 'qwen3.5',
+    // qwen3-max(2025-09-23及之后快照)
+    'qwen3-max',
+    // 老商业系列(2025-07后快照自动支持；含-plus-character角色扮演变体)
+    'qwen-max', 'qwen-plus', 'qwen-flash', 'qwen-turbo',
+    // qwq-plus(仅默认搜索策略，不能设置search_strategy，buildConfig单独处理)
+    'qwq-plus',
+    // 直供DeepSeek(v4全系/v3.2/v3.1/v3/r1及快照)
+    'deepseek-v4',
+    'deepseek-v3.2',
+    'deepseek-v3.1',
+    'deepseek-v3',
+    'deepseek-r1',
+    // MiniMax-M2.1
+    'minimax-m2.1',
   ];
 
-  bool _supports(String modelName) => _supportedModelPrefixes.any(
-    (prefix) => modelName == prefix || modelName.startsWith('$prefix-'),
-  );
+  bool _supports(String modelName) {
+    final name = modelName.toLowerCase();
+    return _supportedModelPrefixes.any(
+      (prefix) => name == prefix || name.startsWith('$prefix-'),
+    );
+  }
 
   @override
   bool supportsModel(String modelName) => _supports(modelName);
@@ -82,8 +104,13 @@ class AliyunWebSearchAdapter extends BuiltinWebSearchAdapter {
   Map<String, dynamic>? buildConfig(String modelName) {
     if (!_supports(modelName)) return null;
 
+    final lowercaseName = modelName.toLowerCase();
+
     // qwen3.5-omni系列官方要求搜索策略必须为agent(每次额外计费)
-    final isOmni = modelName.startsWith('qwen3.5-omni');
+    final isOmni = lowercaseName.startsWith('qwen3.5-omni');
+    // 2026-09-10 qwq-plus仅支持默认搜索策略，设置search_strategy可能报错，
+    // 不发送该字段走平台默认
+    final isQwq = lowercaseName.startsWith('qwq');
 
     return {
       'enable_search': true,
@@ -91,7 +118,7 @@ class AliyunWebSearchAdapter extends BuiltinWebSearchAdapter {
         // 让模型自己判断是否需要搜索，避免无搜索需求时白白计费
         'forced_search': false,
         // turbo(默认,兼顾速度与效果) / max(多源更全面) / agent(多轮检索,额外计费)
-        'search_strategy': isOmni ? 'agent' : 'turbo',
+        if (!isQwq) 'search_strategy': isOmni ? 'agent' : 'turbo',
         // 开启垂域搜索
         'enable_search_extension': true,
       },
@@ -182,6 +209,12 @@ class VolcengineWebSearchAdapter extends BuiltinWebSearchAdapter {
   @override
   String? get setupHint => '自带搜索基于Responses API(开发规划中)，当前请配置第三方搜索Key使用联网';
 
+  /// 2026-09-10 自带搜索未落地(CC不支持web_search)，策略选择无意义，
+  /// 设置页整行隐藏。注意不能按setupHint非空判断隐藏——那是行内提示，
+  /// 否则有前置提示但可用的平台(如小米MiMo)的策略行也会被错误隐藏
+  @override
+  bool get isConfigurable => false;
+
   @override
   bool supportsModel(String modelName) => true;
 
@@ -221,6 +254,79 @@ class VolcengineWebSearchAdapter extends BuiltinWebSearchAdapter {
   }
 }
 
+/// 小米MiMo适配器
+/// 2026-09-10 MiMo的Web Search直接在OpenAI Chat Completions提供
+/// (官方文档明确"暂不支持其他API协议"，与火山仅Responses API提供不同)：
+/// tools平铺{type: "web_search", max_keyword, force_search...} +
+/// tool_choice=auto；引用在message(非流式)/delta(流式)的annotations
+/// (type=url_citation，含url/title/summary/site_name/publish_time/logo_url)。
+/// 前置条件：需在MiMo控制台开通"联网服务插件"(按次计费)，
+/// 一轮搜索会按max_keyword发起多个关键词同时搜索(多次计费)。
+/// 支持模型：mimo-v2.5-pro、mimo-v2.5
+class MimoWebSearchAdapter extends BuiltinWebSearchAdapter {
+  /// 与阿里适配器同款匹配规则：精确相等 或 前缀+日期快照后缀
+  static const List<String> _supportedModelPrefixes = [
+    'mimo-v2.5-pro',
+    'mimo-v2.5',
+  ];
+
+  bool _supports(String modelName) => _supportedModelPrefixes.any(
+    (prefix) => modelName == prefix || modelName.startsWith('$prefix-'),
+  );
+
+  @override
+  bool supportsModel(String modelName) => _supports(modelName);
+
+  @override
+  String? get setupHint => '需在MiMo控制台开通联网服务插件(按次计费)，模型自主判断是否搜索';
+
+  @override
+  Map<String, dynamic>? buildConfig(String modelName) {
+    if (!_supports(modelName)) return null;
+
+    return {
+      'tools': [
+        {
+          'type': 'web_search',
+          // 一轮搜索最大关键词数(每关键词各计一次费，限制以控成本)
+          'max_keyword': 3,
+          // 让模型自主判断是否联网(官方称意图识别)，避免无需求时白白计费
+          'force_search': false,
+        },
+      ],
+      'tool_choice': 'auto',
+    };
+  }
+
+  @override
+  List<Map<String, dynamic>>? parseReferences(Map<String, dynamic> chunkJson) {
+    try {
+      final choices = chunkJson['choices'] as List?;
+      if (choices == null || choices.isEmpty) return null;
+
+      // 引用可能在message(非流式)或delta(流式)的annotations上
+      final choice = choices.first as Map<String, dynamic>;
+      final message = choice['message'] as Map<String, dynamic>?;
+      final delta = choice['delta'] as Map<String, dynamic>?;
+      dynamic refs = message?['annotations'] ?? delta?['annotations'];
+      if (refs is! List || refs.isEmpty) return null;
+
+      return refs.whereType<Map<String, dynamic>>().map((item) {
+        return {
+          'title': item['title'] ?? '',
+          'url': item['url'] ?? '',
+          'description': item['summary'] ?? '',
+          'favicon': item['logo_url'],
+          'publishedDate': item['publish_time'],
+        };
+      }).toList();
+    } catch (e) {
+      pl.e('解析小米MiMo联网搜索引用失败: $e');
+      return null;
+    }
+  }
+}
+
 /// 平台自带联网搜索注册表
 /// 新平台接入: 实现 BuiltinWebSearchAdapter 后在 _adapters 中注册一行即可，
 /// 策略设置UI会自动出现对应平台的配置项
@@ -232,12 +338,14 @@ class BuiltinWebSearchRegistry {
     UnifiedPlatformId.aliyun.name: '阿里百炼',
     UnifiedPlatformId.zhipu.name: '智谱',
     UnifiedPlatformId.volcengine.name: '火山方舟',
+    UnifiedPlatformId.mimo.name: '小米 MiMo',
   };
 
   static final Map<String, BuiltinWebSearchAdapter> _adapters = {
     UnifiedPlatformId.aliyun.name: AliyunWebSearchAdapter(),
     UnifiedPlatformId.zhipu.name: ZhipuWebSearchAdapter(),
     UnifiedPlatformId.volcengine.name: VolcengineWebSearchAdapter(),
+    UnifiedPlatformId.mimo.name: MimoWebSearchAdapter(),
   };
 
   static BuiltinWebSearchAdapter? adapterFor(String platformId) =>

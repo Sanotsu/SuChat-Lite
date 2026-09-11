@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 
@@ -23,6 +24,8 @@ class SpeechRecognitionService {
           return await _recognizeWithSiliconCloud(platform, request, apiKey);
         case 'zhipu':
           return await _recognizeWithZhipu(platform, request, apiKey);
+        case 'mimo':
+          return await _recognizeWithMimo(platform, request, apiKey);
         default:
           // 2026-09-03 通用化：用户在平台管理中自建的平台，只要配置了
           // 语音识别端点(asrPrefix，OpenAI兼容/v1/audio/transcriptions格式)
@@ -172,6 +175,49 @@ class SpeechRecognitionService {
     );
 
     return SpeechRecognitionResponse.fromZhipuResponse(responseData);
+  }
+
+  /// 小米MiMo语音识别(2026-09-10 chat completions风格，不走audio端点)
+  /// 音频转base64以input_audio内容块发送，仅支持mp3/wav
+  static Future<SpeechRecognitionResponse> _recognizeWithMimo(
+    UnifiedPlatformSpec platform,
+    SpeechRecognitionRequest request,
+    String apiKey,
+  ) async {
+    final url = platform.getSpeechToTextUrl();
+    if (url == null) {
+      throw Exception('小米MiMo平台未配置语音识别端点');
+    }
+    final audioFile = request.getAudioFile();
+
+    if (audioFile == null || !audioFile.existsSync()) {
+      throw Exception('音频文件不存在或路径无效');
+    }
+
+    // MiMo仅支持mp3/wav，其他格式给出友好提示
+    final extension = audioFile.path.toLowerCase().split('.').last;
+    final String format;
+    if (extension == 'mp3') {
+      format = 'mp3';
+    } else if (extension == 'wav') {
+      format = 'wav';
+    } else {
+      throw Exception('小米MiMo语音识别仅支持mp3/wav格式音频，当前文件为.$extension');
+    }
+
+    final base64Audio = base64Encode(audioFile.readAsBytesSync());
+
+    final responseData = await HttpUtils.post(
+      path: url,
+      data: request.toMimoFormat(base64Audio: base64Audio, format: format),
+      showLoading: false,
+      headers: {
+        'Authorization': 'Bearer $apiKey',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    return SpeechRecognitionResponse.fromMimoResponse(responseData);
   }
 
   /// 验证音频文件格式
