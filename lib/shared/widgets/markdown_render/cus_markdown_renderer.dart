@@ -5,6 +5,7 @@ import 'package:gpt_markdown/custom_widgets/selectable_adapter.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 
 import '../../../core/utils/simple_tools.dart';
+import '../image_preview_helper.dart';
 import 'cus_code_field.dart';
 import 'latex_string_normalize.dart';
 
@@ -211,21 +212,63 @@ class CusMarkdownRenderer {
   }
 
   // 图片构建器(width/height来自图片alt文本的WxH解析，如![100x200](url))
+  // 2026-09-15 修复：无标注时原实现强制100x100小框(截图里图表显示很小)，
+  // 改为自适应可用宽度(按原图比例，小图不放大、大图缩到约束内)；
+  // 并支持点击放大预览(photo_view缩放)
   Widget _buildImage(
     BuildContext context,
     String url,
     double? width,
     double? height,
   ) {
-    return Image.network(
+    final image = Image.network(
       url,
-      width: width ?? 100,
-      height: height ?? 100,
+      width: width,
+      height: height,
+      fit: BoxFit.contain,
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        final expected = progress.expectedTotalBytes;
+        return Container(
+          width: width ?? 200,
+          height: height ?? 120,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            value: (expected != null && expected > 0)
+                ? progress.cumulativeBytesLoaded / expected
+                : null,
+          ),
+        );
+      },
       errorBuilder: (context, error, stackTrace) => Icon(
-        Icons.error,
-        size: 24,
+        Icons.broken_image_outlined,
+        size: 32,
         color: Theme.of(context).colorScheme.error,
       ),
+    );
+
+    void tapToPreview() => showImagePreviewDialog(context, url);
+
+    // 有WxH标注：按标注尺寸渲染(尊重作者意图)
+    if (width != null || height != null) {
+      return GestureDetector(
+        onTap: tapToPreview,
+        child: ClipRRect(borderRadius: BorderRadius.circular(8), child: image),
+      );
+    }
+
+    // 无标注：不传尺寸让图片按原比例自适应约束(气泡宽度内，原像素
+    // 小于约束则保持原大小不放大)
+    return GestureDetector(
+      onTap: tapToPreview,
+      child: ClipRRect(borderRadius: BorderRadius.circular(8), child: image),
     );
   }
 

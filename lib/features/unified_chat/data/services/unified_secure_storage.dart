@@ -308,6 +308,69 @@ class UnifiedSecureStorage {
     await _storage.delete(key: '$_searchModePrefix$platformId');
   }
 
+  /// 2026-09-11 MCP集成(P0-4)：存储MCP server认证头敏感值
+  /// (如Authorization头值)，DB中仅存非敏感头；键规则 `mcp_auth_serverId`
+  static Future<void> setMcpAuthHeader(String serverId, String value) async {
+    await _storage.write(key: 'unified_chat_mcp_auth_$serverId', value: value);
+  }
+
+  /// 获取MCP server认证头敏感值(未设置返回null)
+  static Future<String?> getMcpAuthHeader(String serverId) async {
+    return await _storage.read(key: 'unified_chat_mcp_auth_$serverId');
+  }
+
+  /// 删除MCP server认证头敏感值(server删除时同步清理)
+  static Future<void> deleteMcpAuthHeader(String serverId) async {
+    await _storage.delete(key: 'unified_chat_mcp_auth_$serverId');
+  }
+
+  /// 2026-09-15 P4-2 OAuth：存储MCP server的OAuth令牌(敏感，JSON序列化)
+  static Future<void> setMcpOAuthTokens(
+    String serverId,
+    String tokensJson,
+  ) async {
+    await _storage.write(
+      key: 'unified_chat_mcp_oauth_$serverId',
+      value: tokensJson,
+    );
+  }
+
+  /// 获取MCP server的OAuth令牌JSON(未授权返回null)
+  static Future<String?> getMcpOAuthTokens(String serverId) async {
+    return await _storage.read(key: 'unified_chat_mcp_oauth_$serverId');
+  }
+
+  /// 删除MCP server的OAuth令牌(server删除时同步清理)
+  static Future<void> deleteMcpOAuthTokens(String serverId) async {
+    await _storage.delete(key: 'unified_chat_mcp_oauth_$serverId');
+  }
+
+  /// 2026-09-11 MCP集成(P1-3)：会话级MCP工具开关，键规则 `mcp_enabled_<id>`
+  static Future<void> setConversationMcpEnabled(
+    String conversationId,
+    bool enabled,
+  ) async {
+    await _storage.write(
+      key: 'unified_chat_mcp_enabled_$conversationId',
+      value: enabled ? '1' : '0',
+    );
+  }
+
+  /// 获取会话级MCP工具开关(未设置默认false——安全默认关)
+  static Future<bool> getConversationMcpEnabled(String conversationId) async {
+    final value = await _storage.read(
+      key: 'unified_chat_mcp_enabled_$conversationId',
+    );
+    return value == '1';
+  }
+
+  /// 删除会话级MCP开关(会话删除时清理)
+  static Future<void> deleteConversationMcpEnabled(
+    String conversationId,
+  ) async {
+    await _storage.delete(key: 'unified_chat_mcp_enabled_$conversationId');
+  }
+
   /// 2026-09-09 存储百度千帆AI搜索模式(retrieval/intelligent)
   static Future<void> setBaiduSearchMode(String mode) async {
     await _storage.write(key: _baiduSearchModeKey, value: mode);
@@ -316,6 +379,18 @@ class UnifiedSecureStorage {
   /// 获取百度千帆AI搜索模式(未设置返回null，调用方按retrieval纯检索处理)
   static Future<String?> getBaiduSearchMode() async {
     return await _storage.read(key: _baiduSearchModeKey);
+  }
+
+  /// 2026-09-12 全局搜索渠道偏好(auto/platformOnly/thirdPartyOnly/mcpOnly)
+  static const String _searchChannelPrefKey =
+      'unified_chat_search_channel_pref';
+
+  static Future<void> setSearchChannelPreference(String value) async {
+    await _storage.write(key: _searchChannelPrefKey, value: value);
+  }
+
+  static Future<String?> getSearchChannelPreference() async {
+    return await _storage.read(key: _searchChannelPrefKey);
   }
 
   /// 获取存储统计信息

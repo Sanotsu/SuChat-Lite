@@ -48,6 +48,9 @@ dependencies:
   dio: ^5.8.0+1
   web_socket_channel: ^3.0.3
 
+  # MCP(Model Context Protocol)客户端SDK，2026-09-11 P0-1
+  mcp_dart: ^2.4.2
+
   get_storage: ^2.1.1
   sqflite: ^2.4.2
   sqflite_common_ffi: ^2.3.6

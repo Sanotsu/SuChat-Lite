@@ -8,6 +8,7 @@ import '../../data/database/unified_chat_db_init.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
 import '../pages/chat_background_picker_page.dart';
 import '../pages/media_library_page.dart';
+import '../pages/mcp_servers_settings_page.dart';
 import '../pages/search_tools_settings_page.dart';
 import 'appearance_tool_widgets.dart';
 
@@ -145,6 +146,17 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
                       ],
                     ),
                   ),
+                  // MCP工具管理(2026-09-11 MCP集成P1-4)
+                  const PopupMenuItem(
+                    value: 'mcp_servers',
+                    child: Row(
+                      children: [
+                        Icon(Icons.extension),
+                        SizedBox(width: 8),
+                        Text('MCP 工具'),
+                      ],
+                    ),
+                  ),
                   const PopupMenuItem(
                     value: 'media_library',
                     child: Row(
@@ -241,6 +253,9 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
         break;
       case 'search_tools':
         _openSearchToolsSettings(context);
+        break;
+      case 'mcp_servers':
+        _openMcpServersSettings(context);
         break;
       case 'text_size':
         _adjustTextScale(context, viewModel);
@@ -364,6 +379,13 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const SearchToolsSettingsPage()),
+    );
+  }
+
+  void _openMcpServersSettings(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const McpServersSettingsPage()),
     );
   }
 

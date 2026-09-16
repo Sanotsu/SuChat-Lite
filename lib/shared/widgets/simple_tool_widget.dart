@@ -598,7 +598,7 @@ Widget buildIconWithTextButton({
       onPressed: onTap,
       child: Container(
         width: 64,
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 4),
         margin: const EdgeInsets.symmetric(vertical: 4),
         child: Column(
           mainAxisSize: MainAxisSize.min,

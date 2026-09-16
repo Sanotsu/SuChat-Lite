@@ -166,6 +166,17 @@ class UnifiedChatDao {
     );
   }
 
+  /// 2026-09-14 清理孤儿流式状态：进程在流式生成中被杀死时，消息的
+  /// is_streaming=1残留在库中，重启后加载会一直显示"生成中…"且继续
+  /// 对话也不消失。应用启动时一次性全表复位——任何时刻最多一条活跃
+  /// 流且随进程消亡，重启后不可能有活跃流，全部置0安全
+  Future<int> clearOrphanStreamingMessages() async {
+    final db = await dbInit.database;
+    return await db.update(UnifiedChatDdl.tableUnifiedChatMessage, {
+      'is_streaming': 0,
+    }, where: 'is_streaming = 1');
+  }
+
   /// 更新消息
   Future<int> updateMessage(UnifiedChatMessage message) async {
     final db = await dbInit.database;

@@ -130,6 +130,9 @@ UnifiedChatMessage _$UnifiedChatMessageFromJson(Map<String, dynamic> json) =>
       searchReferences: (json['search_references'] as List<dynamic>?)
           ?.map((e) => SearchReference.fromJson(e as Map<String, dynamic>))
           .toList(),
+      segments: (json['segments'] as List<dynamic>?)
+          ?.map((e) => MessageSegment.fromJson(e as Map<String, dynamic>))
+          .toList(),
       metadata: json['metadata'] as Map<String, dynamic>?,
       parentId: json['parent_id'] as String?,
       branchIndex: (json['branch_index'] as num?)?.toInt() ?? 0,
@@ -167,6 +170,7 @@ Map<String, dynamic> _$UnifiedChatMessageToJson(UnifiedChatMessage instance) =>
       'search_references': instance.searchReferences
           ?.map((e) => e.toJson())
           .toList(),
+      'segments': instance.segments?.map((e) => e.toJson()).toList(),
       'metadata': instance.metadata,
       'parent_id': instance.parentId,
       'branch_index': instance.branchIndex,

@@ -15,6 +15,7 @@ import '../widgets/chat_history_panel.dart';
 import '../widgets/chat_app_bar.dart';
 import '../widgets/chat_desktop_toolbar.dart';
 import '../widgets/draggable_partner_avatar_preview.dart';
+import '../widgets/mcp_approval_banner.dart';
 import '../widgets/partner_horizontal_list.dart';
 import 'platform_list_page.dart';
 
@@ -253,6 +254,17 @@ class _UnifiedChatPageState extends State<UnifiedChatPage> {
                       viewModel.currentPartner != null)
                     _buildSelectedPartnerCard(viewModel),
 
+                  // 2026-09-14 P3-1 工具调用审批横幅(输入框上方)：
+                  // 挂起时展示工具名+参数，允许/拒绝后Agent循环继续
+                  if (viewModel.pendingApproval != null)
+                    McpApprovalBanner(
+                      request: viewModel.pendingApproval!,
+                      onAllow: () => viewModel.approveToolCall(),
+                      onAllowAlways: () =>
+                          viewModel.approveToolCall(alwaysForSession: true),
+                      onDeny: () => viewModel.denyToolCall(),
+                    ),
+
                   // 输入组件
                   ChatInputWidget(),
                 ],
@@ -343,7 +355,7 @@ class _UnifiedChatPageState extends State<UnifiedChatPage> {
         VerticalDivider(width: 1, color: Theme.of(context).dividerColor),
         Material(
           color: Colors.transparent,
-          child: SizedBox(width: 76, child: ChatDesktopToolbar()),
+          child: SizedBox(width: 86, child: ChatDesktopToolbar()),
         ),
       ],
     );

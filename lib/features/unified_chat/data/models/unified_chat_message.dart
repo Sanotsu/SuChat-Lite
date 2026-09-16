@@ -257,6 +257,118 @@ class SearchReference {
   }
 }
 
+/// 2026-09-12 消息内容段类型(P3-10 分段重构)：
+/// 多轮工具调用的一次完整响应包含多段"思考→正文→工具调用"交替
+enum MessageSegmentType {
+  /// 思考内容(带用时)
+  thinking,
+
+  /// 正文文本
+  text,
+
+  /// 工具调用(执行过程展示)
+  toolCall,
+}
+
+/// 消息内容段：按时间顺序排列成 [segments]，一次AI响应=一个气泡内
+/// 多段交替；旧消息(未分段)segments为null走旧字段渲染
+class MessageSegment {
+  final MessageSegmentType type;
+
+  /// thinking/text: 文本内容
+  final String? text;
+
+  /// thinking: 思考用时(ms)
+  @JsonKey(name: 'thinking_time')
+  final int? thinkingTime;
+
+  /// toolCall: 友好工具名(如 exa.web_search_exa / 联网搜索)
+  @JsonKey(name: 'tool_name')
+  final String? toolName;
+
+  /// toolCall: 参数摘要(截断后的JSON字符串)
+  @JsonKey(name: 'tool_args_summary')
+  final String? toolArgsSummary;
+
+  /// toolCall: 工具结果文本(2026-09-14随哨兵下发持久化，可展开查看；
+  /// null=旧消息无结果或结果尚未回填)
+  @JsonKey(name: 'tool_result')
+  final String? toolResult;
+
+  /// toolCall: 执行耗时ms(P3-14，null=旧消息无耗时数据)
+  @JsonKey(name: 'tool_elapsed_ms')
+  final int? toolElapsedMs;
+
+  const MessageSegment({
+    required this.type,
+    this.text,
+    this.thinkingTime,
+    this.toolName,
+    this.toolArgsSummary,
+    this.toolResult,
+    this.toolElapsedMs,
+  });
+
+  factory MessageSegment.fromJson(Map<String, dynamic> json) {
+    return MessageSegment(
+      type: MessageSegmentType.values.firstWhere(
+        (t) => t.name == json['type'],
+        orElse: () => MessageSegmentType.text,
+      ),
+      text: json['text'] as String?,
+      thinkingTime: json['thinking_time'] as int?,
+      toolName: json['tool_name'] as String?,
+      toolArgsSummary: json['tool_args_summary'] as String?,
+      toolResult: json['tool_result'] as String?,
+      toolElapsedMs: json['tool_elapsed_ms'] as int?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'type': type.name,
+    'text': text,
+    'thinking_time': thinkingTime,
+    'tool_name': toolName,
+    'tool_args_summary': toolArgsSummary,
+    'tool_result': toolResult,
+    'tool_elapsed_ms': toolElapsedMs,
+  };
+
+  factory MessageSegment.thinking(String text, {int? thinkingTime}) =>
+      MessageSegment(
+        type: MessageSegmentType.thinking,
+        text: text,
+        thinkingTime: thinkingTime,
+      );
+
+  factory MessageSegment.textSeg(String text) =>
+      MessageSegment(type: MessageSegmentType.text, text: text);
+
+  factory MessageSegment.toolCallSeg({
+    required String toolName,
+    String? argsSummary,
+    String? result,
+    int? elapsedMs,
+  }) => MessageSegment(
+    type: MessageSegmentType.toolCall,
+    toolName: toolName,
+    toolArgsSummary: argsSummary,
+    toolResult: result,
+    toolElapsedMs: elapsedMs,
+  );
+
+  /// 段是否有实质内容(空段不渲染/不保存)
+  bool get hasContent {
+    switch (type) {
+      case MessageSegmentType.thinking:
+      case MessageSegmentType.text:
+        return text != null && text!.trim().isNotEmpty;
+      case MessageSegmentType.toolCall:
+        return toolName != null && toolName!.isNotEmpty;
+    }
+  }
+}
+
 /// 统一聊天消息模型
 @JsonSerializable(explicitToJson: true)
 class UnifiedChatMessage {
@@ -323,6 +435,11 @@ class UnifiedChatMessage {
   @JsonKey(name: 'search_references')
   final List<SearchReference>? searchReferences;
 
+  /// 2026-09-12 分段内容(多轮工具调用响应的思考/正文/工具调用交替)；
+  /// null=旧格式消息走旧字段渲染
+  @JsonKey(name: 'segments')
+  final List<MessageSegment>? segments;
+
   // 元数据可以存放平台和模型信息？
   final Map<String, dynamic>? metadata;
 
@@ -374,6 +491,7 @@ class UnifiedChatMessage {
     this.isError = false,
     this.errorMessage,
     this.searchReferences,
+    this.segments,
     this.metadata,
     this.parentId,
     this.branchIndex = 0,
@@ -382,6 +500,17 @@ class UnifiedChatMessage {
     required this.createdAt,
     required this.updatedAt,
   });
+
+  /// 2026-09-12 所有text段拼接(复制/导出/翻译/标题生成等旧消费方兜底)；
+  /// 未分段消息直接返回content
+  String get combinedContent {
+    final segs = segments;
+    if (segs == null) return content ?? '';
+    return segs
+        .where((s) => s.type == MessageSegmentType.text && s.text != null)
+        .map((s) => s.text)
+        .join('\n\n');
+  }
 
   // 从字符串转
   factory UnifiedChatMessage.fromRawJson(String str) =>
@@ -441,6 +570,11 @@ class UnifiedChatMessage {
                 .map((e) => SearchReference.fromJson(e as Map<String, dynamic>))
                 .toList()
           : null,
+      segments: map['segments'] != null
+          ? (json.decode(map['segments']) as List)
+                .map((e) => MessageSegment.fromJson(e as Map<String, dynamic>))
+                .toList()
+          : null,
       metadata: map['metadata'] != null
           ? Map<String, dynamic>.from(json.decode(map['metadata']))
           : null,
@@ -483,6 +617,9 @@ class UnifiedChatMessage {
       'search_references': searchReferences != null
           ? json.encode(searchReferences?.map((e) => e.toJson()).toList())
           : null,
+      'segments': segments != null
+          ? json.encode(segments?.map((e) => e.toJson()).toList())
+          : null,
       'metadata': metadata != null ? json.encode(metadata) : null,
       'parent_id': parentId,
       'branch_index': branchIndex,
@@ -516,6 +653,7 @@ class UnifiedChatMessage {
     bool? isError,
     String? errorMessage,
     List<SearchReference>? searchReferences,
+    List<MessageSegment>? segments,
     Map<String, dynamic>? metadata,
     String? parentId,
     int? branchIndex,
@@ -547,6 +685,7 @@ class UnifiedChatMessage {
       isError: isError ?? this.isError,
       errorMessage: errorMessage ?? this.errorMessage,
       searchReferences: searchReferences ?? this.searchReferences,
+      segments: segments ?? this.segments,
       metadata: metadata ?? this.metadata,
       parentId: parentId ?? this.parentId,
       branchIndex: branchIndex ?? this.branchIndex,

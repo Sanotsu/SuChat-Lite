@@ -1,4 +1,5 @@
 import '../../../../core/utils/simple_tools.dart';
+import '../models/mcp_models.dart';
 import '../models/openai_request.dart';
 import '../models/web_search_models.dart';
 import 'builtin_web_search_registry.dart';
@@ -7,7 +8,10 @@ import 'unified_secure_storage.dart';
 
 /// 联网搜索工具管理器
 /// 负责管理搜索工具的注册、调用和结果处理
-class WebSearchToolManager {
+/// 2026-09-14 P3-9 适配ChatToolProvider成为第二个实现(收敛动作)：
+/// 执行路由统一按canHandle分发，service中web_search硬编码分支移除；
+/// searchReferences迁移到ToolResult.references(结构化引用泛化通道)
+class WebSearchToolManager implements ChatToolProvider {
   static final WebSearchToolManager _instance =
       WebSearchToolManager._internal();
   factory WebSearchToolManager() => _instance;
@@ -17,6 +21,16 @@ class WebSearchToolManager {
 
   // 2026-09-09 初始化缓存：避免每次发消息都重复读取安全存储
   bool _initialized = false;
+
+  @override
+  String get namespace => '';
+
+  /// 仅处理内置web_search工具
+  @override
+  bool canHandle(String toolName) => toolName == 'web_search';
+
+  @override
+  Future<void> ensureReady() => initialize();
 
   /// 初始化搜索工具
   /// [force]为true时强制重新读取存储(密钥变更后刷新缓存)
@@ -65,7 +79,11 @@ class WebSearchToolManager {
   }
 
   /// 获取联网搜索工具定义
-  List<OpenAITool> getSearchTools() {
+  List<OpenAITool> getSearchTools() => getTools();
+
+  /// ChatToolProvider: 工具定义(有可用搜索Key时注入web_search)
+  @override
+  List<OpenAITool> getTools() {
     if (!hasAvailableTools()) return [];
 
     return [
@@ -105,25 +123,21 @@ class WebSearchToolManager {
     ];
   }
 
-  /// 处理联网搜索工具调用
-  Future<Map<String, dynamic>> handleToolCall({
-    required String functionName,
-    required Map<String, dynamic> arguments,
-  }) async {
-    if (functionName != 'web_search') {
-      return {
-        'content': '不支持的工具调用: $functionName',
-        'searchReferences': <Map<String, dynamic>>[],
-      };
+  /// 处理联网搜索工具调用(ChatToolProvider: P3-9签名对齐，
+  /// 引用走ToolResult.references)
+  @override
+  Future<ToolResult> handleToolCall(
+    String toolName,
+    Map<String, dynamic> arguments,
+  ) async {
+    if (!canHandle(toolName)) {
+      return ToolResult(content: '不支持的工具调用: $toolName');
     }
 
     try {
       final query = arguments['query'] as String?;
       if (query == null || query.trim().isEmpty) {
-        return {
-          'content': '搜索查询不能为空',
-          'searchReferences': <Map<String, dynamic>>[],
-        };
+        return ToolResult(content: '搜索查询不能为空');
       }
 
       final maxResults = arguments['max_results'] as int? ?? 10;
@@ -155,21 +169,19 @@ class WebSearchToolManager {
           )
           .toList();
 
-      return {
+      return ToolResult(
         // 2026-09-09 结果末尾附调用纪律提示，配合工具描述抑制模型
         // "让我再搜索"式的多轮重复调用
-        'content':
+        content:
             '${result.toToolCallResult()}\n\n'
             '(提示：若以上搜索结果已足够回答用户问题，请直接整理答案作答，'
             '无需再次搜索)',
-        'searchReferences': searchReferences,
-      };
+        // P3-9 引用迁移到泛化通道(消息引用区展示)
+        references: searchReferences,
+      );
     } catch (e) {
       // 2026-09-09 服务层不再弹Toast，错误随结果返回由模型与UI处理
-      return {
-        'content': '搜索失败: $e',
-        'searchReferences': <Map<String, dynamic>>[],
-      };
+      return ToolResult(content: '搜索失败: $e');
     }
   }
 
@@ -258,6 +270,18 @@ class WebSearchToolManager {
   /// 保存平台的自带联网搜索策略
   Future<void> setPlatformSearchMode(String platformId, String mode) async {
     await UnifiedSecureStorage.setPlatformSearchMode(platformId, mode);
+  }
+
+  /// 2026-09-12 全局搜索渠道偏好(联网开关开启时用哪个渠道，见
+  /// SearchChannelPreference；未设置按auto处理)
+  Future<SearchChannelPreference> getSearchChannelPreference() async {
+    final stored = await UnifiedSecureStorage.getSearchChannelPreference();
+    return SearchChannelPreference.fromStorage(stored);
+  }
+
+  /// 保存全局搜索渠道偏好
+  Future<void> setSearchChannelPreference(SearchChannelPreference pref) async {
+    await UnifiedSecureStorage.setSearchChannelPreference(pref.toStorage());
   }
 
   /// 2026-09-09 设置百度搜索模式('retrieval'纯检索/'intelligent'智能生成)，

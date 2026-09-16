@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import '../../../../core/storage/db_config.dart';
 import '../models/unified_platform_spec.dart';
 import 'buildin_models/index.dart';
+import 'builtin_mcp_servers.dart';
 import 'builtin_partners.dart';
 import 'builtin_platforms.dart';
 
@@ -211,6 +212,7 @@ class UnifiedChatDdl {
         platform_id_used    TEXT,
         response_time_ms    INTEGER,
         search_references   TEXT,
+        segments            TEXT,
         is_streaming        INTEGER   NOT NULL     DEFAULT 0,
         is_error            INTEGER   NOT NULL     DEFAULT 0,
         error_message       TEXT,
@@ -243,6 +245,59 @@ class UnifiedChatDdl {
         FOREIGN KEY (platform_id) REFERENCES $tableUnifiedPlatformSpec (id) ON DELETE CASCADE
       )
     ''';
+
+  /// MCP server 配置表
+  /// 2026-09-11 MCP集成(v7)：name为工具命名空间名(唯一)，
+  /// 认证头敏感值不落库存UnifiedSecureStorage
+  static const tableUnifiedMcpServer =
+      '${DBInitConfig.tablePerfix}unified_mcp_server';
+
+  static const ddlForUnifiedMcpServer =
+      '''
+      CREATE TABLE $tableUnifiedMcpServer (
+        id            TEXT      PRIMARY KEY,
+        name          TEXT      NOT NULL    UNIQUE,
+        display_name  TEXT      NOT NULL,
+        transport     TEXT      NOT NULL    DEFAULT 'http',
+        url           TEXT,
+        command       TEXT,
+        args          TEXT,
+        env           TEXT,
+        headers       TEXT,
+        enabled       INTEGER   NOT NULL    DEFAULT 1,
+        is_built_in   INTEGER   NOT NULL    DEFAULT 0,
+        is_search_source INTEGER NOT NULL    DEFAULT 0,
+        approval_required INTEGER NOT NULL    DEFAULT 0,
+        tools_cache   TEXT,
+        oauth_client_id TEXT,
+        oauth_scopes  TEXT,
+        created_at    INTEGER   NOT NULL,
+        updated_at    INTEGER   NOT NULL
+      )
+    ''';
+
+  /// 初始化内置MCP server种子(仅按name补插缺失行，不覆盖用户修改)
+  static Future<void> initDefaultMcpServers(Database db) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final batch = db.batch();
+
+    for (final server in BUILD_IN_MCP_SERVERS) {
+      batch.insert(
+        tableUnifiedMcpServer,
+        {
+          ...server,
+          'id': 'builtin_mcp_${server['name']}',
+          'enabled': 0,
+          'is_built_in': 1,
+          'created_at': now,
+          'updated_at': now,
+        },
+        // 用户可能已改过该行配置，种子只补缺不覆盖
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+    }
+    await batch.commit();
+  }
 
   // 初始化一些内置平台和模型
   static Future<void> initDefaultPlatforms(

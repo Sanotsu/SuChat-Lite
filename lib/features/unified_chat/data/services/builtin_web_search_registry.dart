@@ -21,6 +21,28 @@ enum BuiltinWebSearchMode {
   String toStorage() => name;
 }
 
+/// 2026-09-12 搜索渠道偏好(全局，搜索工具设置页配置)：
+/// 联网搜索开关开启时使用哪个搜索渠道，保证同一时刻只有一个搜索渠道
+/// 生效，避免第三方web_search与MCP搜索源重复搜索
+/// - auto: 自动。第三方key已配置 > MCP搜索源server > 平台自带
+/// - platformOnly: 仅平台自带搜索(按平台计费)
+/// - thirdPartyOnly: 仅第三方搜索工具(web_search，Tavily/博查/百度等)
+/// - mcpOnly: 仅MCP搜索源server的工具(如Exa，需在MCP设置中标记搜索源)
+enum SearchChannelPreference {
+  auto,
+  platformOnly,
+  thirdPartyOnly,
+  mcpOnly;
+
+  static SearchChannelPreference fromStorage(String? value) =>
+      SearchChannelPreference.values.firstWhere(
+        (m) => m.name == value,
+        orElse: () => SearchChannelPreference.auto,
+      );
+
+  String toStorage() => name;
+}
+
 /// 平台自带联网搜索适配器
 /// 各大模型云平台的联网搜索是额外付费的私有配置(请求参数/计费各不相同)，
 /// 通过适配器抹平差异；后续适配新平台时在此注册新适配器即可，主流程零改动。

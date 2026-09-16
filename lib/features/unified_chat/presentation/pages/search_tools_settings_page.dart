@@ -479,6 +479,10 @@ class _SearchToolsSettingsPageState extends State<SearchToolsSettingsPage> {
 
       case _Section.priority:
         return [
+          // 2026-09-12 搜索渠道偏好：决定联网开关开启时用哪个渠道，
+          // 同一时刻只有一个渠道生效；其下的第三方优先级仅第三方渠道内排序
+          _buildChannelPreferenceCard(context, viewModel),
+          const SizedBox(height: 12),
           if (viewModel.hasAvailableSearchTools())
             _buildPriorityCard(context, viewModel)
           else
@@ -486,7 +490,7 @@ class _SearchToolsSettingsPageState extends State<SearchToolsSettingsPage> {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  '尚未配置任何搜索服务，请先在左侧选择一个搜索服务并配置API密钥。',
+                  '尚未配置任何搜索服务，请先在左侧选择一个搜索服务并配置API密钥。也可在"MCP 工具"页将支持搜索的server标记为搜索源。',
                   style: TextStyle(
                     fontSize: 14,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -574,6 +578,111 @@ class _SearchToolsSettingsPageState extends State<SearchToolsSettingsPage> {
         ),
       ),
     ];
+  }
+
+  /// 2026-09-12 搜索渠道偏好卡片：联网开关开启时用哪个渠道搜索，
+  /// 同一时刻只有一个渠道生效(auto: 第三方>MCP搜索源>平台自带)，
+  /// 避免第三方web_search与MCP搜索源(如Exa)重复搜索
+  Widget _buildChannelPreferenceCard(
+    BuildContext context,
+    UnifiedChatViewModel viewModel,
+  ) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '搜索渠道偏好',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              '联网搜索开启时使用的搜索渠道，同一时刻只会有一个渠道生效，避免重复搜索。MCP搜索源需在"MCP 工具"页编辑server时勾选"作为搜索源"。',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            FutureBuilder<SearchChannelPreference>(
+              future: viewModel.getSearchChannelPreference(),
+              builder: (context, snapshot) {
+                final pref = snapshot.data ?? SearchChannelPreference.auto;
+                return Column(
+                  children: [
+                    _buildChannelOption(
+                      context,
+                      viewModel,
+                      current: pref,
+                      pref: SearchChannelPreference.auto,
+                      title: '自动 (推荐)',
+                      description:
+                          '已配置第三方Key则用第三方；否则用标记为"搜索源"的MCP server(如Exa)；都没有则用平台自带搜索',
+                    ),
+                    _buildChannelOption(
+                      context,
+                      viewModel,
+                      current: pref,
+                      pref: SearchChannelPreference.platformOnly,
+                      title: '仅平台自带搜索',
+                      description: '使用阿里百炼/智谱等平台自带的联网搜索参数(按平台计费，仅部分平台/模型支持)',
+                    ),
+                    _buildChannelOption(
+                      context,
+                      viewModel,
+                      current: pref,
+                      pref: SearchChannelPreference.thirdPartyOnly,
+                      title: '仅第三方搜索工具',
+                      description:
+                          '使用已配置Key的第三方搜索(web_search工具调用)；无Key时回落平台自带搜索',
+                    ),
+                    _buildChannelOption(
+                      context,
+                      viewModel,
+                      current: pref,
+                      pref: SearchChannelPreference.mcpOnly,
+                      title: '仅MCP搜索源',
+                      description:
+                          '使用标记为"搜索源"的MCP server工具(如Exa Search)；无可用搜索源时回落平台自带搜索',
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChannelOption(
+    BuildContext context,
+    UnifiedChatViewModel viewModel, {
+    required SearchChannelPreference current,
+    required SearchChannelPreference pref,
+    required String title,
+    required String description,
+  }) {
+    // 2026-09-12 RadioGroup新API(RadioListTile的groupValue/onChanged已废弃)
+    return RadioGroup<SearchChannelPreference>(
+      groupValue: current,
+      onChanged: (value) async {
+        if (value == null) return;
+        await viewModel.setSearchChannelPreference(value);
+        if (mounted) {
+          setState(() {});
+          ToastUtils.showToast('已更新搜索渠道偏好');
+        }
+      },
+      child: RadioListTile<SearchChannelPreference>(
+        title: Text(title, style: const TextStyle(fontSize: 14)),
+        subtitle: Text(description, style: const TextStyle(fontSize: 12)),
+        value: pref,
+        contentPadding: EdgeInsets.zero,
+        dense: true,
+      ),
+    );
   }
 
   /// 搜索优先级卡片(从长页抽为独立分区)

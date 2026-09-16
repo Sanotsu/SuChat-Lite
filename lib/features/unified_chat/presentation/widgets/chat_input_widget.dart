@@ -17,6 +17,7 @@ import '../../../../shared/widgets/toast_utils.dart';
 import '../../../translator/data/models/aliyun_asr_realtime_models.dart';
 import '../../data/models/unified_platform_spec.dart';
 import '../../data/models/unified_model_spec.dart';
+import '../../data/services/mcp/mcp_server_manager.dart';
 import '../../data/services/unified_secure_storage.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
 import 'model_selector_dialog.dart';
@@ -37,6 +38,9 @@ class ChatInputWidget extends StatefulWidget {
 }
 
 class _ChatInputWidgetState extends State<ChatInputWidget> {
+  // 2026-09-11 MCP集成(P1-3b)：判断可用工具数(与管理器保持同一单例)
+  final McpServerManager _mcpManager = McpServerManager();
+
   // 文本控制器
   late TextEditingController _textController;
   final FocusNode _focusNode = FocusNode();
@@ -363,7 +367,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       return;
     }
 
-    if (!_canSend() || viewModel.isStreaming) return;
+    if (!_canSend() || viewModel.isStreaming) {
+      // 2026-09-15 流式期间禁止发送保持单流模型，但无声return让用户
+      // 以为点按失灵——给明确提示
+      if (viewModel.isStreaming && _canSend()) {
+        ToastUtils.showInfo('有会话正在生成回复中，请稍候再发送');
+      }
+      return;
+    }
 
     final text = _inputText.trim();
 
@@ -1397,6 +1408,53 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
               ),
             ),
 
+          // 2026-09-11 MCP集成(P1-3b 实测修订)：MCP工具开关，与联网搜索
+          // 并列同为对话模型(cc)显示；点击切换会话级开关(即时持久化)
+          // 三轮修订：开启前先ensureAllConnected——热重载/首次点击时内存
+          // 无会话(懒连接尚未发生)，直接判断getTools会误报"无可用工具"
+          if (viewModel.currentModel?.type == UnifiedModelType.cc)
+            InkWell(
+              onTap: () async {
+                // 2026-09-12 防呆(实测：自定义模型默认不支持工具调用，
+                // MCP工具被service静默跳过仅打日志，表现为模型说完
+                // "我来搜索一下"就结束)：开关入口直接拦截并指引
+                final model = viewModel.currentModel;
+                if (model != null && !model.supportsToolCalling) {
+                  ToastUtils.showInfo(
+                    '当前模型未开启"支持工具调用"，MCP工具无法生效；请在模型管理中编辑该模型开启后再试',
+                  );
+                  return;
+                }
+                if (!viewModel.isMcpEnabled) {
+                  final closeLoading = ToastUtils.showLoading(
+                    '正在连接 MCP server...',
+                  );
+                  try {
+                    await _mcpManager.ensureAllConnected();
+                  } finally {
+                    closeLoading();
+                  }
+                  if (_mcpManager.getTools().isEmpty) {
+                    ToastUtils.showInfo('未发现可用的MCP工具，请先在"MCP 工具"页启用 server');
+                    return;
+                  }
+                }
+                await viewModel.toggleMcpEnabled();
+              },
+              onLongPress: () => _showMcpTooltipDialog(),
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                child: Icon(
+                  Icons.extension,
+                  size: 20,
+                  color: viewModel.isMcpEnabled
+                      ? Theme.of(context).primaryColor
+                      : Theme.of(context).disabledColor,
+                ),
+              ),
+            ),
+
           // 高级设置按钮
           InkWell(
             onTap: () => _showAdvancedSettings(viewModel),
@@ -1409,24 +1467,59 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           Expanded(child: _buildModelSelector(viewModel)),
 
           // 发送按钮
+          // 2026-09-15 切换会话流式修复：STOP显示/点击条件改为"当前会话
+          // 流式中"(原全局isStreaming——A会话生成中切到B，B也显示STOP且
+          // 点击会误停A的流)。其他会话流式期间按钮仍可点发送(单流模型
+          // 在发送入口拦截并提示，不再灰色禁用让用户以为失灵)
           IconButton(
-            onPressed: _canSend() && !viewModel.isStreaming
-                ? () => _sendMessage(viewModel)
-                : viewModel.isStreaming
+            onPressed: viewModel.isCurrentSessionStreaming
                 ? () => viewModel.stopStreaming()
+                : _canSend()
+                ? () => _sendMessage(viewModel)
                 : null,
             icon: Icon(
-              viewModel.isStreaming
+              viewModel.isCurrentSessionStreaming
                   ? Icons.stop
                   : viewModel.isUserEditingMode
                   ? Icons.check_circle
                   : Icons.arrow_circle_up,
               size: 32,
-              color: _canSend() || viewModel.isStreaming
+              color: _canSend() || viewModel.isCurrentSessionStreaming
                   ? Theme.of(context).primaryColor
                   : Theme.of(context).disabledColor,
             ),
             tooltip: viewModel.isUserEditingMode ? '完成编辑' : '发送消息',
+          ),
+        ],
+      ),
+    );
+  }
+
+  ///
+  /// 显示MCP工具说明对话框(2026-09-11 P1-3b，对齐联网搜索说明入口)
+  ///
+  Future _showMcpTooltipDialog() {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('MCP 工具说明', style: TextStyle(fontSize: 16)),
+        content: SingleChildScrollView(
+          child: Text(
+            "1 MCP(Model Context Protocol)是连接大模型与外部工具的标准协议，"
+            "启用后模型可调用MCP server提供的工具(查文档/搜代码等)\n\n"
+            "2 server在右侧工具栏/菜单的'MCP 工具'页管理，"
+            "已内置DeepWiki等免认证测试源，启用即可用\n\n"
+            "3 开关仅在对话模型显示；需模型支持工具调用，"
+            "且对应server连接成功(开关亮起即代表当前会话启用)\n\n"
+            "4 仅对当前对话生效，切换对话后需重新开启",
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('确定'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
           ),
         ],
       ),

@@ -7,6 +7,7 @@ import '../../../ai_tool_page.dart';
 import '../../data/database/unified_chat_db_init.dart';
 import '../pages/chat_background_picker_page.dart';
 import '../pages/media_library_page.dart';
+import '../pages/mcp_servers_settings_page.dart';
 import '../pages/search_tools_settings_page.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
 import 'appearance_tool_widgets.dart';
@@ -37,6 +38,13 @@ class ChatDesktopToolbar extends StatelessWidget {
                 icon: Icons.search,
                 label: '搜索设置',
                 onTap: () => _openSearchToolsSettings(context),
+                context: context,
+              ),
+              // MCP工具管理(2026-09-11 MCP集成P1-4)
+              buildIconWithTextButton(
+                icon: Icons.extension,
+                label: 'MCP 工具',
+                onTap: () => _openMcpServersSettings(context),
                 context: context,
               ),
               // 媒体面板(2026-09-09 跨会话查看AI生成的图片/视频/语音及生成条件)
@@ -122,6 +130,13 @@ class ChatDesktopToolbar extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const SearchToolsSettingsPage()),
+    );
+  }
+
+  void _openMcpServersSettings(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const McpServersSettingsPage()),
     );
   }
 

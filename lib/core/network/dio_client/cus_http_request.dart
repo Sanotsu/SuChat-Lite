@@ -50,6 +50,14 @@ class HttpRequest {
             (X509Certificate cert, String host, int port) {
               return !kReleaseMode;
             };
+        // 2026-09-12 空流排查 → 正式防御(2026-09-15定性保留)：curl(新连接
+        // +HTTP/2)对白山中转同请求体完全正常，app(dart:io仅支持HTTP/1.1)
+        // 连续请求收到200但零chunk空SSE——中转侧风控疑似对Dart UA计数。
+        // ①伪装curl User-Agent ②关闭accept-encoding:gzip(中转压缩处理
+        // bug) ③连接空闲快速释放。与service层空流重试三层兜底配合使用
+        client.userAgent = 'curl/8.9.1';
+        client.autoUncompress = false;
+        client.idleTimeout = const Duration(milliseconds: 100);
         return client;
       },
     );

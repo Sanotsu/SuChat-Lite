@@ -12,6 +12,7 @@ import './text_selection_dialog.dart';
 import '../../data/models/unified_chat_message.dart';
 import '../../data/models/unified_model_spec.dart';
 import '../../data/services/unified_branch_utils.dart';
+import '../../data/services/unified_chat_service.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
 import 'multimodal_content_widget.dart';
 import 'unified_branch_tree_dialog.dart';
@@ -46,6 +47,9 @@ class ChatMessageItem extends StatefulWidget {
 }
 
 class _ChatMessageItemState extends State<ChatMessageItem> {
+  // 2026-09-11 MCP集成(P1-5)：展开的工具结果卡片消息id集合
+  final Set<String> _expandedToolCardIds = {};
+
   // 是否启用背景图(气泡透明化+字体颜色配置生效)
   bool get _hasBg => widget.viewModel.hasBackgroundImage;
 
@@ -84,6 +88,12 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
   Widget build(BuildContext context) {
     final isUser = widget.message.isUser;
 
+    // 2026-09-11 MCP集成(P1-5)：工具调用结果消息(role=tool)渲染为
+    // 折叠卡片，不走常规AI气泡流程(结果文本可能很长)
+    if (widget.message.role == UnifiedMessageRole.tool) {
+      return _buildToolCallCard(context);
+    }
+
     // 2026-09-07 微信式对齐：用户消息整体靠右(气泡在前头像在后)，
     // system/AI消息靠左(头像在前)；下方元信息与分支切换器同向对齐
     Widget content = Container(
@@ -115,6 +125,90 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
       content = ExcludeSemantics(child: content);
     }
     return content;
+  }
+
+  /// 2026-09-11 MCP集成(P1-5)：工具调用结果折叠卡片
+  /// 展开态按消息id记录(列表复用时状态不串)
+  static const String _toolResultTitle = '工具返回结果';
+
+  Widget _buildToolCallCard(BuildContext context) {
+    final message = widget.message;
+    final expanded = _expandedToolCardIds.contains(message.id);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      // 与AI消息同向(靠左)，保留头像缩进
+      padding: const EdgeInsets.only(left: 36),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => setState(() {
+          expanded
+              ? _expandedToolCardIds.remove(message.id)
+              : _expandedToolCardIds.add(message.id);
+        }),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Theme.of(
+                context,
+              ).colorScheme.outlineVariant.withValues(alpha: 0.5),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.build_circle_outlined,
+                    size: 14,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      message.name ?? '工具调用',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Text(
+                    expanded ? '收起' : '详情',
+                    style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                  ),
+                  Icon(
+                    expanded ? Icons.expand_less : Icons.expand_more,
+                    size: 16,
+                    color: Colors.grey[600],
+                  ),
+                ],
+              ),
+              if (expanded) ...[
+                const Divider(height: 10),
+                Text(
+                  _toolResultTitle,
+                  style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 2),
+                SelectableText(
+                  message.content ?? '(无结果)',
+                  style: TextStyle(fontSize: 12, color: _contentColor),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // 头像区域反向固定不缩放(避免文字放大时头像行溢出，对齐旧版处理)
@@ -393,25 +487,34 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
 
   Widget _buildStreaminigInfo() {
     if (widget.message.isStreaming) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: 12,
-            height: 12,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                _hasBg ? _contentColor : Theme.of(context).colorScheme.primary,
+      // 2026-09-11 实测反馈：工具执行期间无提示等待感明显——
+      // 监听service的activeToolCall通知器，实时显示正在调用的工具
+      return ValueListenableBuilder<String?>(
+        valueListenable: UnifiedChatService().activeToolCall,
+        builder: (context, toolName, _) {
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    _hasBg
+                        ? _contentColor
+                        : Theme.of(context).colorScheme.primary,
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '生成中...',
-            style: TextStyle(fontSize: 12, color: _secondaryColor()),
-          ),
-        ],
+              const SizedBox(width: 8),
+              Text(
+                toolName == null ? '生成中...' : '正在调用工具: $toolName...',
+                style: TextStyle(fontSize: 12, color: _secondaryColor()),
+              ),
+            ],
+          );
+        },
       );
     }
     return SizedBox.shrink();
@@ -452,6 +555,9 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
       type: MaterialType.transparency,
       child: ExpansionTile(
         initiallyExpanded: false,
+        // 2026-09-14 标题与正文左对齐：ExpansionTile默认16px水平内边距
+        // 会让短标题视觉上"缩进/居中"，归零后与markdown正文同起点
+        tilePadding: EdgeInsets.zero,
         title: Row(
           children: [
             Icon(Icons.newspaper, color: _secondaryColor()),
@@ -466,14 +572,20 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
           ],
         ),
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // const SizedBox(height: 8),
-              ...widget.message.searchReferences!.map(
-                (ref) => _buildSearchReferenceItem(ref),
-              ),
-            ],
+          // 2026-09-15 修复引用卡"居中"：ExpansionTile的children外层
+          // Column默认crossAxisAlignment为center，卡片按内容收缩宽度
+          // 后短卡会被水平居中——SizedBox占满宽度保证整体靠左
+          SizedBox(
+            width: double.infinity,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // const SizedBox(height: 8),
+                ...widget.message.searchReferences!.map(
+                  (ref) => _buildSearchReferenceItem(ref),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -486,6 +598,9 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
       child: GestureDetector(
         onTap: () => launchStringUrl(ref.url),
         child: Container(
+          // 2026-09-15 统一占满可用宽度：原先按内容收缩，各卡宽度随
+          // title/URL长短参差不齐(见用户截图)；占满后视觉整齐且左对齐
+          width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
             color: widget.message.isUser
@@ -582,61 +697,109 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
       );
     }
 
+    var msg = widget.message;
+
     String note = '';
-    if (widget.message.tokenCount > 0) {
-      note += 'tokens used: ${widget.message.tokenCount}; ';
+    if (msg.tokenCount > 0) {
+      note += 'tokens used: ${msg.tokenCount}; ';
     }
     // 没有保存模型的价格，所以其实没有实际的花费
-    // if (widget.message.cost > 0) {
-    //   note += 'cost: ${widget.message.cost}; ';
+    // if (msg.cost > 0) {
+    //   note += 'cost: ${msg.cost}; ';
     // }
-    if (widget.message.responseTimeMs != null) {
-      note += 'response time: ${widget.message.responseTimeMs} ms; ';
+    if (msg.responseTimeMs != null) {
+      note += 'response time: ${msg.responseTimeMs} ms; ';
     }
-    if (!widget.message.isUser && widget.message.modelNameUsed != null) {
-      note +=
-          'model: ${widget.message.platformIdUsed ?? ''}(${widget.message.modelNameUsed!}).';
+    if (!msg.isUser && msg.modelNameUsed != null) {
+      note += '${msg.platformIdUsed ?? ''}(${msg.modelNameUsed!}).';
+      // note +=
+      //     'model: ${msg.platformIdUsed ?? ''}(${msg.modelNameUsed!}).';
     }
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: 0.8.sw),
       child: Row(
         // 2026-09-07 用户消息元信息靠右
-        mainAxisAlignment: widget.message.isUser
+        mainAxisAlignment: msg.isUser
             ? MainAxisAlignment.end
             : MainAxisAlignment.start,
         children: [
+          _buildQuickActions(),
+
           const SizedBox(width: 8),
-          Flexible(
-            child: RichText(
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              // 2026-09-07 用户消息元信息文字右对齐(微信式)
-              textAlign: widget.message.isUser
-                  ? TextAlign.right
-                  : TextAlign.left,
-              text: TextSpan(
-                children: [
-                  TextSpan(
-                    text: formatRelativeDate(widget.message.createdAt),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurfaceVariant.withValues(alpha: 0.55),
-                      fontSize: ScreenHelper.metaFontSize(12),
-                    ),
-                  ),
-                  TextSpan(
-                    text: "    $note",
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).disabledColor,
-                      fontSize: ScreenHelper.metaFontSize(11),
-                    ),
-                  ),
-                ],
-              ),
+          // 2026-09-14 时间与note拆为独立Text：快捷操作按钮插在两者之间
+          // (按钮 → 时间 → note)，原实现拼在同一RichText无法分离
+          Text(
+            formatRelativeDate(msg.createdAt),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.55),
+              fontSize: ScreenHelper.metaFontSize(12),
             ),
           ),
+
+          if (note.isNotEmpty)
+            Flexible(
+              child: Text(
+                "    $note",
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                // 2026-09-07 用户消息元信息文字右对齐(微信式)
+                textAlign: msg.isUser ? TextAlign.right : TextAlign.left,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).disabledColor,
+                  fontSize: ScreenHelper.metaFontSize(11),
+                ),
+              ),
+            ),
         ],
+      ),
+    );
+  }
+
+  /// 2026-09-14 消息快捷操作按钮行(元信息行内，时间后)：常用操作一键直达，
+  /// 后续可扩展复制/朗读等；流式中隐藏(避免噪音)，简洁模式不显示。
+  /// 当前：AI消息→重新生成
+  Widget _buildQuickActions() {
+    if (widget.message.isStreaming) return const SizedBox.shrink();
+
+    final actions = <Widget>[];
+    if (widget.message.isAssistant) {
+      actions.add(
+        _buildQuickActionButton(
+          icon: Icons.refresh,
+          tooltip: '重新生成',
+          onTap: () => widget.onRegenerate?.call(),
+        ),
+      );
+      actions.add(const SizedBox(width: 8));
+      actions.add(
+        _buildQuickActionButton(
+          icon: Icons.copy,
+          tooltip: '复制',
+          onTap: () => widget.onCopy?.call(),
+        ),
+      );
+    }
+    if (actions.isEmpty) return const SizedBox.shrink();
+    return Row(mainAxisSize: MainAxisSize.min, children: actions);
+  }
+
+  Widget _buildQuickActionButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Padding(
+          padding: const EdgeInsets.all(3),
+          // child: Icon(icon, size: 16, color: Theme.of(context).disabledColor),
+          child: Icon(icon, size: 16, color: Theme.of(context).primaryColor),
+        ),
       ),
     );
   }
@@ -719,7 +882,15 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
       ],
     ).then((value) async {
       if (value == 'copy') {
-        Clipboard.setData(ClipboardData(text: message.displayContent));
+        // 2026-09-14 分段消息适配：displayContent取content字段(分段落库时
+        // 已是各正文段拼接)；只有思考/工具卡无正文的消息(如内联降级失败)
+        // 复制为空——退化为思考文本，保证总有内容可复制
+        var textToCopy = message.displayContent;
+        if (textToCopy.trim().isEmpty &&
+            (message.thinkingContent ?? '').trim().isNotEmpty) {
+          textToCopy = message.thinkingContent!;
+        }
+        Clipboard.setData(ClipboardData(text: textToCopy));
         ToastUtils.showToast('已复制到剪贴板');
       } else if (value == 'select') {
         _handleMessageSelect(message);

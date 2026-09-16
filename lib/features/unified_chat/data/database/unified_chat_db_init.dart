@@ -53,10 +53,16 @@ class UnifiedChatDBInit {
       path,
       // TODO(发布前): 当前版本未发布过，无线上旧库；正式发布时将version固定为最终值
       // 并移除下方全部_upgradeToV2/_upgradeToV3/_upgradeToV4升级逻辑(开发期保留以便调试，免于反复卸载重装)
-      version: 6,
+      version: 11,
       onCreate: _createDb,
       onUpgrade: _upgradeDb,
     );
+
+    // 2026-09-12 内置MCP种子每次启动幂等补种：原本种子只随onCreate/
+    // onUpgrade执行，后续往BUILD_IN_MCP_SERVERS加新源时存量库拿不到
+    // (库版本没变不触发升级)。ConflictAlgorithm.ignore仅补缺不覆盖
+    // 用户修改，6行batch开销可忽略
+    await UnifiedChatDdl.initDefaultMcpServers(db);
 
     dbFilePath = path;
     return db;
@@ -76,6 +82,7 @@ class UnifiedChatDBInit {
       txn.execute(UnifiedChatDdl.ddlForUnifiedChatPartner);
       txn.execute(UnifiedChatDdl.ddlForTranslationHistory);
       txn.execute(UnifiedChatDdl.ddlIndexTranslationHistory);
+      txn.execute(UnifiedChatDdl.ddlForUnifiedMcpServer);
 
       // 创建一些索引来提高查询性能
       await _createUnifiedChatIndex(txn);
@@ -84,6 +91,7 @@ class UnifiedChatDBInit {
     /// 初始化默认值
     await UnifiedChatDdl.initDefaultPlatforms(db);
     await UnifiedChatDdl.initDefaultPartners(db);
+    await UnifiedChatDdl.initDefaultMcpServers(db);
   }
 
   // 数据库升级
@@ -111,6 +119,77 @@ class UnifiedChatDBInit {
     if (oldVersion < 6) {
       await _upgradeToV6(db);
     }
+
+    if (oldVersion < 7) {
+      await _upgradeToV7(db);
+    }
+
+    if (oldVersion < 8) {
+      await _upgradeToV8(db);
+    }
+
+    if (oldVersion < 9) {
+      await _upgradeToV9(db);
+    }
+
+    if (oldVersion < 10) {
+      await _upgradeToV10(db);
+    }
+
+    if (oldVersion < 11) {
+      await _upgradeToV11(db);
+    }
+  }
+
+  /// v10 -> v11: 2026-09-15 P4-2 OAuth 授权流——
+  /// unified_mcp_server.oauth_client_id/oauth_scopes：远程server的
+  /// OAuth授权码流预注册客户端信息(留空则由SDK动态注册)
+  Future<void> _upgradeToV11(Database db) async {
+    await db.execute(
+      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedMcpServer} ADD COLUMN oauth_client_id TEXT',
+    );
+    await db.execute(
+      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedMcpServer} ADD COLUMN oauth_scopes TEXT',
+    );
+  }
+
+  /// v9 -> v10: 2026-09-14 P3-7 工具列表离线缓存——
+  /// unified_mcp_server.tools_cache：连接成功后listTools结果JSON，
+  /// server不可达时展示/注入上次工具集(降级可用性)
+  Future<void> _upgradeToV10(Database db) async {
+    await db.execute(
+      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedMcpServer} ADD COLUMN tools_cache TEXT',
+    );
+  }
+
+  /// v8 -> v9: 2026-09-14 P3-1 工具调用审批确认流——
+  /// unified_mcp_server.approval_required：该server每次工具调用是否需要
+  /// 用户确认(opencode式授权)，0=直接执行(默认，保持既有行为)
+  Future<void> _upgradeToV9(Database db) async {
+    await db.execute(
+      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedMcpServer} ADD COLUMN approval_required INTEGER NOT NULL DEFAULT 0',
+    );
+  }
+
+  /// v7 -> v8: 2026-09-12 双列扩展——
+  /// ①unified_chat_message.segments：多轮工具调用响应的分段内容
+  ///   (思考/正文/工具调用交替)，JSON数组；null=旧消息走旧字段渲染
+  /// ②unified_mcp_server.is_search_source：MCP搜索源标记(搜索渠道
+  ///   偏好按此注入)，建表DDL已含该列，存量库补列
+  Future<void> _upgradeToV8(Database db) async {
+    await db.execute(
+      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedChatMessage} ADD COLUMN segments TEXT',
+    );
+    await db.execute(
+      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedMcpServer} ADD COLUMN is_search_source INTEGER NOT NULL DEFAULT 0',
+    );
+  }
+
+  /// v6 -> v7: 2026-09-11 MCP集成——新增MCP server配置表并补插
+  /// 内置测试源种子(DeepWiki/Context7/MS Learn，仅补缺不覆盖)
+  Future<void> _upgradeToV7(Database db) async {
+    await db.execute(UnifiedChatDdl.ddlForUnifiedMcpServer);
+    await UnifiedChatDdl.initDefaultMcpServers(db);
   }
 
   /// v4 -> v5: 2026-09-10 新增内置平台"小米MiMo"(对话/语音识别/语音合成，

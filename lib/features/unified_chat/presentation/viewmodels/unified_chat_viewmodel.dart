@@ -32,6 +32,8 @@ import '../../data/models/speech_recognition_request.dart';
 import '../../data/services/unified_secure_storage.dart';
 import '../../data/services/web_search_tool_manager.dart';
 import '../../data/services/builtin_web_search_registry.dart';
+import '../../data/models/mcp_models.dart';
+import '../../data/services/mcp/mcp_server_manager.dart';
 
 /// 统一聊天状态管理
 class UnifiedChatViewModel extends ChangeNotifier {
@@ -71,6 +73,38 @@ class UnifiedChatViewModel extends ChangeNotifier {
   static const String _webSearchManuallyToggledKey =
       'unified_chat_web_search_manually_toggled';
 
+  /// 2026-09-11 MCP集成(P1-3)：会话是否启用MCP工具(会话级持久化，
+  /// secure storage按conversationId存取，安全默认关)
+  bool _isMcpEnabled = false;
+
+  /// 2026-09-14 P3-1 工具调用审批：待审批请求(非null时输入框上方
+  /// 显示审批横幅，Agent循环挂起等待用户决定)
+  /// P3-13泛化：MCP与内置工具统一走此通道
+  ToolApprovalRequest? _pendingApproval;
+  ToolApprovalRequest? get pendingApproval => _pendingApproval;
+
+  /// 审批等待通道(横幅按钮完成它)
+  Completer<ToolApprovalDecision>? _approvalCompleter;
+
+  /// 本次会话"总是允许"的规则键(MCP=serverName；内置shell=builtin:首词)。
+  /// 内存级：切会话/重启失效；持久信任应直接关闭server的审批开关
+  final Set<String> _sessionAllowedKeys = {};
+
+  /// dispose标记：审批finally中的notifyListeners防崩
+  bool _disposed = false;
+
+  /// 2026-09-14 P3-11 内置终端命令工具全局开关(桌面端生效，默认关)
+  /// GetStorage持久化：安全默认，开启时设置页有安全提示
+  bool get isShellToolEnabled =>
+      CusGetStorage().box.read(_shellToolEnabledKey) == true;
+
+  Future<void> setShellToolEnabled(bool enabled) async {
+    await CusGetStorage().box.write(_shellToolEnabledKey, enabled);
+    notifyListeners();
+  }
+
+  static const String _shellToolEnabledKey = 'unified_chat_shell_tool_enabled';
+
   /// 加载和流式状态
   bool _isLoading = false;
   bool _isStreaming = false;
@@ -80,6 +114,18 @@ class UnifiedChatViewModel extends ChangeNotifier {
   /// 2026-09-09 用户手动中断标志：stopStreaming置位、新流监听开始时复位；
   /// 取消类错误到达onError时据此静默处理(不显示报错)
   bool _manualStopRequested = false;
+
+  /// 2026-09-15 切换会话流式修复(用户实测)：正在流式的会话id。
+  /// 原实现流式状态是纯全局bool——切换会话后其他会话的输入框也
+  /// 显示STOP且点击会误停别的会话的流
+  String? _streamingConversationId;
+
+  /// 2026-09-15 切换会话流式修复：各会话进行中的流式消息对象(按会话id)。
+  /// 发送后切走时流继续在该对象上累积(与当前视图列表无关)，切回会话
+  /// 时挂回消息列表恢复实时刷新；完成/停止/出错时无条件落库——原实现
+  /// 完成处理依赖"消息在当前_messages里"，切走后index==-1直接跳过，
+  /// 导致整个AI回复永久丢失(切回只见空会话)
+  final Map<String, UnifiedChatMessage> _activeStreamingMessages = {};
 
   /// 搭档显示状态
   bool _showPartnersInNewChat = true;
@@ -129,6 +175,21 @@ class UnifiedChatViewModel extends ChangeNotifier {
   UnifiedPlatformSpec? get currentPlatform => _currentPlatform;
   UnifiedChatPartner? get currentPartner => _currentPartner;
   bool get isWebSearchEnabled => _isWebSearchEnabled;
+
+  /// 2026-09-11 MCP集成(P1-3)：当前会话MCP工具开关状态
+  bool get isMcpEnabled => _isMcpEnabled;
+
+  /// 切换当前会话MCP工具开关并持久化(secure storage按会话id存取)
+  Future<void> toggleMcpEnabled([bool? value]) async {
+    _isMcpEnabled = value ?? !_isMcpEnabled;
+    if (_currentConversation != null) {
+      await UnifiedSecureStorage.setConversationMcpEnabled(
+        _currentConversation!.id,
+        _isMcpEnabled,
+      );
+    }
+    notifyListeners();
+  }
 
   double get textScaleFactor => _textScaleFactor;
 
@@ -185,6 +246,12 @@ class UnifiedChatViewModel extends ChangeNotifier {
   // 状态getters
   bool get isLoading => _isLoading;
   bool get isStreaming => _isStreaming;
+
+  /// 2026-09-15 切换会话流式修复：当前会话是否有进行中的流式——
+  /// 输入框STOP按钮的显示条件(全局isStreaming会让其他会话也显示STOP)
+  bool get isCurrentSessionStreaming =>
+      _isStreaming && _streamingConversationId == _currentConversation?.id;
+
   String? get error => _error;
   bool get hasError => _error != null;
 
@@ -213,6 +280,20 @@ class UnifiedChatViewModel extends ChangeNotifier {
   /// 初始化Provider
   Future<void> initialize() async {
     _setLoading(true);
+
+    // 2026-09-14 清理孤儿流式状态：上次进程可能在生成中被杀，库中残留
+    // is_streaming=1的消息重启后会一直显示"生成中…"——启动即复位，
+    // 必须在加载最近对话之前执行
+    try {
+      await _chatDao.clearOrphanStreamingMessages();
+    } catch (e) {
+      pl.e('清理孤儿流式状态失败: $e');
+    }
+
+    // 2026-09-14 P3-1/P3-13 审批处理器注入：viewmodel作为UI代理，
+    // 挂起Agent循环等用户在横幅上决定(MCP工具与内置工具统一通道)
+    McpServerManager().approvalHandler = _requestToolApproval;
+    _chatService.builtinToolApprovalHandler = _requestToolApproval;
 
     // 首先加载用户偏好设置
     await _loadUserPreferences();
@@ -248,6 +329,71 @@ class UnifiedChatViewModel extends ChangeNotifier {
     _syncWebSearchWithCapability();
 
     _setLoading(false);
+  }
+
+  /// ******************************************
+  /// 2026-09-14 P3-1 工具调用审批确认流
+  /// manager.handleToolCall拦截 → _requestToolApproval挂起 →
+  /// UI横幅(输入框上方) → approve/deny完成等待 → 循环继续
+  /// ******************************************
+
+  /// 审批请求入口(manager/service回调)：会话级已信任的规则键直接放行，
+  /// 否则挂起等用户决定(横幅按钮或180s超时自动拒绝)。
+  /// 2026-09-14 P3-6 并行执行时多个审批同时到达：排队等待前序横幅
+  /// 完成后串行弹出(轮询等待，审批是人工秒级操作开销可忽略)
+  Future<ToolApprovalDecision> _requestToolApproval(
+    ToolApprovalRequest request,
+  ) async {
+    if (_sessionAllowedKeys.contains(request.sessionAllowKey)) {
+      return ToolApprovalDecision.allow;
+    }
+
+    // 排队：等待前一个审批完成(横幅一次只显示一个请求)
+    while (_pendingApproval != null && !_disposed) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    if (_disposed) return ToolApprovalDecision.deny;
+
+    final completer = Completer<ToolApprovalDecision>();
+    _approvalCompleter = completer;
+    _pendingApproval = request;
+    notifyListeners();
+
+    // 超时兜底：用户长时间不响应自动拒绝，避免Agent流挂死
+    final timer = Timer(const Duration(seconds: 180), () {
+      if (!completer.isCompleted) {
+        completer.complete(ToolApprovalDecision.deny);
+      }
+    });
+
+    try {
+      return await completer.future;
+    } finally {
+      timer.cancel();
+      _pendingApproval = null;
+      _approvalCompleter = null;
+      if (!_disposed) notifyListeners();
+    }
+  }
+
+  /// 允许本次调用
+  /// [alwaysForSession] 同时信任该规则键本次会话内的后续调用
+  /// (MCP=整个server；内置shell=同首词命令族，如允许过npm test则npm *放行)
+  void approveToolCall({bool alwaysForSession = false}) {
+    final completer = _approvalCompleter;
+    if (completer == null || completer.isCompleted) return;
+    final request = _pendingApproval;
+    if (alwaysForSession && request != null) {
+      _sessionAllowedKeys.add(request.sessionAllowKey);
+    }
+    completer.complete(ToolApprovalDecision.allow);
+  }
+
+  /// 拒绝本次调用(回填拒绝文本给模型，由其自行调整)
+  void denyToolCall() {
+    final completer = _approvalCompleter;
+    if (completer == null || completer.isCompleted) return;
+    completer.complete(ToolApprovalDecision.deny);
   }
 
   /// ******************************************
@@ -485,6 +631,19 @@ class UnifiedChatViewModel extends ChangeNotifier {
           _currentConversation!.id,
         );
 
+        // 2026-09-15 切换会话流式修复：该会话若有进行中的流式消息
+        // (发送后切走、流继续在闭包对象上累积)，用内存实时对象替换/
+        // 追加进刚加载的列表——切回即可看到实时进度并继续刷新
+        final active = _activeStreamingMessages[_currentConversation!.id];
+        if (active != null) {
+          final idx = _allMessages.indexWhere((m) => m.id == active.id);
+          if (idx != -1) {
+            _allMessages[idx] = active;
+          } else {
+            _allMessages.add(active);
+          }
+        }
+
         // 确定当前分支路径：优先使用会话保存的路径，无效则回退默认最新链
         _currentBranchPath = _currentConversation!.currentBranchPath;
         _displayTruncateId = null;
@@ -524,6 +683,11 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
         // 2026-09-09 未手动切换过联网开关时，跟随会话模型的能力自动开关
         _syncWebSearchWithCapability();
+
+        // 2026-09-11 MCP集成(P1-3)：加载会话级MCP工具开关(无记录默认关)
+        _isMcpEnabled = await UnifiedSecureStorage.getConversationMcpEnabled(
+          _currentConversation!.id,
+        );
       }
       _clearError();
     } catch (e) {
@@ -764,20 +928,32 @@ class UnifiedChatViewModel extends ChangeNotifier {
   }
 
   /// 更新对话统计信息
-  Future<void> _updateConversationStats() async {
-    if (_currentConversation == null) return;
+  /// 更新会话统计(消息数/token/花费)
+  /// 2026-09-15 切换会话流式修复：支持指定会话id并从DB重算——原实现
+  /// 只按当前内存视图统计，发送后切走会话时统计被跳过或算错会话
+  /// (列表页"0条消息"的成因之一)。默认统计当前会话，行为兼容旧调用
+  Future<void> _updateConversationStats({String? conversationId}) async {
+    final targetId = conversationId ?? _currentConversation?.id;
+    if (targetId == null) return;
 
-    final totalTokens = _messages.fold<int>(0, (sum, msg) => sum + msg.tokens);
-    final totalCost = _messages.fold<double>(0, (sum, msg) => sum + msg.cost);
+    // 从DB重算：不依赖当前内存视图(切走后视图是别的会话的)
+    final msgs = await _chatDao.getMessagesByConversationId(targetId);
+    final conv = await _chatDao.getConversation(targetId);
+    if (conv == null) return;
 
-    _currentConversation = _currentConversation!.copyWith(
-      messageCount: _messages.length,
-      totalTokens: totalTokens,
-      totalCost: totalCost,
+    final updated = conv.copyWith(
+      messageCount: msgs.length,
+      totalTokens: msgs.fold<int>(0, (sum, msg) => sum + msg.tokens),
+      totalCost: msgs.fold<double>(0, (sum, msg) => sum + msg.cost),
       updatedAt: DateTime.now(),
     );
 
-    await _chatDao.updateConversation(_currentConversation!);
+    await _chatDao.updateConversation(updated);
+
+    // 目标正是当前会话时同步内存引用
+    if (targetId == _currentConversation?.id) {
+      _currentConversation = updated;
+    }
   }
 
   /// ******************************************
@@ -961,6 +1137,9 @@ class UnifiedChatViewModel extends ChangeNotifier {
     // 发送请求前不应该保留之前的参考内容
     _chatService.clearLastSearchReferences();
     _setStreaming(true);
+    // 2026-09-15 切换会话流式修复：登记流式会话与消息对象——
+    // 切走后流继续在对象上累积，切回时挂回；完成时无条件落库
+    _streamingConversationId = _currentConversation!.id;
 
     try {
       final messagesToSend = _prepareMessagesForSending(messages);
@@ -968,6 +1147,8 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
       _allMessages.add(assistantMessage);
       _messages.add(assistantMessage);
+      _activeStreamingMessages[assistantMessage.conversationId] =
+          assistantMessage;
       // 占位已挂载到截断视图末端，之后恢复正常分支视图(不再截断)
       _displayTruncateId = null;
       notifyListeners();
@@ -983,6 +1164,10 @@ class UnifiedChatViewModel extends ChangeNotifier {
             (_currentPartner ?? defaultPartner).isStream ??
             true,
         isWebSearch: isWebSearch && _isWebSearchEnabled,
+        // 2026-09-11 MCP集成(P1-3)：会话开关状态传给服务层
+        isMcpEnabled: _isMcpEnabled,
+        // 2026-09-14 P3-11 内置终端命令工具全局开关
+        isShellToolEnabled: isShellToolEnabled,
       );
 
       await _handleStreamResponse(stream, assistantMessage, isWebSearch);
@@ -1135,6 +1320,10 @@ class UnifiedChatViewModel extends ChangeNotifier {
   }
 
   /// 处理流式响应
+  /// 2026-09-12 P3-10 分段重构：多轮工具调用的一次完整响应包含多段
+  /// "思考→正文→工具调用"交替，改用segments列表按序累积，气泡内
+  /// 分段渲染(对齐opencode形态)；旧字段thinkingContent/content仍同步
+  /// 写入作为未分段消费方的兜底
   Future<void> _handleStreamResponse(
     Stream<OpenAIChatCompletionResponse> stream,
     UnifiedChatMessage assistantMessage,
@@ -1143,16 +1332,45 @@ class UnifiedChatViewModel extends ChangeNotifier {
     // 新流监听开始，复位手动停止标志(上一次停止的标记不应影响本次)
     _manualStopRequested = false;
 
-    // 流式响应累加的文本内容
-    String accumulatedContent = '';
-    // 流式响应累加的思考内容
-    String accumulatedThinking = '';
-    // 构建多模态内容列表
+    // 2026-09-15 切换会话流式修复：流式期间的"真实消息"是闭包持有的
+    // streamMsg(每次更新产生新对象并回写活跃Map)。原实现所有更新都从
+    // _messages按id反查——切换会话后_messages换成别的会话的列表，
+    // 反查必然-1，chunk被整体丢弃、完成时也不落库，回复永久丢失。
+    // 现在更新只依赖对象本身；是否刷UI由commitStream判断
+    var streamMsg = assistantMessage;
+
+    // 提交流式消息：同步回活跃Map(切回会话挂回的是最新对象)；
+    // 仅当该消息还在当前会话视图里时才更新列表并通知刷新——
+    // 用户已切到其他会话时只累积不刷UI。
+    // 2026-09-15 手动停止竞态修复：点STOP时可能有chunk正挂在async点
+    // (finishReason落库/工具哨兵处理中)，它恢复后会用旧streamMsg
+    // (isStreaming仍为true)回写——把stopStreaming刚写入的[手动终止]
+    // 状态覆盖掉，UI残留"生成中"。停止后禁止一切回写
+    void commitStream() {
+      if (_manualStopRequested) return;
+      _activeStreamingMessages[streamMsg.conversationId] = streamMsg;
+      if (streamMsg.conversationId == _currentConversation?.id &&
+          _messages.any((m) => m.id == streamMsg.id)) {
+        _updateMessageInLists(streamMsg);
+        notifyListeners();
+      }
+    }
+
+    // ===== 分段状态 =====
+    final segments = <MessageSegment>[];
+    // 最后一个正文段的真实累积(打字机追赶目标)
+    String currentTextFull = '';
+    // 最后一个正文段的打字机已显示值
+    String currentTextDisplayed = '';
+    // 轮结束(finishReason/工具哨兵)后强制下个chunk开新段
+    var forceNewSegment = false;
+
+    // 多模态内容列表
     final multimodalContent = <UnifiedContentItem>[];
     // 2025-10-16 多模态千问omni可以合成语音，响应中有base64语音片段
     // 在流响应完成或者手动终止时，才把已经收集到的片段转为语音，再提供播放
     String finalAudioBase64 = "";
-    // 是否在思考中
+    // 是否在思考中(content内嵌<think>标签的思考模式)
     bool isInThinking = false;
     // 开始思考时间
     var startTime = DateTime.now();
@@ -1160,178 +1378,317 @@ class UnifiedChatViewModel extends ChangeNotifier {
     DateTime? endTime;
     // 思考时长
     var thinkingTime = 0;
-    // 流式UI刷新节流：高频chunk触发消息列表全量重建，Windows下高频重建还会
-    // 导致无障碍桥AXTree更新失败刷屏(Failed to update ui::AXTree)；
-    // 限制最低150ms刷新一次，流结束(_handleStreamDone)时仍会强制刷新
-    var lastUiRefresh = DateTime.now();
 
-    _streamSubscription = stream.listen(
-      (response) async {
-        // 使用单独处理方法，通过返回值更新累加变量
-        final chunkResult = await _processStreamChunk(
-          response,
-          assistantMessage,
-          isWebSearch,
-          accumulatedContent,
-          accumulatedThinking,
-          multimodalContent,
-          finalAudioBase64,
-          isInThinking,
-          startTime,
-          endTime,
-          thinkingTime,
-        );
+    // ===== 打字机平滑(只作用于最后一个正文段) =====
+    Timer? typewriterTimer;
+    void stopTypewriter() {
+      typewriterTimer?.cancel();
+      typewriterTimer = null;
+    }
 
-        // 更新累加变量
-        accumulatedContent = chunkResult.accumulatedContent;
-        accumulatedThinking = chunkResult.accumulatedThinking;
-        finalAudioBase64 = chunkResult.finalAudioBase64;
-        isInThinking = chunkResult.isInThinking;
-        endTime = chunkResult.endTime;
-        thinkingTime = chunkResult.thinkingTime;
+    void typewriterTick() {
+      // 2026-09-15 手动停止后终止打字机：subscription已cancel，onDone/
+      // onError不会到达来调stopTypewriter——timer会一直空转泄漏
+      if (_manualStopRequested) {
+        stopTypewriter();
+        return;
+      }
+      if (currentTextDisplayed.length >= currentTextFull.length) {
+        stopTypewriter();
+        return;
+      }
+      // 每tick追加 max(2, 剩余的1/25)：长文追赶快、尾部平滑
+      final remaining = currentTextFull.length - currentTextDisplayed.length;
+      final step = remaining > 50 ? (remaining / 25).ceil() : 2;
+      var end = currentTextDisplayed.length + step;
+      if (end > currentTextFull.length) end = currentTextFull.length;
+      // 2026-09-14 UTF-16代理对保护：substring按code unit切，截断点落在
+      // emoji等代理对中间会产生孤立代理项，TextSpan渲染直接抛
+      // "string is not well-formed UTF-16"(实测崩溃)。末尾若是未配对的
+      // 高代理则回退一位，把完整代理对留给下一tick
+      if (end > currentTextDisplayed.length && end < currentTextFull.length) {
+        final lastUnit = currentTextFull.codeUnitAt(end - 1);
+        if (lastUnit >= 0xD800 && lastUnit <= 0xDBFF) end--;
+      }
+      currentTextDisplayed = currentTextFull.substring(0, end);
 
-        final now = DateTime.now();
-        if (now.difference(lastUiRefresh).inMilliseconds >= 150) {
-          lastUiRefresh = now;
-          notifyListeners();
-        }
-      },
-      onDone: () async {
-        await _handleStreamDone(assistantMessage);
-      },
-      onError: (error) {
-        _handleStreamError(error, assistantMessage);
-      },
-    );
-  }
+      final lastIdx = segments.lastIndexWhere(
+        (s) => s.type == MessageSegmentType.text,
+      );
+      if (lastIdx != -1) {
+        segments[lastIdx] = MessageSegment.textSeg(currentTextDisplayed);
+      }
 
-  /// 处理流式数据块
-  Future<_StreamChunkResult> _processStreamChunk(
-    OpenAIChatCompletionResponse response,
-    UnifiedChatMessage assistantMessage,
-    bool isWebSearch,
-    String accumulatedContent,
-    String accumulatedThinking,
-    List<UnifiedContentItem> multimodalContent,
-    String finalAudioBase64,
-    bool isInThinking,
-    DateTime startTime,
-    DateTime? endTime,
-    int thinkingTime,
-  ) async {
-    // 更新消息内容
-    final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
-    // 如果没有助手消则无法更新AI响应,直接返回原始值
-    if (index == -1) {
-      return _StreamChunkResult(
-        accumulatedContent: accumulatedContent,
-        accumulatedThinking: accumulatedThinking,
-        finalAudioBase64: finalAudioBase64,
-        isInThinking: isInThinking,
-        endTime: endTime,
-        thinkingTime: thinkingTime,
-        multimodalContent: multimodalContent,
+      streamMsg = streamMsg.copyWith(
+        segments: List.of(segments),
+        content: currentTextDisplayed,
+        updatedAt: DateTime.now(),
+      );
+      commitStream();
+    }
+
+    void ensureTypewriterRunning() {
+      typewriterTimer ??= Timer.periodic(
+        const Duration(milliseconds: 40),
+        (_) => typewriterTick(),
       );
     }
 
-    // 有助手消息,处理流式内容
-    if (response.choices.isNotEmpty) {
-      final choice = response.choices.first;
-      // 如果非流式响应的内容放在message中，包装成一次流式响应。
-      // delta和message结构一致，可以统一处理
-      final delta = choice.delta ?? choice.message;
-
-      // 处理单独推理内容
-      if (delta != null &&
-          delta.reasoningContent != null &&
-          delta.reasoningContent!.isNotEmpty) {
-        accumulatedThinking += delta.reasoningContent!;
-      }
-
-      // 处理正常内容中思考模式
-      if (delta != null && delta.content != null && delta.content!.isNotEmpty) {
-        final newContent = delta.content!;
-
-        // 检测思考内容的开始和结束标记
-        if (newContent.contains('<thinking>') ||
-            newContent.contains('<think>')) {
-          isInThinking = true;
-          startTime = DateTime.now();
-        }
-
-        // 处理正常内容中的思考内容
-        if (isInThinking) {
-          accumulatedThinking += newContent;
-          if (newContent.contains('</thinking>') ||
-              newContent.contains('</think>')) {
-            isInThinking = false;
-
-            // 清理思考内容的标记
-            accumulatedThinking = accumulatedThinking
-                .replaceAll('<thinking>', '')
-                .replaceAll('</thinking>', '')
-                .replaceAll('<think>', '')
-                .replaceAll('</think>', '')
-                .trim();
+    /// 固化最后一个思考段的用时(未固化过才写，取该段开始到现在的时长)
+    void sealPreviousThinkingTime() {
+      for (var i = segments.length - 1; i >= 0; i--) {
+        if (segments[i].type == MessageSegmentType.thinking) {
+          if (segments[i].thinkingTime == null) {
+            final now = DateTime.now();
+            segments[i] = MessageSegment.thinking(
+              segments[i].text ?? '',
+              thinkingTime: now.difference(startTime).inMilliseconds,
+            );
           }
-        } else {
-          // 思考标签结束后,计算思考时长
-          if (endTime == null) {
-            endTime = DateTime.now();
-            thinkingTime = endTime.difference(startTime).inMilliseconds;
-          }
-
-          // 处理正常内容的正常响应
-          accumulatedContent += newContent;
+          return;
         }
       }
+    }
 
-      // print("正常累加内容$accumulatedContent");
+    void appendThinking(String s) {
+      final lastIdx = segments.isEmpty ? -1 : segments.length - 1;
+      if (!forceNewSegment &&
+          lastIdx >= 0 &&
+          segments[lastIdx].type == MessageSegmentType.thinking) {
+        segments[lastIdx] = MessageSegment.thinking(
+          (segments[lastIdx].text ?? '') + s,
+          thinkingTime: segments[lastIdx].thinkingTime,
+        );
+      } else {
+        // 2026-09-13 思考段用时修复：开新思考段前固化上一段的用时并
+        // 重置本轮计时——多轮工具调用的中间轮可能没有正文(直接tool_calls
+        // 结束)，此前只在正文chunk时固化，导致前几轮思考用时全为0、
+        // 且startTime跨轮未重置使最终轮记成总时长
+        sealPreviousThinkingTime();
+        startTime = DateTime.now();
+        endTime = null;
+        thinkingTime = 0;
+        segments.add(MessageSegment.thinking(s));
+        forceNewSegment = false;
+      }
+    }
 
-      // 处理语音(omni等模型可能有流式追加的音频二进制数据需要累加起来)
-      finalAudioBase64 += delta?.audio?['data'] ?? '';
+    // 追加正文文本：最后一段是text且未封段则只更新full(显示由打字机
+    // 推进，避免full/displayed交替闪烁)，否则开新正文段
+    void appendText(String s) {
+      final lastIdx = segments.isEmpty ? -1 : segments.length - 1;
+      final isLastText =
+          lastIdx >= 0 && segments[lastIdx].type == MessageSegmentType.text;
+      if (!forceNewSegment && isLastText) {
+        currentTextFull += s;
+      } else {
+        currentTextFull = s;
+        currentTextDisplayed = '';
+        segments.add(MessageSegment.textSeg(''));
+        forceNewSegment = false;
+      }
+      ensureTypewriterRunning();
+    }
 
-      // 检查是否完成
-      // 模型停止生成 token 的原因。
-      // stop：模型自然停止生成，或遇到 stop 序列中列出的字符串。
-      // length ：输出长度达到了模型上下文长度限制，或达到了 max_tokens 的限制。
-      // content_filter：输出内容因触发过滤策略而被过滤。
-      // insufficient_system_resource：系统推理资源不足，生成被打断。
-      if (choice.finishReason != null) {
-        // 正常停止时,需要把累加的音频数据转为音频文件,并把文本和音频文件等放到消息多模态栏位
-        String voicePath = '';
-        // 如果是多模态有响应音频base64数据，保存到固定的位置
-        if (finalAudioBase64.isNotEmpty) {
-          voicePath = await WavAudioHandler.saveBase64Wav(
-            finalAudioBase64,
-            model: _currentModel?.modelName,
-          );
+    // 封当前正文段：显示值补齐到真实值(轮结束/工具哨兵时调用)
+    void sealTextSegment() {
+      final lastIdx = segments.lastIndexWhere(
+        (s) => s.type == MessageSegmentType.text,
+      );
+      if (lastIdx != -1) {
+        segments[lastIdx] = MessageSegment.textSeg(currentTextFull);
+        currentTextDisplayed = currentTextFull;
+      }
+      stopTypewriter();
+      forceNewSegment = true;
+    }
+
+    // 串行化+内联处理：pause/resume保证chunk顺序；直接读写闭包变量
+    Future<void> handleChunk(OpenAIChatCompletionResponse response) async {
+      // 工具调用哨兵(service在执行完工具后注入，携带结果与参数摘要)：
+      // 封上一段+插入工具段(内嵌卡片可展开查看结果)
+      if (response.toolInvoking != null) {
+        sealTextSegment();
+        // 哨兵前的思考段(无正文的中间轮)补固化用时
+        sealPreviousThinkingTime();
+        segments.add(
+          MessageSegment.toolCallSeg(
+            toolName: response.toolInvoking!,
+            argsSummary: response.toolArgsSummary,
+            result: response.toolResult,
+            elapsedMs: response.toolElapsedMs,
+          ),
+        );
+
+        streamMsg = streamMsg.copyWith(
+          segments: List.of(segments),
+          updatedAt: DateTime.now(),
+        );
+        commitStream();
+        return;
+      }
+
+      // 2026-09-15 切换会话流式修复：原实现在此处按id反查_messages，
+      // 切走后-1直接return丢弃chunk——现在更新基于streamMsg对象，
+      // 无需反查(切走后commitStream只累积不刷UI)
+      streamMsg = streamMsg.copyWith(updatedAt: DateTime.now());
+
+      // 2026-09-14 usage统计帧：stream_options.include_usage开启时平台在
+      // stop帧后发的choices:[]只带usage的chunk(此前被service终态防御误杀/
+      // 此处也被choices.isNotEmpty跳过，双重丢弃导致消息不显示token消耗)——
+      // 单独更新tokenCount/cost并落库(finishReason时已落库过，此处覆盖)
+      if (response.choices.isEmpty && response.usage != null) {
+        final usage = response.usage!;
+        streamMsg = streamMsg.copyWith(
+          tokenCount: usage.totalTokens,
+          cost: _calculateCost(usage.totalTokens, _currentModel!),
+          updatedAt: DateTime.now(),
+        );
+        // 手动停止后不再落库(防在途chunk把isStreaming=true中间态
+        // 覆盖stopStreaming刚保存的[手动终止]终态)
+        if (!_manualStopRequested) _chatDao.saveMessage(streamMsg);
+        commitStream();
+        return;
+      }
+
+      if (response.choices.isNotEmpty) {
+        final choice = response.choices.first;
+        // 如果非流式响应的内容放在message中，包装成一次流式响应。
+        // delta和message结构一致，可以统一处理
+        final delta = choice.delta ?? choice.message;
+
+        // 处理单独推理内容
+        if (delta != null &&
+            delta.reasoningContent != null &&
+            delta.reasoningContent!.isNotEmpty) {
+          // 计时重置已移入appendThinking开新思考段时处理(每段独立计时)
+          appendThinking(delta.reasoningContent!);
         }
 
-        // 添加文本内容（如果存在）
-        if (accumulatedContent.trim().isNotEmpty) {
-          multimodalContent.add(
-            UnifiedContentItem.text(accumulatedContent.trim()),
-          );
+        // 处理正常内容(含content内嵌<think>标签的思考模式)
+        if (delta != null &&
+            delta.content != null &&
+            delta.content!.isNotEmpty) {
+          final newContent = delta.content!;
+
+          if (newContent.contains('<thinking>') ||
+              newContent.contains('<think>')) {
+            isInThinking = true;
+            startTime = DateTime.now();
+          }
+
+          if (isInThinking) {
+            appendThinking(newContent);
+            if (newContent.contains('</thinking>') ||
+                newContent.contains('</think>')) {
+              isInThinking = false;
+              // 清理思考段内的标记
+              final lastIdx = segments.lastIndexWhere(
+                (s) => s.type == MessageSegmentType.thinking,
+              );
+              if (lastIdx != -1) {
+                final cleaned = (segments[lastIdx].text ?? '')
+                    .replaceAll('<thinking>', '')
+                    .replaceAll('</thinking>', '')
+                    .replaceAll('<think>', '')
+                    .replaceAll('</think>', '')
+                    .trim();
+                segments[lastIdx] = MessageSegment.thinking(
+                  cleaned,
+                  thinkingTime: segments[lastIdx].thinkingTime,
+                );
+              }
+            }
+          } else {
+            // 思考结束后第一个正文chunk固化思考时长(消息级旧字段)
+            if (endTime == null) {
+              final now = DateTime.now();
+              endTime = now;
+              thinkingTime = now.difference(startTime).inMilliseconds;
+              sealPreviousThinkingTime();
+            }
+            appendText(newContent);
+          }
         }
 
-        // 添加音频内容
-        if (voicePath.isNotEmpty) {
-          multimodalContent.add(
-            UnifiedContentItem.audio(
-              voicePath,
-              fileName: voicePath.split('/').last,
-              fileSize: await getFileSize(File(voicePath)),
-            ),
+        // omni等模型的流式音频片段累加
+        finalAudioBase64 += delta?.audio?['data'] ?? '';
+
+        // 检查是否完成(finishReason：封段+音频转文件+落库)
+        if (choice.finishReason != null) {
+          sealTextSegment();
+          // 本轮思考段若未固化(无正文直接tool_calls结束)也补上用时
+          sealPreviousThinkingTime();
+
+          String voicePath = '';
+          if (finalAudioBase64.isNotEmpty) {
+            voicePath = await WavAudioHandler.saveBase64Wav(
+              finalAudioBase64,
+              model: _currentModel?.modelName,
+            );
+          }
+
+          if (currentTextFull.trim().isNotEmpty) {
+            multimodalContent.add(
+              UnifiedContentItem.text(currentTextFull.trim()),
+            );
+          }
+
+          if (voicePath.isNotEmpty) {
+            multimodalContent.add(
+              UnifiedContentItem.audio(
+                voicePath,
+                fileName: voicePath.split('/').last,
+                fileSize: await getFileSize(File(voicePath)),
+              ),
+            );
+          }
+
+          final saveMessage = streamMsg.copyWith(
+            segments: List.of(segments),
+            // 旧字段兜底(未分段消费方)：content为各正文段拼接
+            content: segments
+                .where((s) => s.type == MessageSegmentType.text)
+                .map((s) => s.text)
+                .join('\n\n'),
+            thinkingContent: segments
+                .where((s) => s.type == MessageSegmentType.thinking)
+                .map((s) => s.text)
+                .where((t) => t != null && t.isNotEmpty)
+                .join('\n\n'),
+            thinkingTime: thinkingTime,
+            contentType: multimodalContent.isNotEmpty
+                ? UnifiedContentType.multimodal
+                : UnifiedContentType.text,
+            multimodalContent: multimodalContent.isNotEmpty
+                ? multimodalContent
+                : null,
+            tokenCount: response.usage?.totalTokens ?? streamMsg.tokenCount,
+            cost: response.usage?.totalTokens != null
+                ? _calculateCost(response.usage!.totalTokens, _currentModel!)
+                : streamMsg.cost,
+            searchReferences: isWebSearch && _isWebSearchEnabled
+                ? _getSearchReferencesFromService()
+                : streamMsg.searchReferences,
+            updatedAt: DateTime.now(),
           );
+
+          streamMsg = saveMessage;
+          commitStream();
+          // finishReason中间落库：切走会话后DB也有完整中间态可加载
+          // (手动停止后跳过——防覆盖[手动终止]终态，同usage帧)
+          if (!_manualStopRequested) _chatDao.saveMessage(saveMessage);
         }
 
-        // 有多模态异步处理数据，在此处保存到数据库，因为在流结束时保存时没有这些内容
-        final saveMessage = _messages[index].copyWith(
-          content: accumulatedContent,
-          thinkingContent: accumulatedThinking.isNotEmpty
-              ? accumulatedThinking
-              : null,
+        // 实时追加更新助手消息(分段)
+        final updatedStreaming = streamMsg.copyWith(
+          segments: List.of(segments),
+          content: currentTextDisplayed,
+          thinkingContent: segments
+              .where((s) => s.type == MessageSegmentType.thinking)
+              .map((s) => s.text)
+              .where((t) => t != null && t.isNotEmpty)
+              .join('\n\n'),
           thinkingTime: thinkingTime,
           contentType: multimodalContent.isNotEmpty
               ? UnifiedContentType.multimodal
@@ -1339,61 +1696,50 @@ class UnifiedChatViewModel extends ChangeNotifier {
           multimodalContent: multimodalContent.isNotEmpty
               ? multimodalContent
               : null,
-          tokenCount:
-              response.usage?.totalTokens ?? _messages[index].tokenCount,
+          tokenCount: response.usage?.totalTokens ?? streamMsg.tokenCount,
           cost: response.usage?.totalTokens != null
               ? _calculateCost(response.usage!.totalTokens, _currentModel!)
-              : _messages[index].cost,
-          // 如果是搜索相关的响应，添加搜索结果链接
+              : streamMsg.cost,
           searchReferences: isWebSearch && _isWebSearchEnabled
               ? _getSearchReferencesFromService()
-              : _messages[index].searchReferences,
+              : streamMsg.searchReferences,
           updatedAt: DateTime.now(),
         );
 
-        _chatDao.saveMessage(saveMessage);
-
-        notifyListeners();
+        streamMsg = updatedStreaming;
+        commitStream();
       }
-
-      /// 实时追加更新助手消息
-      final updatedStreaming = _messages[index].copyWith(
-        content: accumulatedContent,
-        thinkingContent: accumulatedThinking.isNotEmpty
-            ? accumulatedThinking
-            : null,
-        thinkingTime: thinkingTime,
-        contentType: multimodalContent.isNotEmpty
-            ? UnifiedContentType.multimodal
-            : UnifiedContentType.text,
-        multimodalContent: multimodalContent.isNotEmpty
-            ? multimodalContent
-            : null,
-        tokenCount: response.usage?.totalTokens ?? _messages[index].tokenCount,
-        cost: response.usage?.totalTokens != null
-            ? _calculateCost(response.usage!.totalTokens, _currentModel!)
-            : _messages[index].cost,
-        // 如果是搜索相关的响应，添加搜索结果链接
-        searchReferences: isWebSearch && _isWebSearchEnabled
-            ? _getSearchReferencesFromService()
-            : _messages[index].searchReferences,
-        updatedAt: DateTime.now(),
-      );
-
-      _updateMessageInLists(updatedStreaming);
-
-      notifyListeners();
     }
 
-    // 返回更新后的累加变量
-    return _StreamChunkResult(
-      accumulatedContent: accumulatedContent,
-      accumulatedThinking: accumulatedThinking,
-      finalAudioBase64: finalAudioBase64,
-      isInThinking: isInThinking,
-      endTime: endTime,
-      thinkingTime: thinkingTime,
-      multimodalContent: multimodalContent,
+    _streamSubscription = stream.listen(
+      (response) {
+        // 串行化：上一chunk处理完才放行下一个(消除async回调竞态)
+        _streamSubscription?.pause();
+        handleChunk(response).whenComplete(() => _streamSubscription?.resume());
+      },
+      onDone: () async {
+        stopTypewriter();
+        // flush：最后正文段显示值补齐到真实值，旧字段同步拼接值
+        // (2026-09-15 基于streamMsg而非反查_messages——切走会话后也能收尾)
+        sealTextSegment();
+        streamMsg = streamMsg.copyWith(
+          segments: List.of(segments),
+          content: segments
+              .where((s) => s.type == MessageSegmentType.text)
+              .map((s) => s.text)
+              .join('\n\n'),
+          thinkingContent: segments
+              .where((s) => s.type == MessageSegmentType.thinking)
+              .map((s) => s.text)
+              .where((t) => t != null && t.isNotEmpty)
+              .join('\n\n'),
+        );
+        await _handleStreamDone(streamMsg);
+      },
+      onError: (error) {
+        stopTypewriter();
+        _handleStreamError(error, streamMsg);
+      },
     );
   }
 
@@ -1403,23 +1749,46 @@ class UnifiedChatViewModel extends ChangeNotifier {
   /// 那么在这里，就不太清楚实际作用了
   Future<void> _handleStreamDone(UnifiedChatMessage assistantMessage) async {
     // 流式完成，保存最终消息(注意，有时候解析失败，会无法正确保存token使用量等内容)
-    final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
+    // 2026-09-15 切换会话流式修复：入参是流处理闭包回传的最新对象，
+    // 完成时**无条件落库**——原实现先在_messages反查，切走会话后
+    // index==-1整体跳过，AI回复永久丢失(切回只见空会话)
+    var current = assistantMessage;
 
-    if (index != -1) {
-      final finalMessage = _messages[index].copyWith(
-        isStreaming: false,
-        updatedAt: DateTime.now(),
+    // 2026-09-12 空回答兜底：平台对某些请求返回空流(实测白山中转对
+    // 工具结果续传请求回零chunk空SSE)时消息无声结束——正文/多模态为空
+    // 即提示(思考框有内容也算异常：模型思考完必有正文)，不再无声空白
+    // 2026-09-14 分段渲染适配：渲染优先走segments，只写content字段
+    // 气泡内不显示——需同时插入提示text段(实测内联降级失败后只有
+    // 思考+工具卡，消息空白无任何提示)
+    if ((current.content ?? '').trim().isEmpty &&
+        (current.multimodalContent == null ||
+            current.multimodalContent!.isEmpty)) {
+      const hint = '（模型未返回内容，可能是服务平台对本次请求处理异常；请重试或更换模型/平台）';
+      current = current.copyWith(
+        content: hint,
+        segments: current.segments == null
+            ? null
+            : [...current.segments!, MessageSegment.textSeg(hint)],
       );
-
-      // print('[流式完成]保存最终消息: "${finalMessage.content}" ');
-
-      _updateAssistantMessage(finalMessage);
-
-      // 更新对话统计, 对话处理完了要清空搜索参考
-      await _updateConversationStats();
-      _chatService.clearLastSearchReferences();
     }
 
+    final finalMessage = current.copyWith(
+      isStreaming: false,
+      updatedAt: DateTime.now(),
+    );
+
+    _updateMessageInLists(finalMessage);
+    // 无条件落库(不在当前会话列表时update是no-op，落库保证切回能加载)
+    await _chatDao.saveMessage(finalMessage);
+    _activeStreamingMessages.remove(finalMessage.conversationId);
+
+    // 更新对话统计, 对话处理完了要清空搜索参考
+    // (2026-09-15 按流式会话id统计——切走会话后计数也能正确刷新)
+    await _updateConversationStats(conversationId: finalMessage.conversationId);
+    if (finalMessage.conversationId == _currentConversation?.id) {
+      notifyListeners();
+    }
+    _chatService.clearLastSearchReferences();
     _setStreaming(false);
   }
 
@@ -1437,18 +1806,31 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
     // print('流式响应错误, 类型:${error.runtimeType} 内容:$error');
 
+    // 2026-09-15 错误详情落日志+写入正文段(Ubuntu实测教训：有segments的
+    // 消息只渲染segments，原实现错误文本只写content导致用户看不到详情，
+    // 排障时只能靠"生成失败"四个字猜)
+    pl.e('流式响应错误: $error');
+
     // 在对话中显示错误而不是统一错误页面
-    final index = _messages.indexWhere((m) => m.id == assistantMessage.id);
-    if (index != -1) {
-      final errorMessage = _messages[index].copyWith(
-        content: 'AI回复失败: $error',
-        isStreaming: false,
-        isError: true,
-        errorMessage: error.toString(),
-        updatedAt: DateTime.now(),
-      );
-      _updateMessageInLists(errorMessage);
-      _chatDao.saveMessage(errorMessage);
+    // 2026-09-15 切换会话流式修复：基于闭包回传的最新对象构建错误
+    // 消息并无条件落库——原实现反查_messages失败时错误也一并丢失
+    final errorText = '生成失败: $error';
+    final errorMessage = assistantMessage.copyWith(
+      content: 'AI回复失败: $error',
+      // 错误详情作为独立正文段追加(有segments时气泡只渲染segments)
+      segments: [
+        ...(assistantMessage.segments ?? const <MessageSegment>[]),
+        MessageSegment.textSeg(errorText),
+      ],
+      isStreaming: false,
+      isError: true,
+      errorMessage: error.toString(),
+      updatedAt: DateTime.now(),
+    );
+    _updateMessageInLists(errorMessage);
+    _chatDao.saveMessage(errorMessage);
+    _activeStreamingMessages.remove(errorMessage.conversationId);
+    if (errorMessage.conversationId == _currentConversation?.id) {
       notifyListeners();
     }
 
@@ -1466,31 +1848,59 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
   /// 处理发送请求异常
   Future<void> _handleMessageSendError(Object error) async {
-    if (_currentConversation == null) return;
+    // 2026-09-15 切换会话流式修复：以发送时登记的会话为准——原实现
+    // 按"当前会话"创建错误占位，发送后切走会话时错误消息会落到
+    // 别的会话列表里
+    final activeConvId = _streamingConversationId;
+    final active = activeConvId == null
+        ? null
+        : _activeStreamingMessages[activeConvId];
 
-    // 在对话中显示错误而不是统一错误页面
-    final assistantMessage = _createAssistantPlaceholder(
-      content: '发送请求失败: $error',
-    );
-    final errorMessage = assistantMessage.copyWith(
-      isError: true,
-      errorMessage: error.toString(),
-      isStreaming: false,
-    );
-
-    // 如果已有助手消息占位符，替换它；否则添加新的错误消息
-    final assistantIndex = _messages.lastIndexWhere(
-      (m) => m.role == UnifiedMessageRole.assistant && m.isStreaming,
-    );
-    if (assistantIndex != -1) {
-      _messages[assistantIndex] = errorMessage;
+    if (active != null) {
+      final errorMessage = active.copyWith(
+        content: '发送请求失败: $error',
+        isError: true,
+        errorMessage: error.toString(),
+        isStreaming: false,
+        updatedAt: DateTime.now(),
+      );
+      _updateMessageInLists(errorMessage);
+      await _chatDao.saveMessage(errorMessage);
+      _activeStreamingMessages.remove(activeConvId);
+      if (errorMessage.conversationId == _currentConversation?.id) {
+        notifyListeners();
+      }
     } else {
-      _messages.add(errorMessage);
-      _allMessages.add(errorMessage);
+      if (_currentConversation == null) {
+        _setStreaming(false);
+        return;
+      }
+
+      // 在对话中显示错误而不是统一错误页面
+      final assistantMessage = _createAssistantPlaceholder(
+        content: '发送请求失败: $error',
+      );
+      final errorMessage = assistantMessage.copyWith(
+        isError: true,
+        errorMessage: error.toString(),
+        isStreaming: false,
+      );
+
+      // 如果已有助手消息占位符，替换它；否则添加新的错误消息
+      final assistantIndex = _messages.lastIndexWhere(
+        (m) => m.role == UnifiedMessageRole.assistant && m.isStreaming,
+      );
+      if (assistantIndex != -1) {
+        _messages[assistantIndex] = errorMessage;
+      } else {
+        _messages.add(errorMessage);
+        _allMessages.add(errorMessage);
+      }
+
+      // 保存发送错误消息
+      await _chatDao.saveMessage(errorMessage);
     }
 
-    // 保存发送错误消息并清空搜索参考
-    await _chatDao.saveMessage(errorMessage);
     _chatService.clearLastSearchReferences();
     _setStreaming(false);
   }
@@ -2725,21 +3135,52 @@ class UnifiedChatViewModel extends ChangeNotifier {
     _chatService.cancelStreaming();
 
     // 标记流式消息为完成并保存到数据库
-    for (int i = 0; i < _messages.length; i++) {
-      if (_messages[i].isStreaming) {
-        final stoppedMessage = _messages[i].copyWith(
-          isStreaming: false,
-          content: '${_messages[i].content} [手动终止]',
-          updatedAt: DateTime.now(),
-        );
-        _updateMessageInLists(stoppedMessage);
-        // 保存被停止的消息
-        await _chatDao.saveMessage(stoppedMessage);
+    // 2026-09-15 切换会话流式修复：优先从活跃Map取流式消息(切走会话
+    // 后消息不在当前_messages里，原遍历找不到→停止后消息悬空无落库)
+    final activeConvId = _streamingConversationId;
+    final active = activeConvId == null
+        ? null
+        : _activeStreamingMessages[activeConvId];
+    if (active != null) {
+      final stoppedMessage = active.copyWith(
+        isStreaming: false,
+        content: '${active.content ?? ''} [手动终止]',
+        // 2026-09-15 分段渲染适配：有segments时气泡只渲染segments，
+        // 后缀只写content用户看不到(同错误详情落段的教训)——
+        // 追加独立终止段
+        segments: [
+          ...(active.segments ?? const <MessageSegment>[]),
+          MessageSegment.textSeg('[手动终止]'),
+        ],
+        updatedAt: DateTime.now(),
+      );
+      _updateMessageInLists(stoppedMessage);
+      await _chatDao.saveMessage(stoppedMessage);
+      _activeStreamingMessages.remove(activeConvId);
+      if (stoppedMessage.conversationId == _currentConversation?.id) {
+        notifyListeners();
+      }
+    } else {
+      for (int i = 0; i < _messages.length; i++) {
+        if (_messages[i].isStreaming) {
+          final stoppedMessage = _messages[i].copyWith(
+            isStreaming: false,
+            content: '${_messages[i].content} [手动终止]',
+            segments: [
+              ...(_messages[i].segments ?? const <MessageSegment>[]),
+              MessageSegment.textSeg('[手动终止]'),
+            ],
+            updatedAt: DateTime.now(),
+          );
+          _updateMessageInLists(stoppedMessage);
+          // 保存被停止的消息
+          await _chatDao.saveMessage(stoppedMessage);
+        }
       }
     }
 
-    // 更新对话统计
-    await _updateConversationStats();
+    // 更新对话统计(2026-09-15 按流式会话id统计)
+    await _updateConversationStats(conversationId: activeConvId);
     _setStreaming(false);
   }
 
@@ -2752,6 +3193,8 @@ class UnifiedChatViewModel extends ChangeNotifier {
   /// 设置流式状态
   void _setStreaming(bool streaming) {
     _isStreaming = streaming;
+    // 2026-09-15 流结束清空流式会话标记(单流模型，无并发流)
+    if (!streaming) _streamingConversationId = null;
     notifyListeners();
   }
 
@@ -2763,6 +3206,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
     ToastUtils.showError(error);
     _isLoading = false;
     _isStreaming = false;
+    _streamingConversationId = null;
     notifyListeners();
   }
 
@@ -3071,6 +3515,17 @@ class UnifiedChatViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 2026-09-12 全局搜索渠道偏好(联网开关开启时用哪个渠道搜索)
+  Future<SearchChannelPreference> getSearchChannelPreference() async {
+    return await _searchToolManager.getSearchChannelPreference();
+  }
+
+  /// 保存全局搜索渠道偏好
+  Future<void> setSearchChannelPreference(SearchChannelPreference pref) async {
+    await _searchToolManager.setSearchChannelPreference(pref);
+    notifyListeners();
+  }
+
   /// 从服务中获取搜索结果链接
   List<SearchReference>? _getSearchReferencesFromService() {
     final searchReferences = _chatService.getLastSearchReferences();
@@ -3084,28 +3539,12 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
+    // 审批挂起中销毁：完成等待防止Agent协程永久挂起
+    if (_approvalCompleter != null && !_approvalCompleter!.isCompleted) {
+      _approvalCompleter!.complete(ToolApprovalDecision.deny);
+    }
     _streamSubscription?.cancel();
     super.dispose();
   }
-}
-
-/// 流式处理结果
-class _StreamChunkResult {
-  final String accumulatedContent;
-  final String accumulatedThinking;
-  final String finalAudioBase64;
-  final bool isInThinking;
-  final DateTime? endTime;
-  final int thinkingTime;
-  final List<UnifiedContentItem> multimodalContent;
-
-  _StreamChunkResult({
-    required this.accumulatedContent,
-    required this.accumulatedThinking,
-    required this.finalAudioBase64,
-    required this.isInThinking,
-    required this.endTime,
-    required this.thinkingTime,
-    required this.multimodalContent,
-  });
 }

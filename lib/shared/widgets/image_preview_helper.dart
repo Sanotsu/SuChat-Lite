@@ -182,6 +182,15 @@ Widget _buildPhotoDialog(ImageProvider imageProvider) {
   );
 }
 
+/// 2026-09-15 单张图片全屏预览弹窗(公开入口)：
+/// markdown渲染图片点击放大等场景使用，支持双指/滚轮缩放
+void showImagePreviewDialog(BuildContext context, String imageUrl) {
+  showDialog(
+    context: context,
+    builder: (_) => _buildPhotoDialog(getImageProvider(imageUrl)),
+  );
+}
+
 /// 构建图片画廊弹窗
 Widget _buildPhotoGalleryDialog(List<String> imageList) {
   // 这个弹窗默认是无法全屏的，上下左右会留点空，点击这些空隙可以关闭弹窗
