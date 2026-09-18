@@ -393,6 +393,21 @@ class UnifiedSecureStorage {
     return await _storage.read(key: _searchChannelPrefKey);
   }
 
+  /// 2026-09-16 MCP全局启用开关(设置页控制，与会话级开关并行的上层闸)：
+  /// 开=所有会话强制携带MCP工具(输入框按钮隐藏，会话级开关被覆盖)；
+  /// 关(默认)=回落会话级开关。存'1'/'0'，读不到视为关
+  static const String _mcpGloballyEnabledKey =
+      'unified_chat_mcp_globally_enabled';
+
+  static Future<void> setMcpGloballyEnabled(bool value) async {
+    await _storage.write(key: _mcpGloballyEnabledKey, value: value ? '1' : '0');
+  }
+
+  static Future<bool> getMcpGloballyEnabled() async {
+    final v = await _storage.read(key: _mcpGloballyEnabledKey);
+    return v == '1';
+  }
+
   /// 获取存储统计信息
   static Future<Map<String, int>> getStorageStats() async {
     final allKeys = await _storage.readAll();

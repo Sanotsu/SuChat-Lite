@@ -94,6 +94,11 @@ class UnifiedChatPartner {
   @JsonKey(name: 'background_opacity')
   final double? backgroundOpacity;
 
+  /// 2026-09-16 SKILLS P2-3 挂载技能清单(JSON数组字符串，对齐tags模式)。
+  /// 语义：null=未配置(挂载全部启用技能)；[]或不含=明确不挂载/部分挂载
+  @JsonKey(name: 'skill_ids')
+  final String? skillIds;
+
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
 
@@ -122,6 +127,7 @@ class UnifiedChatPartner {
     this.preferredModelId,
     this.background,
     this.backgroundOpacity,
+    this.skillIds,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -156,6 +162,19 @@ class UnifiedChatPartner {
 
   /// 是否配置了专属背景
   bool get hasBackground => background != null && background!.trim().isNotEmpty;
+
+  /// 2026-09-16 SKILLS P2-3 解析挂载技能清单(skillIds为JSON数组字符串)。
+  /// 返回null表示未配置(挂载全部启用技能)；空列表=明确不挂载
+  List<String>? get mountedSkillIds {
+    final raw = skillIds;
+    if (raw == null || raw.trim().isEmpty) return null;
+    try {
+      final List<dynamic> decoded = jsonDecode(raw);
+      return decoded.cast<String>();
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// 从结构化人设字段生成系统提示词(移植自旧版CharacterCard.generateSystemPrompt)
   /// 有结构化字段时编辑保存会自动生成prompt；仅填prompt的轻量搭档不走此逻辑
@@ -232,6 +251,7 @@ class UnifiedChatPartner {
     String? preferredModelId,
     String? background,
     double? backgroundOpacity,
+    String? skillIds,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -257,6 +277,7 @@ class UnifiedChatPartner {
       preferredModelId: preferredModelId ?? this.preferredModelId,
       background: background ?? this.background,
       backgroundOpacity: backgroundOpacity ?? this.backgroundOpacity,
+      skillIds: skillIds ?? this.skillIds,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -288,6 +309,7 @@ class UnifiedChatPartner {
       'preferred_model_id': preferredModelId,
       'background': background,
       'background_opacity': backgroundOpacity,
+      'skill_ids': skillIds,
     };
   }
 
@@ -317,6 +339,7 @@ class UnifiedChatPartner {
       preferredModelId: map['preferred_model_id'] as String?,
       background: map['background'] as String?,
       backgroundOpacity: (map['background_opacity'] as num?)?.toDouble(),
+      skillIds: map['skill_ids'] as String?,
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(map['updated_at'] as int),
     );

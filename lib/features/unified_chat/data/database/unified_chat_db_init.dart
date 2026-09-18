@@ -53,7 +53,7 @@ class UnifiedChatDBInit {
       path,
       // TODO(发布前): 当前版本未发布过，无线上旧库；正式发布时将version固定为最终值
       // 并移除下方全部_upgradeToV2/_upgradeToV3/_upgradeToV4升级逻辑(开发期保留以便调试，免于反复卸载重装)
-      version: 11,
+      version: 12,
       onCreate: _createDb,
       onUpgrade: _upgradeDb,
     );
@@ -83,6 +83,7 @@ class UnifiedChatDBInit {
       txn.execute(UnifiedChatDdl.ddlForTranslationHistory);
       txn.execute(UnifiedChatDdl.ddlIndexTranslationHistory);
       txn.execute(UnifiedChatDdl.ddlForUnifiedMcpServer);
+      txn.execute(UnifiedChatDdl.ddlForUnifiedSkill);
 
       // 创建一些索引来提高查询性能
       await _createUnifiedChatIndex(txn);
@@ -139,6 +140,20 @@ class UnifiedChatDBInit {
     if (oldVersion < 11) {
       await _upgradeToV11(db);
     }
+
+    if (oldVersion < 12) {
+      await _upgradeToV12(db);
+    }
+  }
+
+  /// v11 -> v12: 2026-09-16 SKILLS P0-1——
+  /// ①新建unified_skills技能元数据表(技能本体在应用支持目录)
+  /// ②搭档表skill_ids列(JSON数组，NULL=未配置即挂载全部启用技能)
+  Future<void> _upgradeToV12(Database db) async {
+    await db.execute(UnifiedChatDdl.ddlForUnifiedSkill);
+    await db.execute(
+      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedChatPartner} ADD COLUMN skill_ids TEXT',
+    );
   }
 
   /// v10 -> v11: 2026-09-15 P4-2 OAuth 授权流——

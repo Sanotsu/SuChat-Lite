@@ -707,9 +707,12 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
     // if (msg.cost > 0) {
     //   note += 'cost: ${msg.cost}; ';
     // }
+    // 2026-09-16 整条消息总耗时(opencode风格，含工具多轮)用格式化时长
     if (msg.responseTimeMs != null) {
-      note += 'response time: ${msg.responseTimeMs} ms; ';
+      note += '耗时 ${msg.responseTimeDescription}; ';
     }
+    // 2026-09-16 轮次上限提示已由气泡内notice横幅段统一承载
+    // (与工具折叠组件平级、无法错过)，元信息行不再重复显示
     if (!msg.isUser && msg.modelNameUsed != null) {
       note += '${msg.platformIdUsed ?? ''}(${msg.modelNameUsed!}).';
       // note +=

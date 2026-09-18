@@ -9,6 +9,7 @@ import '../viewmodels/unified_chat_viewmodel.dart';
 import '../pages/chat_background_picker_page.dart';
 import '../pages/media_library_page.dart';
 import '../pages/mcp_servers_settings_page.dart';
+import '../pages/skills_settings_page.dart';
 import '../pages/search_tools_settings_page.dart';
 import 'appearance_tool_widgets.dart';
 
@@ -124,18 +125,18 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
               PopupMenuButton<String>(
                 onSelected: (value) =>
                     _handleMenuAction(context, value, viewModel),
-                constraints: BoxConstraints(maxWidth: 120, minWidth: 120),
+                constraints: BoxConstraints(maxWidth: 130, minWidth: 130),
                 itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'more_tools',
-                    child: Row(
-                      children: [
-                        Icon(Icons.apps),
-                        SizedBox(width: 8),
-                        Text('更多功能'),
-                      ],
-                    ),
-                  ),
+                  // const PopupMenuItem(
+                  //   value: 'more_tools',
+                  //   child: Row(
+                  //     children: [
+                  //       Icon(Icons.apps),
+                  //       SizedBox(width: 8),
+                  //       Text('更多功能'),
+                  //     ],
+                  //   ),
+                  // ),
                   const PopupMenuItem(
                     value: 'search_tools',
                     child: Row(
@@ -154,6 +155,17 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
                         Icon(Icons.extension),
                         SizedBox(width: 8),
                         Text('MCP 工具'),
+                      ],
+                    ),
+                  ),
+                  // 技能管理(2026-09-16 SKILLS P1-5)
+                  const PopupMenuItem(
+                    value: 'skills',
+                    child: Row(
+                      children: [
+                        Icon(Icons.school_outlined),
+                        SizedBox(width: 8),
+                        Text('Skills 技能'),
                       ],
                     ),
                   ),
@@ -255,7 +267,12 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
         _openSearchToolsSettings(context);
         break;
       case 'mcp_servers':
-        _openMcpServersSettings(context);
+        // 2026-09-16 设置页只写storage(路由不在聊天页局部provider子树，
+        // 回写会错实例)，返回后刷新viewmodel全局MCP态驱动按钮显隐
+        _openMcpServersSettings(context, viewModel);
+        break;
+      case 'skills':
+        _openSkillsSettings(context);
         break;
       case 'text_size':
         _adjustTextScale(context, viewModel);
@@ -382,10 +399,21 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-  void _openMcpServersSettings(BuildContext context) {
-    Navigator.push(
+  void _openMcpServersSettings(
+    BuildContext context,
+    UnifiedChatViewModel viewModel,
+  ) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const McpServersSettingsPage()),
+    );
+    await viewModel.refreshMcpGlobalState();
+  }
+
+  void _openSkillsSettings(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SkillsSettingsPage()),
     );
   }
 

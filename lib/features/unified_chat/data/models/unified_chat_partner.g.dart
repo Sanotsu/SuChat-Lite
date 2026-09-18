@@ -29,6 +29,7 @@ UnifiedChatPartner _$UnifiedChatPartnerFromJson(Map<String, dynamic> json) =>
       preferredModelId: json['preferred_model_id'] as String?,
       background: json['background'] as String?,
       backgroundOpacity: (json['background_opacity'] as num?)?.toDouble(),
+      skillIds: json['skill_ids'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -56,6 +57,7 @@ Map<String, dynamic> _$UnifiedChatPartnerToJson(UnifiedChatPartner instance) =>
       'preferred_model_id': instance.preferredModelId,
       'background': instance.background,
       'background_opacity': instance.backgroundOpacity,
+      'skill_ids': instance.skillIds,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
     };

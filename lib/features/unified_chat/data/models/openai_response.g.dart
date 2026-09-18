@@ -25,6 +25,7 @@ OpenAIChatCompletionResponse _$OpenAIChatCompletionResponseFromJson(
   toolResult: json['toolResult'] as String?,
   toolArgsSummary: json['toolArgsSummary'] as String?,
   toolElapsedMs: (json['toolElapsedMs'] as num?)?.toInt(),
+  limitNotice: json['limitNotice'] as String?,
 );
 
 Map<String, dynamic> _$OpenAIChatCompletionResponseToJson(
@@ -42,6 +43,7 @@ Map<String, dynamic> _$OpenAIChatCompletionResponseToJson(
   'toolResult': ?instance.toolResult,
   'toolArgsSummary': ?instance.toolArgsSummary,
   'toolElapsedMs': ?instance.toolElapsedMs,
+  'limitNotice': ?instance.limitNotice,
 };
 
 OpenAIChoice _$OpenAIChoiceFromJson(Map<String, dynamic> json) => OpenAIChoice(

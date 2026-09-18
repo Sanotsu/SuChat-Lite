@@ -9,6 +9,7 @@ import '../pages/chat_background_picker_page.dart';
 import '../pages/media_library_page.dart';
 import '../pages/mcp_servers_settings_page.dart';
 import '../pages/search_tools_settings_page.dart';
+import '../pages/skills_settings_page.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
 import 'appearance_tool_widgets.dart';
 
@@ -44,7 +45,14 @@ class ChatDesktopToolbar extends StatelessWidget {
               buildIconWithTextButton(
                 icon: Icons.extension,
                 label: 'MCP 工具',
-                onTap: () => _openMcpServersSettings(context),
+                onTap: () => _openMcpServersSettings(context, viewModel),
+                context: context,
+              ),
+              // 技能管理(2026-09-16 SKILLS P1-5)
+              buildIconWithTextButton(
+                icon: Icons.school_outlined,
+                label: 'Skills 技能',
+                onTap: () => _openSkillsSettings(context),
                 context: context,
               ),
               // 媒体面板(2026-09-09 跨会话查看AI生成的图片/视频/语音及生成条件)
@@ -133,10 +141,23 @@ class ChatDesktopToolbar extends StatelessWidget {
     );
   }
 
-  void _openMcpServersSettings(BuildContext context) {
-    Navigator.push(
+  // 2026-09-16 设置页只写storage(路由不在聊天页局部provider子树，
+  // 回写会错实例)，返回后刷新viewmodel全局MCP态驱动输入框按钮显隐
+  void _openMcpServersSettings(
+    BuildContext context,
+    UnifiedChatViewModel viewModel,
+  ) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const McpServersSettingsPage()),
+    );
+    await viewModel.refreshMcpGlobalState();
+  }
+
+  void _openSkillsSettings(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SkillsSettingsPage()),
     );
   }
 

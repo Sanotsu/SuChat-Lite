@@ -135,7 +135,8 @@ class UnifiedChatDdl {
         tags                          TEXT,
         preferred_model_id            TEXT,
         background                    TEXT,
-        background_opacity            REAL
+        background_opacity            REAL,
+        skill_ids                     TEXT
       )
     ''';
 
@@ -276,7 +277,29 @@ class UnifiedChatDdl {
       )
     ''';
 
-  /// 初始化内置MCP server种子(仅按name补插缺失行，不覆盖用户修改)
+  /// Agent Skills 技能元数据表
+  /// 2026-09-16 SKILLS P0-1：技能本体(SKILL.md+附属文件)存应用支持目录，
+  /// DB只存元数据与索引；id即frontmatter name(name已唯一，不再单设uuid)
+  static const tableUnifiedSkill = '${DBInitConfig.tablePerfix}unified_skill';
+
+  static const ddlForUnifiedSkill =
+      '''
+      CREATE TABLE $tableUnifiedSkill (
+        id            TEXT      PRIMARY KEY,
+        name          TEXT      NOT NULL    UNIQUE,
+        description   TEXT,
+        source        TEXT      NOT NULL    DEFAULT 'import',
+        source_url    TEXT,
+        enabled       INTEGER   NOT NULL    DEFAULT 1,
+        dir_path      TEXT      NOT NULL,
+        aux_count     INTEGER   NOT NULL    DEFAULT 0,
+        file_size     INTEGER   NOT NULL    DEFAULT 0,
+        created_at    INTEGER   NOT NULL,
+        updated_at    INTEGER   NOT NULL
+      )
+    ''';
+
+  // 初始化内置MCP server种子(仅按name补插缺失行，不覆盖用户修改)
   static Future<void> initDefaultMcpServers(Database db) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     final batch = db.batch();

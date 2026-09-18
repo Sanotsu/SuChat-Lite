@@ -41,6 +41,10 @@ class UnifiedChatViewModel extends ChangeNotifier {
   final UnifiedChatDao _chatDao = UnifiedChatDao();
   final WebSearchToolManager _searchToolManager = WebSearchToolManager();
 
+  /// 2026-09-18 MCP管理器(factory单例，热重启R会重置static故每次
+  /// 冷启/热重启后连接状态都是全新的——预热见initialize)
+  final McpServerManager _mcpManager = McpServerManager();
+
   /// 当前状态
   UnifiedConversation? _currentConversation;
 
@@ -178,6 +182,58 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
   /// 2026-09-11 MCP集成(P1-3)：当前会话MCP工具开关状态
   bool get isMcpEnabled => _isMcpEnabled;
+
+  /// 2026-09-16 整条消息发送起点(总耗时用，含工具轮次)：发送时赋值，
+  /// _handleStreamDone 完成时读取换算 responseTimeMs；null=非发送流程
+  DateTime? _currentSendStartedAt;
+
+  int? _elapsedSinceSend() {
+    final started = _currentSendStartedAt;
+    if (started == null) return null;
+    _currentSendStartedAt = null;
+    return DateTime.now().difference(started).inMilliseconds;
+  }
+
+  /// 2026-09-16 当前思考段开始时间(实例字段桥接——stopStreaming/错误
+  /// 收尾在独立方法里访问不到_handleStreamResponse闭包的startTime，
+  /// 手动终止时进行中的思考段thinkingTime仍为null渲染成"用时0.0秒")
+  DateTime? _currentThinkingStartedAt;
+
+  /// 停止/错误收尾：固化最后一个未计时的思考段(取段开始到现在的时长)
+  List<MessageSegment> _sealStoppedThinking(List<MessageSegment> segs) {
+    final started = _currentThinkingStartedAt;
+    if (started == null) return segs;
+    final elapsed = DateTime.now().difference(started).inMilliseconds;
+    final list = List.of(segs);
+    for (var i = list.length - 1; i >= 0; i--) {
+      if (list[i].type == MessageSegmentType.thinking) {
+        if (list[i].thinkingTime == null) {
+          list[i] = MessageSegment.thinking(
+            list[i].text ?? '',
+            thinkingTime: elapsed,
+          );
+        }
+        break;
+      }
+    }
+    return list;
+  }
+
+  /// 2026-09-16 MCP全局启用态(设置页控制，与会话级开关并行)：
+  /// 开=所有会话强制携带MCP工具(输入框会话按钮隐藏)；
+  /// 关=回落会话级开关。内存态由init/loadConversation/设置页返回刷新
+  bool _isMcpGloballyEnabled = false;
+  bool get isMcpGloballyEnabled => _isMcpGloballyEnabled;
+
+  /// 从secure storage重读全局开关并广播(聊天页从MCP设置页返回时调用；
+  /// 设置页所在路由不在聊天页局部provider子树下，无法直接回写本实例)
+  Future<void> refreshMcpGlobalState() async {
+    final v = await UnifiedSecureStorage.getMcpGloballyEnabled();
+    if (v != _isMcpGloballyEnabled) {
+      _isMcpGloballyEnabled = v;
+      notifyListeners();
+    }
+  }
 
   /// 切换当前会话MCP工具开关并持久化(secure storage按会话id存取)
   Future<void> toggleMcpEnabled([bool? value]) async {
@@ -327,6 +383,21 @@ class UnifiedChatViewModel extends ChangeNotifier {
       _webSearchManuallyToggled = false;
     }
     _syncWebSearchWithCapability();
+
+    // 2026-09-18 冷启动/热重启(R)后MCP状态同步+后台预热：
+    // ①全局开关内存态原由loadConversation内嵌赋值，新建对话等路径
+    //   不经过——冷启后输入框按钮误显示"未启用"，点击触发全量连接
+    //   转圈20s+，而MCP设置页读storage是开的、返回后按钮又隐藏(状态
+    //   不一致)。现进聊天页即从storage纠正内存态
+    // ②MCP连接原完全惰性(点击开启/发送时才连)，首次发送同步等全部
+    //   server连接(stdio实测14s+)。现只要MCP会被用到(全局开或会话开)
+    //   即后台预热——connectServer幂等(已连接/in-flight直接复用)，
+    //   发送链路ensureAllConnected对已预热server零等待；预热失败静默
+    //   (发送时兜底重连)
+    await refreshMcpGlobalState();
+    if (_isMcpGloballyEnabled || _isMcpEnabled) {
+      unawaited(_mcpManager.ensureAllConnected().catchError((_) {}));
+    }
 
     _setLoading(false);
   }
@@ -688,6 +759,11 @@ class UnifiedChatViewModel extends ChangeNotifier {
         _isMcpEnabled = await UnifiedSecureStorage.getConversationMcpEnabled(
           _currentConversation!.id,
         );
+
+        // 2026-09-16 MCP全局开关同步(设置页只写storage，此处纠正内存态)
+        // 2026-09-18 改走统一入口refreshMcpGlobalState(带变化广播；
+        // 冷启动主路径已挪到initialize无条件执行，此处仅会话切换时刷新)
+        await refreshMcpGlobalState();
       }
       _clearError();
     } catch (e) {
@@ -1164,8 +1240,13 @@ class UnifiedChatViewModel extends ChangeNotifier {
             (_currentPartner ?? defaultPartner).isStream ??
             true,
         isWebSearch: isWebSearch && _isWebSearchEnabled,
-        // 2026-09-11 MCP集成(P1-3)：会话开关状态传给服务层
-        isMcpEnabled: _isMcpEnabled,
+        // 2026-09-11 MCP集成(P1-3)：会话开关状态传给服务层。
+        // 2026-09-16 全局开=强制覆盖会话开关(实时读storage兜底——即使
+        // UI内存态因入口遗漏未刷新，发送链路也以持久化值为准)
+        isMcpEnabled:
+            _isMcpGloballyEnabled ||
+            await UnifiedSecureStorage.getMcpGloballyEnabled() ||
+            _isMcpEnabled,
         // 2026-09-14 P3-11 内置终端命令工具全局开关
         isShellToolEnabled: isShellToolEnabled,
       );
@@ -1379,6 +1460,11 @@ class UnifiedChatViewModel extends ChangeNotifier {
     // 思考时长
     var thinkingTime = 0;
 
+    // 2026-09-16 整条消息总耗时(用户点发送到流完成，含全部工具轮次)，
+    // 完成时写responseTimeMs——原字段从未有写入点恒null，UI一直不显示。
+    // 实例字段而非局部：_handleStreamDone是独立方法(单流模型安全)
+    _currentSendStartedAt = DateTime.now();
+
     // ===== 打字机平滑(只作用于最后一个正文段) =====
     Timer? typewriterTimer;
     void stopTypewriter() {
@@ -1466,6 +1552,8 @@ class UnifiedChatViewModel extends ChangeNotifier {
         // 且startTime跨轮未重置使最终轮记成总时长
         sealPreviousThinkingTime();
         startTime = DateTime.now();
+        // 2026-09-16 桥接实例字段：手动终止/错误收尾固化思考用时用
+        _currentThinkingStartedAt = startTime;
         endTime = null;
         thinkingTime = 0;
         segments.add(MessageSegment.thinking(s));
@@ -1505,6 +1593,21 @@ class UnifiedChatViewModel extends ChangeNotifier {
 
     // 串行化+内联处理：pause/resume保证chunk顺序；直接读写闭包变量
     Future<void> handleChunk(OpenAIChatCompletionResponse response) async {
+      // 2026-09-16 轮次上限提示哨兵(service在强制无工具续传前注入)：
+      // 封上一段+插入notice横幅段(与工具折叠组件平级、恒展开)
+      if (response.limitNotice != null) {
+        sealTextSegment();
+        sealPreviousThinkingTime();
+        segments.add(MessageSegment.noticeSeg(response.limitNotice!));
+        forceNewSegment = true;
+        streamMsg = streamMsg.copyWith(
+          segments: List.of(segments),
+          updatedAt: DateTime.now(),
+        );
+        commitStream();
+        return;
+      }
+
       // 工具调用哨兵(service在执行完工具后注入，携带结果与参数摘要)：
       // 封上一段+插入工具段(内嵌卡片可展开查看结果)
       if (response.toolInvoking != null) {
@@ -1753,23 +1856,35 @@ class UnifiedChatViewModel extends ChangeNotifier {
     // 完成时**无条件落库**——原实现先在_messages反查，切走会话后
     // index==-1整体跳过，AI回复永久丢失(切回只见空会话)
     var current = assistantMessage;
+    final elapsedMs = _elapsedSinceSend();
 
     // 2026-09-12 空回答兜底：平台对某些请求返回空流(实测白山中转对
-    // 工具结果续传请求回零chunk空SSE)时消息无声结束——正文/多模态为空
-    // 即提示(思考框有内容也算异常：模型思考完必有正文)，不再无声空白
     // 2026-09-14 分段渲染适配：渲染优先走segments，只写content字段
     // 气泡内不显示——需同时插入提示text段(实测内联降级失败后只有
     // 思考+工具卡，消息空白无任何提示)
     if ((current.content ?? '').trim().isEmpty &&
         (current.multimodalContent == null ||
             current.multimodalContent!.isEmpty)) {
-      const hint = '（模型未返回内容，可能是服务平台对本次请求处理异常；请重试或更换模型/平台）';
+      // 2026-09-16 兜底文案按场景区分：气泡内已有notice横幅(轮次上限)
+      // 时不再重复归因，只给行动指引；无横幅(真平台异常)才说明归因
+      final hasNotice =
+          current.segments?.any((s) => s.type == MessageSegmentType.notice) ??
+          false;
+      final hint = hasNotice
+          ? '（模型未返回正文。可直接发送"继续"，让模型基于已收集的'
+                '工具结果接着作答）'
+          : '（模型未返回内容，可能是服务平台对本次请求处理异常；'
+                '请重试或更换模型/平台）';
       current = current.copyWith(
         content: hint,
+        responseTimeMs: elapsedMs,
         segments: current.segments == null
             ? null
             : [...current.segments!, MessageSegment.textSeg(hint)],
       );
+    } else {
+      // 2026-09-16 总耗时落库(正常完成路径)
+      current = current.copyWith(responseTimeMs: elapsedMs);
     }
 
     final finalMessage = current.copyWith(
@@ -1817,9 +1932,12 @@ class UnifiedChatViewModel extends ChangeNotifier {
     final errorText = '生成失败: $error';
     final errorMessage = assistantMessage.copyWith(
       content: 'AI回复失败: $error',
-      // 错误详情作为独立正文段追加(有segments时气泡只渲染segments)
+      // 错误详情作为独立正文段追加(有segments时气泡只渲染segments)；
+      // 2026-09-16 同步固化进行中思考段的用时(思考中异常原显示0.0秒)
       segments: [
-        ...(assistantMessage.segments ?? const <MessageSegment>[]),
+        ..._sealStoppedThinking(
+          assistantMessage.segments ?? const <MessageSegment>[],
+        ),
         MessageSegment.textSeg(errorText),
       ],
       isStreaming: false,
@@ -1827,6 +1945,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
       errorMessage: error.toString(),
       updatedAt: DateTime.now(),
     );
+    _currentThinkingStartedAt = null;
     _updateMessageInLists(errorMessage);
     _chatDao.saveMessage(errorMessage);
     _activeStreamingMessages.remove(errorMessage.conversationId);
@@ -3147,13 +3266,15 @@ class UnifiedChatViewModel extends ChangeNotifier {
         content: '${active.content ?? ''} [手动终止]',
         // 2026-09-15 分段渲染适配：有segments时气泡只渲染segments，
         // 后缀只写content用户看不到(同错误详情落段的教训)——
-        // 追加独立终止段
+        // 追加独立终止段；2026-09-16 改notice横幅段(系统级事件统一样式)
+        // 并固化进行中思考段的用时(原先显示0.0秒)
         segments: [
-          ...(active.segments ?? const <MessageSegment>[]),
-          MessageSegment.textSeg('[手动终止]'),
+          ..._sealStoppedThinking(active.segments ?? const <MessageSegment>[]),
+          MessageSegment.noticeSeg('[手动终止] 本次回复由用户停止生成'),
         ],
         updatedAt: DateTime.now(),
       );
+      _currentThinkingStartedAt = null;
       _updateMessageInLists(stoppedMessage);
       await _chatDao.saveMessage(stoppedMessage);
       _activeStreamingMessages.remove(activeConvId);
@@ -3167,8 +3288,10 @@ class UnifiedChatViewModel extends ChangeNotifier {
             isStreaming: false,
             content: '${_messages[i].content} [手动终止]',
             segments: [
-              ...(_messages[i].segments ?? const <MessageSegment>[]),
-              MessageSegment.textSeg('[手动终止]'),
+              ..._sealStoppedThinking(
+                _messages[i].segments ?? const <MessageSegment>[],
+              ),
+              MessageSegment.noticeSeg('[手动终止] 本次回复由用户停止生成'),
             ],
             updatedAt: DateTime.now(),
           );
@@ -3177,6 +3300,7 @@ class UnifiedChatViewModel extends ChangeNotifier {
           await _chatDao.saveMessage(stoppedMessage);
         }
       }
+      _currentThinkingStartedAt = null;
     }
 
     // 更新对话统计(2026-09-15 按流式会话id统计)

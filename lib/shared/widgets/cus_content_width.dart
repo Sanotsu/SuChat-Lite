@@ -20,12 +20,14 @@ class CusContentWidth extends StatelessWidget {
   static const double contentWidth = 1000;
 
   /// 设置/表单页标准限宽：表单控件全宽拉伸难看，收窄一档
-  static const double formWidth = 720;
+  // static const double formWidth = 720;
+  static const double formWidth = 1000; // 测试效果
 
   /// 弹窗标准限宽：桌面端所有功能弹窗统一宽度(配合showDialog使用时
   /// 须Align+ConstrainedBox包裹——builder结果处于tight全屏约束，
   /// 单独ConstrainedBox会被enforce规则覆盖失效)
-  static const double dialogWidth = 640;
+  // static const double dialogWidth = 640;
+  static const double dialogWidth = 720; // 测试效果
 
   /// 内容/功能页档位(默认1000)
   const CusContentWidth({

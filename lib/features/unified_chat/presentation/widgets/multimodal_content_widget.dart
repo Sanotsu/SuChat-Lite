@@ -106,6 +106,48 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
           }
         case MessageSegmentType.toolCall:
           children.add(_buildSegmentToolCall(seg));
+        case MessageSegmentType.notice:
+          // 2026-09-16 系统提示横幅：与思考/工具折叠组件平级、恒展开、
+          // 琥珀色底——轮次上限/[手动终止]等系统级事件统一视觉语言
+          if ((seg.text ?? '').trim().isNotEmpty) {
+            children.add(
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.amber.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 15,
+                      color: Colors.amber[800],
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        seg.text!,
+                        style: (widget.textStyle ?? const TextStyle()).copyWith(
+                          fontSize: 12,
+                          color: Colors.amber[900],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
       }
     }
 

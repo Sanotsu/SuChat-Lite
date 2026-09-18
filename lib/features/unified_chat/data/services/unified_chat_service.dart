@@ -25,6 +25,7 @@ import 'builtin_shell_tool.dart';
 import 'builtin_web_search_registry.dart';
 import 'web_search_tool_manager.dart';
 import 'mcp/mcp_server_manager.dart';
+import 'skills/skill_manager.dart';
 
 /// 统一聊天服务
 class UnifiedChatService {
@@ -41,6 +42,9 @@ class UnifiedChatService {
 
   // 2026-09-11 MCP集成(P1-1)：MCP工具管理器(ChatToolProvider第一个实现)
   final McpServerManager _mcpManager = McpServerManager();
+
+  // 2026-09-16 SKILLS P1-2：技能管理器(ChatToolProvider第三实现，read_skill)
+  final SkillManager _skillManager = SkillManager();
 
   /// 2026-09-14 P3-13 内置工具审批处理器(viewmodel注入，弹横幅等用户
   /// 决定)；P3-11 shell工具非只读命令执行前调用；null时非只读命令拒绝执行
@@ -337,10 +341,56 @@ class UnifiedChatService {
       pl.i('内置终端命令工具注入(桌面端)');
     }
 
+    // 2026-09-16 SKILLS P1-3 Level 1 技能清单注入：启用技能的
+    // name+description 拼为独立 system 消息追加到消息末尾(渐进式披露
+    // 第一级)。
+    // 2026-09-16 语义翻转(用户拍板)：清单只在搭档**显式挂载非空清单**
+    // 时注入——null(未配置)与空列表都不再全量跟随(原 null=全量使内置
+    // 搭档被动背上全部清单token成本)。发现性由 read_skill_list 工具
+    // 按需提供；点名技能走 read_skill(只校验全局启用，挂载不隔离)
+    List<UnifiedChatMessage> effectiveMessages = messages;
+    final partnerId = conversation.partnerId;
+    if (partnerId != null && partnerId.isNotEmpty) {
+      final partner = await _chatDao.getChatPartner(partnerId);
+      final mountedSkillIds = partner?.mountedSkillIds;
+      if (mountedSkillIds != null && mountedSkillIds.isNotEmpty) {
+        final skillCatalog = await _skillManager.buildSkillCatalog(
+          mountedSkillIds: mountedSkillIds,
+        );
+        if (skillCatalog != null) {
+          // 请求内临时 system 消息(不落库不进分支树，depth=-1 同系统消息约定)
+          effectiveMessages = [
+            ...messages,
+            UnifiedChatMessage(
+              id: 'skill_catalog_${DateTime.now().millisecondsSinceEpoch}',
+              conversationId: conversation.id,
+              role: UnifiedMessageRole.system,
+              content: skillCatalog,
+              contentType: UnifiedContentType.text,
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+              depth: -1,
+              branchPath: '',
+            ),
+          ];
+        }
+      }
+    }
+
+    // 2026-09-16 技能工具注入门禁与清单解耦：有启用技能即注入
+    // read_skill/read_skill_list(默认搭档无清单也需发现通道)；
+    // 零技能时两者都省；模型不支持工具调用时都不注入
+    if (model.supportsToolCalling == true &&
+        await _skillManager.hasEnabledSkills()) {
+      final skillTools = _skillManager.getTools();
+      tools = tools == null ? skillTools : [...tools, ...skillTools];
+      pl.i('技能工具注入: read_skill/read_skill_list(发现+读取)');
+    }
+
     // 构建请求体
     return OpenAIChatCompletionRequest.fromMessages(
       model: model.modelName,
-      messages: messages,
+      messages: effectiveMessages,
       temperature: conversation.temperature,
       maxTokens: conversation.maxTokens,
       topP: conversation.topP,
@@ -856,24 +906,43 @@ class UnifiedChatService {
       'content': assistantContent,
       'tool_calls': toolCallsForMessage,
     });
-
-    // 每个工具调用对应一条提示性的tool结果消息：不执行搜索，
-    // 明确告知模型搜索次数已用完，必须直接作答
+    // 每个工具调用对应一条提示性的tool结果消息：不执行工具，
+    // 明确告知模型轮次已用完，必须直接作答。
+    // 2026-09-16 修正：name用实际工具名(原硬编码'web_search'——工具
+    // 体系扩到shell/MCP/read_skill后模型收到"search limit"与实际调用
+    // 不符，误判为错误分类而反复重试，见用户截图)；文本语义改为
+    // "轮次上限"并强调基于已有信息作答
     final now = DateTime.now().millisecondsSinceEpoch;
     int seq = 0;
     for (final toolCall in accumulatedToolCalls.values) {
       final toolCallId = toolCall['id'].toString().isEmpty
           ? 'tool_call_$now${seq++}'
           : toolCall['id'];
+      final toolFunction = toolCall['function'] as Map<String, dynamic>?;
+      final toolName = toolFunction?['name']?.toString() ?? 'tool';
       newMessages.add({
         'tool_call_id': toolCallId,
         'role': 'tool',
-        'name': 'web_search',
+        'name': toolName,
         'content':
-            '搜索次数已达上限，本次未执行搜索。请直接根据之前获得的搜索'
-            '结果与你的知识整理最终回答，不要再尝试调用搜索工具。',
+            '[$toolName 未执行] 工具调用轮次已达上限($maxToolCallRounds轮)，'
+            '这是系统限制而非你的错误，不要再尝试调用任何工具。'
+            '请立即根据之前已获得的全部工具结果与你的知识，直接整理输出'
+            '最终回答。',
       });
     }
+
+    // 2026-09-16 轮次上限提示段(方案c回退后的最终形态)：以独立notice
+    // 哨兵下发——与"已调用工具"折叠组件平级的横幅，用户无法错过；
+    // 被拦截的调用不再生成工具卡片(信息由notice段统一承载)
+    yield OpenAIChatCompletionResponse(
+      id: 'limit-notice',
+      choices: const [],
+      limitNotice:
+          '已达到工具调用轮次上限($maxToolCallRounds轮)，后续调用被系统拦截。'
+          '以下回答由模型基于此前已收集的工具结果生成，信息可能不完整；'
+          '可在 MCP 设置页调高"工具调用轮次"后重试，或发送"继续"接续处理。',
+    );
 
     final newRequest = OpenAIChatCompletionRequest(
       model: originalRequest.model,
@@ -1386,6 +1455,46 @@ class UnifiedChatService {
       );
     }
 
+    // 2026-09-16 SKILLS P1-2 内置技能读取工具(本地只读免审批)：
+    // SkillManager 实现 ChatToolProvider，与搜索/MCP provider 同构分发
+    if (_skillManager.canHandle(functionName)) {
+      try {
+        if (argumentsStr.trim().isEmpty) {
+          throw FormatException('工具调用参数为空');
+        }
+
+        final arguments = _parseToolCallArguments(argumentsStr);
+        final result = await _skillManager.handleToolCall(
+          functionName,
+          arguments,
+        );
+
+        return (
+          result: <String, dynamic>{
+            'tool_call_id': actualToolCallId,
+            'role': 'tool',
+            'name': functionName,
+            // SKILLS修复：read_skill自带16000分页+续读指引，放宽截断
+            // 到20000保单页完整到达(通用6000线会让SKILL.md必截断，
+            // 模型不知续读路径而反复换工具重试——用户实测frontend-design)
+            'content': _truncateToolResult(result.content, maxLen: 20000),
+          },
+          refs: null,
+        );
+      } catch (e) {
+        pl.e('技能读取失败: $e');
+        return (
+          result: <String, dynamic>{
+            'tool_call_id': actualToolCallId,
+            'role': 'tool',
+            'name': functionName,
+            'content': '技能读取失败: $e',
+          },
+          refs: null,
+        );
+      }
+    }
+
     // 2026-09-14 P3-11/P3-12 内置终端命令工具：
     // 黑名单直接拒绝 > 只读白名单直接执行 > 其余审批横幅
     if (functionName == BuiltinShellTool.toolName) {
@@ -1473,9 +1582,10 @@ class UnifiedChatService {
 
   /// 2026-09-12 工具结果体积限制：实测白山中转(api.edgefn.net)对messages
   /// 含大体积工具结果的请求(Exa搜索10条新闻约几十KB)返回200但零chunk空流，
-  /// 小payload正常——统一截断到上限保住续传可用性(模型仍能拿到核心信息)
-  static String _truncateToolResult(String content) {
-    const maxLen = 6000;
+  /// 小payload正常——统一截断到上限保住续传可用性(模型仍能拿到核心信息)。
+  /// 2026-09-16 SKILLS：read_skill 自带16000字符分页+续读指引，放宽到
+  /// 20000保单页完整到达(通用搜索类仍用6000保守线)
+  static String _truncateToolResult(String content, {int maxLen = 6000}) {
     if (content.length <= maxLen) return content;
     var end = maxLen;
     // 2026-09-14 UTF-16代理对保护：截断点落在emoji等代理对中间会产生
@@ -1485,9 +1595,16 @@ class UnifiedChatService {
     return '${content.substring(0, end)}\n\n[…工具结果过长已截断]';
   }
 
-  /// 2026-09-14 P3-11/P3-12 内置终端命令工具执行：
+  /// 2026-09-16 P3-6 最近一次shell输出缓存(单槽)：read_offset续读
+  /// 不重新执行命令——shell输出非持久化文件，续读必须基于内存缓存；
+  /// 每次新执行覆盖，应用重启自然清空(续读时给引导文本)
+  String? _lastShellOutput;
+
+  /// 2026-09-16 P3-11/P3-12 内置终端命令工具执行：
   /// 安全判定(黑名单拒绝>白名单放行>审批横幅) → 执行回填。
-  /// 所有异常路径均以文本回填，单次失败不中断Agent循环
+  /// 所有异常路径均以文本回填，单次失败不中断Agent循环。
+  /// 2026-09-16 P3-6 加read_offset续读分支(免审批：只读缓存无副作用，
+  /// 对齐read_skill分页协议治"输出被截断后模型反复重跑命令")
   Future<Map<String, dynamic>> _executeShellToolCall(
     String toolCallId,
     String functionName,
@@ -1500,50 +1617,68 @@ class UnifiedChatService {
       final command = arguments['command']?.toString() ?? '';
       if (command.trim().isEmpty) throw const FormatException('缺少command参数');
 
-      final safety = BuiltinShellTool.classify(command);
-      if (safety == ShellSafety.dangerous) {
-        // 黑名单：直接拒绝不询问，告知模型与用户原因
-        pl.w('shell命令被安全策略拦截: $command');
-        content =
-            '该命令命中危险命令安全策略，已被拦截且不会执行: $command\n'
-            '请勿重试相同或相似命令，改为向用户口头说明或建议用户手动执行。';
-      } else if (safety == ShellSafety.readOnly) {
-        // 只读白名单：免审批直接执行
-        content = await BuiltinShellTool.execute(
-          command: command,
-          workingDirectory: arguments['working_directory']?.toString(),
-          timeoutSeconds:
-              (arguments['timeout_seconds'] as num?)?.toInt() ??
-              toolCallTimeoutSec,
-        );
-      } else {
-        // 普通命令：走审批横幅；无审批处理器时拒绝执行(安全默认)
-        final handler = builtinToolApprovalHandler;
-        if (handler == null) {
-          content = '终端命令执行未获得授权(approval handler不可用)，已取消: $command';
+      // P3-6 续读分支(优先于安全判定——不执行任何命令，command仅为
+      // schema required占位)：read_offset>0时从缓存分页取后续页
+      final readOffset = (arguments['read_offset'] as num?)?.toInt() ?? 0;
+      if (readOffset > 0) {
+        final cached = _lastShellOutput;
+        if (cached == null || cached.isEmpty) {
+          content =
+              '没有可续读的上次输出(应用重启后缓存清空，或尚未执行过命令)。'
+              '请不带read_offset重新执行命令获取输出。';
         } else {
-          final decision = await handler(
-            ToolApprovalRequest(
-              serverName: null,
-              title: '执行终端命令',
-              displayDetail: command,
-              sessionAllowKey: BuiltinShellTool.sessionAllowKey(command),
-            ),
+          content = _paginateShellOutput(cached, readOffset);
+        }
+      } else {
+        final safety = BuiltinShellTool.classify(command);
+        if (safety == ShellSafety.dangerous) {
+          // 黑名单：直接拒绝不询问，告知模型与用户原因
+          pl.w('shell命令被安全策略拦截: $command');
+          content =
+              '该命令命中危险命令安全策略，已被拦截且不会执行: $command\n'
+              '请勿重试相同或相似命令，改为向用户口头说明或建议用户手动执行。';
+        } else if (safety == ShellSafety.readOnly) {
+          // 只读白名单：免审批直接执行
+          content = await BuiltinShellTool.execute(
+            command: command,
+            workingDirectory: arguments['working_directory']?.toString(),
+            timeoutSeconds:
+                (arguments['timeout_seconds'] as num?)?.toInt() ??
+                toolCallTimeoutSec,
           );
-          if (decision == ToolApprovalDecision.deny) {
-            pl.i('用户拒绝shell命令: $command');
-            content =
-                '用户拒绝了本次命令执行，不会执行: $command\n'
-                '请尊重用户决定，不要重试相同或相似命令，'
-                '改为口头说明或询问用户希望如何处理。';
+          _lastShellOutput = content;
+          content = _paginateShellOutput(content, 0);
+        } else {
+          // 普通命令：走审批横幅；无审批处理器时拒绝执行(安全默认)
+          final handler = builtinToolApprovalHandler;
+          if (handler == null) {
+            content = '终端命令执行未获得授权(approval handler不可用)，已取消: $command';
           } else {
-            content = await BuiltinShellTool.execute(
-              command: command,
-              workingDirectory: arguments['working_directory']?.toString(),
-              timeoutSeconds:
-                  (arguments['timeout_seconds'] as num?)?.toInt() ??
-                  toolCallTimeoutSec,
+            final decision = await handler(
+              ToolApprovalRequest(
+                serverName: null,
+                title: '执行终端命令',
+                displayDetail: command,
+                sessionAllowKey: BuiltinShellTool.sessionAllowKey(command),
+              ),
             );
+            if (decision == ToolApprovalDecision.deny) {
+              pl.i('用户拒绝shell命令: $command');
+              content =
+                  '用户拒绝了本次命令执行，不会执行: $command\n'
+                  '请尊重用户决定，不要重试相同或相似命令，'
+                  '改为口头说明或询问用户希望如何处理。';
+            } else {
+              content = await BuiltinShellTool.execute(
+                command: command,
+                workingDirectory: arguments['working_directory']?.toString(),
+                timeoutSeconds:
+                    (arguments['timeout_seconds'] as num?)?.toInt() ??
+                    toolCallTimeoutSec,
+              );
+              _lastShellOutput = content;
+              content = _paginateShellOutput(content, 0);
+            }
           }
         }
       }
@@ -1558,8 +1693,31 @@ class UnifiedChatService {
       'tool_call_id': toolCallId,
       'role': 'tool',
       'name': functionName,
-      'content': _truncateToolResult(content),
+      'content': _truncateToolResult(content, maxLen: 20000),
     };
+  }
+
+  /// 2026-09-16 P3-6 shell输出分页(对齐read_skill协议)：16000字符/页
+  /// (service截断线20000内保证单页完整)+页尾明确续读指引+代理对保护。
+  /// 续读走内存缓存不重执行命令——治"大输出被截断后模型反复重跑命令"
+  static String _paginateShellOutput(String full, int offset) {
+    const pageSize = 16000;
+    final total = full.length;
+    final start = offset.clamp(0, total);
+    final end = (start + pageSize).clamp(0, total);
+    // 截断点落在代理对中间则回退一位(防UTF-16渲染异常)
+    var safeEnd = end;
+    if (safeEnd < total && safeEnd > start) {
+      final lastUnit = full.codeUnitAt(safeEnd - 1);
+      if (lastUnit >= 0xD800 && lastUnit <= 0xDBFF) safeEnd--;
+    }
+    final page = full.substring(start, safeEnd);
+    if (safeEnd >= total) {
+      return start == 0 ? page : '$page\n\n[输出结束，共$total字符]';
+    }
+    return '$page\n\n[输出共$total字符，当前显示 $start-$safeEnd。'
+        '继续读取请再次调用shell_execute，command任意、传read_offset='
+        '$safeEnd（不会重新执行命令）]';
   }
 
   /// 解析工具调用参数

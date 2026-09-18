@@ -43,7 +43,9 @@ class BuiltinShellTool {
             '在用户的桌面电脑上执行终端命令并返回输出(stdout/stderr/退出码)。'
             '适用于查看文件目录、运行脚本、包管理、git操作、系统信息查询等。'
             '注意：破坏性命令会被安全策略直接拦截；非只读命令每次执行前'
-            '需要用户确认，请勿重复发起被用户拒绝的命令。',
+            '需要用户确认，请勿重复发起被用户拒绝的命令。'
+            '2026-09-16 P3-6 输出分页：超长输出按16000字符分页，页尾附'
+            '续读指引——传read_offset即可读取剩余部分(不会重新执行命令)。',
         parameters: <String, dynamic>{
           'type': 'object',
           'properties': <String, dynamic>{
@@ -60,6 +62,12 @@ class BuiltinShellTool {
             'timeout_seconds': <String, dynamic>{
               'type': 'integer',
               'description': '超时秒数(可选，默认30，最大120，超时进程被终止)',
+            },
+            'read_offset': <String, dynamic>{
+              'type': 'integer',
+              'description':
+                  '输出续读偏移(可选，默认0=执行新命令)。传上次页尾指引中的'
+                  'offset值则不执行命令、直接返回上次输出的后续页(免审批)',
             },
           },
           'required': <String>['command'],

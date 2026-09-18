@@ -1412,7 +1412,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           // 并列同为对话模型(cc)显示；点击切换会话级开关(即时持久化)
           // 三轮修订：开启前先ensureAllConnected——热重载/首次点击时内存
           // 无会话(懒连接尚未发生)，直接判断getTools会误报"无可用工具"
-          if (viewModel.currentModel?.type == UnifiedModelType.cc)
+          // 2026-09-16 四轮：全局启用开关打开时按钮隐藏——所有会话已强制
+          // 携带MCP工具，会话级开关无意义(关闭全局后按钮恢复原会话状态)
+          if (viewModel.currentModel?.type == UnifiedModelType.cc &&
+              !viewModel.isMcpGloballyEnabled)
             InkWell(
               onTap: () async {
                 // 2026-09-12 防呆(实测：自定义模型默认不支持工具调用，

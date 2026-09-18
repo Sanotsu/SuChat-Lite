@@ -11,8 +11,10 @@ import '../../../../core/utils/screen_helper.dart';
 import '../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/database/unified_chat_dao.dart';
+import '../../data/models/skill_models.dart';
 import '../../data/models/unified_chat_partner.dart';
 import '../../data/models/unified_model_spec.dart';
+import '../../data/services/skills/skill_storage_service.dart';
 
 /// 搭档编辑页(新建/编辑共用)
 /// 2026-09-07 由 AddPartnerDialog 弹窗改为独立页面：
@@ -102,8 +104,124 @@ class _PartnerEditPageState extends State<PartnerEditPage> {
     _backgroundPath = p?.background;
     _backgroundOpacity = p?.backgroundOpacity ?? 0.35;
     _preferredModelId = p?.preferredModelId;
+    _mountedSkillIds = p?.mountedSkillIds?.toSet();
     _advancedExpanded = p?.hasStructuredProfile == true;
     _loadModelOptions();
+    _loadSkillOptions();
+  }
+
+  /// 2026-09-16 SKILLS P2-3 挂载技能多选(三态语义)：
+  /// _mountedSkillIds==null 未配置(挂载全部启用技能)；空集=明确不挂载；
+  /// 非空=只挂载所选(运行时与启用状态取交集)
+  Set<String>? _mountedSkillIds;
+
+  /// 技能候选项(技能管理页导入的技能)
+  List<SkillMeta> _skillOptions = [];
+
+  Future<void> _loadSkillOptions() async {
+    try {
+      _skillOptions = await SkillStorageService().getAllSkills();
+    } catch (_) {
+      _skillOptions = [];
+    }
+    if (mounted) setState(() {});
+  }
+
+  /// 挂载技能选择器：显示当前语义摘要，点击弹多选对话框
+  /// 2026-09-16 语义翻转：null与空列表等价(不注入清单)——发现性由
+  /// read_skill_list工具按需提供，点名技能经read_skill直接可用
+  Widget _buildSkillMountSelector() {
+    final summary = _mountedSkillIds == null || _mountedSkillIds!.isEmpty
+        ? '未挂载(不注入清单；技能可点名调用或经read_skill_list发现)'
+        : '已挂载 ${_mountedSkillIds!.length} 个(注入清单)';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListTile(
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          title: Text(summary, style: const TextStyle(fontSize: 14)),
+          trailing: const Icon(Icons.edit_outlined, size: 18),
+          onTap: _showSkillMountDialog,
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showSkillMountDialog() async {
+    if (_skillOptions.isEmpty) {
+      ToastUtils.showInfo('暂无技能，请先在"技能管理"页导入');
+      return;
+    }
+    final initial = _mountedSkillIds?.toSet() ?? {};
+    final result = await showDialog<Set<String>?>(
+      context: context,
+      builder: (context) {
+        var selected = Set<String>.from(initial);
+        return StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('挂载技能'),
+            content: SizedBox(
+              width: 360,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    '运行时只注入"所选 ∩ 已启用"的技能作为清单；'
+                    '未挂载的技能仍可被用户点名调用，或由模型经'
+                    'read_skill_list发现。',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 8),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          for (final s in _skillOptions)
+                            CheckboxListTile(
+                              dense: true,
+                              title: Text(
+                                s.name,
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                              subtitle: Text(
+                                s.description ?? '(无描述)',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              value: selected.contains(s.name),
+                              onChanged: (v) => setDialogState(() {
+                                v == true
+                                    ? selected.add(s.name)
+                                    : selected.remove(s.name);
+                              }),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              // 恢复默认(null=不注入清单，语义与空列表一致)
+              TextButton(
+                onPressed: () => Navigator.pop(context, null),
+                child: const Text('恢复默认'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, selected),
+                child: const Text('确定'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (result == null) return; // 恢复默认
+    if (!mounted) return;
+    setState(() => _mountedSkillIds = result);
   }
 
   /// 加载平台管理中已激活平台下的全部对话模型(仅cc类型)
@@ -269,6 +387,10 @@ class _PartnerEditPageState extends State<PartnerEditPage> {
         backgroundOpacity: (background?.isEmpty ?? true)
             ? null
             : _backgroundOpacity,
+        // P2-3 挂载技能：null=未配置(全部启用)；非空=JSON数组字符串
+        skillIds: _mountedSkillIds == null
+            ? null
+            : jsonEncode(_mountedSkillIds!.toList()),
       );
 
       // 保存由列表页完成后刷新(此处仅回传成功标记)
@@ -335,6 +457,10 @@ class _PartnerEditPageState extends State<PartnerEditPage> {
                   _buildLabel('偏好模型'),
                   _buildPreferredModelSelector(),
                   const SizedBox(height: 16),
+                  // 2026-09-16 SKILLS P2-3 挂载技能(Agent能力配置)
+                  _buildLabel('挂载技能'),
+                  _buildSkillMountSelector(),
+                  const SizedBox(height: 16),
                   // 2026-09-09 对话参数(可选，留空=平台API默认值)
                   ..._buildDialogParamsFields(),
                 ],
@@ -400,6 +526,10 @@ class _PartnerEditPageState extends State<PartnerEditPage> {
             ..._buildAdvancedFields(),
             _buildLabel('偏好模型'),
             _buildPreferredModelSelector(),
+            const SizedBox(height: 16),
+            // 2026-09-16 SKILLS P2-3 挂载技能(Agent能力配置)
+            _buildLabel('挂载技能'),
+            _buildSkillMountSelector(),
             const SizedBox(height: 16),
             // 2026-09-09 对话参数(可选，留空=平台API默认值)
             ..._buildDialogParamsFields(),

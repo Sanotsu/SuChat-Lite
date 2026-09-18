@@ -268,6 +268,10 @@ enum MessageSegmentType {
 
   /// 工具调用(执行过程展示)
   toolCall,
+
+  /// 2026-09-16 系统提示横幅(与思考/工具折叠组件平级、恒展开)：
+  /// 轮次上限/[手动终止]等需要用户明确感知的系统级事件
+  notice,
 }
 
 /// 消息内容段：按时间顺序排列成 [segments]，一次AI响应=一个气泡内
@@ -344,6 +348,10 @@ class MessageSegment {
   factory MessageSegment.textSeg(String text) =>
       MessageSegment(type: MessageSegmentType.text, text: text);
 
+  /// 2026-09-16 系统提示横幅段(琥珀色恒展开，用户无法错过)
+  factory MessageSegment.noticeSeg(String text) =>
+      MessageSegment(type: MessageSegmentType.notice, text: text);
+
   factory MessageSegment.toolCallSeg({
     required String toolName,
     String? argsSummary,
@@ -365,6 +373,8 @@ class MessageSegment {
         return text != null && text!.trim().isNotEmpty;
       case MessageSegmentType.toolCall:
         return toolName != null && toolName!.isNotEmpty;
+      case MessageSegmentType.notice:
+        return text != null && text!.trim().isNotEmpty;
     }
   }
 }
@@ -783,12 +793,17 @@ class UnifiedChatMessage {
   /// 获取响应时间描述
   String get responseTimeDescription {
     if (responseTimeMs == null) return '';
+    return formatDurationMs(responseTimeMs!);
+  }
 
-    if (responseTimeMs! < 1000) {
-      return '${responseTimeMs}ms';
-    } else {
-      return '${(responseTimeMs! / 1000).toStringAsFixed(1)}s';
-    }
+  /// 2026-09-16 时长格式化(含工具多轮调用的整条消息耗时，可达分钟级)：
+  /// <1s 显示ms；<60s 显示X.Xs；否则 X分Y秒(opencode风格总耗时)
+  static String formatDurationMs(int ms) {
+    if (ms < 1000) return '${ms}ms';
+    if (ms < 60 * 1000) return '${(ms / 1000).toStringAsFixed(1)}s';
+    final minutes = ms ~/ (60 * 1000);
+    final seconds = (ms % (60 * 1000)) ~/ 1000;
+    return '${minutes}m${seconds}s';
   }
 
   /// 获取成本格式化字符串

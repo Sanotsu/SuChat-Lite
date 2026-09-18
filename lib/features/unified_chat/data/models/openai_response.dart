@@ -44,6 +44,12 @@ class OpenAIChatCompletionResponse {
   @JsonKey(includeIfNull: false)
   int? toolElapsedMs;
 
+  /// 2026-09-16 轮次上限提示哨兵：service在强制无工具续传前注入，
+  /// viewmodel据此在气泡内插入独立notice横幅段(与工具折叠组件平级)；
+  /// 非流式标准字段，不参与序列化
+  @JsonKey(includeIfNull: false)
+  String? limitNotice;
+
   OpenAIChatCompletionResponse({
     required this.id,
     this.object,
@@ -57,6 +63,7 @@ class OpenAIChatCompletionResponse {
     this.toolResult,
     this.toolArgsSummary,
     this.toolElapsedMs,
+    this.limitNotice,
   }) : customText = customText ?? _generateCustomText(choices);
 
   // 自定义的响应文本(比如流式返回最后是个[DONE]没法转型，但可以自行设定；而正常响应时可以从其他值中得到)

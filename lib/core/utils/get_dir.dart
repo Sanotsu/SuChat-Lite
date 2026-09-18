@@ -54,6 +54,13 @@ Future<Directory> getSqliteDbDir() async {
   return getAppPrivateDir(subfolder: "DB/sqlite_db");
 }
 
+/// Agent Skills 技能存储目录（私有区）
+/// 2026-09-16 SKILLS P0-2：每个技能一个子目录 `<name>/`，内含
+/// SKILL.md 与附属文件；本体不进 DB，DB(unified_skill) 只存元数据
+Future<Directory> getSkillsDir() async {
+  return getAppPrivateDir(subfolder: "SKILLS");
+}
+
 /// 获取objectbox数据库文件保存的目录
 ///
 /// 0.1.5：ObjectBox 仅剩旧聊天模块读取旧数据（P5 整体移除），

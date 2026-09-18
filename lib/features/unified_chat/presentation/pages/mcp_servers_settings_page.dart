@@ -7,6 +7,7 @@ import '../../data/models/mcp_models.dart';
 import '../../data/services/mcp/mcp_runtime_checker.dart';
 import '../../data/services/mcp/mcp_server_config_service.dart';
 import '../../data/services/mcp/mcp_server_manager.dart';
+import '../../data/services/unified_secure_storage.dart';
 import 'mcp_browse_dialogs.dart';
 import 'mcp_import_dialog.dart';
 import 'mcp_server_edit_dialog.dart';
@@ -42,11 +43,33 @@ class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
   /// 正在测试/连接的server id
   final Set<String> _busyIds = {};
 
+  /// 2026-09-16 MCP全局启用开关(secure storage持久化)：
+  /// 开=所有会话强制携带MCP工具(输入框会话按钮隐藏)；
+  /// 关(默认)=回落会话级开关。只读写storage，不直接操作viewmodel——
+  /// 本页经Navigator.push打开，context在root navigator子树下，
+  /// 拿到的是suchat_app全局provider实例而非聊天页局部实例
+  /// (见chat_desktop_toolbar._openMediaLibrary注释)，回写会错实例；
+  /// 聊天页侧在init/loadConversation及设置页返回时刷新内存态
+  bool _mcpGloballyEnabled = false;
+
   @override
   void initState() {
     super.initState();
     _loadServers();
     _detectRuntimes();
+    _loadMcpGlobalEnabled();
+  }
+
+  Future<void> _loadMcpGlobalEnabled() async {
+    final v = await UnifiedSecureStorage.getMcpGloballyEnabled();
+    if (!mounted) return;
+    setState(() => _mcpGloballyEnabled = v);
+  }
+
+  Future<void> _toggleMcpGlobalEnabled(bool value) async {
+    await UnifiedSecureStorage.setMcpGloballyEnabled(value);
+    if (!mounted) return;
+    setState(() => _mcpGloballyEnabled = value);
   }
 
   Future<void> _detectRuntimes() async {
@@ -203,6 +226,8 @@ class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            _buildMcpGlobalSwitchCard(),
+            const SizedBox(height: 12),
             _buildHintCard(),
             const SizedBox(height: 12),
             _buildRuntimeCard(),
@@ -217,6 +242,28 @@ class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
             ],
             const SizedBox(height: 80),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// 2026-09-16 MCP全局启用开关卡：全局与会话控制并行——
+  /// 开=全部会话强制启用(输入框会话按钮隐藏)；关=各会话输入区单独开启
+  Widget _buildMcpGlobalSwitchCard() {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: SwitchListTile(
+        value: _mcpGloballyEnabled,
+        onChanged: _toggleMcpGlobalEnabled,
+        title: const Text(
+          '全局启用 MCP 工具',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          _mcpGloballyEnabled
+              ? '已全局启用：所有会话自动携带 MCP 工具，输入区的会话开关已隐藏'
+              : '关闭中：可在各会话输入区单独开启 MCP 工具',
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
         ),
       ),
     );
@@ -314,7 +361,7 @@ class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
   /// 超时(全局GetStorage，service/manager读时生效，改动即时生效)
   static const String _toolRoundsKey = 'unified_chat_tool_rounds';
   static const String _toolTimeoutKey = 'unified_chat_tool_timeout_sec';
-  static const List<int> _roundsChoices = [3, 5, 10, 15, 20];
+  static const List<int> _roundsChoices = [3, 10, 20, 50, 100];
   static const List<int> _timeoutChoices = [30, 60, 120, 300];
 
   Widget _buildAgentSettingsCard() {
