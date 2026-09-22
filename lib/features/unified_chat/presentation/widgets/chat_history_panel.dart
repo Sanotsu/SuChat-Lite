@@ -383,6 +383,7 @@ class _ChatHistoryPanelState extends State<ChatHistoryPanel> {
             children: [
               Expanded(
                 child: IconButton(
+                  key: const ValueKey('partner_entry'),
                   icon: const Icon(Icons.people),
                   tooltip: '我的搭档',
                   onPressed: () => _navigate(() {

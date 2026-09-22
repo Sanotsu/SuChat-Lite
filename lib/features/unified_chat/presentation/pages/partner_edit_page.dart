@@ -138,6 +138,7 @@ class _PartnerEditPageState extends State<PartnerEditPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ListTile(
+          key: const ValueKey('skill_mount_selector'),
           dense: true,
           contentPadding: EdgeInsets.zero,
           title: Text(summary, style: const TextStyle(fontSize: 14)),

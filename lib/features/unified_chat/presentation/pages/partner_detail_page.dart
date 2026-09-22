@@ -133,6 +133,7 @@ class _PartnerDetailPageState extends State<PartnerDetailPage> {
             ),
             if (!_partner.isBuiltIn)
               IconButton(
+                key: const ValueKey('partner_edit'),
                 onPressed: _editPartner,
                 icon: const Icon(Icons.edit),
                 tooltip: '编辑',

@@ -43,6 +43,7 @@ class ChatDesktopToolbar extends StatelessWidget {
               ),
               // MCP工具管理(2026-09-11 MCP集成P1-4)
               buildIconWithTextButton(
+                key: const ValueKey('toolbar_mcp'),
                 icon: Icons.extension,
                 label: 'MCP 工具',
                 onTap: () => _openMcpServersSettings(context, viewModel),
@@ -50,6 +51,7 @@ class ChatDesktopToolbar extends StatelessWidget {
               ),
               // 技能管理(2026-09-16 SKILLS P1-5)
               buildIconWithTextButton(
+                key: const ValueKey('toolbar_skills'),
                 icon: Icons.school_outlined,
                 label: 'Skills 技能',
                 onTap: () => _openSkillsSettings(context),

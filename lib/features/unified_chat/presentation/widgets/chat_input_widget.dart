@@ -1446,6 +1446,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
               },
               onLongPress: () => _showMcpTooltipDialog(),
               borderRadius: BorderRadius.circular(20),
+              // 2026-09-18 Marionette 脚本化测试寻址(FIX_LOG 九十补充四)
+              key: const ValueKey('input_mcp_toggle'),
               child: Container(
                 padding: const EdgeInsets.all(6),
                 child: Icon(

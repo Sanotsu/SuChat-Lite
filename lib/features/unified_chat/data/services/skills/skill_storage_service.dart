@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive.dart';
@@ -81,7 +82,7 @@ class SkillStorageService {
     );
   }
 
-  /// 删除技能（DB 行 + 磁盘目录）
+  /// 删除技能（DB 行 + 磁盘目录 + 搭档挂载死引用清理）
   Future<void> deleteSkill(String name) async {
     final existing = await getSkill(name);
     final db = await _dbInit.database;
@@ -99,6 +100,38 @@ class SkillStorageService {
           pl.w('技能目录删除失败(已移除DB记录): $e');
         }
       }
+    }
+    await _removeSkillRefsFromPartners(name, db);
+  }
+
+  /// 2026-09-18 G5 删除联动：搭档 skill_ids 移除已删技能，不残留死引用。
+  /// 语义翻转后清空即写 [](与 null 等价=不注入清单)；解析失败的脏数据整列跳过不动。
+  Future<void> _removeSkillRefsFromPartners(String name, dynamic db) async {
+    try {
+      final rows = await db.query(
+        UnifiedChatDdl.tableUnifiedChatPartner,
+        where: 'skill_ids IS NOT NULL',
+      );
+      for (final row in rows) {
+        final raw = row['skill_ids'] as String?;
+        if (raw == null || raw.isEmpty) continue;
+        try {
+          final decoded = jsonDecode(raw);
+          if (decoded is! List) continue;
+          final list = decoded.cast<String>().where((e) => e != name).toList();
+          if (list.length == decoded.length) continue; // 无该引用，跳过
+          await db.update(
+            UnifiedChatDdl.tableUnifiedChatPartner,
+            {'skill_ids': jsonEncode(list)},
+            where: 'id = ?',
+            whereArgs: [row['id']],
+          );
+        } catch (e) {
+          pl.w('搭档挂载清理跳过(解析失败): ${row['id']} $e');
+        }
+      }
+    } catch (e) {
+      pl.w('搭档挂载死引用清理失败(不阻断删除): $e');
     }
   }
 

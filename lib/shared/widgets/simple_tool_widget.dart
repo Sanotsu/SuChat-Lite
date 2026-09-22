@@ -582,6 +582,7 @@ Widget buildIconTextInkWell({
 
 // 上方图标下方文字的TextButton按钮
 Widget buildIconWithTextButton({
+  Key? key,
   required IconData icon,
   required String label,
   required VoidCallback? onTap,
@@ -591,6 +592,7 @@ Widget buildIconWithTextButton({
   var textColor = Theme.of(context).colorScheme.onSurface;
 
   return Tooltip(
+    key: key,
     message: label,
     verticalOffset: 20,
     preferBelow: false,
