@@ -3,6 +3,7 @@
 import 'buildin_aliyun_models.dart';
 import 'buildin_deepseek_models.dart';
 import 'buildin_mimo_models.dart';
+import 'buildin_openrouter_models.dart';
 import 'buildin_siliconflow_models.dart';
 import 'buildin_volcengine_models.dart';
 import 'buildin_zhipu_models.dart';
@@ -14,4 +15,5 @@ List<Map<String, dynamic>> BUILD_IN_MODELS = [
   ...volcengineModels,
   ...deepseekModels,
   ...mimoModels,
+  ...openrouterModels,
 ];

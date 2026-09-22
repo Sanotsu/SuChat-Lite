@@ -99,6 +99,30 @@ class ImageGenerationResponse {
     );
   }
 
+  /// 从OpenRouter响应格式创建
+  /// https://openrouter.ai/docs/api/api-reference/images/generate-an-image
+  /// OpenAI兼容结构：{created, data:[{b64_json}], usage}——url可能缺省，
+  /// 优先b64_json
+  factory ImageGenerationResponse.fromOpenRouterResponse(
+    Map<String, dynamic> json,
+  ) {
+    final data = json['data'] as List<dynamic>? ?? [];
+
+    final generatedImages = data.map((image) {
+      final imageMap = image as Map<String, dynamic>;
+      return GeneratedImage(
+        url: imageMap['url'] as String?,
+        b64Json: imageMap['b64_json'] as String?,
+      );
+    }).toList();
+
+    return ImageGenerationResponse(
+      created: json['created'] as int?,
+      data: generatedImages,
+      metadata: json,
+    );
+  }
+
   /// 从智谱响应格式创建
   /// https://docs.bigmodel.cn/api-reference/%E6%A8%A1%E5%9E%8B-api/%E5%9B%BE%E5%83%8F%E7%94%9F%E6%88%90
   factory ImageGenerationResponse.fromZhipuResponse(Map<String, dynamic> json) {

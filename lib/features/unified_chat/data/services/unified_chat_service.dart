@@ -1841,6 +1841,20 @@ class UnifiedChatService {
         params = {"type": type.trim()};
       }
 
+      // 2026-09-18 OpenRouter密钥检查专用轻量端点：其模型列表返回
+      // 445个模型的巨量JSON(约70万字符)耗时且刷屏；且models接口
+      // 公开无鉴权语义，假key也能200。改用GET /v1/key(查当前key
+      // 的额度信息，错误key返回401，响应仅几百字符)
+      if (platformId == UnifiedPlatformId.openrouter.name) {
+        await HttpUtils.get(
+          path: '${platform.hostUrl}/v1/key',
+          headers: platform.getAuthHeaders(apiKey),
+          showLoading: false,
+          showErrorMessage: false,
+        );
+        return true;
+      }
+
       final apiPrefix = _getModelsApiPrefix(platformId);
 
       // 使用简单的模型列表请求测试连接

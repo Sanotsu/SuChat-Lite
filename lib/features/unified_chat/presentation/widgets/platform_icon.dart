@@ -48,6 +48,8 @@ String _getPlatformIcon(String platformId) {
       return '${commonIcon}siliconcloud.png';
     case 'mimo':
       return '${commonIcon}mimo.png';
+    case 'openrouter':
+      return '${commonIcon}openrouter.png';
     default:
       return '';
   }

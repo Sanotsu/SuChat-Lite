@@ -125,6 +125,17 @@ class VideoGenerationService {
             throw Exception('火山方舟响应中未找到任务ID');
           }
           return id;
+        case 'openrouter':
+          // OpenRouter：POST /videos 返回{polling_url, status}，
+          // 任务号优先取id字段，缺省时从polling_url尾段解析
+          // (polling_url形如/api/v1/videos/job-abc123)
+          final id = resp['id'] as String?;
+          if (id != null && id.isNotEmpty) return id;
+          final pollingUrl = resp['polling_url'] as String?;
+          if (pollingUrl != null && pollingUrl.contains('/videos/')) {
+            return pollingUrl.split('/videos/').last;
+          }
+          throw Exception('OpenRouter响应中未找到任务ID');
         default:
           throw Exception('平台 ${platform.displayName} 暂不支持视频生成');
       }
@@ -172,6 +183,16 @@ class VideoGenerationService {
         // 火山方舟内容生成任务查询：GET /v3/contents/generations/tasks/{id}
         resp = await HttpUtils.get(
           path: '${platform.hostUrl}/v3/contents/generations/tasks/$taskId',
+          headers: headers,
+          showErrorMessage: false,
+          showLoading: false,
+        );
+        break;
+      case 'openrouter':
+        // OpenRouter视频任务查询：GET /videos/{jobId}(host已带/api
+        // 前缀，正好拼出/api/v1/videos/{id})
+        resp = await HttpUtils.get(
+          path: '${platform.hostUrl}/videos/$taskId',
           headers: headers,
           showErrorMessage: false,
           showLoading: false,
@@ -269,6 +290,35 @@ class VideoGenerationService {
             status: VideoTaskStatus.failed,
             taskId: taskId,
             error: '视频生成失败',
+          );
+        }
+        return VideoTaskResult(
+          status: VideoTaskStatus.processing,
+          taskId: taskId,
+        );
+
+      case 'openrouter':
+        // OpenRouter视频任务状态：status(completed/failed/pending等) +
+        // unsigned_urls(生成视频的下载地址列表)
+        final status = resp['status'] as String?;
+        if (status == 'completed') {
+          final videos =
+              (resp['unsigned_urls'] as List?)
+                  ?.map((u) => u as String)
+                  .where((u) => u.isNotEmpty)
+                  .toList() ??
+              [];
+          return VideoTaskResult(
+            status: VideoTaskStatus.succeeded,
+            taskId: taskId,
+            videoUrls: videos,
+          );
+        }
+        if (status == 'failed') {
+          return VideoTaskResult(
+            status: VideoTaskStatus.failed,
+            taskId: taskId,
+            error: resp['error']?['message'] as String? ?? '视频生成失败',
           );
         }
         return VideoTaskResult(
@@ -442,6 +492,21 @@ class VideoGenerationService {
             'negative_prompt': settings!['negativePrompt'],
           if (settings?['seed'] != null) 'seed': settings!['seed'],
         };
+
+      case 'openrouter':
+        // OpenRouter视频提交：POST /videos，请求体{model, prompt}。
+        // i2v经frame_images携带首/尾帧(FrameImage: frame_type+image)，
+        // 字段细节待实测核实，当前先支持文本生成视频
+        if (refImage != null) {
+          return {
+            'model': model,
+            'prompt': prompt,
+            'frame_images': [
+              {'frame_type': 'first_frame', 'image': refImage},
+            ],
+          };
+        }
+        return {'model': model, 'prompt': prompt};
 
       case 'volcengine':
         // 火山方舟内容生成异步任务：content数组携带文本+首帧图

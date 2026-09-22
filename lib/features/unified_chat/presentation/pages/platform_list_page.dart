@@ -282,6 +282,8 @@ class _PlatformListPageState extends State<PlatformListPage> {
         return '${commonIcon}siliconcloud.png';
       case 'mimo':
         return '${commonIcon}mimo.png';
+      case 'openrouter':
+        return '${commonIcon}openrouter.png';
       default:
         return '';
     }

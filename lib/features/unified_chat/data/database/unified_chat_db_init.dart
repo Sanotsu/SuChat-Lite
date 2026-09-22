@@ -53,7 +53,7 @@ class UnifiedChatDBInit {
       path,
       // TODO(发布前): 当前版本未发布过，无线上旧库；正式发布时将version固定为最终值
       // 并移除下方全部_upgradeToV2/_upgradeToV3/_upgradeToV4升级逻辑(开发期保留以便调试，免于反复卸载重装)
-      version: 12,
+      version: 14,
       onCreate: _createDb,
       onUpgrade: _upgradeDb,
     );
@@ -144,6 +144,34 @@ class UnifiedChatDBInit {
     if (oldVersion < 12) {
       await _upgradeToV12(db);
     }
+
+    if (oldVersion < 13) {
+      await _upgradeToV13(db);
+    }
+
+    if (oldVersion < 14) {
+      await _upgradeToV14(db);
+    }
+  }
+
+  /// v13 -> v14: 2026-09-18 OpenRouter平台定义补全四模态前缀
+  /// (图片/视频/TTS/ASR——初版仅对话)。幂等replace存量行，无论
+  /// 是否跑过v13都能拿到完整定义
+  Future<void> _upgradeToV14(Database db) async {
+    await UnifiedChatDdl.initDefaultPlatforms(
+      db,
+      platformId: UnifiedPlatformId.openrouter,
+    );
+  }
+
+  /// v12 -> v13: 2026-09-18 新增内置平台"OpenRouter"(400+模型的
+  /// OpenAI兼容聚合网关，仅对话能力)，存量库补插该平台与内置模型
+  /// 种子数据(仅replace openrouter自身的行，不影响其他平台及其模型收藏)
+  Future<void> _upgradeToV13(Database db) async {
+    await UnifiedChatDdl.initDefaultPlatforms(
+      db,
+      platformId: UnifiedPlatformId.openrouter,
+    );
   }
 
   /// v11 -> v12: 2026-09-16 SKILLS P0-1——

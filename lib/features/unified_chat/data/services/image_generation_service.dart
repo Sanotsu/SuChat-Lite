@@ -97,6 +97,10 @@ class ImageGenerationService {
           return ImageGenerationResponse.fromZhipuResponse(responseData);
         case 'volcengine':
           return ImageGenerationResponse.fromVolcengineResponse(responseData);
+        case 'openrouter':
+          // OpenRouter的POST /images同步返回OpenAI兼容结构
+          // (data[].b64_json优先，见generate-an-image文档)
+          return ImageGenerationResponse.fromOpenRouterResponse(responseData);
         default:
           return ImageGenerationResponse.fromSiliconCloudResponse(responseData);
       }

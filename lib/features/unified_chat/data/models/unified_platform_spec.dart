@@ -15,6 +15,7 @@ enum UnifiedPlatformId {
   zhipu,
   volcengine,
   mimo,
+  openrouter,
 }
 
 // 内置的平台对应的中文名
@@ -25,6 +26,7 @@ final Map<UnifiedPlatformId, String> UPI_NAME_MAP = {
   UnifiedPlatformId.zhipu: '智谱',
   UnifiedPlatformId.volcengine: '火山方舟',
   UnifiedPlatformId.mimo: '小米 MiMo',
+  UnifiedPlatformId.openrouter: 'OpenRouter',
 };
 
 /// 统一平台规格模型

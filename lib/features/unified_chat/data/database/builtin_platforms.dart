@@ -64,4 +64,21 @@ List<Map<String, dynamic>> BUILD_IN_PLATFORMS = [
     'tts_prefix': '/v1/chat/completions',
     'asr_prefix': '/v1/chat/completions',
   },
+  {
+    // 2026-09-18 新增内置平台OpenRouter(聚合400+模型的一个OpenAI兼容
+    // 网关)。全模态支持(2026-09-18依官方API文档核定)：
+    // 对话 /v1/chat/completions；图片 POST /images(同步，响应data[].b64_json
+    // 与OpenAI兼容)；视频 POST /videos 提交+GET /videos/{id} 轮询(响应
+    // status+unsigned_urls)；TTS /audio/speech、ASR /audio/transcriptions
+    // (两者均OpenAI兼容零适配)。models检查接口default前缀/v1/models
+    // 正好拼出/api/v1/models，但密钥检查专用轻量的GET /v1/key
+    'id': 'openrouter',
+    'display_name': 'OpenRouter',
+    'host_url': 'https://openrouter.ai/api',
+    'cc_prefix': '/v1/chat/completions',
+    'img_gen_prefix': '/images',
+    'video_gen_prefix': '/videos',
+    'tts_prefix': '/audio/speech',
+    'asr_prefix': '/audio/transcriptions',
+  },
 ];
