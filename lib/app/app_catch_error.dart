@@ -7,7 +7,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:marionette_flutter/marionette_flutter.dart';
 import 'package:video_player_media_kit/video_player_media_kit.dart';
 
 import '../core/network/dio_client/interceptor_error.dart';
@@ -35,19 +34,10 @@ class AppCatchError {
       }
     };
 
-    // 受保护的代码块
-    runZonedGuarded(() async {
-      // 确保已经初始化绑定
-      // 2026-09-18 Marionette MCP 测试基建(FIX_LOG 九十)：debug 模式替换
-      // 为 MarionetteBinding——AI agent 经 MCP 驱动真实运行的应用
-      // (控件树/tap/输入/截图)；kDebugMode 是编译期常量，release 的
-      // 死代码摇除会移除该分支，生产构建零影响。本文件是全应用唯一
-      // binding 初始化入口
-      if (kDebugMode) {
-        MarionetteBinding.ensureInitialized();
-      } else {
+      // 受保护的代码块
+      runZonedGuarded(() async {
+        // 确保已经初始化绑定
         WidgetsFlutterBinding.ensureInitialized();
-      }
 
       // 仅在移动端限制垂直方向
       if (Platform.isAndroid || Platform.isIOS) {

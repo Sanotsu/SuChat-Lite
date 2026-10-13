@@ -205,8 +205,7 @@ class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
         appBar: AppBar(
           title: const Text('MCP 工具'),
           actions: [
-            // 2026-09-14 P2-4 JSON批量导入
-            // 2026-09-18 key 供 Marionette CLI 脚本寻址
+            // 2026-09-14 P2-4 JSON批量导入(key供测试/自动化寻址)
             IconButton(
               key: const ValueKey('mcp_import_json'),
               tooltip: '导入配置(JSON)',
@@ -251,7 +250,7 @@ class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
 
   /// 2026-09-16 MCP全局启用开关卡：全局与会话控制并行——
   /// 开=全部会话强制启用(输入框会话按钮隐藏)；关=各会话输入区单独开启
-  /// 2026-09-18 key 供 Marionette CLI 脚本点击(点卡片任意处=切换)
+  /// 2026-09-18 key 供测试/自动化寻址(点卡片任意处=切换)
   Widget _buildMcpGlobalSwitchCard() {
     return Card(
       key: const ValueKey('mcp_global_switch_card'),
@@ -609,7 +608,7 @@ class _McpServersSettingsPageState extends State<McpServersSettingsPage> {
                     onChanged: (v) => _toggleServer(server, v),
                   ),
                   PopupMenuButton<String>(
-                    // 2026-09-18 key 供 Marionette CLI 按 server 精确寻址菜单
+                    // 2026-09-18 key 供测试/自动化按 server 精确寻址菜单
                     // (用 name 而非 id：脚本可读；name 导入时已去重)
                     key: ValueKey('server_menu_${server.name}'),
                     icon: const Icon(Icons.more_vert, size: 20),
