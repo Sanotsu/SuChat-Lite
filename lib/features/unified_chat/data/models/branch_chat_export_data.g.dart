@@ -71,7 +71,7 @@ BranchChatMessageExport _$BranchChatMessageExportFromJson(
   modelLabel: json['modelLabel'] as String?,
   branchIndex: (json['branchIndex'] as num).toInt(),
   depth: (json['depth'] as num).toInt(),
-  branchPath: json['branchPath'] as String,
+  branchPath: json['branchPath'] as String?,
   parentMessageId: json['parentMessageId'] as String?,
   characterId: json['characterId'] as String?,
 );

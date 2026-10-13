@@ -362,6 +362,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   Future<void> _sendMessage(UnifiedChatViewModel viewModel) async {
     unfocusHandle();
 
+    // 2026-09-18 只读降级：无可用模型/平台时明确提示(输入框已禁用，
+    // 此处兜底快捷键/回调路径)
+    if (!viewModel.canContinueChat) {
+      ToastUtils.showInfo('当前无可用平台/模型，仅可浏览历史对话');
+      return;
+    }
+
     if (viewModel.currentModel == null) {
       ToastUtils.showError("请先选择模型");
       return;
@@ -1008,10 +1015,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 : TextField(
                     controller: _textController,
                     focusNode: _focusNode,
+                    // 2026-09-18 只读降级：无可用模型/平台时禁用输入
+                    enabled: viewModel.canContinueChat,
                     maxLines: 5,
                     minLines: 1,
                     decoration: InputDecoration(
-                      hintText: viewModel.isUserEditingMode
+                      hintText: !viewModel.canContinueChat
+                          ? '无可用平台/模型，仅可浏览历史对话'
+                          : viewModel.isUserEditingMode
                           ? '编辑消息...'
                           : '输入消息...',
                       border: InputBorder.none,
@@ -1040,13 +1051,17 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             _sendMessage(viewModel),
       },
       child: TextField(
+        // 2026-09-18 只读降级：无可用模型/平台时禁用输入
+        enabled: viewModel.canContinueChat,
         controller: _textController,
         focusNode: _focusNode,
         keyboardType: TextInputType.multiline,
         maxLines: 5,
         minLines: 1,
         decoration: InputDecoration(
-          hintText: viewModel.isUserEditingMode
+          hintText: !viewModel.canContinueChat
+              ? '无可用平台/模型，仅可浏览历史对话'
+              : viewModel.isUserEditingMode
               ? '编辑消息...'
               : '输入消息... (Shift+Enter 换行)',
           border: InputBorder.none,
@@ -1391,7 +1406,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             InkWell(
               onTap: _canToggleWebSearch(viewModel)
                   ? () => viewModel.toggleWebSearch()
-                  : () => ToastUtils.showInfo("该平台或模型不支持联网搜索"),
+                  : () => ToastUtils.showInfo("该平台或模型不支持联网搜索，或未配置联网搜索服务"),
               onLongPress: () => _showTooltipDialog(),
               borderRadius: BorderRadius.circular(20),
               child: Container(
@@ -1476,8 +1491,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           // 流式中"(原全局isStreaming——A会话生成中切到B，B也显示STOP且
           // 点击会误停A的流)。其他会话流式期间按钮仍可点发送(单流模型
           // 在发送入口拦截并提示，不再灰色禁用让用户以为失灵)
+          // 2026-09-18 只读降级：无可用模型/平台时禁用发送
           IconButton(
-            onPressed: viewModel.isCurrentSessionStreaming
+            onPressed: !viewModel.canContinueChat
+                ? null
+                : viewModel.isCurrentSessionStreaming
                 ? () => viewModel.stopStreaming()
                 : _canSend()
                 ? () => _sendMessage(viewModel)
@@ -1489,11 +1507,17 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   ? Icons.check_circle
                   : Icons.arrow_circle_up,
               size: 32,
-              color: _canSend() || viewModel.isCurrentSessionStreaming
+              color: !viewModel.canContinueChat
+                  ? Theme.of(context).disabledColor
+                  : _canSend() || viewModel.isCurrentSessionStreaming
                   ? Theme.of(context).primaryColor
                   : Theme.of(context).disabledColor,
             ),
-            tooltip: viewModel.isUserEditingMode ? '完成编辑' : '发送消息',
+            tooltip: !viewModel.canContinueChat
+                ? '无可用平台/模型，仅可浏览'
+                : viewModel.isUserEditingMode
+                ? '完成编辑'
+                : '发送消息',
           ),
         ],
       ),

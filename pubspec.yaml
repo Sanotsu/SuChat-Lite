@@ -1,4 +1,4 @@
-name: suchat_lite
+﻿name: suchat_lite
 description: "A concise AI assistant and standalone handy tools in one."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -57,6 +57,12 @@ dependencies:
   get_storage: ^2.1.1
   sqflite: ^2.4.2
   sqflite_common_ffi: ^2.3.6
+  # 2026-10-12 最小集成：仅供旧版(0.1.4)分支聊天数据直接升级迁移
+  # 读取 SuChatFiles/DB/objectbox/branch_chat——UI/业务永不写入，
+  # 版本须与0.1.4一致(4.3.0)保证旧库schema uid兼容；迁移率稳定后
+  # 可整体移除
+  objectbox: ^5.3.2
+  objectbox_flutter_libs: ^5.3.2
 
   device_info_plus: ^13.2.0
   package_info_plus: ^10.2.1
@@ -161,6 +167,12 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   build_runner: ^2.7.0
   json_serializable: ^6.11.0
+  objectbox_generator: ^5.3.2
+
+# 配置objectbox生成的json和实体的位置(与0.1.4一致，必须同目录才能
+# 匹配旧objectbox-model.json的schema uid)
+objectbox:
+  output_dir: core/storage
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

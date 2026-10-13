@@ -1,7 +1,7 @@
 import 'db_config.dart';
 
 class DietDiaryDdl {
-  // 创建食品表
+  // 创建食品表（最好不要在DDL里面加注释）
   static const tableFoodItem = '${DBInitConfig.tablePerfix}food_item';
   static const ddlForFoodItem =
       """
@@ -57,9 +57,6 @@ class DietDiaryDdl {
       unit                TEXT,
       gmtCreate           TEXT NOT NULL,
       gmtModified         TEXT NOT NULL,
-      // 2026-09-07 A-6 修复：原外键引用 meal_records/food_items 等不存在的
-      // 表名（sqflite 默认未开启 foreign_keys 故从未爆发）；改为真实表名。
-      // 注意本项目未开启 PRAGMA foreign_keys，级联仍不生效，删除清理由 DAO 层负责
       FOREIGN KEY (mealRecordId) REFERENCES $tableMealRecord (id) ON DELETE CASCADE,
       FOREIGN KEY (foodItemId) REFERENCES $tableFoodItem (id) ON DELETE RESTRICT
     );
@@ -77,8 +74,6 @@ class DietDiaryDdl {
       note                TEXT,
       gmtCreate         TEXT NOT NULL,
       gmtModified         TEXT NOT NULL
-      // 2026-09-07 A-6 修复：原外键引用不存在的 user_profiles 表（userId
-      // 语义是主库 user_info.user_id 文本，无本库表可引用），删除该假外键
     );
     """;
 

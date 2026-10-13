@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:archive/archive_io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
@@ -49,10 +48,20 @@ class RestorePreviewConversation {
 /// 备份包恢复向导(2026-09-01)
 /// 三步：解析预览 -> 勾选 -> 进度执行 -> 结果报告
 /// 解决旧流程"无进度、不能部分恢复"两个问题
+///
+/// 2026-10-12 新增文件夹模式：0.1.4的全量备份zip不含统一聊天数据
+/// (旧版设计：统一聊天走单独导出到 SuChatFiles/BAKUP/backup_files/
+/// unified_chat/db_export/)。该目录的json可直接经 preParsedFiles
+/// 进入同一预览/执行流程(unzipDir为空自动跳过媒体/外观/清单环节)
 class RestoreWizardPage extends StatefulWidget {
-  final File zipFile;
+  final File? zipFile;
+  final List<File>? preParsedFiles;
 
-  const RestoreWizardPage({super.key, required this.zipFile});
+  const RestoreWizardPage({super.key, this.zipFile, this.preParsedFiles})
+    : assert(
+        (zipFile == null) != (preParsedFiles == null),
+        'zipFile与preParsedFiles必须二选一',
+      );
 
   @override
   State<RestoreWizardPage> createState() => _RestoreWizardPageState();
@@ -93,13 +102,20 @@ class _RestoreWizardPageState extends State<RestoreWizardPage> {
       final tempDir = await getTemporaryDirectory();
       _unzipPath = p.join(tempDir.path, ZIP_TEMP_DIR_AT_UNZIP);
 
-      // 解压+列出json文件(isolate中执行，避免大zip卡UI)
-      final files = await compute(_unzipAndScanSync, {
-        'zipPath': widget.zipFile.path,
-        'unzipPath': _unzipPath,
-      });
+      // 文件夹模式：外部已解析好的json列表(旧版统一聊天db_export导出)
+      final pre = widget.preParsedFiles;
+      if (pre != null) {
+        _jsonFiles = pre;
+        _unzipPath = '';
+      } else {
+        // 解压+列出json文件(isolate中执行，避免大zip卡UI)
+        final files = await compute(_unzipAndScanSync, {
+          'zipPath': widget.zipFile!.path,
+          'unzipPath': _unzipPath,
+        });
+        _jsonFiles = files.map((e) => File(e)).toList();
+      }
 
-      _jsonFiles = files.map((e) => File(e)).toList();
       final items = <RestorePreviewItem>[];
 
       for (final file in _jsonFiles) {
@@ -218,7 +234,8 @@ class _RestoreWizardPageState extends State<RestoreWizardPage> {
           selectedFiles: selectedFiles,
           unifiedConvIds: convIds,
         ),
-        unzipDir: Directory(_unzipPath),
+        // 文件夹模式无zip根目录：跳过媒体/外观/清单环节
+        unzipDir: _unzipPath.isEmpty ? null : Directory(_unzipPath),
         onProgress: (module, done, total) {
           if (!mounted) return;
           setState(() {
@@ -248,10 +265,12 @@ class _RestoreWizardPageState extends State<RestoreWizardPage> {
         _step = 3;
       });
     } finally {
-      // 清理解压临时文件
-      try {
-        await BackupUtils.deleteFilesInDirectory(_unzipPath);
-      } catch (_) {}
+      // 清理解压临时文件(文件夹模式无解压目录)
+      if (_unzipPath.isNotEmpty) {
+        try {
+          await BackupUtils.deleteFilesInDirectory(_unzipPath);
+        } catch (_) {}
+      }
     }
   }
 
@@ -279,7 +298,7 @@ class _RestoreWizardPageState extends State<RestoreWizardPage> {
           const CircularProgressIndicator(),
           const SizedBox(height: 16),
           Text(
-            '正在解析备份包...\n${p.basename(widget.zipFile.path)}',
+            '正在解析备份包...\n${p.basename(widget.zipFile?.path ?? '')}',
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.grey),
           ),
@@ -320,7 +339,7 @@ class _RestoreWizardPageState extends State<RestoreWizardPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '备份文件: ${p.basename(widget.zipFile.path)}',
+                '备份文件: ${p.basename(widget.zipFile?.path ?? '统一聊天导出文件夹')}',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),
@@ -559,7 +578,9 @@ List<String> _unzipAndScanSync(Map<String, String> args) {
   } else {
     dir.createSync(recursive: true);
   }
-  extractFileToDisk(args['zipPath']!, unzipPath);
+  // 2026-10-12 FIX：archive 4.x extractFileToDisk 对旧版zip静默丢文件
+  // (23个json只解出1个)，改用 BackupUtils 同步解压(异常上抛不吞)
+  BackupUtils.extractZipToDiskSync(args['zipPath']!, unzipPath);
   return dir
       .listSync()
       .whereType<File>()

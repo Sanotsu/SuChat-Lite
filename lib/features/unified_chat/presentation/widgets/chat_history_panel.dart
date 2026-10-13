@@ -458,6 +458,14 @@ class _ChatHistoryPanelState extends State<ChatHistoryPanel> {
 
   void _loadConversation(UnifiedConversation conversation) {
     final viewModel = Provider.of<UnifiedChatViewModel>(context, listen: false);
+    // 2026-09-18 升级迁移场景：无任何可用平台/模型时(未配置AK、迁移后
+    // 平台未激活)，进入会话只会看到"配置AI大模型平台和模型"占位页，
+    // 历史消息不可见——入口直接拦截并给出明确指引，配置好后再进入
+    // 即可正常浏览(有可用模型时loadConversation会自动回落续聊)
+    if (!viewModel.canContinueChat) {
+      ToastUtils.showInfo('请先配置至少一个可用的平台和模型，才能查看历史对话');
+      return;
+    }
     viewModel.loadConversation(conversation.id);
   }
 

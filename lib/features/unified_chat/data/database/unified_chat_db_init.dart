@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -33,6 +34,21 @@ class UnifiedChatDBInit {
   // 获取数据库实例
   Future<Database> get database async => _database ??= await initializeDB();
 
+  /// 关闭库连接并清空缓存(下次getter重开)。
+  /// 2026-10-12 迁移器覆盖复制库文件前调用：Windows下目标文件被
+  /// 本进程打开时复制会 errno 32 失败，必须先关闭
+  Future<void> closeDatabase() async {
+    final db = _database;
+    if (db != null && db.isOpen) {
+      await db.close();
+    }
+    _database = null;
+  }
+
+  // 仅供测试覆盖库路径(flutter test)：生产代码勿读写
+  @visibleForTesting
+  static String? debugDatabasePath;
+
   // 初始化数据库
   Future<Database> initializeDB() async {
     // 如果是桌面端（Windows/Linux/macOS），初始化 FFI
@@ -43,6 +59,19 @@ class UnifiedChatDBInit {
     }
 
     // 自定义的sqlite数据库文件保存的目录
+    // (测试可经debugDatabasePath整体短路真实目录解析——测试环境无
+    //  path_provider平台通道)
+    if (debugDatabasePath != null) {
+      final db = await openDatabase(
+        debugDatabasePath!,
+        version: 2,
+        onCreate: _createDb,
+        onUpgrade: _upgradeDb,
+      );
+      await UnifiedChatDdl.initDefaultMcpServers(db);
+      dbFilePath = debugDatabasePath!;
+      return db;
+    }
     Directory directory = await getSqliteDbDir();
     String path = "${directory.path}/${DBInitConfig.chatDbName}";
 
@@ -51,9 +80,12 @@ class UnifiedChatDBInit {
     // 在给定路径上打开/创建数据库
     var db = await openDatabase(
       path,
-      // TODO(发布前): 当前版本未发布过，无线上旧库；正式发布时将version固定为最终值
-      // 并移除下方全部_upgradeToV2/_upgradeToV3/_upgradeToV4升级逻辑(开发期保留以便调试，免于反复卸载重装)
-      version: 14,
+      // 2026-09-18 升级链归一：0.1.5开发期按功能迭代累积的v2~v14共13个
+      // 中间版本从未发布，真实用户没有也不需要这些中间态——线上存量库
+      // 只有0.1.4的v1。版本号归一为2，全部迁移内容合并进_upgradeV1ToV2
+      // 单方法一次执行，0.1.4→0.1.5即单纯的1个版本数据库升级。
+      // 0.1.5发布后的新功能再从v2起追加增量迁移
+      version: 2,
       onCreate: _createDb,
       onUpgrade: _upgradeDb,
     );
@@ -96,171 +128,126 @@ class UnifiedChatDBInit {
   }
 
   // 数据库升级
-  void _upgradeDb(Database db, int oldVersion, int newVersion) async {
+  // 2026-09-18 升级链归一：0.1.5开发期按功能迭代累积的v2~v14共13个
+  // 中间版本从未发布，真实用户没有也不需要这些中间态——线上存量库
+  // 只有0.1.4的v1。版本号归一为2，全部迁移内容合并进_upgradeV1ToV2
+  // 单方法一次执行，0.1.4→0.1.5即单纯的1个版本数据库升级。
+  // 注意：开发期装有v2~v14中间版本的设备库version>2会触发downgrade
+  // 保护报错，请卸载重装
+  Future<void> _upgradeDb(Database db, int oldVersion, int newVersion) async {
     print("Chat 数据库升级 _upgradeDb 从 $oldVersion 到 $newVersion");
 
     if (oldVersion < 2) {
-      // TODO(发布前): 移除(v2从未发布，无线上v1库)
-      await _upgradeToV2(db);
-    }
-
-    if (oldVersion < 3) {
-      // TODO(发布前): 移除(v3为翻译历史表，开发期数据库可能存在无audio_path列的中间结构)
-      await _upgradeToV3(db);
-    }
-
-    if (oldVersion < 4) {
-      await _upgradeToV4(db);
-    }
-
-    if (oldVersion < 5) {
-      await _upgradeToV5(db);
-    }
-
-    if (oldVersion < 6) {
-      await _upgradeToV6(db);
-    }
-
-    if (oldVersion < 7) {
-      await _upgradeToV7(db);
-    }
-
-    if (oldVersion < 8) {
-      await _upgradeToV8(db);
-    }
-
-    if (oldVersion < 9) {
-      await _upgradeToV9(db);
-    }
-
-    if (oldVersion < 10) {
-      await _upgradeToV10(db);
-    }
-
-    if (oldVersion < 11) {
-      await _upgradeToV11(db);
-    }
-
-    if (oldVersion < 12) {
-      await _upgradeToV12(db);
-    }
-
-    if (oldVersion < 13) {
-      await _upgradeToV13(db);
-    }
-
-    if (oldVersion < 14) {
-      await _upgradeToV14(db);
+      await _upgradeV1ToV2(db);
     }
   }
 
-  /// v13 -> v14: 2026-09-18 OpenRouter平台定义补全四模态前缀
-  /// (图片/视频/TTS/ASR——初版仅对话)。幂等replace存量行，无论
-  /// 是否跑过v13都能拿到完整定义
-  Future<void> _upgradeToV14(Database db) async {
-    await UnifiedChatDdl.initDefaultPlatforms(
-      db,
-      platformId: UnifiedPlatformId.openrouter,
-    );
-  }
-
-  /// v12 -> v13: 2026-09-18 新增内置平台"OpenRouter"(400+模型的
-  /// OpenAI兼容聚合网关，仅对话能力)，存量库补插该平台与内置模型
-  /// 种子数据(仅replace openrouter自身的行，不影响其他平台及其模型收藏)
-  Future<void> _upgradeToV13(Database db) async {
-    await UnifiedChatDdl.initDefaultPlatforms(
-      db,
-      platformId: UnifiedPlatformId.openrouter,
-    );
-  }
-
-  /// v11 -> v12: 2026-09-16 SKILLS P0-1——
-  /// ①新建unified_skills技能元数据表(技能本体在应用支持目录)
-  /// ②搭档表skill_ids列(JSON数组，NULL=未配置即挂载全部启用技能)
-  Future<void> _upgradeToV12(Database db) async {
-    await db.execute(UnifiedChatDdl.ddlForUnifiedSkill);
+  /// 0.1.4(v1) → 0.1.5(v2) 全量迁移。
+  /// 分段注释保留原开发期v2~v14的历史背景；步骤顺序即原递进链顺序，
+  /// 后步依赖前步(如会话表重建依赖分支列的添加)
+  Future<void> _upgradeV1ToV2(Database db) async {
+    // ===== 表结构补齐(2026-09-18)：0.1.4发布后onCreate DDL新增的列，
+    // 存量库须先补齐再执行后续任何种子插入(否则模型/平台种子INSERT
+    // 带新列直接报no column named)。经全表DDL自动比对确认仅这两列，
+    // 其余差异均由下方各分段步骤覆盖
     await db.execute(
-      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedChatPartner} ADD COLUMN skill_ids TEXT',
-    );
-  }
-
-  /// v10 -> v11: 2026-09-15 P4-2 OAuth 授权流——
-  /// unified_mcp_server.oauth_client_id/oauth_scopes：远程server的
-  /// OAuth授权码流预注册客户端信息(留空则由SDK动态注册)
-  Future<void> _upgradeToV11(Database db) async {
-    await db.execute(
-      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedMcpServer} ADD COLUMN oauth_client_id TEXT',
+      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedModelSpec} '
+      'ADD COLUMN supports_image_input INTEGER NOT NULL DEFAULT 0',
     );
     await db.execute(
-      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedMcpServer} ADD COLUMN oauth_scopes TEXT',
+      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedPlatformSpec} '
+      'ADD COLUMN video_gen_prefix TEXT',
     );
-  }
 
-  /// v9 -> v10: 2026-09-14 P3-7 工具列表离线缓存——
-  /// unified_mcp_server.tools_cache：连接成功后listTools结果JSON，
-  /// server不可达时展示/注入上次工具集(降级可用性)
-  Future<void> _upgradeToV10(Database db) async {
-    await db.execute(
-      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedMcpServer} ADD COLUMN tools_cache TEXT',
+    // ===== 清理已停服的内置平台残留数据(原v2)：零一万物/无问芯穹，
+    // 会话/消息历史保留不动(模型名/平台名是文本快照，仅不可再续聊)
+    const deadPlatforms = ['lingyiwanwu', 'infini'];
+    final placeholders = List.filled(deadPlatforms.length, '?').join(',');
+
+    await db.delete(
+      UnifiedChatDdl.tableUnifiedApiKey,
+      where: 'platform_id IN ($placeholders)',
+      whereArgs: deadPlatforms,
     );
-  }
-
-  /// v8 -> v9: 2026-09-14 P3-1 工具调用审批确认流——
-  /// unified_mcp_server.approval_required：该server每次工具调用是否需要
-  /// 用户确认(opencode式授权)，0=直接执行(默认，保持既有行为)
-  Future<void> _upgradeToV9(Database db) async {
-    await db.execute(
-      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedMcpServer} ADD COLUMN approval_required INTEGER NOT NULL DEFAULT 0',
-    );
-  }
-
-  /// v7 -> v8: 2026-09-12 双列扩展——
-  /// ①unified_chat_message.segments：多轮工具调用响应的分段内容
-  ///   (思考/正文/工具调用交替)，JSON数组；null=旧消息走旧字段渲染
-  /// ②unified_mcp_server.is_search_source：MCP搜索源标记(搜索渠道
-  ///   偏好按此注入)，建表DDL已含该列，存量库补列
-  Future<void> _upgradeToV8(Database db) async {
-    await db.execute(
-      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedChatMessage} ADD COLUMN segments TEXT',
-    );
-    await db.execute(
-      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedMcpServer} ADD COLUMN is_search_source INTEGER NOT NULL DEFAULT 0',
-    );
-  }
-
-  /// v6 -> v7: 2026-09-11 MCP集成——新增MCP server配置表并补插
-  /// 内置测试源种子(DeepWiki/Context7/MS Learn，仅补缺不覆盖)
-  Future<void> _upgradeToV7(Database db) async {
-    await db.execute(UnifiedChatDdl.ddlForUnifiedMcpServer);
-    await UnifiedChatDdl.initDefaultMcpServers(db);
-  }
-
-  /// v4 -> v5: 2026-09-10 新增内置平台"小米MiMo"(对话/语音识别/语音合成，
-  /// 三者共用chat completions端点)，存量库补插该平台与内置模型种子数据
-  /// (仅replace mimo自身的行，不影响其他平台及其模型收藏)
-  Future<void> _upgradeToV5(Database db) async {
-    await UnifiedChatDdl.initDefaultPlatforms(
-      db,
-      platformId: UnifiedPlatformId.mimo,
-    );
-  }
-
-  /// v5 -> v6: 2026-09-10 全面移除embedding/reranker模型类型——本应用
-  /// 为聊天客户端，这两类模型从无任何调用流程，存量行删除
-  /// (字符串解析处已有default兜底为cc，双保险)
-  Future<void> _upgradeToV6(Database db) async {
     await db.delete(
       UnifiedChatDdl.tableUnifiedModelSpec,
-      where: "model_type IN ('embedding', 'reranker')",
+      where: 'platform_id IN ($placeholders)',
+      whereArgs: deadPlatforms,
     );
-  }
+    await db.delete(
+      UnifiedChatDdl.tableUnifiedPlatformSpec,
+      where: 'id IN ($placeholders)',
+      whereArgs: deadPlatforms,
+    );
 
-  /// v3 -> v4: 会话表 max_tokens/context_message_length 两列去 NOT NULL 约束
-  /// (2026-09-09 对话参数混合方案：null=未设置→请求不传该参数/上下文不限制；
-  /// temperature/top_p 两列原本就可空无需处理)
-  /// SQLite 不支持 ALTER 修改列约束，标准做法：建新表→拷贝→删旧表→改名
-  Future<void> _upgradeToV4(Database db) async {
-    // 按最新DDL建临时表(列顺序与旧表完全一致，仅两列约束不同)
+    // ===== 消息表分支字段+会话表当前分支路径(原v2，SQLite加列必须逐条)
+    await db.execute(
+      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedChatMessage} ADD COLUMN parent_id TEXT',
+    );
+    await db.execute(
+      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedChatMessage} '
+      'ADD COLUMN branch_index INTEGER NOT NULL DEFAULT 0',
+    );
+    await db.execute(
+      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedChatMessage} '
+      'ADD COLUMN depth INTEGER NOT NULL DEFAULT 0',
+    );
+    await db.execute(
+      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedChatMessage} '
+      "ADD COLUMN branch_path TEXT NOT NULL DEFAULT ''",
+    );
+    await db.execute(
+      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedConversation} '
+      'ADD COLUMN current_branch_path TEXT',
+    );
+
+    // ===== 搭档表合并角色卡系统(原v2)
+    const partnerColumns = [
+      'description TEXT',
+      'personality TEXT',
+      'scenario TEXT',
+      'first_message TEXT',
+      'example_dialogue TEXT',
+      'tags TEXT',
+      'preferred_model_id TEXT',
+      'background TEXT',
+      'background_opacity REAL',
+    ];
+    for (final col in partnerColumns) {
+      await db.execute(
+        'ALTER TABLE ${UnifiedChatDdl.tableUnifiedChatPartner} ADD COLUMN $col',
+      );
+    }
+
+    // ===== 分支索引(原v2)
+    await db.execute(
+      'CREATE INDEX idx_messages_parent_id ON '
+      '${UnifiedChatDdl.tableUnifiedChatMessage} (conversation_id, parent_id)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_messages_branch_path ON '
+      '${UnifiedChatDdl.tableUnifiedChatMessage} (conversation_id, branch_path)',
+    );
+
+    // ===== 回填存量消息为单链分支(原v2)：v1的消息是线性序列，
+    // 按会话分组、创建时间排序，非system消息串成一条单链
+    await _backfillBranchColumns(db);
+
+    // ===== 翻译历史表(原v3，2026-09-03快速翻译改造)
+    await db.execute(UnifiedChatDdl.ddlForTranslationHistory);
+    await db.execute(UnifiedChatDdl.ddlIndexTranslationHistory);
+    try {
+      await db.execute(
+        'ALTER TABLE ${UnifiedChatDdl.tableTranslationHistory} ADD COLUMN audio_path TEXT',
+      );
+    } catch (_) {
+      // 列已存在(按最新DDL新建的表已包含)，忽略
+    }
+
+    // ===== 会话表 max_tokens/context_message_length 去NOT NULL约束
+    // (原v4，2026-09-09对话参数混合方案：null=未设置；temperature/top_p
+    // 两列原本就可空无需处理)。SQLite不支持ALTER修改列约束，标准做法：
+    // 建新表→拷贝→删旧表→改名
     final newTableDdl = UnifiedChatDdl.ddlForUnifiedConversation.replaceAll(
       UnifiedChatDdl.tableUnifiedConversation,
       '${UnifiedChatDdl.tableUnifiedConversation}_v4_new',
@@ -292,9 +279,8 @@ class UnifiedChatDBInit {
         'RENAME TO ${UnifiedChatDdl.tableUnifiedConversation}',
       );
 
-      // 2026-09-09 内置搭档参数默认全空(使用平台默认/上下文不限制)：
-      // 存量行是老代码以默认值6插入的，清掉使其回到"未设置"语义；
-      // 对话中的参数由用户在对话设置中显式配置
+      // 内置搭档参数默认全空(使用平台默认/上下文不限制)：存量行是
+      // 老代码以默认值6插入的，清掉使其回到"未设置"语义
       await txn.execute(
         'UPDATE ${UnifiedChatDdl.tableUnifiedChatPartner} SET '
         'context_message_length = NULL, temperature = NULL, '
@@ -302,102 +288,49 @@ class UnifiedChatDBInit {
         'WHERE is_built_in = 1',
       );
     });
-  }
 
-  /// v2 -> v3: 新增翻译历史表(2026-09-03 快速翻译改造)
-  /// 兼容开发期中间结构：已建过无audio_path列表的，ALTER补列
-  Future<void> _upgradeToV3(Database db) async {
-    await db.execute(UnifiedChatDdl.ddlForTranslationHistory);
-    await db.execute(UnifiedChatDdl.ddlIndexTranslationHistory);
-    try {
-      await db.execute(
-        'ALTER TABLE ${UnifiedChatDdl.tableTranslationHistory} ADD COLUMN audio_path TEXT',
-      );
-    } catch (_) {
-      // 列已存在(按最新DDL新建的表已包含)，忽略
-    }
-  }
-
-  /// v1 -> v2: 消息表增加分支字段、会话表增加当前分支路径，并回填存量数据
-  /// 2026-09-02 v2尚未发布，移除已停服内置平台(零一万物lingyiwanwu、无问芯穹infini)
-  /// 的残留数据也并入本次升级：删除其内置平台行、内置模型行和API密钥行
-  /// (会话/消息历史保留不动，其中记录的模型名/平台名是文本快照，仅不可再续聊)
-  Future<void> _upgradeToV2(Database db) async {
-    // 0. 清理已停服的内置平台残留数据
-    const deadPlatforms = ['lingyiwanwu', 'infini'];
-    final placeholders = List.filled(deadPlatforms.length, '?').join(',');
-
-    await db.delete(
-      UnifiedChatDdl.tableUnifiedApiKey,
-      where: 'platform_id IN ($placeholders)',
-      whereArgs: deadPlatforms,
+    // ===== 内置平台"小米MiMo"种子(原v5，2026-09-10，对话/语音识别/
+    // 语音合成共用chat completions端点；仅replace自身行不影响用户数据)
+    await UnifiedChatDdl.initDefaultPlatforms(
+      db,
+      platformId: UnifiedPlatformId.mimo,
     );
+
+    // ===== 移除embedding/reranker模型类型(原v6，2026-09-10：本应用为
+    // 聊天客户端，这两类模型从无调用流程；字符串解析处已有default兜底)
     await db.delete(
       UnifiedChatDdl.tableUnifiedModelSpec,
-      where: 'platform_id IN ($placeholders)',
-      whereArgs: deadPlatforms,
-    );
-    await db.delete(
-      UnifiedChatDdl.tableUnifiedPlatformSpec,
-      where: 'id IN ($placeholders)',
-      whereArgs: deadPlatforms,
+      where: "model_type IN ('embedding', 'reranker')",
     );
 
-    // 1. 加列(SQLite的ALTER TABLE加列必须一条一条执行)
+    // ===== MCP集成(原v7，2026-09-11)：新增MCP server配置表并补插
+    // 内置测试源种子(DeepWiki/Context7/MS Learn，仅补缺不覆盖)。
+    // 建表用当前DDL即含全部扩展列，原v8~v11的5条mcp_server ALTER
+    // 在合并时间线下全部是重复列操作(合并纰漏，2026-09-18修复)
+    await db.execute(UnifiedChatDdl.ddlForUnifiedMcpServer);
+    await UnifiedChatDdl.initDefaultMcpServers(db);
+
+    // ===== 多轮工具调用分段列(原v8，2026-09-12)：仅message表的segments；
+    // mcp_server表的is_search_source已随上方建表自带
     await db.execute(
-      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedChatMessage} ADD COLUMN parent_id TEXT',
-    );
-    await db.execute(
-      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedChatMessage} '
-      'ADD COLUMN branch_index INTEGER NOT NULL DEFAULT 0',
-    );
-    await db.execute(
-      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedChatMessage} '
-      'ADD COLUMN depth INTEGER NOT NULL DEFAULT 0',
-    );
-    await db.execute(
-      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedChatMessage} '
-      "ADD COLUMN branch_path TEXT NOT NULL DEFAULT ''",
-    );
-    await db.execute(
-      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedConversation} '
-      'ADD COLUMN current_branch_path TEXT',
+      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedChatMessage} ADD COLUMN segments TEXT',
     );
 
-    // 2026-08-31 搭档表合并角色卡系统(仍在v2内：v2尚未发布，partner加列一并放入本次升级)
-    // 这些列在v2的onCreate DDL中也已存在
-    const partnerColumns = [
-      'description TEXT',
-      'personality TEXT',
-      'scenario TEXT',
-      'first_message TEXT',
-      'example_dialogue TEXT',
-      'tags TEXT',
-      'preferred_model_id TEXT',
-      'background TEXT',
-      'background_opacity REAL',
-    ];
-    for (final col in partnerColumns) {
-      await db.execute(
-        'ALTER TABLE ${UnifiedChatDdl.tableUnifiedChatPartner} ADD COLUMN $col',
-      );
-    }
-
-    // 2. 加索引
+    // ===== SKILLS P0-1(原v12，2026-09-16)：技能元数据表+搭档挂载列
+    await db.execute(UnifiedChatDdl.ddlForUnifiedSkill);
     await db.execute(
-      'CREATE INDEX idx_messages_parent_id ON '
-      '${UnifiedChatDdl.tableUnifiedChatMessage} (conversation_id, parent_id)',
-    );
-    await db.execute(
-      'CREATE INDEX idx_messages_branch_path ON '
-      '${UnifiedChatDdl.tableUnifiedChatMessage} (conversation_id, branch_path)',
+      'ALTER TABLE ${UnifiedChatDdl.tableUnifiedChatPartner} ADD COLUMN skill_ids TEXT',
     );
 
-    // 3. 回填存量消息：每个会话内按时间顺序把非系统消息串成单链分支
-    await _backfillBranchColumns(db);
+    // ===== 内置平台"OpenRouter"种子(原v13+v14，2026-09-18，两步合并为
+    // 最终完整定义：400+模型的OpenAI兼容聚合网关，全模态；仅replace
+    // 自身行不影响用户数据)
+    await UnifiedChatDdl.initDefaultPlatforms(
+      db,
+      platformId: UnifiedPlatformId.openrouter,
+    );
   }
 
-  /// 存量数据回填：v1的消息是线性序列，按会话分组、创建时间排序，
   /// 把非system消息串成一条单链(每条消息是前一条的子节点)，system消息不入树
   Future<void> _backfillBranchColumns(Database db) async {
     final maps = await db.query(
@@ -564,5 +497,17 @@ class UnifiedChatDBInit {
     }
 
     return tempDir.path;
+  }
+
+  /// 仅供迁移验证测试使用(flutter test, 2026-09-18)：在指定db上按生产
+  /// 同款逻辑执行版本升级，验证"0.1.4(v1)库 → 合并迁移 → 当前结构"。
+  /// 生产路径走openDatabase的onUpgrade回调进入_upgradeDb，勿用它
+  @visibleForTesting
+  static Future<void> runUpgradeForVerification(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
+    await UnifiedChatDBInit()._upgradeDb(db, oldVersion, newVersion);
   }
 }

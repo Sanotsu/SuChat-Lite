@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/services/upgrade_migrator.dart';
 import '../../../../core/storage/cus_get_storage.dart';
 import '../../../../core/utils/screen_helper.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../widgets/chat_background.dart';
-import '../../../settings/pages/backup_and_restore_page.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
 import '../widgets/chat_message_list.dart';
 import '../widgets/chat_input_widget.dart';
@@ -45,7 +43,6 @@ class _UnifiedChatPageState extends State<UnifiedChatPage> {
   void initState() {
     super.initState();
     _initializeChat();
-    _checkLegacyMigrationPrompt();
     _loadSidebarVisible();
     _loadWidescreen();
   }
@@ -84,66 +81,8 @@ class _UnifiedChatPageState extends State<UnifiedChatPage> {
     await _viewModel.initialize();
   }
 
-  /// 首启旧版聊天数据引导(2026-09-01 0.1.5 改版)：
-  /// 0.1.5 已移除旧聊天模块与 ObjectBox 依赖，本机残留旧聊天数据
-  /// 只能经 0.1.4 全量备份 zip 中转导入(升级迁移器已把库/媒体自动迁入私有区)
-  bool _legacyPromptRunning = false;
-
-  Future<void> _checkLegacyMigrationPrompt() async {
-    if (_legacyPromptRunning) return;
-    _legacyPromptRunning = true;
-
-    try {
-      final box = CusGetStorage().box;
-      const promptShownKey = 'legacy_migration_prompt_shown';
-      if (box.read(promptShownKey) == true) return;
-
-      // 迁移器标记的 ObjectBox 残留(未做备份中转的旧聊天数据)
-      final objectBoxFound =
-          box.read(UpgradeMigrator.objectBoxFoundKey) == true;
-      if (!objectBoxFound) return;
-
-      await box.write(promptShownKey, true);
-      if (!mounted) return;
-
-      await showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('检测到旧版聊天数据'),
-          content: const Text(
-            '本机有旧版聊天模块的对话记录/角色卡数据。\n\n'
-            '由于 0.1.5 已移除旧版聊天模块，需通过备份包导入：\n\n'
-            '1. 若已在旧版本中做过"全量备份"，直接选择备份 zip 恢复即可\n'
-            '2. 若未备份，可重新安装 0.1.4 完成一次全量备份后再升级\n'
-            '(其他数据如媒体/配置已自动迁移完成)',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('知道了'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        const BackupAndRestorePage(packageVersion: ''),
-                  ),
-                );
-              },
-              child: const Text('去恢复备份'),
-            ),
-          ],
-        ),
-      );
-    } catch (_) {
-      // 引导失败静默(不影响正常使用)
-    } finally {
-      _legacyPromptRunning = false;
-    }
-  }
+  // 2026-10-12 移除"检测到旧版聊天数据"引导弹窗：ObjectBox 旧库已由
+  // 迁移器直接自动转换导入(无需备份中转)，该引导已无意义
 
   @override
   void dispose() {
@@ -263,6 +202,45 @@ class _UnifiedChatPageState extends State<UnifiedChatPage> {
                       onAllowAlways: () =>
                           viewModel.approveToolCall(alwaysForSession: true),
                       onDeny: () => viewModel.denyToolCall(),
+                    ),
+
+                  // 2026-09-18 旧数据只读降级：无可用平台/模型(未配置AK、
+                  // 迁移后平台未激活等)时，历史会话仅可浏览——输入框上方
+                  // 给出明确的降级说明，配合输入区禁用
+                  if (!viewModel.canContinueChat)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.history_edu,
+                            size: 18,
+                            color: Theme.of(context).hintColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '当前无可用平台或模型，历史对话仅可浏览，'
+                              '配置平台API Key后可继续对话',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: Theme.of(context).hintColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
 
                   // 输入组件

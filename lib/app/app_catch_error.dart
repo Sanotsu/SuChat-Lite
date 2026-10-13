@@ -19,6 +19,7 @@ import '../core/utils/simple_tools.dart';
 import '../core/utils/storage_paths.dart';
 import '../shared/services/network_service.dart';
 import '../shared/widgets/toast_utils.dart';
+import 'migration_permission_gate.dart';
 import 'suchat_app.dart';
 
 class AppCatchError {
@@ -58,6 +59,15 @@ class AppCatchError {
       final gsPath = (await getGetStorageDir()).path;
       await GetStorage(CusGetStorage.storeName, gsPath).initStorage;
 
+      // 2026-10-12 权限引导门：Android 未授权时先挂引导页(说明框取得
+      // 用户同意后才请求系统权限)，授权/拒绝后再继续正常初始化。
+      // 未授权绝不静默弹权限、不探测旧目录、不标记完成
+      if (await UpgradeMigrator.needsPermissionGate()) {
+        final gateCompleter = Completer<bool>();
+        runApp(MigrationPermissionGate(completer: gateCompleter));
+        await gateCompleter.future;
+      }
+
       // 0.1.5 起零存储权限启动：核心数据在应用私有区，直接初始化应用
       await initApp();
     }, (error, stack) => catchError(error, stack));
@@ -65,7 +75,9 @@ class AppCatchError {
 
   Future<void> initApp() async {
     // 0.1.4 → 0.1.5 升级迁移：sqlite 库文件复制必须先于任何数据库打开；
-    // 媒体移动/路径重写在后台续跑，旧聊天 ObjectBox 走备份 zip 中转
+    // 媒体移动/路径重写/旧分支聊天转换在后台续跑。
+    // Android 未授权时这里只返回 needsPermission(引导页负责授权交互)，
+    // 授权后正常启动会走完整迁移
     await UpgradeMigrator.runIfNeeded(quickOnly: true);
 
     /// 只在首次启动时初始化内置模型

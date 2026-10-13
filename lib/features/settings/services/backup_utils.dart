@@ -252,7 +252,8 @@ class BackupUtils {
         DBInitConfig.chatDbName,
       );
       if (File(dbPath).existsSync()) {
-        final db = await openDatabase(dbPath);
+        // singleInstance:false 独立连接——默认单例下close()会关掉app全局共享连接(2026-09-18 FIX)
+        final db = await openDatabase(dbPath, singleInstance: false);
         try {
           final rows = await db.rawQuery(
             'SELECT content, multimodal_content, metadata FROM '
@@ -291,7 +292,8 @@ class BackupUtils {
         DBInitConfig.databaseName,
       );
       if (File(dbPath).existsSync()) {
-        final db = await openDatabase(dbPath);
+        // singleInstance:false 独立连接——默认单例下close()会关掉app全局共享连接(2026-09-18 FIX)
+        final db = await openDatabase(dbPath, singleInstance: false);
         try {
           final mediaRows = await db.rawQuery(
             'SELECT media_path, thumbnail_path FROM '
@@ -435,12 +437,39 @@ class BackupUtils {
   /// 解压备份zip到指定目录(先清空旧解压残留)
   static Future<List<File>> unzipBackup(File zipFile, String unzipPath) async {
     await deleteFilesInDirectory(unzipPath);
-    await extractFileToDisk(zipFile.path, unzipPath);
+    extractZipToDiskSync(zipFile.path, unzipPath);
 
     return Directory(unzipPath)
         .listSync()
         .where((entity) => entity is File && entity.path.endsWith('.json'))
         .map((entity) => entity as File)
         .toList();
+  }
+
+  /// 解压备份zip到指定目录(同步版，可入isolate)
+  ///
+  /// 2026-10-12 FIX：archive 4.x 的 extractFileToDisk 走流式内容重读，
+  /// 对旧版(3.x ZipEncoder)编码的备份包逐文件解压失败，且包内
+  /// try-catch(_){} 静默吞错——实测0.1.4备份23个json只解出1个，
+  /// 恢复预览全落"其他数据"、旧聊天/角色卡从未进入恢复执行。
+  /// 改用 decodeBytes 全量内存解码(备份包量级≤几十MB)后显式写盘，
+  /// 异常直接上抛不吞。
+  static void extractZipToDiskSync(String zipPath, String unzipPath) {
+    final bytes = File(zipPath).readAsBytesSync();
+    final archive = ZipDecoder().decodeBytes(bytes);
+
+    final outDir = Directory(unzipPath);
+    if (!outDir.existsSync()) outDir.createSync(recursive: true);
+    final outAbs = outDir.absolute.path;
+
+    for (final file in archive) {
+      if (!file.isFile) continue;
+      final target = File(p.normalize(p.join(outAbs, file.name)));
+      // 防zip路径穿越：目标必须仍在解压目录内
+      if (!p.isWithin(outAbs, target.path)) {
+        throw FormatException('备份包内含非法路径条目: ${file.name}');
+      }
+      target.writeAsBytesSync(file.content as List<int>);
+    }
   }
 }

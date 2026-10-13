@@ -76,6 +76,18 @@ class BranchChatImporter {
       }
     }
 
+    // 2026-09-18 FIX：0.1.4备份的消息无branchPath/parentMessageId(旧版
+    // 运行时值不落库)，导入行分支字段为空——统一按单链重建(与v1库升级
+    // 迁移同款回填逻辑，只处理branch_path=''的行，幂等)。0.1.4的多分支
+    // 结构退化为单链，但对话完整可读可续聊
+    if (imported > 0) {
+      try {
+        await _dao.backfillBranchColumnsForRestore();
+      } catch (e) {
+        print('旧版会话分支链回填失败(消息已导入，可重试恢复触发): $e');
+      }
+    }
+
     return BranchChatImportResult(
       importedCount: imported,
       skippedCount: skipped,
@@ -164,16 +176,23 @@ class BranchChatImporter {
       await _dao.saveMessage(message);
     }
 
-    // 7. 更新会话统计
-    await _updateStatsForMigratedConversation(convId, conversation, now);
+    // 7. 更新会话统计(保留备份updateTime——统计刷新默认写now，
+    // 否则侧边栏排序/时间全变"刚刚")
+    await _updateStatsForMigratedConversation(
+      convId,
+      conversation,
+      now,
+      updatedAt: sessionExport.updateTime,
+    );
   }
 
   /// 更新迁移会话的统计信息(按默认最新链统计，与新版展示逻辑一致)
   Future<void> _updateStatsForMigratedConversation(
     String convId,
     UnifiedConversation conversation,
-    DateTime fallbackTime,
-  ) async {
+    DateTime fallbackTime, {
+    DateTime? updatedAt,
+  }) async {
     // 会话没有消息时删除空会话
     final messages = await _dao.getMessagesByConversationId(convId);
     final nonSystem = messages.where((m) => !m.isSystem).toList();
@@ -182,7 +201,7 @@ class BranchChatImporter {
       return;
     }
 
-    await _dao.updateConversationStats(convId);
+    await _dao.updateConversationStats(convId, updatedAt: updatedAt);
   }
 
   /// 转换单条消息
@@ -252,11 +271,12 @@ class BranchChatImporter {
           ? searchReferences
           : null,
       metadata: metadata,
-      // 分支字段原样迁移
+      // 分支字段：0.1.4备份无branchPath/parentMessageId(运行时值)——
+      // 空值导入，完成后由backfillBranchColumnsForRestore按单链重建
       parentId: msg.parentMessageId,
       branchIndex: msg.branchIndex,
       depth: msg.depth,
-      branchPath: msg.branchPath,
+      branchPath: msg.branchPath ?? '',
       createdAt: msg.createTime,
       updatedAt: msg.createTime,
     );

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -139,8 +141,8 @@ class _UserAndSettingsState extends State<UserAndSettings> {
   }
 
   /// 旧版数据迁移入口(0.1.5)：
-  /// - 0.1.4 → 0.1.5 的库/媒体/配置由升级迁移器自动完成，此处可手动重跑
-  /// - 旧聊天对话/角色只能经 0.1.4 全量备份 zip 中转导入
+  /// - 0.1.4 → 0.1.5 的库/媒体/配置/旧分支聊天由升级迁移器自动完成，
+  ///   此处可手动重跑(未授权时先请求权限)
   /// 桌面端用居中弹窗(与其他弹窗风格一致)，移动端保持底部弹窗
   void _showLegacyMigrationSheet(BuildContext context) {
     final content = Column(
@@ -151,8 +153,9 @@ class _UserAndSettingsState extends State<UserAndSettings> {
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              '升级到 0.1.5 时，旧版本的数据库、媒体与配置会自动迁移。\n'
-              '旧版聊天对话与角色需通过旧版本的"全量备份"zip 导入。',
+              '升级到 0.1.5 时，旧版本的数据库、媒体、配置与旧分支聊天'
+              '会自动迁移。若首次启动时选择了"暂不迁移"或未授权，'
+              '可在此重新扫描完成迁移。',
             ),
           ),
         ),
@@ -162,6 +165,18 @@ class _UserAndSettingsState extends State<UserAndSettings> {
           subtitle: const Text('手动执行一次 0.1.4 数据自动迁移'),
           onTap: () async {
             Navigator.pop(context);
+            // 2026-10-12 FIX：未授权时此前直接返回needsPermission被
+            // 归类成"未发现可迁移的旧数据"，且拒绝过引导的用户再无
+            // 授权入口——此处是用户主动触发，直接请求权限
+            if (Platform.isAndroid &&
+                !await UpgradeMigrator.isLegacyPermissionGranted()) {
+              final granted = await UpgradeMigrator.requestLegacyPermission();
+              if (!granted) {
+                ToastUtils.showError('需要"所有文件访问"权限才能读取旧版数据，可在系统设置中授权后重试');
+                return;
+              }
+            }
+
             // withLoading 保证结束(含异常)必关遮罩；
             // 之前直接 showLoading 不持有 CancelFunc，遮罩永不关闭锁死界面
             try {
@@ -169,29 +184,24 @@ class _UserAndSettingsState extends State<UserAndSettings> {
                 () => UpgradeMigrator.runIfNeeded(force: true),
                 '正在扫描迁移旧版数据...',
               );
-              ToastUtils.showSuccess(
-                result.migrated ? '旧版数据迁移完成' : '未发现可迁移的旧版数据',
-              );
+              // 2026-09-18 FIX：迁移器不再吞失败(此前库复制失败也被
+              // 标记完成，重扫永远显示成功)。按真实结果分流提示
+              if (result.needsPermission) {
+                ToastUtils.showError('需要"所有文件访问"权限才能扫描旧版数据');
+              } else if (!result.migrated) {
+                ToastUtils.showSuccess('未发现可迁移的旧版数据');
+              } else if (result.success) {
+                ToastUtils.showSuccess('旧版数据迁移完成');
+              } else {
+                ToastUtils.showError(result.error ?? '旧版数据迁移失败');
+              }
             } catch (e) {
               ToastUtils.showError('旧版数据迁移失败: $e');
             }
           },
         ),
-        ListTile(
-          leading: const Icon(Icons.restore, color: Colors.blue),
-          title: const Text('从备份包导入旧聊天'),
-          subtitle: const Text('选择 0.1.4 导出的全量备份 zip 恢复'),
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    BackupAndRestorePage(packageVersion: _packageInfo.version),
-              ),
-            );
-          },
-        ),
+        // 2026-10-12 移除"从备份包导入旧聊天"入口：恢复向导已同时
+        // 兼容0.1.4/0.1.5备份包(备份恢复功能入口已有)，无需在此单设
       ],
     );
 

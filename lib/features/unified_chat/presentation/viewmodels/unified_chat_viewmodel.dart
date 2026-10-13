@@ -180,6 +180,12 @@ class UnifiedChatViewModel extends ChangeNotifier {
   UnifiedChatPartner? get currentPartner => _currentPartner;
   bool get isWebSearchEnabled => _isWebSearchEnabled;
 
+  /// 2026-09-18 旧数据只读降级：无任何可用模型/平台时(未配置AK、
+  /// 升级迁移后平台未激活等)，历史会话仅可浏览——输入区禁用+页面
+  /// 提示条，不再"点发送才报错"。有可用模型时切换会话会自动回落到
+  /// 可用模型(loadConversation的orElse逻辑)，正常续聊不受影响
+  bool get canContinueChat => _currentModel != null && _currentPlatform != null;
+
   /// 2026-09-11 MCP集成(P1-3)：当前会话MCP工具开关状态
   bool get isMcpEnabled => _isMcpEnabled;
 

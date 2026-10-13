@@ -65,7 +65,11 @@ class BranchChatMessageExport {
   final String? modelLabel;
   final int branchIndex;
   final int depth;
-  final String branchPath;
+  // 2026-09-18 FIX：0.1.4备份的消息json无branchPath字段(它是旧版运行时
+  // 计算值，不落ObjectBox不导出)——非空required使fromJson的null as
+  // String直接崩掉整个备份导入(恢复0会话)。改可空，导入后由
+  // backfillBranchColumnsForRestore按单链重建分支字段
+  final String? branchPath;
   final String? parentMessageId;
   final String? characterId;
 
@@ -88,7 +92,7 @@ class BranchChatMessageExport {
     this.modelLabel,
     required this.branchIndex,
     required this.depth,
-    required this.branchPath,
+    this.branchPath,
     this.parentMessageId,
     this.characterId,
   });

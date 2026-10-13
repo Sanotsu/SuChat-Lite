@@ -459,7 +459,10 @@ class RestoreExecutor {
         DBInitConfig.chatDbName,
       );
       if (!File(dbPath).existsSync()) return;
-      final db = await openDatabase(dbPath);
+      // 2026-09-18 FIX：singleInstance:false(独立连接)——默认单例下
+      // 此处close()会关掉app全局共享连接，合并恢复后查库报
+      // DatabaseException(database_closed)
+      final db = await openDatabase(dbPath, singleInstance: false);
       try {
         // 新版备份：备份私有区根 → 当前私有区根
         if (oldRoot != null && oldRoot.isNotEmpty) {
@@ -584,36 +587,41 @@ class RestoreExecutor {
   }
 
   /// json文件名 -> 模块显示名(恢复向导预览用)
+  /// 2026-10-12 细分到实际内容粒度(每个文件一个勾选项，名称即所见)
   static String moduleNameOf(String filename) {
     final f = filename.toLowerCase();
     return switch (f) {
       CHARACTER_CARD_LIST_FILE_NAME => '旧版角色卡',
-      BRANCH_CHAT_HISTORY_FILE_NAME => '旧版聊天历史',
+      BRANCH_CHAT_HISTORY_FILE_NAME => '旧版聊天历史(自动转新版)',
       '${UnifiedChatDdl.tableUnifiedPlatformSpec}.json' => '新版聊天-平台配置',
       '${UnifiedChatDdl.tableUnifiedModelSpec}.json' => '新版聊天-模型列表',
       '${UnifiedChatDdl.tableUnifiedChatPartner}.json' => '新版聊天-搭档角色',
       '${UnifiedChatDdl.tableUnifiedConversation}.json' => '新版聊天-对话',
       '${UnifiedChatDdl.tableUnifiedChatMessage}.json' => '新版聊天-消息',
       '${UnifiedChatDdl.tableUnifiedApiKey}.json' => '新版聊天-密钥(跳过)',
-      '${DBDdl.tableVoiceRecognitionTask}.json' => 'AI工具-语音任务',
+      // 旧体系两张死表(2026-09-07退役，常量已删——用0.1.4导出的
+      // 实际文件名字面量)：新版本无对应表，执行时跳过
+      'suchat_brief_cus_llm_spec.json' => '旧版AI配置(已废弃跳过)',
+      'suchat_brief_media_generation_history.json' => '旧版生成记录(已废弃跳过)',
+      '${DBDdl.tableVoiceRecognitionTask}.json' => 'AI工具-语音识别任务',
       '${DBDdl.tableUserInfo}.json' => '用户信息',
-      '${TrainingDdl.tableTrainingPlan}.json' => '训练助手',
-      '${TrainingDdl.tableTrainingPlanDetail}.json' => '训练助手',
-      '${TrainingDdl.tableTrainingRecord}.json' => '训练助手',
-      '${TrainingDdl.tableTrainingRecordDetail}.json' => '训练助手',
-      '${DietDiaryDdl.tableDietAnalysis}.json' => '饮食日记',
-      '${DietDiaryDdl.tableDietRecipe}.json' => '饮食日记',
-      '${DietDiaryDdl.tableFoodItem}.json' => '饮食日记',
-      '${DietDiaryDdl.tableMealFoodRecord}.json' => '饮食日记',
-      '${DietDiaryDdl.tableMealRecord}.json' => '饮食日记',
-      '${DietDiaryDdl.tableWeightRecord}.json' => '饮食日记',
-      '${SimpleAccountingDdl.tableBillCategory}.json' => '极简记账',
-      '${SimpleAccountingDdl.tableBillItem}.json' => '极简记账',
-      '${NotebookDdl.tableNoteCategory}.json' => '记事本',
-      '${NotebookDdl.tableNoteTag}.json' => '记事本',
-      '${NotebookDdl.tableNoteMedia}.json' => '记事本',
-      '${NotebookDdl.tableNote}.json' => '记事本',
-      '${NotebookDdl.tableNoteTagRelation}.json' => '记事本',
+      '${TrainingDdl.tableTrainingPlan}.json' => '训练助手-训练计划',
+      '${TrainingDdl.tableTrainingPlanDetail}.json' => '训练助手-训练计划明细',
+      '${TrainingDdl.tableTrainingRecord}.json' => '训练助手-训练记录',
+      '${TrainingDdl.tableTrainingRecordDetail}.json' => '训练助手-训练记录明细',
+      '${DietDiaryDdl.tableDietAnalysis}.json' => '饮食日记-AI分析',
+      '${DietDiaryDdl.tableDietRecipe}.json' => '饮食日记-推荐食谱',
+      '${DietDiaryDdl.tableFoodItem}.json' => '饮食日记-食物库',
+      '${DietDiaryDdl.tableMealFoodRecord}.json' => '饮食日记-餐食食材明细',
+      '${DietDiaryDdl.tableMealRecord}.json' => '饮食日记-餐食记录',
+      '${DietDiaryDdl.tableWeightRecord}.json' => '饮食日记-体重记录',
+      '${SimpleAccountingDdl.tableBillCategory}.json' => '极简记账-账单分类',
+      '${SimpleAccountingDdl.tableBillItem}.json' => '极简记账-账单明细',
+      '${NotebookDdl.tableNoteCategory}.json' => '记事本-笔记分类',
+      '${NotebookDdl.tableNoteTag}.json' => '记事本-笔记标签',
+      '${NotebookDdl.tableNoteMedia}.json' => '记事本-笔记媒体',
+      '${NotebookDdl.tableNote}.json' => '记事本-笔记',
+      '${NotebookDdl.tableNoteTagRelation}.json' => '记事本-标签关联',
       _ => '其他数据',
     };
   }

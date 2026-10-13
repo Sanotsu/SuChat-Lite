@@ -66,13 +66,20 @@ class UnifiedChatDao {
   }
 
   /// 更新对话统计
-  Future<void> updateConversationStats(String conversationId) async {
+  /// 更新会话统计(消息数/token/成本)
+  /// [updatedAt] 传入时写指定值；默认now(正常聊天场景)。
+  /// 2026-10-12 FIX：旧版数据迁移导入后统计刷新会把updated_at刷成
+  /// 当前时间，侧边栏排序/显示全变"刚刚"——导入器需传原始updateTime
+  Future<void> updateConversationStats(
+    String conversationId, {
+    DateTime? updatedAt,
+  }) async {
     final db = await dbInit.database;
 
     // 计算消息数量、总token和总成本
     final results = await db.rawQuery(
       '''
-      SELECT 
+      SELECT
         COUNT(*) as message_count,
         SUM(token_count) as total_tokens,
         SUM(cost) as total_cost
@@ -90,7 +97,9 @@ class UnifiedChatDao {
           'message_count': stats['message_count'] ?? 0,
           'total_tokens': stats['total_tokens'] ?? 0,
           'total_cost': stats['total_cost'] ?? 0.0,
-          'updated_at': DateTime.now().millisecondsSinceEpoch,
+          'updated_at':
+              updatedAt?.millisecondsSinceEpoch ??
+              DateTime.now().millisecondsSinceEpoch,
         },
         where: 'id = ?',
         whereArgs: [conversationId],

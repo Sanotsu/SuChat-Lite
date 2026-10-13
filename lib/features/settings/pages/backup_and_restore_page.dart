@@ -1,12 +1,12 @@
 // ignore_for_file: constant_identifier_names
 
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:bot_toast/bot_toast.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import '../../../core/utils/datetime_formatter.dart';
 import '../../../shared/widgets/toast_utils.dart';
@@ -42,37 +42,32 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
 
   ///
   /// 全量备份(0.1.5 改版)：
-  /// 1. 系统保存器选位置(免存储权限，iOS也可用)
-  /// 2. 流式构建zip(内存占用恒定)：
-  ///    数据json + 外观设置 + 清单 + 小媒体(单文件≤10MB，总配额500MB)
+  /// 1. 流式构建zip到应用缓存目录
+  /// 2. 系统保存器选位置，由file_picker经SAF写入(bytes通道)
   /// 3. 视频等大文件经"媒体文件包"单独导出
   ///
+  /// 2026-10-12 FIX：Android的saveFile返回content://URI，
+  /// toFilePath()转出'/document'这类不可写路径，ZipFileEncoder
+  /// create直接errno 30(Read-only file system)。改为先在缓存目录
+  /// 构建完整zip，再交file_picker的bytes通道落盘(官方支持写法)
   Future<void> exportAllData({bool includeMedia = true}) async {
     if (!mounted) return;
 
     final zipName = '$ZIP_FILE_PREFIX${fileTs(DateTime.now())}.zip';
+    final tempDir = await getTemporaryDirectory();
+    final tmpZipPath = p.join(tempDir.path, zipName);
 
-    // 系统保存器选择保存位置(file_picker 12 要求 bytes 必填：传空占位，
-    // 仅借系统保存器拿到目标路径，zip 随后流式写入覆盖)
-    final Uri? saveUri = await FilePicker.saveFile(
-      fileName: zipName,
-      type: FileType.custom,
-      allowedExtensions: ['zip'],
-      bytes: Uint8List(0),
-    );
-    if (saveUri == null) return; // 用户取消
-    final String savePath = saveUri.toFilePath();
     if (isLoading) return;
 
     setState(() {
       isLoading = true;
     });
 
+    CancelFunc? closeLoading;
     try {
-      // 阶段提示：每阶段关旧开新(BotToast 不支持更新文字)，结束后必关
-      CancelFunc? closeLoading;
+      // 1. 先在应用缓存目录流式构建zip
       await BackupUtils.buildDataPack(
-        zipPath: savePath,
+        zipPath: tmpZipPath,
         includeMedia: includeMedia,
         onStage: (stage) {
           if (mounted) {
@@ -81,38 +76,49 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
           }
         },
       );
-      closeLoading?.call();
 
+      // 2. 系统保存器选位置，由file_picker经SAF写入
+      closeLoading?.call();
+      final tmpZip = File(tmpZipPath);
+      final Uri? saveUri = await FilePicker.saveFile(
+        fileName: zipName,
+        type: FileType.custom,
+        allowedExtensions: ['zip'],
+        bytes: await tmpZip.readAsBytes(),
+      );
+      await tmpZip.delete();
+
+      if (!mounted) return;
       setState(() {
         isLoading = false;
       });
 
+      if (saveUri == null) return; // 用户取消
       ToastUtils.showSuccess(
-        '备份已保存到: $savePath',
+        '备份已保存到: ${saveUri.toFilePath()}',
         duration: const Duration(seconds: 5),
       );
     } catch (e) {
+      closeLoading?.call();
+      if (File(tmpZipPath).existsSync()) File(tmpZipPath).deleteSync();
       debugPrint('保存操作出现错误: $e');
       ToastUtils.showError('备份失败: $e');
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
   /// 导出大媒体文件包(视频等未纳入全量备份的大文件)
+  /// 2026-10-12 FIX：同exportAllData，SAF content URI不能当文件路径写
   Future<void> exportMediaPack() async {
     if (!mounted || isLoading) return;
 
     final zipName = '$MEDIA_PACK_PREFIX${fileTs(DateTime.now())}.zip';
-    final Uri? saveUri = await FilePicker.saveFile(
-      fileName: zipName,
-      type: FileType.custom,
-      allowedExtensions: ['zip'],
-      bytes: Uint8List(0),
-    );
-    if (saveUri == null) return;
-    final String savePath = saveUri.toFilePath();
+    final tempDir = await getTemporaryDirectory();
+    final tmpZipPath = p.join(tempDir.path, zipName);
 
     setState(() {
       isLoading = true;
@@ -121,32 +127,52 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
     try {
       // 之前未持有 CancelFunc，loading 遮罩永不关闭锁死界面
       final closeLoading = ToastUtils.showLoading('正在扫描大媒体文件...');
+      BackupBuildResult result;
       try {
-        final result = await BackupUtils.buildMediaPack(zipPath: savePath);
+        result = await BackupUtils.buildMediaPack(zipPath: tmpZipPath);
         closeLoading();
-
-        setState(() {
-          isLoading = false;
-        });
-
-        if (result.includedCount == 0) {
-          ToastUtils.showInfo('没有需要单独打包的大媒体文件');
-          File(savePath).deleteSync();
-        } else {
-          ToastUtils.showSuccess(
-            '媒体包已保存到: $savePath\n(共${result.includedCount}个文件)',
-            duration: const Duration(seconds: 5),
-          );
-        }
       } catch (e) {
         closeLoading();
         rethrow;
       }
-    } catch (e) {
-      ToastUtils.showError('导出媒体包失败: $e');
+
+      if (result.includedCount == 0) {
+        if (File(tmpZipPath).existsSync()) File(tmpZipPath).deleteSync();
+        if (!mounted) return;
+        setState(() {
+          isLoading = false;
+        });
+        ToastUtils.showInfo('没有需要单独打包的大媒体文件');
+        return;
+      }
+
+      // zip构建完成，经系统保存器写入用户选的位置
+      final Uri? saveUri = await FilePicker.saveFile(
+        fileName: zipName,
+        type: FileType.custom,
+        allowedExtensions: ['zip'],
+        bytes: await File(tmpZipPath).readAsBytes(),
+      );
+      if (File(tmpZipPath).existsSync()) File(tmpZipPath).deleteSync();
+
+      if (!mounted) return;
       setState(() {
         isLoading = false;
       });
+
+      if (saveUri == null) return; // 用户取消
+      ToastUtils.showSuccess(
+        '媒体包已保存到: ${saveUri.toFilePath()}\n(共${result.includedCount}个文件)',
+        duration: const Duration(seconds: 5),
+      );
+    } catch (e) {
+      if (File(tmpZipPath).existsSync()) File(tmpZipPath).deleteSync();
+      ToastUtils.showError('导出媒体包失败: $e');
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -169,7 +195,44 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
   /// 2026-09-01 恢复入口改为三步向导(解析预览 -> 模块/会话勾选 -> 进度执行)：
   /// 解决旧流程"无进度、不能部分恢复"两个问题
   ///
+  /// 2026-10-12 新增旧版统一聊天导出文件夹导入：
+  /// 0.1.4的全量备份zip不含统一聊天数据(旧版设计：统一聊天单独导出到
+  /// SuChatFiles/BAKUP/backup_files/unified_chat/db_export/)——提供
+  /// 文件夹选择入口，选该目录(或其上级)即可恢复旧统一聊天
   Future<void> restoreDataFromBackup() async {
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('选择恢复来源'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, 'zip'),
+            child: const ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.archive_outlined),
+              title: Text('全量备份压缩包'),
+              subtitle: Text('SuChat全量数据备份_*.zip'),
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, 'folder'),
+            child: const ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.folder_outlined),
+              title: Text('旧版统一聊天导出文件夹'),
+              subtitle: Text('SuChatFiles/BAKUP/.../db_export'),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (choice == null || !mounted) return; // 用户取消
+
+    if (choice == 'folder') {
+      await _restoreFromLegacyUnifiedFolder();
+      return;
+    }
+
     File? file = await FilePickerUtils.pickAndSaveFile(
       fileType: CusFileType.custom,
       // 导出时指定为zip，所以这里也限制为zip
@@ -195,6 +258,51 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
     } else {
       ToastUtils.showError("用于恢复的备份文件格式不对，恢复已取消。");
     }
+  }
+
+  /// 旧版统一聊天db_export文件夹导入
+  Future<void> _restoreFromLegacyUnifiedFolder() async {
+    final String? dirPath = await FilePicker.getDirectoryPath(
+      dialogTitle: '选择 unified_chat/db_export 目录(或其任意上级目录)',
+    );
+    if (dirPath == null || !mounted) return; // 用户取消
+
+    // 宽容匹配：优先扫所选目录根，若无json则扫一层子目录
+    // (选db_export本身/unified_chat/backup_files均可命中)
+    var root = Directory(dirPath);
+    var jsonFiles = root
+        .listSync()
+        .whereType<File>()
+        .where((f) => f.path.toLowerCase().endsWith('.json'))
+        .toList();
+
+    if (jsonFiles.isEmpty) {
+      for (final e in root.listSync()) {
+        if (e is Directory) {
+          jsonFiles.addAll(
+            e.listSync().whereType<File>().where(
+              (f) => f.path.toLowerCase().endsWith('.json'),
+            ),
+          );
+        }
+      }
+    }
+
+    // 必须命中统一聊天导出特征，防止误选其他文件夹
+    final hasUnified = jsonFiles.any(
+      (f) => p.basename(f.path).toLowerCase().startsWith('suchat_unified_'),
+    );
+    if (!hasUnified) {
+      ToastUtils.showError('所选目录中未找到统一聊天导出数据(suchat_unified_*.json)，恢复已取消');
+      return;
+    }
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RestoreWizardPage(preParsedFiles: jsonFiles),
+      ),
+    );
   }
 
   @override

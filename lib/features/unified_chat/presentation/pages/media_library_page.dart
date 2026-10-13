@@ -91,7 +91,7 @@ class _MediaLibraryPageState extends State<MediaLibraryPage> {
         type == null ? items.length : items.where((i) => i.type == type).length;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.fromLTRB(8, 12, 8, 4),
       child: Wrap(
         spacing: 8,
         runSpacing: 4,
@@ -124,12 +124,20 @@ class _MediaLibraryPageState extends State<MediaLibraryPage> {
     return ChoiceChip(
       label: Text('$label ($count)'),
       selected: isSelected,
+      showCheckmark: false,
       onSelected: (_) => setState(() => _filter = type),
       labelStyle: TextStyle(
         fontSize: 12,
         color: isSelected ? Colors.white : null,
       ),
       selectedColor: theme.primaryColor,
+      // 压缩内边距
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+      labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+      // 收紧整体高度
+      visualDensity: VisualDensity.compact,
+      // 去掉 48dp 最小点击区
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 
