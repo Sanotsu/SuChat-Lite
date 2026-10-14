@@ -376,18 +376,20 @@ class VideoGenerationService {
     switch (platform.id) {
       case 'aliyun':
         // 百炼视频模型族(万相/HappyHorse/爱诗等)共用同一异步任务框架，
-        // 但请求体分四类协议(2026-09-02 依官方文档核定，HH经实测修正)：
+        // 但请求体分四类协议(2026-10-14 依官方文档核定)：
         //  1. wan3.0：input.media数组(首帧可选)，parameters用resolution+ratio(含adaptive)+duration[2,30]+audio
-        //  2. HappyHorse：t2v仅prompt；i2v的input.media必选(仅1张首帧)且不支持ratio；duration[3,15]，watermark默认true
-        //  3. wan2.7/2.6：input.img_url，parameters用resolution+ratio+duration
+        //  2. HappyHorse/wan2.7：t2v仅prompt；i2v的input.media必选(first_frame)；
+        //     r2v为reference_image(文档要求prompt用[Image N]指代)；均不支持ratio(跟随素材)
+        //     (2026-10-14 FIX：wan2.7此前误归旧img_url协议——官方
+        //      wan2.7-i2v/r2v文档已改用media数组，img_url仅wan2.6及更早)
+        //     (2026-10-14 FIX：happyhorse r2v参考图此前误传first_frame类型)
+        //  3. wan2.6：input.img_url，parameters用resolution+ratio+duration
         //  4. wan2.2及更早/PixVerse等：input.img_url，parameters用size像素值(必选)+duration
         // 注意：resolution/duration直接影响计费，平台默认1080P为最贵档；
         // 未配置时这里默认720P(画质与费用平衡)，可经设置弹窗调整
         final isWan3 = model.startsWith('wan3.');
         final isHappyHorse = model.startsWith('happyhorse');
-        final isResolutionStyle =
-            !isHappyHorse &&
-            (model.startsWith('wan2.7') || model.startsWith('wan2.6'));
+        final isResolutionStyle = model.startsWith('wan2.6');
 
         if (isWan3) {
           return {
@@ -413,20 +415,25 @@ class VideoGenerationService {
           };
         }
 
-        if (isHappyHorse) {
-          // i2v宽高比自动跟随首帧，仅t2v接受ratio；
-          // watermark平台默认true(右下角"Happy Horse")，这里默认false可经弹窗开启
+        if (isHappyHorse || model.startsWith('wan2.7')) {
+          // media元素type按模型用途区分：i2v首帧、r2v参考图
+          final mediaType = model.contains('-r2v')
+              ? 'reference_image'
+              : 'first_frame';
           return {
             'model': model,
             'input': {
               'prompt': prompt,
               if (refImage != null)
                 'media': [
-                  {'type': 'first_frame', 'url': refImage},
+                  {'type': mediaType, 'url': refImage},
                 ],
             },
             'parameters': {
+              // happyhorse文档parameters无prompt_extend；wan2.7默认true
+              if (!isHappyHorse) 'prompt_extend': true,
               'resolution': settings?['resolution'] ?? '720P',
+              // i2v/r2v无ratio参数(输出比例跟随素材)，仅t2v接受
               if (refImage == null && settings?['ratio'] != null)
                 'ratio': settings!['ratio'],
               if (settings?['duration'] != null)

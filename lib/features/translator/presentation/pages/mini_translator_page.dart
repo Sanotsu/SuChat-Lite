@@ -370,8 +370,9 @@ class _MiniTranslatorPageState extends State<MiniTranslatorPage> {
         request: SpeechSynthesisRequest(
           model: entry.model.modelName,
           input: _translatedText!.trim(),
-          // 阿里qwen-tts需要显式音色，使用其默认音色；其他平台走服务端默认
-          voice: entry.platform.id == 'aliyun' ? 'Cherry' : null,
+          // 音色不固定传——阿里Qwen-Audio-TTS与Qwen-TTS音色体系不同
+          // (Cherry仅后者有效)，由toAliyunFormat按模型族取默认音色
+          voice: null,
           responseFormat: entry.platform.id == 'aliyun' ? null : 'mp3',
         ),
       );

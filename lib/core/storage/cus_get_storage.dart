@@ -139,6 +139,24 @@ class CusGetStorage {
   }
 
   ///
+  /// AI 翻译模型偏好(platformId + modelId)：
+  /// 页面内嵌翻译(MAL详情标题/简介等经 TranslationService)使用的模型，
+  /// 2026-10-13 此前固定取统一库第一个可用对话模型，用户不可控。
+  /// null = 跟随默认(统一库第一个可用对话模型)
+  ///
+  static const String aiTranslationModelKey = 'ai_translation_model';
+
+  Future<void> setAiTranslationModel(Map<String, String>? pref) async {
+    await box.write(aiTranslationModelKey, pref);
+  }
+
+  Map<String, String>? getAiTranslationModel() {
+    final raw = box.read(aiTranslationModelKey);
+    if (raw == null) return null;
+    return Map<String, String>.from(raw);
+  }
+
+  ///
   /// GitHub存储配置相关
   ///
   static const String githubUsernameKey = 'github_username';

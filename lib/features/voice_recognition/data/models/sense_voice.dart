@@ -60,6 +60,11 @@ class SenseVoiceJROutput {
   @JsonKey(name: 'results')
   List<SenseVoiceJROutputResult>? results;
 
+  // 2026-10-14 FIX：qwen3-asr-flash-filetrans的结果在output.result
+  // (单数对象，官方qwen-asr-api-reference)，与Fun-ASR系的results[]不同
+  @JsonKey(name: 'result')
+  SenseVoiceJROutputResult? result;
+
   @JsonKey(name: 'task_metrics')
   SenseVoiceJROutputTaskMetric? taskMetrics;
 
@@ -79,8 +84,9 @@ class SenseVoiceJROutput {
     this.results,
     this.taskMetrics,
     this.code,
-    this.message,
-  );
+    this.message, {
+    this.result,
+  });
 
   // 从字符串转
   factory SenseVoiceJROutput.fromRawJson(String str) =>

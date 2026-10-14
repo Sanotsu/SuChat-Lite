@@ -19,7 +19,7 @@ class OneHpDetail {
   @JsonKey(name: 'category')
   String? category;
 
-  @JsonKey(name: 'display_category')
+  @JsonKey(name: 'display_category', readValue: tolerantIntReadValue)
   int? displayCategory;
 
   @JsonKey(name: 'item_id')
@@ -37,7 +37,7 @@ class OneHpDetail {
   @JsonKey(name: 'pic_ipX')
   String? picIpX;
 
-  @JsonKey(name: 'like_count')
+  @JsonKey(name: 'like_count', readValue: tolerantIntReadValue)
   int? likeCount;
 
   @JsonKey(name: 'post_date')
@@ -56,13 +56,13 @@ class OneHpDetail {
   @JsonKey(name: 'audio_url')
   String? audioUrl;
 
-  @JsonKey(name: 'audio_platform')
+  @JsonKey(name: 'audio_platform', readValue: tolerantIntReadValue)
   int? audioPlatform;
 
   @JsonKey(name: 'start_video')
   String? startVideo;
 
-  @JsonKey(name: 'has_reading')
+  @JsonKey(name: 'has_reading', readValue: tolerantIntReadValue)
   int? hasReading;
 
   @JsonKey(name: 'volume')
@@ -77,16 +77,16 @@ class OneHpDetail {
   @JsonKey(name: 'subtitle')
   String? subtitle;
 
-  @JsonKey(name: 'number')
+  @JsonKey(name: 'number', readValue: tolerantIntReadValue)
   int? number;
 
-  @JsonKey(name: 'serial_id')
+  @JsonKey(name: 'serial_id', readValue: tolerantIntReadValue)
   int? serialId;
 
   @JsonKey(name: 'serial_list')
   List<dynamic>? serialList;
 
-  @JsonKey(name: 'movie_story_id')
+  @JsonKey(name: 'movie_story_id', readValue: tolerantIntReadValue)
   int? movieStoryId;
 
   @JsonKey(name: 'content_id')
@@ -166,7 +166,7 @@ class OneContentDetail {
   @JsonKey(name: 'anchor')
   String? anchor;
 
-  @JsonKey(name: 'category')
+  @JsonKey(name: 'category', readValue: tolerantIntReadValue)
   int? category;
 
   @JsonKey(name: 'id')
@@ -191,11 +191,11 @@ class OneContentDetail {
   String? homeImage;
 
   // 点赞数
-  @JsonKey(name: 'praisenum')
+  @JsonKey(name: 'praisenum', readValue: tolerantIntReadValue)
   int? praisenum;
 
   // 评论数
-  @JsonKey(name: 'commentnum')
+  @JsonKey(name: 'commentnum', readValue: tolerantIntReadValue)
   int? commentnum;
 
   @JsonKey(name: 'json_content')
@@ -301,13 +301,13 @@ class OneContentDetailJson {
   String? simpleAnswerer;
 
   /// 音乐额外还有的栏位
-  @JsonKey(name: 'id')
+  @JsonKey(name: 'id', readValue: tolerantIntReadValue)
   int? id;
 
   @JsonKey(name: 'audio_url')
   String? audioUrl;
 
-  @JsonKey(name: 'audio_platform')
+  @JsonKey(name: 'audio_platform', readValue: tolerantIntReadValue)
   int? audioPlatform;
 
   @JsonKey(name: 'platform_name')
@@ -402,7 +402,7 @@ class OneContentJsonAuthor {
 
 @JsonSerializable(explicitToJson: true)
 class OneContentBriefAuthor {
-  @JsonKey(name: 'id')
+  @JsonKey(name: 'id', readValue: tolerantIntReadValue)
   int? id;
 
   @JsonKey(name: 'avatar')
@@ -505,10 +505,10 @@ class OneDataArticle {
 
 @JsonSerializable(explicitToJson: true)
 class OneSerialNav {
-  @JsonKey(name: 'prev')
+  @JsonKey(name: 'prev', readValue: tolerantIntReadValue)
   int? prev;
 
-  @JsonKey(name: 'next')
+  @JsonKey(name: 'next', readValue: tolerantIntReadValue)
   int? next;
 
   OneSerialNav({this.prev, this.next});
@@ -525,7 +525,7 @@ class OneSerialNav {
 /// 评论列表响应的data栏位包含总计和评论列表
 @JsonSerializable(explicitToJson: true)
 class OneCommentList {
-  @JsonKey(name: 'count')
+  @JsonKey(name: 'count', readValue: tolerantIntReadValue)
   int? count;
 
   @JsonKey(name: 'data')
@@ -550,7 +550,7 @@ class OneComment {
   @JsonKey(name: 'content')
   String? content;
 
-  @JsonKey(name: 'praisenum')
+  @JsonKey(name: 'praisenum', readValue: tolerantIntReadValue)
   int? praisenum;
 
   @JsonKey(name: 'device_token')
@@ -580,7 +580,7 @@ class OneComment {
   @JsonKey(name: 'touser')
   OneUser? touser;
 
-  @JsonKey(name: 'type')
+  @JsonKey(name: 'type', readValue: tolerantIntReadValue)
   int? type;
 
   OneComment({

@@ -178,10 +178,13 @@ class VoiceRecognitionTaskInfo {
 
   // 获取识别结果URL
   String? get transcriptionUrl {
-    if (jobResponse?.output?.results != null &&
-        jobResponse!.output!.results!.isNotEmpty) {
-      return jobResponse!.output!.results!.first.transcriptionUrl;
+    final output = jobResponse?.output;
+    // 2026-10-14 FIX：双路径兼容
+    // Fun-ASR/qwen-audio-3.x-asr-flash-filetrans在output.results[]数组；
+    // qwen3-asr-flash-filetrans在output.result单数对象
+    if (output?.results != null && output!.results!.isNotEmpty) {
+      return output.results!.first.transcriptionUrl;
     }
-    return null;
+    return output?.result?.transcriptionUrl;
   }
 }

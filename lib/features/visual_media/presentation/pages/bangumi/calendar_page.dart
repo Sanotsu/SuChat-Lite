@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import '../../../../../shared/widgets/cus_content_width.dart';
 import 'package:easy_refresh/easy_refresh.dart';
@@ -227,9 +225,11 @@ class _BangumiCalendarPageState extends State<BangumiCalendarPage> {
                                 textAlign: TextAlign.center,
                               ),
                             ),
-                            buildItemCardWrap(
-                              calendarList[index],
-                              selectedBgmType,
+                            // 2026-10-13 每日放送也走统一网格
+                            buildSubjectGrid(
+                              calendarList[index].items ?? [],
+                              type: selectedBgmType,
+                              shrinkWrap: true,
                             ),
 
                             /// 直接使用这个，放在一行滚动到左右边界时，会显示EasyRefresh的loading图标
@@ -245,89 +245,56 @@ class _BangumiCalendarPageState extends State<BangumiCalendarPage> {
                         );
                       },
                     )
-                  : GridView.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 500,
-                            childAspectRatio: 2.8, // 调整子组件的宽高比
-                          ),
-                      itemCount: subjectList.length,
-                      itemBuilder: (context, index) {
-                        var subject = subjectList[index];
-
-                        return buildOverviewItem(subject, index);
-                      },
-                    ),
+                  : buildSubjectGrid(subjectList, type: selectedBgmType),
             ),
     );
   }
 
-  /// 预览列表的条目
-  Widget buildOverviewItem(BGMSubject subject, int index) {
-    return OverviewItem(
-      imageUrl: subject.images?.medium ?? "",
-      title: (subject.nameCn != null && subject.nameCn!.isNotEmpty)
-          ? subject.nameCn!
-          : subject.name ?? "",
-      rankWidget: buildBgmScoreArea(
-        subject.rating?.score,
-        total: subject.rating?.total,
-        rank: subject.rank,
-      ),
-      targetPage: BangumiItemDetailPage(
-        id: subject.id!,
-        subType: selectedBgmType.cnLabel,
-      ),
-      overviewList: [
-        Text(
-          "类型: ${bgmTypes.where((e) => e.value == subject.type).first.cnLabel}",
-          style: TextStyle(fontSize: 12.sp),
-          maxLines: 1,
-        ),
-        Text(
-          "原名: ${subject.name}",
-          style: TextStyle(fontSize: 12.sp),
-          maxLines: 1,
-        ),
-        Text(
-          "首播: ${subject.airDate}",
-          style: TextStyle(fontSize: 12.sp),
-          maxLines: 1,
-        ),
-      ],
-    );
-  }
+  /// 统一网格(2026-10-13)：与 MAL 放映计划页同一套规则——
+  /// 移动端2列/桌面端4列自适应，卡片高度贴合内容约250。
+  /// [shrinkWrap]为true时用于每日放送的周几分组嵌套(不自滚动)
+  Widget buildSubjectGrid(
+    List<BGMSubject> subjects, {
+    required CusLabel type,
+    bool shrinkWrap = false,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = (constraints.maxWidth / 230).floor().clamp(2, 6);
+        final tileWidth = constraints.maxWidth / crossAxisCount;
+        const contentHeight = 255.0;
 
-  /// 每日放送是查询一周七天，需要List中再嵌套一个周几的放映列表
-  Widget buildItemCardWrap(BGMLargeCalendar calendar, CusLabel type) {
-    return Wrap(
-      // direction: Axis.horizontal,
-      // 2026-09-04 桌面端适配: 卡片限宽并居中排布
-      alignment: WrapAlignment.center,
-      children: calendar.items != null && calendar.items!.isNotEmpty
-          ? List.generate(calendar.items!.length, (index) {
-              var subject = calendar.items![index];
-              return SizedBox(
-                height: 240.sp,
-                width: math.min(0.325.sw, 280.0),
-                child: buildPreviewTileCard(
-                  context,
-                  // grid和small过于小了
-                  subject.images?.medium ?? "",
-                  subject.airDate ?? "",
-                  subject.rating?.score ?? 0,
-                  subject.rating?.total ?? 0,
-                  (subject.nameCn != null && subject.nameCn!.isNotEmpty)
-                      ? subject.nameCn!
-                      : subject.name ?? "",
-                  targetPage: BangumiItemDetailPage(
-                    id: subject.id!,
-                    subType: type.cnLabel,
-                  ),
-                ),
-              );
-            }).toList()
-          : [],
+        return GridView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          shrinkWrap: shrinkWrap,
+          physics: shrinkWrap ? const NeverScrollableScrollPhysics() : null,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: tileWidth / contentHeight,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+          ),
+          itemCount: subjects.length,
+          itemBuilder: (context, index) {
+            var subject = subjects[index];
+
+            return buildPreviewTileCard(
+              context,
+              subject.images?.medium ?? "",
+              subject.airDate ?? "",
+              subject.rating?.score ?? 0,
+              subject.rating?.total ?? 0,
+              (subject.nameCn != null && subject.nameCn!.isNotEmpty)
+                  ? subject.nameCn!
+                  : subject.name ?? "",
+              targetPage: BangumiItemDetailPage(
+                id: subject.id!,
+                subType: type.cnLabel,
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

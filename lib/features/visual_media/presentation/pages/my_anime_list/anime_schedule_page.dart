@@ -318,27 +318,48 @@ class _MALAnimeSchedulePageState extends State<MALAnimeSchedulePage> {
                       }
                     }
                   : null,
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 380,
-                  childAspectRatio: 9 / 18, // 调整子组件的宽高比
-                ),
-                itemCount: subjectList.length,
-                itemBuilder: (context, index) {
-                  var item = subjectList[index];
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // 列数：按目标格宽220计算并至少2列——移动端(~360-边距)
+                  // 2列、桌面端(~1000宽)4列、超宽屏最多6列防溢出
+                  final crossAxisCount = (constraints.maxWidth / 230)
+                      .floor()
+                      .clamp(2, 6);
+                  final tileWidth = constraints.maxWidth / crossAxisCount;
+                  const contentHeight = 255.0;
 
-                  return buildPreviewTileCard(
-                    context,
-                    item.images.jpg?.imageUrl ?? "",
-                    "${item.aired?.from?.split("T").first}",
-                    item.score ?? 0,
-                    item.scoredBy ?? 0,
-                    item.title ?? item.titleJapanese ?? "",
-                    targetPage: MALItemDetailPage(
-                      item: item,
-                      // 放映默认应该只有动画
-                      malType: CusLabel(cnLabel: "动画", value: MALType.anime),
+                  return GridView.builder(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
                     ),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      childAspectRatio: tileWidth / contentHeight,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                    ),
+                    itemCount: subjectList.length,
+                    itemBuilder: (context, index) {
+                      var item = subjectList[index];
+
+                      return buildPreviewTileCard(
+                        context,
+                        item.images.jpg?.imageUrl ?? "",
+                        "${item.aired?.from?.split("T").first}",
+                        item.score ?? 0,
+                        item.scoredBy ?? 0,
+                        item.title ?? item.titleJapanese ?? "",
+                        targetPage: MALItemDetailPage(
+                          item: item,
+                          // 放映默认应该只有动画
+                          malType: CusLabel(
+                            cnLabel: "动画",
+                            value: MALType.anime,
+                          ),
+                        ),
+                      );
+                    },
                   );
                 },
               ),

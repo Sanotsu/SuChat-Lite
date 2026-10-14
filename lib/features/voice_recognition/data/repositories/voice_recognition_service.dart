@@ -195,13 +195,15 @@ class VoiceRecognitionService {
       final apiKey = await _getApiKey();
       final url = _getTaskQueryUrl(taskId);
 
+      // 2026-10-14 FIX：任务查询用GET(官方文档/fun-asr-recorded-speech-
+      // recognition-http-api)，此前误用POST且带冗余的X-DashScope-Async头
+      // (该头仅提交任务时需要)
       final headers = {
         'content-type': 'application/json',
         'Authorization': 'Bearer $apiKey',
-        'X-DashScope-Async': 'enable',
       };
 
-      final response = await HttpUtils.post(
+      final response = await HttpUtils.get(
         path: url,
         headers: headers,
         showLoading: false,

@@ -1,6 +1,7 @@
 // ignore_for_file: avoid_print
 
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 
 class ResponseIntercepter extends Interceptor {
   const ResponseIntercepter();
@@ -10,7 +11,7 @@ class ResponseIntercepter extends Interceptor {
     Response response,
     ResponseInterceptorHandler handler,
   ) async {
-    print('【onResponse】进入了dio的响应拦截器');
+    debugPrint('【onResponse】进入了dio的响应拦截器');
 
     // ??? 这里打印response和response.data是一样的
 

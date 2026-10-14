@@ -45,7 +45,7 @@ class OneRecommendContent {
   @JsonKey(name: 'category')
   String? category;
 
-  @JsonKey(name: 'display_category')
+  @JsonKey(name: 'display_category', readValue: tolerantIntReadValue)
   int? displayCategory;
 
   @JsonKey(name: 'item_id')
@@ -63,7 +63,7 @@ class OneRecommendContent {
   @JsonKey(name: 'pic_ipX')
   String? picIpX;
 
-  @JsonKey(name: 'like_count')
+  @JsonKey(name: 'like_count', readValue: tolerantIntReadValue)
   int? likeCount;
 
   @JsonKey(name: 'post_date')
@@ -81,13 +81,13 @@ class OneRecommendContent {
   @JsonKey(name: 'audio_url')
   String? audioUrl;
 
-  @JsonKey(name: 'audio_platform')
+  @JsonKey(name: 'audio_platform', readValue: tolerantIntReadValue)
   int? audioPlatform;
 
   @JsonKey(name: 'start_video')
   String? startVideo;
 
-  @JsonKey(name: 'has_reading')
+  @JsonKey(name: 'has_reading', readValue: tolerantIntReadValue)
   int? hasReading;
 
   // 可能是数字也可能是字符串
@@ -117,7 +117,7 @@ class OneRecommendContent {
   @JsonKey(name: 'serial_list')
   List<dynamic>? serialList;
 
-  @JsonKey(name: 'movie_story_id')
+  @JsonKey(name: 'movie_story_id', readValue: tolerantIntReadValue)
   int? movieStoryId;
 
   @JsonKey(name: 'content_id')
@@ -241,7 +241,7 @@ class OneRecommendMenuContent {
 
 @JsonSerializable(explicitToJson: true)
 class OneMonthRecommend {
-  @JsonKey(name: 'id')
+  @JsonKey(name: 'id', readValue: tolerantIntReadValue)
   int? id;
 
   @JsonKey(name: 'date')

@@ -52,7 +52,18 @@ class _OneDetailPageState extends State<OneDetailPage> {
   bool _isDarkMode = false;
   double _fontSize = 16.0;
   bool _showReadingProgress = true;
-  double _readingProgress = 0.0;
+
+  // 2026-10-13 PERF：滚动进度用 ValueNotifier 局部刷新——此前滚动中
+  // 每 1% 进度 setState 一次，整个页面(含长文 SelectableText 与
+  // ThemeData)全部重建，是长文章滚动卡顿的主因
+  final ValueNotifier<double> _readingProgressNotifier = ValueNotifier(0.0);
+
+  // 2026-10-13 PERF：ThemeData 构造成本高，缓存避免每次 build 重建
+  late ThemeData _pageTheme;
+
+  // 2026-10-13 PERF：正文 filterHtmlTags 正则结果缓存(加载后算一次，
+  // 此前每次 build 都对全文重跑正则)
+  String? _cachedPlainContent;
 
   @override
   void initState() {
@@ -75,12 +86,14 @@ class _OneDetailPageState extends State<OneDetailPage> {
       _fontSize = _settingsService.getFontSize();
       _isDarkMode = _settingsService.getIsDarkMode();
       _showReadingProgress = _settingsService.getShowReadingProgress();
+      _pageTheme = _isDarkMode ? ThemeData.dark() : ThemeData.light();
     });
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _readingProgressNotifier.dispose();
     super.dispose();
   }
 
@@ -94,10 +107,9 @@ class _OneDetailPageState extends State<OneDetailPage> {
             ? (currentScroll / maxScroll).clamp(0.0, 1.0)
             : 0.0;
 
-        if ((progress - _readingProgress).abs() > 0.01) {
-          setState(() {
-            _readingProgress = progress;
-          });
+        // 只更新 notifier(相同值不通知)，不再触发全页 setState
+        if ((progress - _readingProgressNotifier.value).abs() > 0.01) {
+          _readingProgressNotifier.value = progress;
         }
       }
     });
@@ -117,6 +129,7 @@ class _OneDetailPageState extends State<OneDetailPage> {
         if (mounted) {
           setState(() {
             _hpDetail = detail;
+            _cachePlainContent();
           });
         }
       } else {
@@ -128,6 +141,7 @@ class _OneDetailPageState extends State<OneDetailPage> {
         if (mounted) {
           setState(() {
             _contentDetail = detail;
+            _cachePlainContent();
           });
         }
       }
@@ -220,6 +234,8 @@ class _OneDetailPageState extends State<OneDetailPage> {
           onDarkModeChanged: (value) async {
             setState(() {
               _isDarkMode = value;
+              // 2026-10-13 PERF：主题只在切换时重建一次
+              _pageTheme = value ? ThemeData.dark() : ThemeData.light();
             });
             await _settingsService.setIsDarkMode(value);
           },
@@ -244,7 +260,8 @@ class _OneDetailPageState extends State<OneDetailPage> {
   Widget build(BuildContext context) {
     return CusContentWidth(
       child: Theme(
-        data: _isDarkMode ? ThemeData.dark() : ThemeData.light(),
+        // 2026-10-13 PERF：用缓存的 Theme(此前每次 build 新建 ThemeData)
+        data: _pageTheme,
         child: Scaffold(
           appBar: AppBar(
             title: Text(
@@ -267,13 +284,20 @@ class _OneDetailPageState extends State<OneDetailPage> {
           ),
           body: Column(
             children: [
-              // 阅读进度条
+              // 阅读进度条(ValueListenableBuilder局部刷新，不重建页面)
               if (_showReadingProgress)
-                LinearProgressIndicator(
-                  value: _readingProgress,
-                  backgroundColor: _isDarkMode ? Colors.grey : Colors.grey[300],
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    _isDarkMode ? Colors.white : Theme.of(context).primaryColor,
+                ValueListenableBuilder<double>(
+                  valueListenable: _readingProgressNotifier,
+                  builder: (context, progress, _) => LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: _isDarkMode
+                        ? Colors.grey
+                        : Colors.grey[300],
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      _isDarkMode
+                          ? Colors.white
+                          : Theme.of(context).primaryColor,
+                    ),
                   ),
                 ),
               // 内容区域
@@ -516,17 +540,20 @@ class _OneDetailPageState extends State<OneDetailPage> {
         .trim();
   }
 
-  /// 构建正文内容
-  Widget _buildContentSection() {
+  /// 缓存正文的纯文本(filterHtmlTags 只算一次)
+  void _cachePlainContent() {
     String? content;
-
     if (_contentDetail?.jsonContent?.content != null) {
       content = _contentDetail!.jsonContent!.content;
     } else if (_hpDetail?.forward != null) {
       content = _hpDetail!.forward;
     }
+    _cachedPlainContent = content == null ? null : filterHtmlTags(content);
+  }
 
-    if (content == null) return const SizedBox.shrink();
+  /// 构建正文内容
+  Widget _buildContentSection() {
+    if (_cachedPlainContent == null) return const SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -540,7 +567,7 @@ class _OneDetailPageState extends State<OneDetailPage> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 680),
               child: SelectableText(
-                filterHtmlTags(content),
+                _cachedPlainContent!,
                 style: TextStyle(
                   fontSize: _fontSize,
                   height: 1.6,

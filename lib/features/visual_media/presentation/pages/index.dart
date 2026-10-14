@@ -59,6 +59,8 @@ List<Widget> buildExpansionTileList(BuildContext context) {
   return [
     ExpansionTile(
       shape: const Border(),
+      // 当前动漫资讯只有一个，默认展开
+      initiallyExpanded: true,
       leading: const Icon(Icons.image, color: Colors.green),
       title: _titleWidget('动画和漫画'),
       children: _animeAndComics(context),

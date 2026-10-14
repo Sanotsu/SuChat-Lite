@@ -115,8 +115,13 @@ class OpenAIChatCompletionRequest {
     // 2026-09-02 按最新文档修正：
     // 1. enable_thinking 仅在显式开启时发送；false不发送(走模型默认值)——
     //    GLM-5.3、kimi-k3等强制思考模型仅支持true，传false直接400
+    // 2026-10-14 按最新文档补充：稀宇科技直供的MiniMax/MiniMax-M3不使用
+    // enable_thinking，思考控制走thinking对象({type:adaptive/disabled})
     if (json['enable_thinking'] == false) {
       json.remove('enable_thinking');
+      if (model.contains('MiniMax-M3')) {
+        json['thinking'] = {'type': 'disabled'};
+      }
     }
 
     // 2. max_tokens已被官方标注"即将废弃"，新写法为max_completion_tokens

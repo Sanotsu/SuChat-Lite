@@ -22,6 +22,10 @@ class _DaoduDailyCardPageState extends State<DaoduDailyCardPage> {
   // 数据状态
   final Map<String, DaoduLesson?> _lessonsCache = {}; // 缓存不同日期的文章
   final Map<String, DaoduActivityStats?> _statsCache = {}; // 缓存文章统计
+  // 2026-10-13 FIX：in-flight 请求防重——缓存只在加载完成后写入，
+  // 此前请求进行中重复触发(切页连续回调/相邻页预载)会并发发出
+  // 多个相同请求(实测点"前一天"同 URL 发出5次)
+  final Set<String> _loadingKeys = {};
   bool _isLoading = false;
   String? _error;
 
@@ -65,6 +69,12 @@ class _DaoduDailyCardPageState extends State<DaoduDailyCardPage> {
       return;
     }
 
+    // 该日期的请求正在进行中，忽略重复触发
+    if (_loadingKeys.contains(dateKey)) {
+      return;
+    }
+    _loadingKeys.add(dateKey);
+
     try {
       setState(() {
         _isLoading = true;
@@ -104,6 +114,8 @@ class _DaoduDailyCardPageState extends State<DaoduDailyCardPage> {
           _isLoading = false;
         });
       }
+    } finally {
+      _loadingKeys.remove(dateKey);
     }
   }
 
@@ -121,6 +133,11 @@ class _DaoduDailyCardPageState extends State<DaoduDailyCardPage> {
 
     //  今日及其之前的文章可以加载
     _loadLessonByOffset(offset);
+
+    // 预加载更前一天的文章(in-flight 防重，不会重复请求)
+    if (offset - 1 <= 0) {
+      _loadLessonByOffset(offset - 1);
+    }
   }
 
   /// 构建倒计时卡片
@@ -159,7 +176,7 @@ class _DaoduDailyCardPageState extends State<DaoduDailyCardPage> {
 
             // 倒计时显示
             StreamBuilder<String>(
-              stream: _countdownStream(),
+              stream: _countdown,
               builder: (context, snapshot) {
                 return Container(
                   padding: const EdgeInsets.symmetric(
@@ -189,6 +206,10 @@ class _DaoduDailyCardPageState extends State<DaoduDailyCardPage> {
   }
 
   /// 倒计时流
+  /// 2026-10-13 FIX：缓存 stream 引用——此前每次 build 都新建无限
+  /// 循环流，rebuild 后旧流仍每秒继续跑(泄漏且计时重置)
+  late final Stream<String> _countdown = _countdownStream();
+
   Stream<String> _countdownStream() async* {
     while (true) {
       final now = DateTime.now();
@@ -321,16 +342,9 @@ class _DaoduDailyCardPageState extends State<DaoduDailyCardPage> {
     }
 
     if (lesson == null) {
-      // 预加载相邻日期的文章
-      if (offset == _currentDateOffset - 1 ||
-          offset == _currentDateOffset + 1) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            _loadLessonByOffset(offset);
-          }
-        });
-      }
-
+      // 2026-10-13 FIX：预加载已移到 _switchToOffset 显式触发——
+      // 此前在 build 中 addPostFrameCallback 调度请求，PageView
+      // 相邻页每次 rebuild 都会注册一次，造成重复请求
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

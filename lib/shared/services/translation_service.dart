@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:ui';
 
+import '../../core/storage/cus_get_storage.dart';
 import '../widgets/toast_utils.dart';
 import 'unified_llm_service.dart';
 
@@ -68,7 +69,10 @@ class TranslationService {
     }
   }
 
-  /// 解析实际使用的模型条目：未指定时取统一库第一个可用对话模型
+  /// 解析实际使用的模型条目：
+  /// 1. 调用方显式指定(如快速翻译页的三下拉)直接使用；
+  /// 2. 用户在设置页指定的"AI 翻译模型"偏好；
+  /// 3. 均无时回退统一库第一个可用对话模型
   /// (2026-09-07 旧"内置默认模型"随作者 Key 一并退役，不再有免费默认)
   static Future<UnifiedModelEntry> _resolveEntry(
     UnifiedModelEntry? entry,
@@ -78,6 +82,17 @@ class TranslationService {
     final available = await UnifiedLLMService.loadModelEntries();
     if (available.isEmpty) {
       throw Exception('暂无可用模型，请先在聊天页-平台管理中配置对话模型');
+    }
+
+    // 2026-10-13 FIX：此前固定取第一个，用哪个模型完全取决于平台管理里第一个配的是什么，用户不可控——现在优先使用设置页指定的偏好
+    final pref = CusGetStorage().getAiTranslationModel();
+    if (pref != null) {
+      for (final e in available) {
+        if (e.model.id == pref['modelId'] &&
+            e.platform.id == pref['platformId']) {
+          return e;
+        }
+      }
     }
     return available.first;
   }

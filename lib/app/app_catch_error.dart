@@ -34,10 +34,10 @@ class AppCatchError {
       }
     };
 
-      // 受保护的代码块
-      runZonedGuarded(() async {
-        // 确保已经初始化绑定
-        WidgetsFlutterBinding.ensureInitialized();
+    // 受保护的代码块
+    runZonedGuarded(() async {
+      // 确保已经初始化绑定
+      WidgetsFlutterBinding.ensureInitialized();
 
       // 仅在移动端限制垂直方向
       if (Platform.isAndroid || Platform.isIOS) {

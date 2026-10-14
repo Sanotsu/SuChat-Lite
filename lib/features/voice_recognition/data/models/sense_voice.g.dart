@@ -43,6 +43,11 @@ SenseVoiceJROutput _$SenseVoiceJROutputFromJson(Map<String, dynamic> json) =>
             ),
       json['code'] as String?,
       json['message'] as String?,
+      result: json['result'] == null
+          ? null
+          : SenseVoiceJROutputResult.fromJson(
+              json['result'] as Map<String, dynamic>,
+            ),
     );
 
 Map<String, dynamic> _$SenseVoiceJROutputToJson(SenseVoiceJROutput instance) =>
@@ -53,6 +58,7 @@ Map<String, dynamic> _$SenseVoiceJROutputToJson(SenseVoiceJROutput instance) =>
       'scheduled_time': instance.scheduledTime,
       'end_time': instance.endTime,
       'results': instance.results?.map((e) => e.toJson()).toList(),
+      'result': instance.result?.toJson(),
       'task_metrics': instance.taskMetrics?.toJson(),
       'code': instance.code,
       'message': instance.message,

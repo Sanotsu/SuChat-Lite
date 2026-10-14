@@ -11,7 +11,9 @@ import '../../core/utils/simple_tools.dart';
 import '../../core/viewmodels/user_info_viewmodel.dart';
 import '../../shared/widgets/cus_content_width.dart';
 import '../../shared/widgets/toast_utils.dart';
+import 'pages/ai_translation_model_page.dart';
 import 'pages/backup_and_restore_page.dart';
+import 'pages/content_source_keys_page.dart';
 import 'pages/user_info_page.dart';
 
 class UserAndSettings extends StatefulWidget {
@@ -90,6 +92,30 @@ class _UserAndSettingsState extends State<UserAndSettings> {
                   description: "从 0.1.4 旧版迁移数据到当前版本",
                   onTap: () => _showLegacyMigrationSheet(context),
                   accentColor: Colors.teal,
+                ),
+                CusSettingCard(
+                  icon: Icons.vpn_key_outlined,
+                  title: "内容源 API 配置",
+                  description: "TMDB/USDA/NewsAPI 使用自备 Key",
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ContentSourceKeysPage(),
+                    ),
+                  ),
+                  accentColor: Colors.deepPurpleAccent,
+                ),
+                CusSettingCard(
+                  icon: Icons.translate,
+                  title: "AI 翻译模型",
+                  description: "页面内 AI 翻译(如 MAL 详情)使用的模型",
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AiTranslationModelPage(),
+                    ),
+                  ),
+                  accentColor: Colors.pinkAccent,
                 ),
                 const SizedBox(height: 24),
                 _buildSectionTitle('支持', theme),

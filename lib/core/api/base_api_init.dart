@@ -8,8 +8,27 @@ import 'base_api_config.dart';
 class BaseApiInit {
   static final Map<String, bool> _initializedModules = {};
 
+  // 2026-10-13 FIX：并发去重——此前仅靠 _initializedModules 检查，
+  // 两个调用同时进入(async 检查非原子)会双份初始化(日志重复打两遍)
+  static final Map<String, Future<void>> _initFutures = {};
+
   /// 初始化指定模块的存储
   static Future<void> initModule(BaseApiConfig config) async {
+    final existing = _initFutures[config.moduleName];
+    if (existing != null) return existing;
+
+    final future = _initModuleInner(config);
+    _initFutures[config.moduleName] = future;
+    try {
+      await future;
+    } catch (_) {
+      // 失败移除，允许后续重试
+      _initFutures.remove(config.moduleName);
+      rethrow;
+    }
+  }
+
+  static Future<void> _initModuleInner(BaseApiConfig config) async {
     if (_initializedModules[config.moduleName] == true) return;
 
     try {

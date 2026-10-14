@@ -1,4 +1,4 @@
-// 阿里百炼平台模型
+﻿// 阿里百炼平台模型
 // 2026-09-10 选择截至当前时间分类最新的几个模型
 final aliyunModels = [
   // ===== 文本对话 =====
@@ -224,6 +224,8 @@ final aliyunModels = [
     'supports_image_input': 1,
   },
   // ===== 语音合成 =====
+  // 2026-10-14 FIX：Qwen-Audio-TTS系列与Qwen-TTS端点不同——前者走
+  // /api/v1/services/audio/tts/SpeechSynthesizer，后者走multimodal-generation。
   {
     'id': 'qwen-audio-3.0-tts-plus',
     'platform_id': 'aliyun',
@@ -236,6 +238,13 @@ final aliyunModels = [
     'platform_id': 'aliyun',
     'model_name': 'qwen-audio-3.0-tts-flash',
     'display_name': 'Qwen-Audio-3.0-TTS-Flash',
+    'model_type': 'tts',
+  },
+  {
+    'id': 'qwen-audio-3.1-tts-flash',
+    'platform_id': 'aliyun',
+    'model_name': 'qwen-audio-3.1-tts-flash',
+    'display_name': 'Qwen-Audio-3.1-TTS-Flash',
     'model_type': 'tts',
   },
   // ===== 语音识别 =====

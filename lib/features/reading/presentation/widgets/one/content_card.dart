@@ -112,12 +112,14 @@ class OneContentCard extends StatelessWidget {
                       ),
                     ),
 
-                    if (content.volume != null && content.volume!.isNotEmpty)
+                    // 2026-10-13 FIX：volume 类型不稳定(num/String)，
+                    // dynamic 上直接调 isNotEmpty 遇 num 值会运行时崩溃
+                    if ((content.volume?.toString() ?? '').isNotEmpty)
                       Positioned(
                         top: 8,
                         left: 8,
                         child: Text(
-                          content.volume ?? '',
+                          content.volume?.toString() ?? '',
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
