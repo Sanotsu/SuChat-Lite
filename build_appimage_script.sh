@@ -27,7 +27,7 @@ export QT_IM_MODULE=fcitx
 export XMODIFIERS=@im=fcitx
 export LD_LIBRARY_PATH="${APPDIR}/usr/lib:${LD_LIBRARY_PATH}"
 # 启动应用
-exec "${APPDIR}/SuChat" "$@"
+exec "${APPDIR}/suchat_lite" "$@"
 EOF
 chmod +x AppDir/AppRun
 

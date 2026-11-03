@@ -239,15 +239,17 @@ sudo apt install locate p7zip-full
 
 ```sh
 # Windows installer (Inno Setup wrapper, with setup wizard/desktop shortcut/uninstaller)
-fastforge package --platform windows --targets exe
+fastforge package --platform windows --targets exe --artifact-name 'SuChat-{{version}}-{{platform}}-setup.exe'
 
 # Windows portable zip (extract and run)
-fastforge package --platform windows --targets zip
+fastforge package --platform windows --targets zip --artifact-name 'SuChat-{{version}}-{{platform}}.{{ext}}'
 
 # Linux AppImage (single-file, install-free; run on Linux)
-fastforge package --platform linux --targets appimage
+fastforge package --platform linux --targets appimage --artifact-name 'SuChat-{{version}}-{{platform}}.{{ext}}'
 
 # Artifacts go to dist/<version>/; add --skip-clean to skip a full rebuild if already built
+# --artifact-name changes the artifact name prefix from the pubspec name (suchat_lite) to SuChat;
+# a full `fastforge release` run reads artifact_name from the top of distribute_options.yaml automatically
 ```
 
 Notes:

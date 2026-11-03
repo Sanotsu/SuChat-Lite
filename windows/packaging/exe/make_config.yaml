@@ -7,6 +7,8 @@ app_id: a53df732-71ab-443f-9742-cc1eac2e787c
 publisher: SuChat
 publisher_url: https://github.com/SuChat/suchat_lite
 display_name: SuChat
+# 安装目录保持与程序名一致(不指定时默认用 pubspec 名 suchat_lite)
+install_dir_name: '{autopf64}\SuChat'
 create_desktop_icon: true
 # ico 格式，相对项目根目录
 setup_icon_file: windows\runner\resources\app_icon.ico

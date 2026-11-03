@@ -3,7 +3,7 @@
   <a href="README-EN.md">English</a>
 </p>
 
-# SuChat Lite
+# SuChat
 
 SuChat 是一个以简洁 AI 聊天为核心，并集成多种生活娱乐工具的跨平台应用，由 Flutter 开发并通过云端大模型 API 驱动：
 
@@ -26,6 +26,8 @@ SuChat 是一个以简洁 AI 聊天为核心，并集成多种生活娱乐工具
 移动端截图：
 
 ![SuChat Lite 预览](./_doc/snapshots/screenshot-mobile.jpg)
+
+更多功能与内容，请下载后体验。
 
 ## 使用指南
 
@@ -237,15 +239,17 @@ sudo apt install locate p7zip-full
 
 ```sh
 # Windows 安装包(Inno Setup 封装，带安装向导/桌面快捷方式/卸载器)
-fastforge package --platform windows --targets exe
+fastforge package --platform windows --targets exe --artifact-name 'SuChat-{{version}}-{{platform}}-setup.exe'
 
 # Windows 绿色版 zip(解压即用)
-fastforge package --platform windows --targets zip
+fastforge package --platform windows --targets zip --artifact-name 'SuChat-{{version}}-{{platform}}.{{ext}}'
 
 # Linux AppImage(免安装单文件，在 Linux 环境执行)
-fastforge package --platform linux --targets appimage
+fastforge package --platform linux --targets appimage --artifact-name 'SuChat-{{version}}-{{platform}}.{{ext}}'
 
 # 产物统一输出在 dist/<版本号>/ 下；已构建过时加 --skip-clean 跳过全量重建
+# --artifact-name 用于把产物名前缀从 pubspec 名(suchat_lite)改为 SuChat；
+# fastforge release 全量打包时则自动读取 distribute_options.yaml 顶层的 artifact_name，无需手动传
 ```
 
 说明：

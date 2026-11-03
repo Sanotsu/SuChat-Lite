@@ -1,16 +1,22 @@
 # Fastforge 打包总配置
 # 文档: https://fastforge.dev/getting-started
 #
-# 常用命令(在项目根目录):
-#   Windows 安装包:  fastforge package --platform windows --targets exe
-#   Windows 绿色zip: fastforge package --platform windows --targets zip
-#   Linux AppImage:  fastforge package --platform linux --targets appimage (仅限 Linux 环境)
-#   一次全出(当前平台): fastforge release --name release
+# 常用命令(在项目根目录，产物名前缀统一为 SuChat):
+#   Windows 安装包:  fastforge package --platform windows --targets exe --artifact-name 'SuChat-{{version}}-{{platform}}-setup.exe'
+#   Windows 绿色zip: fastforge package --platform windows --targets zip --artifact-name 'SuChat-{{version}}-{{platform}}.{{ext}}'
+#   Linux AppImage:  fastforge package --platform linux --targets appimage --artifact-name 'SuChat-{{version}}-{{platform}}.{{ext}}' (仅限 Linux 环境)
+#   一次全出(当前平台): fastforge release --name release (自动读取下方 artifact_name，无需手动传)
 #
 # 前置条件:
 #   Windows: Inno Setup(exe target 需要，已在 PATH)、7-Zip(zip target 需要 7z 在 PATH)
 #   Linux:   locate / p7zip-full / appimagetool，以及 flutter linux 构建依赖
 output: dist/
+
+# 产物文件名模板(fastforge 默认用 pubspec 名 suchat_lite，这里统一改为 SuChat)
+# 对 fastforge release 生效；单命令打包(fastforge package)需加:
+#   --artifact-name 'SuChat-{{version}}-{{platform}}.{{ext}}' (appimage/zip)
+#   --artifact-name 'SuChat-{{version}}-{{platform}}-setup.exe' (exe)
+artifact_name: 'SuChat-{{version}}-{{platform}}{{#is_installer}}-setup{{/is_installer}}{{#ext}}.{{ext}}{{/ext}}'
 
 releases:
   - name: release

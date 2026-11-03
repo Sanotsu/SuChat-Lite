@@ -23,6 +23,16 @@ import 'suchat_app.dart';
 
 class AppCatchError {
   void run() {
+    // 2026-11-03 release 静默控制台输出(debug 构建不受影响，开发照常打印)：
+    // 1) debugPrint 置空——dio 日志拦截器 logPrint=debugPrint、pretty_dio_logger
+    //    及各处 debugPrint 全部静默(含 HTTP 请求/响应刷屏)；
+    // 2) runZonedGuarded 加 ZoneSpecification.print 钩子——吞掉裸 print
+    //    (interceptor_error.dart、proste_logger 等直接 print 的输出)。
+    // 注意：原生层(C++/libmpv等)的 stdout 输出无法经此拦截。
+    if (kReleaseMode) {
+      debugPrint = (String? message, {int? wrapWidth}) {};
+    }
+
     ///Flutter 框架异常
     FlutterError.onError = (FlutterErrorDetails details) async {
       ///线上环境 todo
@@ -60,7 +70,12 @@ class AppCatchError {
 
       // 0.1.5 起零存储权限启动：核心数据在应用私有区，直接初始化应用
       await initApp();
-    }, (error, stack) => catchError(error, stack));
+    }, (error, stack) => catchError(error, stack),
+      // release 下吞掉 Zone 内所有裸 print 调用
+      zoneSpecification: kReleaseMode
+          ? ZoneSpecification(print: (self, parent, zone, line) {})
+          : null,
+    );
   }
 
   Future<void> initApp() async {
