@@ -42,6 +42,9 @@ class MonthlyStatisticsPageState extends State<MonthlyStatisticsPage>
 
   // 公开的刷新数据方法，供父组件调用
   void refreshData() {
+    // 防止在组件销毁后调用
+    if (!mounted) return;
+
     final viewModel = Provider.of<BillViewModel>(context, listen: false);
     // 重新加载当前选中的月份数据
     viewModel.loadMonthlyData(
@@ -417,7 +420,7 @@ class MonthlyStatisticsPageState extends State<MonthlyStatisticsPage>
         0,
       );
 
-      return StatisticsUtils.getRankingData(
+      return await StatisticsUtils.getRankingData(
         viewModel: viewModel,
         startDate: firstDayOfMonth,
         endDate: lastDayOfMonth,
@@ -452,8 +455,9 @@ class MonthlyStatisticsPageState extends State<MonthlyStatisticsPage>
         final stats = monthsData[key]!;
 
         // 根据选择的类型获取数据
-        double value =
-            _selectedType == 0 ? stats.totalIncome : stats.totalExpense;
+        double value = _selectedType == 0
+            ? stats.totalIncome
+            : stats.totalExpense;
 
         // 提取月份显示
         String monthDisplay;

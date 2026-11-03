@@ -14,9 +14,7 @@ class JikanStatistic {
   @JsonKey(name: 'data')
   JikanStatisticData data;
 
-  JikanStatistic(
-    this.data,
-  );
+  JikanStatistic(this.data);
 
   // 从字符串转
   factory JikanStatistic.fromRawJson(String str) =>
@@ -95,11 +93,7 @@ class JikanStatisticScore {
   @JsonKey(name: 'percentage')
   double percentage;
 
-  JikanStatisticScore(
-    this.score,
-    this.votes,
-    this.percentage,
-  );
+  JikanStatisticScore(this.score, this.votes, this.percentage);
 
   // 从字符串转
   factory JikanStatisticScore.fromRawJson(String str) =>

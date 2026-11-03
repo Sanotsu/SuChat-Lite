@@ -36,13 +36,12 @@ class PlanList extends StatelessWidget {
           elevation: isSelected ? 4 : 1,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side:
-                isSelected
-                    ? BorderSide(
-                      color: Theme.of(context).colorScheme.primary,
-                      width: 2,
-                    )
-                    : BorderSide.none,
+            side: isSelected
+                ? BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 2,
+                  )
+                : BorderSide.none,
           ),
           child: InkWell(
             onTap: () => onPlanSelected(plan),

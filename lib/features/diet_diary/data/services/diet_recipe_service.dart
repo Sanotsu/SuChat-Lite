@@ -2,25 +2,24 @@ import 'dart:async';
 import 'dart:ui';
 
 import '../../../../core/dao/user_info_dao.dart';
-import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/entities/user_info.dart';
-import '../../../../shared/constants/constant_llm_enum.dart';
-import '../../../branch_chat/data/datasources/openai_compatible_apis.dart';
-import '../../../branch_chat/data/services/chat_service.dart';
+import '../../../../shared/services/unified_llm_service.dart';
 
 class DietRecipeService {
   /// 生成个性化食谱
   ///
   /// 参数:
-  /// - model: 使用的大模型
+  /// - entry: 统一模型库条目(模型+所属平台，来自聊天页平台管理)
   /// - userInfo: 用户信息
   /// - dailyNutrition: 一日营养摄入总量
   /// - dailyRecommended: 推荐的每日营养摄入量
   /// - preferences: 用户的饮食偏好（如喜欢/不喜欢的食物、饮食禁忌等）
   /// - mealCount: 需要生成的餐次数量（1-4）
   /// - days: 需要生成的天数（1-7）
-  Future<(Stream<String>, VoidCallback)> generatePersonalizedRecipe({
-    required CusLLMSpec model,
+  /// 2026-09-04 改返回完整响应流，思考模型的reasoning_content由页面分类展示
+  /// 2026-09-07 旧LLM体系退役：改经UnifiedLLMService门面调用
+  Future<(Stream, VoidCallback)> generatePersonalizedRecipe({
+    required UnifiedModelEntry entry,
     required UserInfo userInfo,
     MacrosIntake? dailyNutrition,
     MacrosIntake? dailyRecommended,
@@ -29,20 +28,6 @@ class DietRecipeService {
     required int days,
     String? customPrompt,
   }) async {
-    // 如果是自定义平台模型，url、apikey等直接在模型规格中
-    Map<String, String> headers;
-    String baseUrl;
-    if (model.platform == ApiPlatform.custom) {
-      headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${model.apiKey}',
-      };
-      baseUrl = "${model.baseUrl}/chat/completions";
-    } else {
-      headers = await ChatService.getHeaders(model);
-      baseUrl = "${ChatService.getBaseUrl(model.platform)}/chat/completions";
-    }
-
     // 构建提示词
     String prompt;
     // 如果用户有自定义提示词，则使用自定义提示词
@@ -59,24 +44,17 @@ class DietRecipeService {
       );
     }
 
-    // 基础请求体
-    final Map<String, dynamic> requestBody = {
-      'model': model.model,
-      'messages': [
+    // 调用大模型API(完整响应流：delta含reasoningContent与content)
+    // 食谱并无固定JSON结构限制，保持流式输出
+    final (stream, cancel) = await UnifiedLLMService.sendChatStream(
+      entry: entry,
+      messages: [
         {
           'role': 'system',
           'content': '你是一位专业的营养师和健康饮食顾问，负责根据用户的个人信息、健康目标和饮食偏好，设计个性化的健康食谱。',
         },
         {'role': 'user', 'content': prompt},
       ],
-      "stream": true,
-    };
-
-    // 调用大模型API
-    final (stream, cancel) = await getStreamOnlyStringResponse(
-      baseUrl,
-      headers,
-      requestBody,
     );
 
     return (stream, cancel);
@@ -114,7 +92,8 @@ class DietRecipeService {
 """;
 
     // 用户信息部分
-    final userBaseInfo = """
+    final userBaseInfo =
+        """
 ## 用户信息
 - 性别: ${userInfo.gender == Gender.male ? '男' : '女'}
 - 年龄: ${userInfo.age}岁
@@ -143,13 +122,15 @@ class DietRecipeService {
     // """;
 
     // 用户饮食偏好
-    final userPreferences = """
+    final userPreferences =
+        """
 ## 饮食偏好和禁忌
 $preferences
 """;
 
     // 用户请求
-    final userRequest = """
+    final userRequest =
+        """
 请根据以上信息，为我设计一份个性化的$days天食谱计划，每天包含$mealCount餐，一次性输出所有的天数和餐次。
 我希望这份食谱能够帮助我达成${getGoalText(userInfo.goal ?? Goal.maintainWeight)}的目标，同时符合我的饮食偏好。
 请确保食谱实用、易于准备，并提供详细的食材用量和简单的制作方法。

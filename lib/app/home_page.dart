@@ -2,20 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../shared/widgets/toast_utils.dart';
-import '../features/branch_chat/domain/entities/character_card.dart';
-import '../features/branch_chat/presentation/index.dart';
+import '../features/unified_chat/presentation/pages/unified_chat_page.dart';
 
 ///
 /// 主页面
-/// app启动进入的首页，就是分支对话页面，其他模块都从这里跳转
+/// 2026-09-01 0.1.5：旧版 branch_chat 首页替换为新版统一聊天页面，
+/// "更多功能"(AIToolPage)入口在聊天页顶部菜单
 ///
 class HomePage extends StatefulWidget {
-  // 直接启动app进入主页是不会有character的，
-  // 但在角色卡列表页点击某个角色时，会传递character跳转到此home页面，并清空所有路由
-  // 此时就是在home页面中将character传递给branchchatpage
-  final CharacterCard? character;
-
-  const HomePage({super.key, this.character});
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -50,7 +45,7 @@ class _HomePageState extends State<HomePage> {
           ToastUtils.showInfo('再按一次退出应用', align: Alignment.center);
         }
       },
-      child: BranchChatPage(character: widget.character),
+      child: const UnifiedChatPage(),
     );
   }
 }

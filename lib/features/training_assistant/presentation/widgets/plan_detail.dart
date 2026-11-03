@@ -131,11 +131,10 @@ class PlanDetail extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder:
-                            (context) => PlanCalendarPage(
-                              plan: plan,
-                              planDetails: planDetails,
-                            ),
+                        builder: (context) => PlanCalendarPage(
+                          plan: plan,
+                          planDetails: planDetails,
+                        ),
                       ),
                     );
                   },
@@ -358,58 +357,54 @@ class PlanDetail extends StatelessWidget {
       // 桌面端或平板：使用弹窗
       showDialog(
         context: context,
-        builder:
-            (context) => Dialog(
-              child: Container(
-                width: screenWidth * 0.8,
-                height: MediaQuery.of(context).size.height * 0.8,
-                padding: const EdgeInsets.all(16),
-                child: PlanDetailEditPage(
-                  day: day,
-                  details: List.from(details),
-                  onSave: (updatedDetails) {
-                    // 创建新的planDetails列表，替换当前日期的训练详情
-                    final newPlanDetails = List<TrainingPlanDetail>.from(
-                      planDetails,
-                    );
+        builder: (context) => Dialog(
+          child: Container(
+            width: screenWidth * 0.8,
+            height: MediaQuery.of(context).size.height * 0.8,
+            padding: const EdgeInsets.all(16),
+            child: PlanDetailEditPage(
+              day: day,
+              details: List.from(details),
+              onSave: (updatedDetails) {
+                // 创建新的planDetails列表，替换当前日期的训练详情
+                final newPlanDetails = List<TrainingPlanDetail>.from(
+                  planDetails,
+                );
 
-                    // 移除当前日期的所有训练详情
-                    newPlanDetails.removeWhere((detail) => detail.day == day);
+                // 移除当前日期的所有训练详情
+                newPlanDetails.removeWhere((detail) => detail.day == day);
 
-                    // 添加更新后的训练详情
-                    newPlanDetails.addAll(updatedDetails);
+                // 添加更新后的训练详情
+                newPlanDetails.addAll(updatedDetails);
 
-                    // 更新训练详情
-                    viewModel.updatePlanDetails(plan.planId, newPlanDetails);
-                  },
-                ),
-              ),
+                // 更新训练详情
+                viewModel.updatePlanDetails(plan.planId, newPlanDetails);
+              },
             ),
+          ),
+        ),
       );
     } else {
       // 移动端：使用新页面
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder:
-              (context) => PlanDetailEditPage(
-                day: day,
-                details: List.from(details),
-                onSave: (updatedDetails) {
-                  // 创建新的planDetails列表，替换当前日期的训练详情
-                  final newPlanDetails = List<TrainingPlanDetail>.from(
-                    planDetails,
-                  );
+          builder: (context) => PlanDetailEditPage(
+            day: day,
+            details: List.from(details),
+            onSave: (updatedDetails) {
+              // 创建新的planDetails列表，替换当前日期的训练详情
+              final newPlanDetails = List<TrainingPlanDetail>.from(planDetails);
 
-                  // 移除当前日期的所有训练详情
-                  newPlanDetails.removeWhere((detail) => detail.day == day);
+              // 移除当前日期的所有训练详情
+              newPlanDetails.removeWhere((detail) => detail.day == day);
 
-                  // 添加更新后的训练详情
-                  newPlanDetails.addAll(updatedDetails);
+              // 添加更新后的训练详情
+              newPlanDetails.addAll(updatedDetails);
 
-                  // 更新训练详情
-                  viewModel.updatePlanDetails(plan.planId, newPlanDetails);
-                },
-              ),
+              // 更新训练详情
+              viewModel.updatePlanDetails(plan.planId, newPlanDetails);
+            },
+          ),
         ),
       );
     }

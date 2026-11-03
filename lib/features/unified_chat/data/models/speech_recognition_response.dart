@@ -47,11 +47,26 @@ class SpeechRecognitionResponse {
 
   Map<String, dynamic> toJson() => _$SpeechRecognitionResponseToJson(this);
 
-  /// 从阿里百炼响应创建(从层层结构中获取text字段)
+  /// 从阿里百炼响应创建
+  /// 2026-10-14 FIX：新版非实时识别协议(qwen-audio-3.x-asr/fun-asr-flash)
+  /// 的完整文本直接在output.text；旧版协议则在output.choices消息链路。
+  /// 两种格式按字段存在性自动兼容。
   factory SpeechRecognitionResponse.fromAliyunResponse(
     Map<String, dynamic> json,
   ) {
     final output = json['output'] as Map<String, dynamic>?;
+
+    // 新版协议：output.text + output.sentence
+    final outputText = output?['text'] as String?;
+    if (outputText != null && outputText.isNotEmpty) {
+      return SpeechRecognitionResponse(
+        text: outputText,
+        requestId: json['request_id'] as String?,
+        metadata: {'usage': json['usage'], 'sentence': output?['sentence']},
+      );
+    }
+
+    // 旧版协议：output.choices[0].message.content[0].text
     final choices = output?['choices'] as List<dynamic>?;
     final firstChoice = choices?.isNotEmpty == true
         ? choices!.first as Map<String, dynamic>
@@ -83,6 +98,11 @@ class SpeechRecognitionResponse {
     );
   }
 
+  /// 从OpenAI兼容响应创建(用户自建平台通用，/audio/transcriptions标准格式)
+  factory SpeechRecognitionResponse.fromOpenAIResponse(
+    Map<String, dynamic> json,
+  ) => SpeechRecognitionResponse.fromZhipuResponse(json);
+
   /// 从硅基流动响应创建(只有text一个字段)
   factory SpeechRecognitionResponse.fromSiliconCloudResponse(
     Map<String, dynamic> json,
@@ -110,6 +130,26 @@ class SpeechRecognitionResponse {
       created: json['created'] as int?,
       model: json['model'] as String?,
       segments: segments,
+      metadata: json,
+    );
+  }
+
+  /// 从小米MiMo响应创建(2026-09-10 chat completions格式，
+  /// 识别文本在choices[0].message.content)
+  factory SpeechRecognitionResponse.fromMimoResponse(
+    Map<String, dynamic> json,
+  ) {
+    final choices = json['choices'] as List<dynamic>?;
+    final firstChoice = choices?.isNotEmpty == true
+        ? choices!.first as Map<String, dynamic>
+        : null;
+    final message = firstChoice?['message'] as Map<String, dynamic>?;
+
+    return SpeechRecognitionResponse(
+      text: message?['content'] as String? ?? '',
+      taskId: json['id'] as String?,
+      created: json['created'] as int?,
+      model: json['model'] as String?,
       metadata: json,
     );
   }

@@ -23,9 +23,11 @@ Future<List<BGMSubject>> getBangumiSubject(
   try {
     // 页面要放在url，其他条件在data中
     // limit: 取多少条
-    // offser: 从哪个偏移数开始(数据的索引从0开始)
+    // offset: 从哪个偏移数开始(数据的索引从0开始)
+    // 2026-09-07 修复：offset = pageSize * page 使第 1 页跳过前 pageSize
+    // 条数据（首页数据丢失）；索引从 0 开始，应为 (page - 1) * pageSize
     var url =
-        "$bgmBase/v0/search/subjects?limit=$pageSize&offset=${pageSize! * page!}";
+        "$bgmBase/v0/search/subjects?limit=$pageSize&offset=${pageSize! * (page! - 1)}";
 
     var respData = await HttpUtils.post(
       path: url,

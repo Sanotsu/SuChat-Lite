@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:open_file/open_file.dart';
 
+import '../../../../core/utils/screen_helper.dart';
 import '../../../../shared/widgets/audio_player_widget.dart';
 import '../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
@@ -16,10 +17,14 @@ class MultimodalContentWidget extends StatefulWidget {
   final UnifiedChatMessage message;
   final TextStyle? textStyle;
 
+  /// 推理内容字体颜色(聊天背景模式下由外部传入配置色)
+  final Color? thinkingColor;
+
   const MultimodalContentWidget({
     super.key,
     required this.message,
     this.textStyle,
+    this.thinkingColor,
   });
 
   @override
@@ -28,6 +33,9 @@ class MultimodalContentWidget extends StatefulWidget {
 }
 
 class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
+  /// 2026-09-14 分段工具卡片展开态(消息id#工具名，消息粒度内存级)
+  final Set<String> _expandedToolSegKeys = {};
+
   // 预览文件（可选）
   Future<void> _previewFile(String filePath) async {
     try {
@@ -41,6 +49,13 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
 
   @override
   Widget build(BuildContext context) {
+    // 2026-09-12 分段渲染(P3-10)：多轮工具调用的响应按段顺序渲染
+    // 思考折叠块/正文/工具调用卡片交替；未分段旧消息走原逻辑
+    final segs = widget.message.segments;
+    if (segs != null && segs.isNotEmpty) {
+      return _buildSegmentsContent(segs);
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -62,12 +77,347 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
     );
   }
 
-  Widget _buildMultimodalContent() {
-    final items = widget.message.multimodalContent!;
+  /// 2026-09-12 分段内容渲染：思考折叠块/正文/工具卡片按时间序交替；
+  /// 消息级多模态(音频等)附加在末尾
+  Widget _buildSegmentsContent(List<MessageSegment> segs) {
+    final children = <Widget>[];
+
+    for (var i = 0; i < segs.length; i++) {
+      final seg = segs[i];
+      switch (seg.type) {
+        case MessageSegmentType.thinking:
+          if ((seg.text ?? '').trim().isNotEmpty) {
+            children.add(_buildSegmentThinking(seg, i, segs));
+          }
+        case MessageSegmentType.text:
+          final text = seg.text ?? '';
+          // 打字机未推进的空段跳过
+          if (text.trim().isNotEmpty) {
+            children.add(
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: CusMarkdownRenderer.instance.render(
+                  text,
+                  textStyle: widget.textStyle,
+                  selectable: ScreenHelper.isDesktop(),
+                ),
+              ),
+            );
+          }
+        case MessageSegmentType.toolCall:
+          children.add(_buildSegmentToolCall(seg));
+        case MessageSegmentType.notice:
+          // 2026-09-16 系统提示横幅：与思考/工具折叠组件平级、恒展开、
+          // 琥珀色底——轮次上限/[手动终止]等系统级事件统一视觉语言
+          if ((seg.text ?? '').trim().isNotEmpty) {
+            children.add(
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.amber.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 15,
+                      color: Colors.amber[800],
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        seg.text!,
+                        style: (widget.textStyle ?? const TextStyle()).copyWith(
+                          fontSize: 12,
+                          color: Colors.amber[900],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+      }
+    }
+
+    // 2026-09-14 正文重复修复：finishReason落库时最终轮正文会被同时
+    // 塞进multimodalContent作text项(旧字段兼容逻辑，旧版渲染与此互斥
+    // 不重复)；分段渲染下正文已在segments的text段——附加多模态时过滤
+    // text项，只附加图片/音频/视频/文件，否则正文渲染两遍
+    if (widget.message.hasMultimodalContent) {
+      final nonTextItems = widget.message.multimodalContent!
+          .where((item) => item.type != 'text')
+          .toList();
+      if (nonTextItems.isNotEmpty) {
+        children.add(_buildMultimodalContent(items: nonTextItems));
+      }
+    } else if (_hasMetadataAttachments()) {
+      children.add(_buildMetadataContent());
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: items.map((item) => _buildContentItem(item)).toList(),
+      children: children,
+    );
+  }
+
+  /// 分段思考折叠块：流式末段标题"思考中"且默认展开；
+  /// 历史段标题"已深度思考(用时x秒)"默认收起
+  Widget _buildSegmentThinking(
+    MessageSegment seg,
+    int index,
+    List<MessageSegment> segs,
+  ) {
+    final isLastSegment = index == segs.length - 1;
+    final isThinkingNow = widget.message.isStreaming && isLastSegment;
+
+    return Container(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        type: MaterialType.transparency,
+        child: ExpansionTile(
+          // 2026-09-14 标题与正文左对齐：ExpansionTile默认16px水平内边距
+          // 会让"已深度思考"标题视觉上缩进/居中，归零后与markdown正文同起点
+          tilePadding: EdgeInsets.zero,
+          title: Text(
+            isThinkingNow
+                ? '思考中'
+                : '已深度思考(用时${(seg.thinkingTime ?? 0) / 1000}秒)',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: widget.thinkingColor ?? Colors.black54,
+            ),
+          ),
+          initiallyExpanded: isThinkingNow,
+          children: [
+            // 2026-09-14 短思考内容居中修复：ExpansionTile内部用Column
+            // (crossAxisAlignment固定center，不暴露参数)包裹children——
+            // 短文本markdown宽度收缩后被水平居中；强制满宽使内容靠左
+            SizedBox(
+              width: double.infinity,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 24),
+                child: RepaintBoundary(
+                  child: CusMarkdownRenderer.instance.render(
+                    seg.text ?? '',
+                    textStyle: TextStyle(
+                      color:
+                          widget.thinkingColor ??
+                          Theme.of(context).colorScheme.primary,
+                      fontSize: 12,
+                    ),
+                    selectable: ScreenHelper.isDesktop(),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 分段工具调用卡片：无结果时为折叠行；有结果时为可展开卡片
+  /// (2026-09-14 哨兵携带结果持久化到段，展开查看原始终端输出/工具结果)
+  Widget _buildSegmentToolCall(MessageSegment seg) {
+    final hasResult = (seg.toolResult ?? '').trim().isNotEmpty;
+
+    final header = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.construction,
+          size: 16,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            '已调用工具: ${seg.toolName ?? ''}',
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        // P3-14 工具执行耗时(旧消息无此数据不显示)
+        if ((seg.toolElapsedMs ?? 0) > 0)
+          Padding(
+            padding: const EdgeInsets.only(left: 6),
+            child: Text(
+              seg.toolElapsedMs! >= 1000
+                  ? '${(seg.toolElapsedMs! / 1000).toStringAsFixed(1)}s'
+                  : '${seg.toolElapsedMs}ms',
+              style: TextStyle(
+                fontSize: 11,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+              ),
+            ),
+          ),
+        if (hasResult)
+          Icon(
+            Icons.keyboard_arrow_down,
+            size: 16,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+      ],
+    );
+
+    if (!hasResult) {
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Theme.of(
+            context,
+          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Theme.of(
+              context,
+            ).colorScheme.outlineVariant.withValues(alpha: 0.5),
+          ),
+        ),
+        child: header,
+      );
+    }
+
+    // 有结果：可展开(展开态按消息id+段序记录，见_expandedToolSegKey)
+    final expandKey = '${widget.message.id}#${seg.toolName ?? ""}';
+    final expanded = _expandedToolSegKeys.contains(expandKey);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      decoration: BoxDecoration(
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Theme.of(
+            context,
+          ).colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () => setState(() {
+              expanded
+                  ? _expandedToolSegKeys.remove(expandKey)
+                  : _expandedToolSegKeys.add(expandKey);
+            }),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: header,
+            ),
+          ),
+          if (expanded) ...[
+            Divider(
+              height: 1,
+              color: Theme.of(
+                context,
+              ).colorScheme.outlineVariant.withValues(alpha: 0.5),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if ((seg.toolArgsSummary ?? '').trim().isNotEmpty) ...[
+                    Text(
+                      '参数:',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Container(
+                      width: double.infinity,
+                      constraints: const BoxConstraints(maxHeight: 100),
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).scaffoldBackgroundColor.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: SingleChildScrollView(
+                        child: SelectableText(
+                          seg.toolArgsSummary!,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[700],
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  Text(
+                    '结果:',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Container(
+                    width: double.infinity,
+                    constraints: const BoxConstraints(maxHeight: 240),
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).scaffoldBackgroundColor.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: SingleChildScrollView(
+                      child: SelectableText(
+                        seg.toolResult!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[700],
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMultimodalContent({List<UnifiedContentItem>? items}) {
+    final list = items ?? widget.message.multimodalContent!;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: list.map((item) => _buildContentItem(item)).toList(),
     );
   }
 
@@ -95,6 +445,8 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
     return CusMarkdownRenderer.instance.render(
       content,
       textStyle: widget.textStyle,
+      // 桌面直接选中文本，不再依赖右键→"选择文本"全屏弹窗
+      selectable: ScreenHelper.isDesktop(),
     );
   }
 
@@ -103,6 +455,7 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
     return CusMarkdownRenderer.instance.render(
       text,
       textStyle: widget.textStyle,
+      selectable: ScreenHelper.isDesktop(),
     );
   }
 
@@ -350,33 +703,45 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
   Widget _buildThinkingContent() {
     return Container(
       padding: EdgeInsets.only(bottom: 8),
-      child: ExpansionTile(
-        title: Text(
-          widget.message.content!.isEmpty
-              ? '思考中'
-              : '已深度思考(用时${(widget.message.thinkingTime ?? 0) / 1000}秒)',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.black54,
+      child: Material(
+        type: MaterialType.transparency,
+        child: ExpansionTile(
+          title: Text(
+            widget.message.content!.isEmpty
+                ? '思考中'
+                : '已深度思考(用时${(widget.message.thinkingTime ?? 0) / 1000}秒)',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: widget.thinkingColor ?? Colors.black54,
+            ),
           ),
-        ),
-        initiallyExpanded: true,
-        children: [
-          Padding(
-            padding: EdgeInsets.only(left: 24),
-            // 使用高性能MarkdownRenderer来渲染深度思考内容，可以利用缓存机制
-            child: RepaintBoundary(
-              child: CusMarkdownRenderer.instance.render(
-                widget.message.thinkingContent ?? '',
-                textStyle: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
+          initiallyExpanded: true,
+          children: [
+            // 2026-09-14 同分段思考块：强制满宽防ExpansionTile内部
+            // Column的center对齐使短内容居中
+            SizedBox(
+              width: double.infinity,
+              child: Padding(
+                padding: EdgeInsets.only(left: 24),
+                // 使用高性能MarkdownRenderer来渲染深度思考内容，可以利用缓存机制
+                child: RepaintBoundary(
+                  child: CusMarkdownRenderer.instance.render(
+                    widget.message.thinkingContent ?? '',
+                    textStyle: TextStyle(
+                      color:
+                          widget.thinkingColor ??
+                          Theme.of(context).colorScheme.primary,
+                      fontSize: 12,
+                      // 不用斜体了，太斜了不好看，万一有人想看思考内容呢
+                      // fontStyle: FontStyle.italic,
+                    ),
+                    selectable: ScreenHelper.isDesktop(),
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -389,6 +754,7 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
     return metadata.containsKey('images') ||
         metadata.containsKey('audio') ||
         metadata.containsKey('video') ||
+        metadata.containsKey('videos') ||
         metadata.containsKey('files');
   }
 
@@ -434,6 +800,14 @@ class _MultimodalContentWidgetState extends State<MultimodalContentWidget> {
     if (metadata.containsKey('video')) {
       final videoPath = metadata['video'].toString();
       widgets.add(_buildMetadataVideo(videoPath));
+    }
+
+    // 显示视频生成结果(2026-09-02 媒体生成并入聊天：视频生成消息的metadata.videos)
+    if (metadata.containsKey('videos')) {
+      final videos = metadata['videos'] as List<dynamic>;
+      for (final videoPath in videos) {
+        widgets.add(_buildMetadataVideo(videoPath.toString()));
+      }
     }
 
     // 显示文件附件

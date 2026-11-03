@@ -56,17 +56,16 @@ class _SimpleMarqueeOrTextState extends State<SimpleMarqueeOrText> {
         return SizedBox(
           height: widget.height ?? 30,
           width: showWidth,
-          child:
-              numLines > (widget.showLines ?? 1)
-                  ? Marquee(
-                    text: "${widget.data}   ", // 超过一行时滚动的字串加点空白以便识别文字起止
-                    style: widget.style,
-                    velocity: widget.velocity ?? 10.0, // 滚动速度
-                  )
-                  : Align(
-                    alignment: widget.textAlignment ?? Alignment.center,
-                    child: Text(widget.data, style: widget.style),
-                  ),
+          child: numLines > (widget.showLines ?? 1)
+              ? Marquee(
+                  text: "${widget.data}   ", // 超过一行时滚动的字串加点空白以便识别文字起止
+                  style: widget.style,
+                  velocity: widget.velocity ?? 10.0, // 滚动速度
+                )
+              : Align(
+                  alignment: widget.textAlignment ?? Alignment.center,
+                  child: Text(widget.data, style: widget.style),
+                ),
         );
       },
     );

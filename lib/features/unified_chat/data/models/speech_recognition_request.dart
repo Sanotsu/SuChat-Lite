@@ -74,6 +74,51 @@ class SpeechRecognitionRequest {
 
   /// 转换为阿里百炼API格式（DashScope 方式，不是openAI API兼容的接口）
   Map<String, dynamic> toAliyunFormat({String? audioUrl}) {
+    // 2026-10-14 FIX：qwen-audio-3.x-asr-flash / fun-asr-flash 系列
+    // (非filetrans/streaming，走multimodal-generation同步端点)已切换为
+    // 新版非实时识别协议(官方文档2026-10版)：
+    //   1. user消息用 input_audio 内容块(此前旧对话格式的audio字段已不识别)
+    //   2. parameters.format 为必选
+    //   3. 语言放 parameters.language_hints(数组)
+    //   4. 不再发送空system消息(新版协议消息仅支持user/assistant)
+    // 文档: https://help.aliyun.com/zh/model-studio/fun-asr-flash-recorded-speech-recognition-http-api
+    final isNewAsrProtocol =
+        (model.startsWith('qwen-audio-3') ||
+            model.startsWith('fun-asr-flash')) &&
+        !model.contains('filetrans') &&
+        !model.contains('streaming');
+
+    if (isNewAsrProtocol) {
+      final parameters = <String, dynamic>{'format': _guessAudioFormat()};
+      // language_hints: qwen-audio-3.x最多4个值，fun-asr-flash仅1个——
+      // 统一只传1个语种码两者均兼容；不传则服务端自动检测
+      if (language != null && language!.isNotEmpty) {
+        parameters['language_hints'] = [language];
+      }
+
+      return {
+        'model': model,
+        'input': {
+          'messages': [
+            {
+              'role': 'user',
+              'content': [
+                {
+                  'type': 'input_audio',
+                  'input_audio': {
+                    // 公网URL或 data:{mime};base64,xxx 的Data URI
+                    'data': audioUrl ?? audioPath,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        'parameters': parameters,
+      };
+    }
+
+    // —— 以下为旧版DashScope格式(qwen3-asr等)，保持不变 ——
     // qwen3-asr 请求参数可参考通用文档 https://help.aliyun.com/zh/model-studio/use-qwen-by-calling-api
     // messages 要放在input 对象中
     final messages = [
@@ -106,6 +151,14 @@ class SpeechRecognitionRequest {
     };
   }
 
+  /// 从音频文件扩展名推断格式(parameters.format必选，未知时兜底wav)
+  String _guessAudioFormat() {
+    final path = (audioPath ?? audioUrl ?? '').toLowerCase();
+    final ext = path.contains('.') ? path.split('.').last : '';
+    const known = {'wav', 'mp3', 'opus', 'aac', 'amr', 'flac', 'ogg', 'm4a'};
+    return known.contains(ext) ? ext : 'wav';
+  }
+
   /// 转换为硅基流动API格式（FormData，文件在外面处理）
   Map<String, dynamic> toSiliconCloudFormData() {
     return {'model': model};
@@ -119,6 +172,48 @@ class SpeechRecognitionRequest {
       if (stream != null) 'stream': stream,
       if (requestId != null) 'request_id': requestId,
       if (userId != null) 'user_id': userId,
+    };
+  }
+
+  /// 转换为小米MiMo API格式(2026-09-10 chat completions风格，不走audio端点)
+  /// 音频以input_audio内容块放在user消息中，仅支持mp3/wav
+  Map<String, dynamic> toMimoFormat({
+    required String base64Audio,
+    required String format,
+  }) {
+    // MiMo的asr_options.language仅支持auto/zh/en，其他值不传走自动检测
+    String? languageCode;
+    if (language != null && language!.isNotEmpty) {
+      final normalized = language!.toLowerCase().replaceAll('_', '-');
+      if (normalized == 'auto') {
+        languageCode = 'auto';
+      } else if (normalized.startsWith('zh')) {
+        languageCode = 'zh';
+      } else if (normalized.startsWith('en')) {
+        languageCode = 'en';
+      }
+    }
+
+    return {
+      'model': model,
+      'messages': [
+        {
+          'role': 'user',
+          'content': [
+            {
+              'type': 'input_audio',
+              'input_audio': {
+                // data URL形式的base64(与format字段需匹配)
+                'data':
+                    'data:audio/${format == 'mp3' ? 'mpeg' : 'wav'};base64,$base64Audio',
+                'format': format,
+              },
+            },
+          ],
+        },
+      ],
+      if (languageCode != null) 'asr_options': {'language': languageCode},
+      'stream': stream ?? false,
     };
   }
 

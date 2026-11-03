@@ -141,10 +141,9 @@ class BmiIndicatorPainter extends CustomPainter {
     final indicatorX = position * width;
 
     // 绘制指示器
-    final paint =
-        Paint()
-          ..color = Colors.white
-          ..style = PaintingStyle.fill;
+    final paint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
 
     // 绘制指示器线条
     canvas.drawRect(Rect.fromLTWH(indicatorX - 1, 0, 2, height), paint);
@@ -167,11 +166,10 @@ class BmiIndicatorPainter extends CustomPainter {
     final width = size.width;
     final height = size.height;
 
-    final paint =
-        Paint()
-          ..color = Colors.grey.withValues(alpha: 0.5)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.5;
+    final paint = Paint()
+      ..color = Colors.grey.withValues(alpha: 0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
 
     for (final point in keyPoints) {
       final position = (point - minBmi) / (maxBmi - minBmi);
@@ -227,10 +225,9 @@ class BmiIndicatorPainter extends CustomPainter {
       ],
     );
 
-    final paint =
-        Paint()
-          ..shader = gradient.createShader(rect)
-          ..style = PaintingStyle.fill;
+    final paint = Paint()
+      ..shader = gradient.createShader(rect)
+      ..style = PaintingStyle.fill;
 
     // 绘制圆角矩形背景
     final rrect = RRect.fromRectAndRadius(rect, Radius.circular(height / 2));

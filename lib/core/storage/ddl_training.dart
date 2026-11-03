@@ -4,7 +4,8 @@ class TrainingDdl {
   // 训练助手 - 训练计划表
   static const tableTrainingPlan = '${DBInitConfig.tablePerfix}training_plan';
 
-  static const ddlForTrainingPlan = """
+  static const ddlForTrainingPlan =
+      """
     CREATE TABLE $tableTrainingPlan (
       planId              TEXT    NOT NULL,
       userId              TEXT    NOT NULL,
@@ -27,7 +28,8 @@ class TrainingDdl {
   static const tableTrainingPlanDetail =
       '${DBInitConfig.tablePerfix}training_plan_detail';
 
-  static const ddlForTrainingPlanDetail = """
+  static const ddlForTrainingPlanDetail =
+      """
     CREATE TABLE $tableTrainingPlanDetail (
       detailId            TEXT    NOT NULL,
       planId              TEXT    NOT NULL,
@@ -49,7 +51,8 @@ class TrainingDdl {
   static const tableTrainingRecord =
       '${DBInitConfig.tablePerfix}training_record';
 
-  static const ddlForTrainingRecord = """
+  static const ddlForTrainingRecord =
+      """
     CREATE TABLE $tableTrainingRecord (
       recordId            TEXT    NOT NULL,
       planId              TEXT    NOT NULL,
@@ -68,7 +71,8 @@ class TrainingDdl {
   static const tableTrainingRecordDetail =
       '${DBInitConfig.tablePerfix}training_record_detail';
 
-  static const ddlForTrainingRecordDetail = """
+  static const ddlForTrainingRecordDetail =
+      """
     CREATE TABLE $tableTrainingRecordDetail (
       detailRecordId      TEXT    NOT NULL,
       recordId            TEXT    NOT NULL,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 
@@ -57,16 +58,15 @@ class _FoodManagementPageState extends State<FoodManagementPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder:
-            (context) => FoodEditPage(
-              initialName: initialName,
-              onSave: (foodItem) {
-                _viewModel.addFood(foodItem).then((_) {
-                  _loadFoodItems();
-                  _loadFoodCount();
-                });
-              },
-            ),
+        builder: (context) => FoodEditPage(
+          initialName: initialName,
+          onSave: (foodItem) {
+            _viewModel.addFood(foodItem).then((_) {
+              _loadFoodItems();
+              _loadFoodCount();
+            });
+          },
+        ),
       ),
     );
   }
@@ -75,15 +75,14 @@ class _FoodManagementPageState extends State<FoodManagementPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder:
-            (context) => FoodEditPage(
-              foodItem: food,
-              onSave: (foodItem) {
-                _viewModel.updateFood(foodItem).then((_) {
-                  _loadFoodItems();
-                });
-              },
-            ),
+        builder: (context) => FoodEditPage(
+          foodItem: food,
+          onSave: (foodItem) {
+            _viewModel.updateFood(foodItem).then((_) {
+              _loadFoodItems();
+            });
+          },
+        ),
       ),
     );
   }
@@ -108,117 +107,119 @@ class _FoodManagementPageState extends State<FoodManagementPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('食品管理'),
-        actions: [
-          FavoriteFilterButton(
-            showOnlyFavorites: _showOnlyFavorites,
-            onToggle: () {
-              setState(() {
-                _showOnlyFavorites = !_showOnlyFavorites;
-              });
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.file_upload),
-            tooltip: '导入食品数据',
-            onPressed: _isImporting ? null : _importFoodData,
-          ),
-          IconButton(
-            icon: const Icon(Icons.camera_alt),
-            tooltip: '识别食品营养成分表',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const FoodRecognitionPage(),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // 搜索框
-          FoodSearchBar(
-            controller: _searchController,
-            searchQuery: _searchQuery,
-            hintText: '搜索食品名称或编码',
-            onSearchChanged: (value) {
-              setState(() {
-                _searchQuery = value;
-              });
-              _viewModel.searchFood(value);
-            },
-            onClearSearch: () {
-              setState(() {
-                _searchQuery = '';
-                _searchController.clear();
-              });
-              _viewModel.searchFood('');
-            },
-          ),
-
-          // 食品统计信息
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              children: [
-                Text(
-                  '总计 $_totalFoodCount 种食品(只显示前200个)',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                ),
-                const Spacer(),
-                // if (!_isImporting)
-                //   TextButton(
-                //     onPressed: () {
-                //       _viewModel.clearAllFood().then((_) {
-                //         _loadFoodItems();
-                //         _loadFoodCount();
-                //       });
-                //     },
-                //     child: const Text('清空'),
-                //   ),
-                if (_isImporting)
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-              ],
+    return CusContentWidth(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('食品管理'),
+          actions: [
+            FavoriteFilterButton(
+              showOnlyFavorites: _showOnlyFavorites,
+              onToggle: () {
+                setState(() {
+                  _showOnlyFavorites = !_showOnlyFavorites;
+                });
+              },
             ),
-          ),
-          const SizedBox(height: 8),
-
-          // 食品列表
-          Expanded(
-            child: Consumer<DietDiaryViewModel>(
-              builder: (context, viewModel, child) {
-                return FoodListView(
-                  viewModel: viewModel,
-                  searchQuery: _searchQuery,
-                  showOnlyFavorites: _showOnlyFavorites,
-                  errorContext: 'food_management',
-                  onFoodTap: _navigateToFoodDetail,
-                  onFavoriteToggle: _toggleFavorite,
-                  onFoodEdit: _navigateToEditFood,
-                  onFoodDelete: _showDeleteConfirmation,
-                  onAddNewFood:
-                      (query) => _navigateToAddFood(initialName: query),
-                  showManagementActions: true,
+            IconButton(
+              icon: const Icon(Icons.file_upload),
+              tooltip: '导入食品数据',
+              onPressed: _isImporting ? null : _importFoodData,
+            ),
+            IconButton(
+              icon: const Icon(Icons.camera_alt),
+              tooltip: '识别食品营养成分表',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const FoodRecognitionPage(),
+                  ),
                 );
               },
             ),
-          ),
-        ],
-      ),
-      floatingActionButton: buildFloatingActionButton(
-        _navigateToAddFood,
-        context,
-        icon: Icons.add,
-        tooltip: '添加食品',
+          ],
+        ),
+        body: Column(
+          children: [
+            // 搜索框
+            FoodSearchBar(
+              controller: _searchController,
+              searchQuery: _searchQuery,
+              hintText: '搜索食品名称或编码',
+              onSearchChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+                _viewModel.searchFood(value);
+              },
+              onClearSearch: () {
+                setState(() {
+                  _searchQuery = '';
+                  _searchController.clear();
+                });
+                _viewModel.searchFood('');
+              },
+            ),
+
+            // 食品统计信息
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                children: [
+                  Text(
+                    '总计 $_totalFoodCount 种食品(只显示前200个)',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                  ),
+                  const Spacer(),
+                  // if (!_isImporting)
+                  //   TextButton(
+                  //     onPressed: () {
+                  //       _viewModel.clearAllFood().then((_) {
+                  //         _loadFoodItems();
+                  //         _loadFoodCount();
+                  //       });
+                  //     },
+                  //     child: const Text('清空'),
+                  //   ),
+                  if (_isImporting)
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // 食品列表
+            Expanded(
+              child: Consumer<DietDiaryViewModel>(
+                builder: (context, viewModel, child) {
+                  return FoodListView(
+                    viewModel: viewModel,
+                    searchQuery: _searchQuery,
+                    showOnlyFavorites: _showOnlyFavorites,
+                    errorContext: 'food_management',
+                    onFoodTap: _navigateToFoodDetail,
+                    onFavoriteToggle: _toggleFavorite,
+                    onFoodEdit: _navigateToEditFood,
+                    onFoodDelete: _showDeleteConfirmation,
+                    onAddNewFood: (query) =>
+                        _navigateToAddFood(initialName: query),
+                    showManagementActions: true,
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+        floatingActionButton: buildFloatingActionButton(
+          _navigateToAddFood,
+          context,
+          icon: Icons.add,
+          tooltip: '添加食品',
+        ),
       ),
     );
   }
@@ -226,35 +227,34 @@ class _FoodManagementPageState extends State<FoodManagementPage> {
   void _showDeleteConfirmation(FoodItem food) {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('确认删除'),
-            content: Text('确定要删除"${food.name}"吗？如果该食品已被使用，将无法删除。'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  Navigator.pop(context);
-                  try {
-                    if (food.id != null) {
-                      await _viewModel.deleteFood(food.id!);
-                      _loadFoodItems();
-                      _loadFoodCount();
-
-                      ToastUtils.showInfo('食品已删除');
-                    }
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    commonExceptionDialog(context, '删除失败', e.toString());
-                  }
-                },
-                child: const Text('删除'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('确认删除'),
+        content: Text('确定要删除"${food.name}"吗？如果该食品已被使用，将无法删除。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
           ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                if (food.id != null) {
+                  await _viewModel.deleteFood(food.id!);
+                  _loadFoodItems();
+                  _loadFoodCount();
+
+                  ToastUtils.showInfo('食品已删除');
+                }
+              } catch (e) {
+                if (!context.mounted) return;
+                commonExceptionDialog(context, '删除失败', e.toString());
+              }
+            },
+            child: const Text('删除'),
+          ),
+        ],
+      ),
     );
   }
 

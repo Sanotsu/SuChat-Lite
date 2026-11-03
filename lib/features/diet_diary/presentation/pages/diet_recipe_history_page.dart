@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 
@@ -46,14 +47,14 @@ class _DietRecipeHistoryPageState extends State<DietRecipeHistoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('食谱历史')),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _recipes.isEmpty
-              ? const Center(child: Text('暂无食谱记录'))
-              : ListView.builder(
+    return CusContentWidth(
+      child: Scaffold(
+        appBar: AppBar(title: const Text('食谱历史')),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _recipes.isEmpty
+            ? const Center(child: Text('暂无食谱记录'))
+            : ListView.builder(
                 itemCount: _recipes.length,
                 itemBuilder: (context, index) {
                   final recipe = _recipes[index];
@@ -120,25 +121,24 @@ class _DietRecipeHistoryPageState extends State<DietRecipeHistoryPage> {
                       onLongPress: () async {
                         var result = await showDialog(
                           context: context,
-                          builder:
-                              (context) => AlertDialog(
-                                title: const Text('删除分析'),
-                                content: const Text('确定要删除该分析吗？'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.pop(context, false);
-                                    },
-                                    child: const Text('取消'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.pop(context, true);
-                                    },
-                                    child: const Text('确定'),
-                                  ),
-                                ],
+                          builder: (context) => AlertDialog(
+                            title: const Text('删除分析'),
+                            content: const Text('确定要删除该分析吗？'),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context, false);
+                                },
+                                child: const Text('取消'),
                               ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context, true);
+                                },
+                                child: const Text('确定'),
+                              ),
+                            ],
+                          ),
                         );
 
                         if (result == true) {
@@ -154,6 +154,7 @@ class _DietRecipeHistoryPageState extends State<DietRecipeHistoryPage> {
                   );
                 },
               ),
+      ),
     );
   }
 

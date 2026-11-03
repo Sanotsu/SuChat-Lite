@@ -168,3 +168,7 @@ installer/
 portable/
 temp/
 SuChat_for_gui.evb
+
+# ObjectBox桌面端测试动态库(本地下载，不入库)
+objectbox.dll
+objectbox.lib

@@ -1,7 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../../core/utils/screen_helper.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
+import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/models/unified_chat_partner.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
 
@@ -18,6 +23,8 @@ class ChatSettingsDialog extends StatefulWidget {
   final bool? enableThinking;
   final UnifiedChatPartner? selectedPartner;
   final Map<String, dynamic>? omniParams;
+  // 用户自定义请求参数(JSON字符串)，发送时合并到请求体顶层
+  final Map<String, dynamic>? customParams;
   final Function(Map<String, dynamic>) onSave;
 
   const ChatSettingsDialog({
@@ -33,6 +40,7 @@ class ChatSettingsDialog extends StatefulWidget {
     this.enableThinking = false,
     this.selectedPartner,
     this.omniParams,
+    this.customParams,
     required this.onSave,
   });
 
@@ -44,8 +52,27 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
   late TextEditingController _titleController;
   late TextEditingController _systemPromptController;
   late TextEditingController _maxTokensController;
+  late TextEditingController _customParamsController;
 
-  late double _contextMessageLength;
+  // 2026-09-09 上下文消息数：null=不限制(携带全部历史)；
+  // 左侧滑条为预设档位，右侧输入框可自由输入任意值
+  static const List<int?> _ctxPresets = [
+    0,
+    2,
+    4,
+    8,
+    10,
+    20,
+    50,
+    100,
+    200,
+    500,
+    null,
+  ];
+  int? _contextMessageLength;
+  double _ctxSliderIndex = 10;
+  late TextEditingController _contextLengthController;
+
   late double _temperature;
   late double _topP;
   bool _isStream = true;
@@ -62,6 +89,28 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
       widget.viewModel.currentModel?.modelName.toLowerCase().contains('omni') ??
       false;
 
+  /// 2026-09-09 当前是否由自制搭档托管对话参数：
+  /// 选中自制搭档时参数随搭档配置生效，对话设置不再展示/修改高级配置
+  bool get _isCustomPartnerManaged =>
+      widget.selectedPartner != null &&
+      widget.selectedPartner!.isBuiltIn == false;
+
+  /// 值对应的预设档位index(不在预设中的值定位到最近的较大档，null=不限制档)
+  double _indexForValue(int? value) {
+    if (value == null) return (_ctxPresets.length - 1).toDouble();
+    final idx = _ctxPresets.indexOf(value);
+    if (idx >= 0) return idx.toDouble();
+    // 非预设值(如手输15)：定位到第一个大于它的预设档
+    for (var i = 0; i < _ctxPresets.length; i++) {
+      final preset = _ctxPresets[i];
+      if (preset != null && preset >= value) return i.toDouble();
+    }
+    return (_ctxPresets.length - 1).toDouble();
+  }
+
+  /// 档位显示文本(null显示"不限制")
+  String _ctxDisplayText(int? value) => value?.toString() ?? '不限制';
+
   @override
   void initState() {
     super.initState();
@@ -72,8 +121,17 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
     _maxTokensController = TextEditingController(
       text: (widget.maxTokens ?? 4096).toString(),
     );
+    _customParamsController = TextEditingController(
+      text: widget.customParams == null
+          ? ''
+          : const JsonEncoder.withIndent('  ').convert(widget.customParams),
+    );
 
-    _contextMessageLength = (widget.contextMessageLength ?? 6).toDouble();
+    _contextMessageLength = widget.contextMessageLength;
+    _ctxSliderIndex = _indexForValue(_contextMessageLength);
+    _contextLengthController = TextEditingController(
+      text: _ctxDisplayText(_contextMessageLength),
+    );
     _temperature = widget.temperature ?? 0.7;
     _topP = widget.topP ?? 1.0;
     _isStream = widget.isStream ?? true;
@@ -103,7 +161,9 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
       _maxTokensController.text = (widget.maxTokens ?? 4096).toString();
     }
     if (oldWidget.contextMessageLength != widget.contextMessageLength) {
-      _contextMessageLength = (widget.contextMessageLength ?? 6).toDouble();
+      _contextMessageLength = widget.contextMessageLength;
+      _ctxSliderIndex = _indexForValue(_contextMessageLength);
+      _contextLengthController.text = _ctxDisplayText(_contextMessageLength);
     }
     if (oldWidget.temperature != widget.temperature) {
       _temperature = widget.temperature ?? 0.7;
@@ -123,22 +183,48 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
     _titleController.dispose();
     _systemPromptController.dispose();
     _maxTokensController.dispose();
+    _contextLengthController.dispose();
+    _customParamsController.dispose();
     super.dispose();
   }
 
   void _handleSave() {
-    final settings = {
+    // 校验自定义JSON参数(可留空)
+    Map<String, dynamic>? customParams;
+    final customText = _customParamsController.text.trim();
+    if (customText.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(customText);
+        if (decoded is! Map<String, dynamic>) {
+          ToastUtils.showError('自定义请求参数必须是JSON对象(以{}包裹)');
+          return;
+        }
+        customParams = decoded;
+      } catch (e) {
+        ToastUtils.showError('自定义请求参数JSON格式错误: $e');
+        return;
+      }
+    }
+
+    // 2026-09-09 自制搭档托管参数时：不回传高级参数键
+    // (updateConversationSettings 对缺失键不做修改，搭档配置保持生效)
+    final settings = <String, dynamic>{
       'title': _titleController.text,
       'systemPrompt': _systemPromptController.text,
-      'contextMessageLength': _contextMessageLength.round(),
-      'temperature': _temperature,
-      'topP': _topP,
-      'maxTokens': int.tryParse(_maxTokensController.text) ?? 4096,
-      'isStream': _isStream,
-      'enableThinking': _enableThinking,
+      if (!_isCustomPartnerManaged) ...{
+        // 可为null(不限制)，updateConversationSettings已支持显式写null
+        'contextMessageLength': _contextMessageLength,
+        'temperature': _temperature,
+        'topP': _topP,
+        'maxTokens': int.tryParse(_maxTokensController.text) ?? 4096,
+        'isStream': _isStream,
+        'enableThinking': _enableThinking,
+      },
       // qwen-omni模型还可以指定
       'modalities': _isOutputAudio ? ['text', 'audio'] : ['text'],
       if (_isOutputAudio) 'audio': {'voice': _audioVoice, 'format': 'wav'},
+      // 为null时显式清空已保存的自定义参数
+      'customRequestParams': customParams,
     };
 
     widget.onSave(settings);
@@ -147,81 +233,104 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16),
-      title: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: const BoxDecoration(
-              color: Colors.blue,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.smart_toy, color: Colors.white, size: 24),
-          ),
-          const SizedBox(width: 12),
-          const Text(
-            '对话设置',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const Spacer(),
-          Tooltip(
-            message: '注意: 因模型不同，部分设置可能不会生效。',
-            triggerMode: TooltipTriggerMode.tap,
-            showDuration: Duration(seconds: 20),
-            margin: EdgeInsets.all(24),
-            child: Icon(Icons.info_outline, size: 24, color: Colors.grey),
-          ),
-        ],
-      ),
-      content: ConstrainedBox(
-        constraints: BoxConstraints(
-          minWidth: double.maxFinite,
-          maxHeight: 0.6.sh,
+    // 2026-09-10 弹窗宽度统一(dialogWidth=640)：限宽必须加在AlertDialog
+    // 外层(showDialog处于tight全屏约束，须Align先转loose)；
+    // content用maxFinite撑满，视觉宽度=640-2x16(inset)=608，全项目一致
+    return Align(
+      alignment: Alignment.center,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: CusContentWidth.dialogWidth,
         ),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+          title: Row(
             children: [
-              // 搭档信息显示(搭档的标题和提示词都放在输入框里了,这里不必再显示)
-              // if (widget.selectedPartner != null) buildPartnerInfo(),
-
-              // 名称
-              const Text('名称', style: TextStyle(color: Colors.grey)),
-              TextField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.all(8),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: Colors.blue,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.smart_toy,
+                  color: Colors.white,
+                  size: 24,
                 ),
               ),
-              const SizedBox(height: 8),
-
-              // 系统提示
-              const Text('系统提示（角色设定）', style: TextStyle(color: Colors.grey)),
-              TextField(
-                controller: _systemPromptController,
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.all(12),
-                ),
+              const SizedBox(width: 12),
+              const Text(
+                '对话设置',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 8),
-
-              _buildCollapsibleSection(),
+              const Spacer(),
+              Tooltip(
+                message: '注意: 因模型不同，部分设置可能不会生效。',
+                triggerMode: TooltipTriggerMode.tap,
+                showDuration: Duration(seconds: 20),
+                margin: EdgeInsets.all(24),
+                child: Icon(Icons.info_outline, size: 24, color: Colors.grey),
+              ),
             ],
           ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: ScreenHelper.isDesktop() ? 560.0 : 0.6.sh,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 搭档信息显示(搭档的标题和提示词都放在输入框里了,这里不必再显示)
+                    // if (widget.selectedPartner != null) buildPartnerInfo(),
+
+                    // 名称
+                    const Text('名称', style: TextStyle(color: Colors.grey)),
+                    TextField(
+                      controller: _titleController,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.all(8),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // 系统提示
+                    const Text(
+                      '系统提示（角色设定）',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    TextField(
+                      controller: _systemPromptController,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.all(12),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // 2026-09-09 选中自制搭档时隐藏高级配置：搭档自身配置即参数唯一
+                    // 来源(选搭档时已应用到会话)，此处单独修改语义冲突不应生效；
+                    // 内置搭档/未选搭档时正常显示可配置
+                    if (!_isCustomPartnerManaged) _buildCollapsibleSection(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
+            ),
+            ElevatedButton(onPressed: _handleSave, child: const Text('保存')),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
-        ),
-        ElevatedButton(onPressed: _handleSave, child: const Text('保存')),
-      ],
     );
   }
 
@@ -281,9 +390,11 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
           : const Icon(Icons.keyboard_arrow_down),
       trailing: TextButton(
         onPressed: () {
-          // 重置当前对话使用的模型设置为预设的
+          // 重置当前对话使用的模型设置为默认(2026-09-09 上下文数重置为"不限制")
           setState(() {
-            _contextMessageLength = 6;
+            _contextMessageLength = null;
+            _ctxSliderIndex = _indexForValue(null);
+            _contextLengthController.text = _ctxDisplayText(null);
             _temperature = 0.7;
             _topP = 1.0;
             _maxTokensController.text = '4096';
@@ -319,32 +430,62 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
         ),
         Row(
           children: [
+            // 2026-09-09 左侧：预设档位滑条(0/2/4/8/10/20/50/100/200/500/不限制)
             Expanded(
               child: Slider(
-                value: _contextMessageLength,
-                min: 1,
-                max: 20,
-                divisions: 19,
+                value: _ctxSliderIndex,
+                min: 0,
+                max: (_ctxPresets.length - 1).toDouble(),
+                divisions: _ctxPresets.length - 1,
+                label: _ctxDisplayText(_ctxPresets[_ctxSliderIndex.round()]),
                 onChanged: (value) {
                   setState(() {
-                    _contextMessageLength = value;
+                    _ctxSliderIndex = value;
+                    _contextMessageLength = _ctxPresets[value.round()];
+                    _contextLengthController.text = _ctxDisplayText(
+                      _contextMessageLength,
+                    );
                   });
                 },
               ),
             ),
             const SizedBox(width: 12),
-            Container(
-              width: 50,
-              height: 32,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Center(
-                child: Text(
-                  _contextMessageLength.round().toString(),
-                  style: const TextStyle(fontSize: 14),
+            // 2026-09-09 右侧：自由输入框(任意正整数，"不限制"或空=不限)
+            SizedBox(
+              width: 80,
+              height: 36,
+              child: TextField(
+                controller: _contextLengthController,
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: '不限',
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 8,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  isDense: true,
                 ),
+                onChanged: (text) {
+                  setState(() {
+                    if (text.trim().isEmpty) {
+                      // 清空输入视为"不限制"
+                      _contextMessageLength = null;
+                      _ctxSliderIndex = _indexForValue(null);
+                      return;
+                    }
+                    final v = int.tryParse(text.trim());
+                    if (v != null && v >= 0) {
+                      _contextMessageLength = v;
+                      _ctxSliderIndex = _indexForValue(v);
+                    }
+                    // 非法输入暂不更新状态，保存时以 _contextMessageLength 为准
+                  });
+                },
               ),
             ),
           ],
@@ -552,6 +693,39 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
               child: Icon(Icons.info_outline, size: 16, color: Colors.grey),
             ),
           ],
+        ),
+        const SizedBox(height: 8),
+
+        // 自定义请求参数(JSON)：平台/模型特例配置，合并到请求体顶层
+        Row(
+          children: [
+            const Text('自定义请求参数(JSON)'),
+            const SizedBox(width: 8),
+            Tooltip(
+              message:
+                  '以JSON对象形式输入任意请求参数，发送时合并到请求体顶层，'
+                  '同名键将覆盖上方通用设置。用于各平台模型的特殊参数，'
+                  '例如 {"top_k": 50}、{"reasoning_effort": "high"} 等。留空表示不附加。',
+              triggerMode: TooltipTriggerMode.tap,
+              showDuration: Duration(seconds: 20),
+              margin: EdgeInsets.all(24),
+              child: Icon(Icons.info_outline, size: 16, color: Colors.grey),
+            ),
+          ],
+        ),
+        TextField(
+          controller: _customParamsController,
+          maxLines: 4,
+          style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+          decoration: InputDecoration(
+            border: const OutlineInputBorder(),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 8,
+            ),
+            hintText: '例如: {"top_k": 50, "frequency_penalty": 0.5}',
+            hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+          ),
         ),
       ],
     );

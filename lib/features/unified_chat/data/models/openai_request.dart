@@ -24,7 +24,7 @@ class OpenAIChatCompletionRequest {
   final OpenAIStreamOptions? streamOptions;
 
   // 是否启用思考模式
-  // 阿里百炼、硅基流动、无问芯穹 等平台的Qwen3等模型，可以控制是否启动思考模式
+  // 阿里百炼、硅基流动 等平台的Qwen3等模型，可以控制是否启动思考模式
   // 智谱 等平台的GLM4.5 新模型，参数是thinking，值为 enabled, disabled
   @JsonKey(name: 'enable_thinking')
   final bool? enableThinking;
@@ -52,6 +52,12 @@ class OpenAIChatCompletionRequest {
   @JsonKey(name: 'top_logprobs')
   final int? topLogprobs;
 
+  // 用户自定义请求参数(2026-09-02)：对话设置中以JSON输入的任意参数，
+  // 发送时合并到请求体顶层(同名键覆盖标准参数)，用于平台/模型特例配置；
+  // 不参与常规序列化(toJson不含此字段，由toRequestBody手动合并)
+  @JsonKey(includeIfNull: false)
+  final Map<String, dynamic>? customParams;
+
   const OpenAIChatCompletionRequest({
     required this.model,
     required this.messages,
@@ -76,6 +82,7 @@ class OpenAIChatCompletionRequest {
     this.logitBias,
     this.logprobs,
     this.topLogprobs,
+    this.customParams,
   });
 
   factory OpenAIChatCompletionRequest.fromJson(Map<String, dynamic> json) =>
@@ -86,17 +93,42 @@ class OpenAIChatCompletionRequest {
   // 移除null值的属性
   Map<String, dynamic> toRequestBody({UnifiedPlatformSpec? platform}) {
     if (platform?.id == UnifiedPlatformId.zhipu.name) {
-      return toZhipuBody();
+      return _applyCustomParams(toZhipuBody());
     }
     if (platform?.id == UnifiedPlatformId.siliconCloud.name) {
-      return toSiliconCloudBody();
+      return _applyCustomParams(toSiliconCloudBody());
     }
     if (platform?.id == UnifiedPlatformId.volcengine.name) {
-      return toVolcengineBody();
+      return _applyCustomParams(toVolcengineBody());
+    }
+    if (platform?.id == UnifiedPlatformId.mimo.name) {
+      return _applyCustomParams(toMimoBody());
     }
 
     final json = toJson();
     json.removeWhere((key, value) => value == null);
+
+    // 移除辅助字段(customParams单独合并，不作为请求键发送)
+    json.remove('custom_params');
+    json.remove('customParams');
+
+    // 2026-09-02 按最新文档修正：
+    // 1. enable_thinking 仅在显式开启时发送；false不发送(走模型默认值)——
+    //    GLM-5.3、kimi-k3等强制思考模型仅支持true，传false直接400
+    // 2026-10-14 按最新文档补充：稀宇科技直供的MiniMax/MiniMax-M3不使用
+    // enable_thinking，思考控制走thinking对象({type:adaptive/disabled})
+    if (json['enable_thinking'] == false) {
+      json.remove('enable_thinking');
+      if (model.contains('MiniMax-M3')) {
+        json['thinking'] = {'type': 'disabled'};
+      }
+    }
+
+    // 2. max_tokens已被官方标注"即将废弃"，新写法为max_completion_tokens
+    //    (限制含思维链的完整输出；Qwen3.7-Max+/GLM-5+/DeepSeek-V3+/Kimi-K2.5+支持)
+    if (json['max_tokens'] != null) {
+      json['max_completion_tokens'] = json.remove('max_tokens');
+    }
 
     // 如果有单独omni的参数，进行构建
     if (omniParams != null) {
@@ -112,19 +144,21 @@ class OpenAIChatCompletionRequest {
     json.remove('frequency_penalty');
     json.remove('presence_penalty');
 
-    // TEST: 移除不支持的参数
-    // json.remove('tool_choice');
-    // json.remove('stream');
-    // json.remove('stream_options');
-    // json.remove('enable_thinking');
-    // json.remove('max_tokens');
-    // json.remove('top_p');
-    // json.remove('temperature');
+    return _applyCustomParams(json);
+  }
 
+  /// 将用户自定义参数合并到请求体顶层(2026-09-02)
+  /// 同名键直接覆盖标准参数，用于各平台/模型的特例配置
+  Map<String, dynamic> _applyCustomParams(Map<String, dynamic> json) {
+    if (customParams != null && customParams!.isNotEmpty) {
+      json.addAll(customParams!);
+    }
     return json;
   }
 
-  // 智谱平台的对话好像有些参数不支持，设置了会报错而不是被忽略
+  // 智谱平台部分参数不支持，设置了会报错而不是被忽略
+  // 2026-09-02：GLM-5.3等强制思考模型仅支持开启思考，thinking:disabled会400；
+  // 故仅在显式开启时发送thinking:enabled，关闭时不发送(走模型默认行为)
   Map<String, dynamic> toZhipuBody() {
     final json = toJson();
     json.removeWhere((key, value) => value == null);
@@ -134,50 +168,68 @@ class OpenAIChatCompletionRequest {
     json.remove('presence_penalty');
     json.remove('stream_options');
 
-    // 获得thinking参数
+    // 获得thinking参数：仅开启时转换，关闭时移除
     final enableThinking = json['enable_thinking'];
-    if (enableThinking != null) {
-      json['thinking'] = {'type': enableThinking ? 'enabled' : 'disabled'};
-      json.remove('enable_thinking');
+    if (enableThinking == true) {
+      json['thinking'] = {'type': 'enabled'};
     }
+    json.remove('enable_thinking');
 
     return json;
   }
 
-  // 实测，类似GLM-4-9B-0414等不支持enable_thinking参数的模型设置了会报错
+  // 2026-09-02 移除按模型关键字写死的enable_thinking白名单(模型更新快无法枚举)：
+  // 统一为仅显式开启思考时发送；不支持该参数的旧模型请换新模型，
+  // 或在对话设置的自定义JSON参数中自行覆盖
   Map<String, dynamic> toSiliconCloudBody() {
     final json = toJson();
     json.removeWhere((key, value) => value == null);
 
-    // 测试：移除不支持的参数
+    // 移除不支持的参数
     json.remove('frequency_penalty');
     json.remove('presence_penalty');
 
-    // 2025-09-26 如果不是这些关键字的模型，不要添加enable_thinking参数，否则调用会报错
-    List<String> removedModelKeywords = [
-      'qwen3',
-      'hunyuan-a13b-instruct',
-      'glm-4.5v',
-      'deepseek-v3.1',
-    ];
-    if (!removedModelKeywords.any(
-      (keyword) => model.toLowerCase().contains(keyword),
-    )) {
+    // 仅显式开启思考时发送(强制思考模型传false会400)
+    if (json['enable_thinking'] != true) {
       json.remove('enable_thinking');
     }
     return json;
   }
 
-  // 智谱平台的对话好像有些参数不支持，设置了会报错而不是被忽略
+  // 火山方舟部分参数不支持，设置了会报错而不是被忽略
+  // 2026-09-02：与智谱同理，仅在显式开启思考时发送thinking:enabled
   Map<String, dynamic> toVolcengineBody() {
     final json = toJson();
     json.removeWhere((key, value) => value == null);
 
-    // 获得thinking参数
+    // 获得thinking参数：仅开启时转换，关闭时移除
     final enableThinking = json['enable_thinking'];
-    if (enableThinking != null) {
-      json['thinking'] = {'type': enableThinking ? 'enabled' : 'disabled'};
-      json.remove('enable_thinking');
+    if (enableThinking == true) {
+      json['thinking'] = {'type': 'enabled'};
+    }
+    json.remove('enable_thinking');
+
+    return json;
+  }
+
+  // 2026-09-10 小米MiMo：OpenAI兼容，但思考开关用thinking:{type:enabled}
+  // (同智谱/火山)，限长参数用max_completion_tokens，不支持stream_options
+  Map<String, dynamic> toMimoBody() {
+    final json = toJson();
+    json.removeWhere((key, value) => value == null);
+
+    json.remove('stream_options');
+
+    // 获得thinking参数：仅开启时转换，关闭时移除(走模型默认行为)
+    final enableThinking = json['enable_thinking'];
+    if (enableThinking == true) {
+      json['thinking'] = {'type': 'enabled'};
+    }
+    json.remove('enable_thinking');
+
+    // MiMo文档示例使用max_completion_tokens
+    if (json['max_tokens'] != null) {
+      json['max_completion_tokens'] = json.remove('max_tokens');
     }
 
     return json;
@@ -202,6 +254,7 @@ class OpenAIChatCompletionRequest {
     dynamic toolChoice,
     OpenAIResponseFormat? responseFormat,
     String? platformId,
+    Map<String, dynamic>? customParams,
   }) {
     // 根据平台ID调整参数
     final adjustedMessages = _adjustMessagesForPlatform(messages, platformId);
@@ -228,6 +281,7 @@ class OpenAIChatCompletionRequest {
       tools: tools,
       toolChoice: toolChoice,
       responseFormat: responseFormat,
+      customParams: customParams,
     );
   }
 
@@ -416,30 +470,6 @@ class OpenAIModelsRequest {
       _$OpenAIModelsRequestFromJson(json);
 
   Map<String, dynamic> toJson() => _$OpenAIModelsRequestToJson(this);
-}
-
-/// 嵌入请求
-@JsonSerializable(explicitToJson: true)
-class OpenAIEmbeddingRequest {
-  final String model;
-  final dynamic input; // string or array of strings
-  @JsonKey(name: 'encoding_format')
-  final String? encodingFormat;
-  final int? dimensions;
-  final String? user;
-
-  const OpenAIEmbeddingRequest({
-    required this.model,
-    required this.input,
-    this.encodingFormat,
-    this.dimensions,
-    this.user,
-  });
-
-  factory OpenAIEmbeddingRequest.fromJson(Map<String, dynamic> json) =>
-      _$OpenAIEmbeddingRequestFromJson(json);
-
-  Map<String, dynamic> toJson() => _$OpenAIEmbeddingRequestToJson(this);
 }
 
 /// 图片生成请求

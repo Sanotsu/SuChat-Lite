@@ -29,9 +29,10 @@ android {
     //     jvmTarget = JavaVersion.VERSION_11.toString()
     // }
 
-       // Android 15(API 35)
-    compileSdk = 35
-    ndkVersion = "27.2.12479018"
+       // Android 16(API 37) - secure_storage 11 / permission_handler 13 要求
+    compileSdk = 37
+    // ndkVersion = "27.2.12479018"
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

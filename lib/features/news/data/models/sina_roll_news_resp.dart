@@ -64,10 +64,7 @@ class SinaRNStatus {
   @JsonKey(name: 'msg')
   String? msg;
 
-  SinaRNStatus({
-    this.code,
-    this.msg,
-  });
+  SinaRNStatus({this.code, this.msg});
 
   factory SinaRNStatus.fromRawJson(String str) =>
       SinaRNStatus.fromJson(json.decode(str));
@@ -161,11 +158,7 @@ class SinaRNImage {
   @JsonKey(name: 'h')
   dynamic h;
 
-  SinaRNImage({
-    this.u,
-    this.w,
-    this.h,
-  });
+  SinaRNImage({this.u, this.w, this.h});
 
   factory SinaRNImage.fromRawJson(String str) =>
       SinaRNImage.fromJson(json.decode(str));

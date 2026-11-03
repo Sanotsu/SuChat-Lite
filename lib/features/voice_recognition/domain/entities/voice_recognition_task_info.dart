@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import '../../../../core/entities/cus_llm_model.dart';
+import 'task_model_info.dart';
 import '../../data/models/sense_voice.dart';
 
 /// 本地存储的任务模型，包含阿里云任务信息和本地信息
@@ -11,7 +11,7 @@ class VoiceRecognitionTaskInfo {
   final String? languageHint; // 语言类型
   final String? taskStatus; // 任务状态
   final DateTime? gmtCreate; // 创建时间
-  final CusLLMSpec? llmSpec; // 任务模型
+  final TaskModelInfo? llmSpec; // 任务模型
   final SenseVoiceJobResp? jobResponse; // 阿里云任务响应
   final SenseVoiceRecogResp? recognitionResponse; // 阿里云识别结果
 
@@ -35,22 +35,20 @@ class VoiceRecognitionTaskInfo {
       githubAudioUrl: json['githubAudioUrl'],
       languageHint: json['languageHint'],
       taskStatus: json['taskStatus'],
-      gmtCreate:
-          json['gmtCreate'] != null ? DateTime.parse(json['gmtCreate']) : null,
-      llmSpec:
-          json['llmSpec'] != null
-              ? CusLLMSpec.fromJson(jsonDecode(json['llmSpec']))
-              : null,
-      jobResponse:
-          json['jobResponse'] != null
-              ? SenseVoiceJobResp.fromJson(jsonDecode(json['jobResponse']))
-              : null,
-      recognitionResponse:
-          json['recognitionResponse'] != null
-              ? SenseVoiceRecogResp.fromJson(
-                jsonDecode(json['recognitionResponse']),
-              )
-              : null,
+      gmtCreate: json['gmtCreate'] != null
+          ? DateTime.parse(json['gmtCreate'])
+          : null,
+      llmSpec: json['llmSpec'] != null
+          ? TaskModelInfo.fromJson(jsonDecode(json['llmSpec']))
+          : null,
+      jobResponse: json['jobResponse'] != null
+          ? SenseVoiceJobResp.fromJson(jsonDecode(json['jobResponse']))
+          : null,
+      recognitionResponse: json['recognitionResponse'] != null
+          ? SenseVoiceRecogResp.fromJson(
+              jsonDecode(json['recognitionResponse']),
+            )
+          : null,
     );
   }
 
@@ -64,12 +62,12 @@ class VoiceRecognitionTaskInfo {
       'taskStatus': taskStatus,
       'gmtCreate': gmtCreate?.toIso8601String(),
       'llmSpec': llmSpec != null ? jsonEncode(llmSpec!.toJson()) : null,
-      'jobResponse':
-          jobResponse != null ? jsonEncode(jobResponse!.toJson()) : null,
-      'recognitionResponse':
-          recognitionResponse != null
-              ? jsonEncode(recognitionResponse!.toJson())
-              : null,
+      'jobResponse': jobResponse != null
+          ? jsonEncode(jobResponse!.toJson())
+          : null,
+      'recognitionResponse': recognitionResponse != null
+          ? jsonEncode(recognitionResponse!.toJson())
+          : null,
     };
   }
 
@@ -81,22 +79,18 @@ class VoiceRecognitionTaskInfo {
       githubAudioUrl: map['githubAudioUrl'],
       languageHint: map['languageHint'],
       taskStatus: map['taskStatus'],
-      gmtCreate:
-          map['gmtCreate'] != null ? DateTime.parse(map['gmtCreate']) : null,
-      jobResponse:
-          map['jobResponse'] != null
-              ? SenseVoiceJobResp.fromJson(jsonDecode(map['jobResponse']))
-              : null,
-      llmSpec:
-          map['llmSpec'] != null
-              ? CusLLMSpec.fromJson(jsonDecode(map['llmSpec']))
-              : null,
-      recognitionResponse:
-          map['recognitionResponse'] != null
-              ? SenseVoiceRecogResp.fromJson(
-                jsonDecode(map['recognitionResponse']),
-              )
-              : null,
+      gmtCreate: map['gmtCreate'] != null
+          ? DateTime.parse(map['gmtCreate'])
+          : null,
+      jobResponse: map['jobResponse'] != null
+          ? SenseVoiceJobResp.fromJson(jsonDecode(map['jobResponse']))
+          : null,
+      llmSpec: map['llmSpec'] != null
+          ? TaskModelInfo.fromJson(jsonDecode(map['llmSpec']))
+          : null,
+      recognitionResponse: map['recognitionResponse'] != null
+          ? SenseVoiceRecogResp.fromJson(jsonDecode(map['recognitionResponse']))
+          : null,
     );
   }
 
@@ -122,7 +116,7 @@ class VoiceRecognitionTaskInfo {
     String? languageHint,
     String? taskStatus,
     DateTime? gmtCreate,
-    CusLLMSpec? llmSpec,
+    TaskModelInfo? llmSpec,
     SenseVoiceJobResp? jobResponse,
     SenseVoiceRecogResp? recognitionResponse,
   }) {
@@ -184,10 +178,13 @@ class VoiceRecognitionTaskInfo {
 
   // 获取识别结果URL
   String? get transcriptionUrl {
-    if (jobResponse?.output?.results != null &&
-        jobResponse!.output!.results!.isNotEmpty) {
-      return jobResponse!.output!.results!.first.transcriptionUrl;
+    final output = jobResponse?.output;
+    // 2026-10-14 FIX：双路径兼容
+    // Fun-ASR/qwen-audio-3.x-asr-flash-filetrans在output.results[]数组；
+    // qwen3-asr-flash-filetrans在output.result单数对象
+    if (output?.results != null && output!.results!.isNotEmpty) {
+      return output.results!.first.transcriptionUrl;
     }
-    return null;
+    return output?.result?.transcriptionUrl;
   }
 }

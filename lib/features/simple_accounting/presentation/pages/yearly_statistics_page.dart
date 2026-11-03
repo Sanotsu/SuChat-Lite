@@ -40,6 +40,9 @@ class YearlyStatisticsPageState extends State<YearlyStatisticsPage>
 
   // 公开的刷新数据方法，供父组件调用
   void refreshData() {
+    // 防止在组件销毁后调用
+    if (!mounted) return;
+
     final viewModel = Provider.of<BillViewModel>(context, listen: false);
     // 重新加载当前选中的年份数据
     viewModel.loadYearlyData(viewModel.selectedYear);
@@ -332,7 +335,7 @@ class YearlyStatisticsPageState extends State<YearlyStatisticsPage>
       final firstDayOfYear = DateTime(viewModel.selectedYear, 1, 1);
       final lastDayOfYear = DateTime(viewModel.selectedYear, 12, 31);
 
-      return StatisticsUtils.getRankingData(
+      return await StatisticsUtils.getRankingData(
         viewModel: viewModel,
         startDate: firstDayOfYear,
         endDate: lastDayOfYear,
@@ -366,8 +369,9 @@ class YearlyStatisticsPageState extends State<YearlyStatisticsPage>
         final stats = yearsData[key]!;
 
         // 根据选择的类型获取数据
-        double value =
-            _selectedType == 0 ? stats.totalIncome : stats.totalExpense;
+        double value = _selectedType == 0
+            ? stats.totalIncome
+            : stats.totalExpense;
 
         // 添加到结果中，并标记当前选中的年份
         result.add(
@@ -408,8 +412,9 @@ class YearlyStatisticsPageState extends State<YearlyStatisticsPage>
         final stats = monthsData[key]!;
 
         // 根据选择的类型获取数据
-        double value =
-            _selectedType == 0 ? stats.totalIncome : stats.totalExpense;
+        double value = _selectedType == 0
+            ? stats.totalIncome
+            : stats.totalExpense;
 
         // 月份显示
         final month = int.parse(key);

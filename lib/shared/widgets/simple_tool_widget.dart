@@ -7,6 +7,7 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 import '../../core/utils/screen_helper.dart';
 import '../services/network_service.dart';
+import 'cus_content_width.dart';
 import 'image_preview_helper.dart';
 
 // 绘制转圈圈
@@ -59,38 +60,44 @@ Future<void> commonMarkdwonHintDialog(
   showDialog(
     context: context,
     builder: (context) {
-      // 获取屏幕尺寸
-      final size = MediaQuery.of(context).size;
-      // 计算显示最大宽度
-      final maxWidth = ScreenHelper.isDesktop() ? size.width * 0.6 : size.width;
-
-      return AlertDialog(
-        title: Text(title),
-        insetPadding: insetPadding,
-        content: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: maxWidth),
-          child: SingleChildScrollView(
-            child: MarkdownBody(
-              data: message,
-              selectable: true,
-              // 设置Markdown文本全局样式
-              styleSheet: MarkdownStyleSheet(
-                // 普通段落文本颜色(假定用户输入就是普通段落文本)
-                p: TextStyle(fontSize: msgFontSize, color: Colors.black),
-                // ... 其他级别的标题样式
-                // 可以继续添加更多Markdown元素的样式
+      // 2026-09-10 弹窗宽度统一(dialogWidth=640)：桌面此前0.6倍窗口宽
+      // 超宽；须Align先转loose再限宽(tight下CB失效)，视觉宽=640-2x16
+      return Align(
+        alignment: Alignment.center,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: CusContentWidth.dialogWidth,
+          ),
+          child: AlertDialog(
+            title: Text(title),
+            insetPadding:
+                insetPadding ?? const EdgeInsets.symmetric(horizontal: 16),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: MarkdownBody(
+                  data: message,
+                  selectable: true,
+                  // 设置Markdown文本全局样式
+                  styleSheet: MarkdownStyleSheet(
+                    // 普通段落文本颜色(假定用户输入就是普通段落文本)
+                    p: TextStyle(fontSize: msgFontSize, color: Colors.black),
+                    // ... 其他级别的标题样式
+                    // 可以继续添加更多Markdown元素的样式
+                  ),
+                ),
               ),
             ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text("确定"),
+              ),
+            ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text("确定"),
-          ),
-        ],
       );
     },
   );
@@ -120,12 +127,90 @@ void commonExceptionDialog(BuildContext context, String title, String message) {
 }
 
 /// 通用的底部信息弹窗
+/// 2026-09-04 桌面端适配：桌面改为居中弹窗(限宽)，移动端保持底部抽屉
 void commonMDHintModalBottomSheet(
   BuildContext context,
   String title,
   String message, {
   double? msgFontSize,
 }) {
+  // Markdown 内容主体(两端共用)
+  Widget mdBody = SingleChildScrollView(
+    child: Padding(
+      padding: EdgeInsets.all(10),
+      child: MarkdownBody(
+        data: message,
+        selectable: true,
+        // 设置Markdown文本全局样式
+        styleSheet: MarkdownStyleSheet(
+          // 普通段落文本颜色(假定用户输入就是普通段落文本)
+          p: TextStyle(fontSize: msgFontSize, color: Colors.black),
+          // ... 其他级别的标题样式
+          // 可以继续添加更多Markdown元素的样式
+        ),
+      ),
+    ),
+  );
+
+  Widget header = Padding(
+    padding: EdgeInsets.symmetric(horizontal: 20),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(title, style: TextStyle(fontSize: 18)),
+        TextButton(
+          child: const Text('关闭'),
+          onPressed: () {
+            Navigator.pop(context);
+            unfocusHandle();
+          },
+        ),
+      ],
+    ),
+  );
+
+  // 桌面端：居中弹窗(限宽，避免全宽贴底抽屉)
+  if (ScreenHelper.isDesktop()) {
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        // 2026-09-10 弹窗宽度统一：桌面560→dialogWidth(640)同模式限宽，
+        // 视觉宽=640-2x16=608与其他弹窗一致
+        return Align(
+          alignment: Alignment.center,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: CusContentWidth.dialogWidth,
+            ),
+            child: Dialog(
+              insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Container(
+                width: double.maxFinite,
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.7,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(height: 12),
+                    header,
+                    Divider(height: 2, thickness: 2),
+                    Flexible(child: mdBody),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+    return;
+  }
+
+  // 移动端：保持底部抽屉
   showModalBottomSheet<void>(
     context: context,
     builder: (BuildContext context) {
@@ -142,41 +227,9 @@ void commonMDHintModalBottomSheet(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(title, style: TextStyle(fontSize: 18)),
-                  TextButton(
-                    child: const Text('关闭'),
-                    onPressed: () {
-                      Navigator.pop(context);
-                      unfocusHandle();
-                    },
-                  ),
-                ],
-              ),
-            ),
+            header,
             Divider(height: 2, thickness: 2),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: EdgeInsets.all(10),
-                  child: MarkdownBody(
-                    data: message,
-                    selectable: true,
-                    // 设置Markdown文本全局样式
-                    styleSheet: MarkdownStyleSheet(
-                      // 普通段落文本颜色(假定用户输入就是普通段落文本)
-                      p: TextStyle(fontSize: msgFontSize, color: Colors.black),
-                      // ... 其他级别的标题样式
-                      // 可以继续添加更多Markdown元素的样式
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            Expanded(child: mdBody),
           ],
         ),
       );
@@ -529,6 +582,7 @@ Widget buildIconTextInkWell({
 
 // 上方图标下方文字的TextButton按钮
 Widget buildIconWithTextButton({
+  Key? key,
   required IconData icon,
   required String label,
   required VoidCallback? onTap,
@@ -538,6 +592,7 @@ Widget buildIconWithTextButton({
   var textColor = Theme.of(context).colorScheme.onSurface;
 
   return Tooltip(
+    key: key,
     message: label,
     verticalOffset: 20,
     preferBelow: false,
@@ -545,7 +600,7 @@ Widget buildIconWithTextButton({
       onPressed: onTap,
       child: Container(
         width: 64,
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 4),
         margin: const EdgeInsets.symmetric(vertical: 4),
         child: Column(
           mainAxisSize: MainAxisSize.min,

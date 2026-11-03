@@ -10,8 +10,8 @@ import '../base_news_page/base_news_page_state.dart';
 
 // 注释掉的是实测无数据的分类
 List<CusLabel> langCategorys = [
-  CusLabel(cnLabel: "中文", value: "chinese"),
   CusLabel(cnLabel: "英语", value: "english"),
+  CusLabel(cnLabel: "中文", value: "chinese"),
   CusLabel(cnLabel: "日语", value: "japanese"),
   CusLabel(cnLabel: "阿拉伯语", value: "arabic"),
   CusLabel(cnLabel: "印度尼西亚语", value: "indonesian"),
@@ -44,9 +44,8 @@ List<CusLabel> langCategorys = [
 ];
 
 ///
-/// 头条新闻
-/// https://github.com/Meowv/ToutiaoNews
-/// 没有分页，只能看到一点点
+/// 野榜BBC
+/// https://bbc-news-api.vercel.app/
 ///
 class SutBbcNewsRespPage extends StatefulWidget {
   const SutBbcNewsRespPage({super.key});

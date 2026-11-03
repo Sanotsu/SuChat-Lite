@@ -35,6 +35,12 @@ class _ExerciseTimerCardState extends State<ExerciseTimerCard> {
   late int _countdown;
   bool _isPaused = false;
 
+  // 2026-09-07 A-10 竞态防护：
+  // 完成回调只允许发出一次的标志
+  bool _completionNotified = false;
+  // 倒计时结束后 3 秒延迟回调的句柄（父级状态变化/销毁时需取消）
+  Timer? _completionDelayTimer;
+
   // TTS助手实例
   final TTSHelper _ttsHelper = TTSHelper();
 
@@ -56,6 +62,12 @@ class _ExerciseTimerCardState extends State<ExerciseTimerCard> {
     if (oldWidget.isResting != widget.isResting ||
         oldWidget.currentSet != widget.currentSet ||
         oldWidget.exercise.detailId != widget.exercise.detailId) {
+      // 父级状态推进（下一组/下一动作/切换休息）时，
+      // 取消上一轮尚未触发的延迟完成回调，重新武装标志
+      _completionDelayTimer?.cancel();
+      _completionDelayTimer = null;
+      _completionNotified = false;
+
       _timer.cancel();
       _initializeTimer();
 
@@ -67,6 +79,7 @@ class _ExerciseTimerCardState extends State<ExerciseTimerCard> {
   @override
   void dispose() {
     _timer.cancel();
+    _completionDelayTimer?.cancel();
     // 确保停止所有TTS声音
     _ttsHelper.stop();
     super.dispose();
@@ -74,8 +87,9 @@ class _ExerciseTimerCardState extends State<ExerciseTimerCard> {
 
   void _initializeTimer() {
     // 如果是休息状态，使用休息时间；否则使用默认的锻炼时间
-    _countdown =
-        widget.isResting ? widget.exercise.restTime : widget.exercise.countdown;
+    _countdown = widget.isResting
+        ? widget.exercise.restTime
+        : widget.exercise.countdown;
     _isPaused = false;
 
     _startTimer();
@@ -93,8 +107,16 @@ class _ExerciseTimerCardState extends State<ExerciseTimerCard> {
           } else {
             _timer.cancel();
 
+            // 2026-09-07 A-10 修复：倒计时结束后存在 3 秒延迟回调窗口，
+            // 期间父级因跳过动作/手动操作发生重建时旧回调仍会触发，
+            // 导致组数重复累加或错加到新动作。改为：
+            // 1) 同步置位 _completionNotified 保证完成回调只发一次；
+            // 2) 延迟回调句柄保存到 _completionDelayTimer，在
+            //    didUpdateWidget 重置与 dispose 时统一取消。
+            if (_completionNotified) return;
+            _completionNotified = true;
+
             // 播放结束语音提示
-            // ？？？注意:这里如果speaknow报错了，就没有调用onRestCompleted和onSetCompleted，可能有问题
             if (_ttsHelper.isSupported) {
               // 休息结束
               if (widget.isResting) {
@@ -102,11 +124,14 @@ class _ExerciseTimerCardState extends State<ExerciseTimerCard> {
                   _ttsHelper.speakNow("休息结束，准备下一组");
                 } finally {
                   // 使用延迟避免语音和UI更新冲突
-                  Future.delayed(Duration(milliseconds: 3000), () {
-                    if (mounted) {
-                      widget.onRestCompleted();
-                    }
-                  });
+                  _completionDelayTimer = Timer(
+                    Duration(milliseconds: 3000),
+                    () {
+                      if (mounted) {
+                        widget.onRestCompleted();
+                      }
+                    },
+                  );
                 }
               } else {
                 // 组完成和全部完成的提示作为队列播放
@@ -120,11 +145,14 @@ class _ExerciseTimerCardState extends State<ExerciseTimerCard> {
                   }
                 } finally {
                   // 使用延迟避免语音和UI更新冲突
-                  Future.delayed(Duration(milliseconds: 3000), () {
-                    if (mounted) {
-                      widget.onSetCompleted();
-                    }
-                  });
+                  _completionDelayTimer = Timer(
+                    Duration(milliseconds: 3000),
+                    () {
+                      if (mounted) {
+                        widget.onSetCompleted();
+                      }
+                    },
+                  );
                 }
               }
             } else {
@@ -270,19 +298,16 @@ class _ExerciseTimerCardState extends State<ExerciseTimerCard> {
                           onPressed: () {
                             showDialog(
                               context: context,
-                              builder:
-                                  (context) => AlertDialog(
-                                    title: const Text('动作说明'),
-                                    content: Text(
-                                      widget.exercise.instructions!,
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context),
-                                        child: const Text('关闭'),
-                                      ),
-                                    ],
+                              builder: (context) => AlertDialog(
+                                title: const Text('动作说明'),
+                                content: Text(widget.exercise.instructions!),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('关闭'),
                                   ),
+                                ],
+                              ),
                             );
                           },
                         ),
@@ -294,10 +319,9 @@ class _ExerciseTimerCardState extends State<ExerciseTimerCard> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color:
-                          widget.isResting
-                              ? Colors.green.withValues(alpha: 0.2)
-                              : Colors.blue.withValues(alpha: 0.2),
+                      color: widget.isResting
+                          ? Colors.green.withValues(alpha: 0.2)
+                          : Colors.blue.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -361,10 +385,9 @@ class _ExerciseTimerCardState extends State<ExerciseTimerCard> {
                     style: TextStyle(
                       fontSize: 48,
                       fontWeight: FontWeight.bold,
-                      color:
-                          _countdown < 5
-                              ? Colors.red
-                              : Theme.of(context).primaryColor,
+                      color: _countdown < 5
+                          ? Colors.red
+                          : Theme.of(context).primaryColor,
                     ),
                   ),
                 ],

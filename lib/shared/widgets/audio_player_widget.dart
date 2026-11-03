@@ -45,6 +45,12 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   Duration _duration = Duration.zero;
   String? _tempAssetPath;
 
+  // 2026-09-07 修复：_initializeController 为 async（asset 分支需先复制
+  // 临时文件），快速进出页面时 dispose 可能先于控制器赋值执行，
+  // 访问未初始化的 late 字段会抛 LateInitializationError
+  bool _controllerAssigned = false;
+  bool _disposed = false;
+
   @override
   void initState() {
     super.initState();
@@ -53,7 +59,10 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    _disposed = true;
+    if (_controllerAssigned) {
+      _controller.dispose();
+    }
     _cleanupTempAsset();
     super.dispose();
   }
@@ -91,10 +100,16 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
         ),
         _ => VideoPlayerController.file(File(widget.audioUrl)),
       };
+      _controllerAssigned = true;
 
       await _controller.initialize();
 
-      if (!mounted) return;
+      // 页面已销毁：若 dispose 时控制器尚未赋值则此处补释放
+      if (_disposed) return;
+      if (!mounted) {
+        await _controller.dispose();
+        return;
+      }
       setState(() {
         _isInitialized = true;
         _duration = _controller.value.duration;
@@ -276,10 +291,9 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
         // 如果是密集型，则只显示播放/暂停按钮，不显示单独按钮行
         if (widget.dense)
           _buildIconButton(
-            icon:
-                _isPlaying
-                    ? Icons.pause_circle_filled
-                    : Icons.play_circle_filled,
+            icon: _isPlaying
+                ? Icons.pause_circle_filled
+                : Icons.play_circle_filled,
             onPressed: _togglePlayPause,
             sizeFactor: ScreenHelper.isDesktop() ? 1.5 : 2.4,
           ),
@@ -293,8 +307,9 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       children: [
         // 静音控制(后续可以修改滚动条控制音频)
         _buildIconButton(
-          icon:
-              _controller.value.volume > 0 ? Icons.volume_up : Icons.volume_off,
+          icon: _controller.value.volume > 0
+              ? Icons.volume_up
+              : Icons.volume_off,
           onPressed: () {
             _controller.setVolume(_controller.value.volume > 0 ? 0 : 1.0);
             setState(() {});
@@ -311,8 +326,9 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
         ),
         // 播放/暂停
         _buildIconButton(
-          icon:
-              _isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+          icon: _isPlaying
+              ? Icons.pause_circle_filled
+              : Icons.play_circle_filled,
           onPressed: _togglePlayPause,
           sizeFactor: widget.dense ? 1.5 : 2.0,
         ),

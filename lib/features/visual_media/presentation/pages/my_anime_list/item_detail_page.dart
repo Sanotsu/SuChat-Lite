@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../../../../core/network/dio_client/interceptor_error.dart';
 import '../../../../../core/utils/simple_tools.dart';
 import '../../../../../shared/constants/constants.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import '../../../../../shared/widgets/image_preview_helper.dart';
 import '../../../../../shared/widgets/simple_tool_widget.dart';
+import '../../../../../shared/widgets/toast_utils.dart';
 import '../../../../../shared/widgets/translatable_widgets.dart';
 import '../../../data/datasources/jikan/get_jikan_apis.dart';
 import '../../../data/models/jikan/jikan_data.dart';
@@ -66,6 +69,8 @@ class _MALItemDetailPageState extends State<MALItemDetailPage> {
   }
 
   // 查询当前mal条目的评分统计
+  // 2026-09-07 修复：原三个查询方法均无 try-catch，接口抛异常时
+  // loading 标志永远停在 true，页面永久卡在加载态
   Future<void> queryMALStatistic() async {
     if (isScoreLoading) return;
 
@@ -73,31 +78,40 @@ class _MALItemDetailPageState extends State<MALItemDetailPage> {
       isScoreLoading = true;
     });
 
-    var stat = await getAMStatistics(
-      jkdata.malId,
-      type: (widget.malType.value as MALType),
-    );
+    try {
+      var stat = await getAMStatistics(
+        jkdata.malId,
+        type: (widget.malType.value as MALType),
+      );
 
-    if (!mounted) return;
-    setState(() {
-      statisticData = stat.data;
+      if (!mounted) return;
+      setState(() {
+        statisticData = stat.data;
 
-      // 先清空
-      malScoreList.clear();
-      var tempList = stat.data.scores ?? [];
+        // 先清空
+        malScoreList.clear();
+        var tempList = stat.data.scores ?? [];
 
-      List<ChartData> tempScores = [];
-      for (var e in tempList) {
-        tempScores.add(ChartData("${e.score}星", e.percentage));
+        List<ChartData> tempScores = [];
+        for (var e in tempList) {
+          tempScores.add(ChartData("${e.score}星", e.percentage));
+        }
+
+        // 从左往右日期逐渐变大，所以数据要翻转
+        malScoreList.addAll([tempScores.reversed.toList()]);
+      });
+    } on CusHttpException catch (e) {
+      // http请求异常已在拦截器中给出提示，这里仅需记录
+      debugPrint(e.toString());
+    } catch (e) {
+      if (mounted) ToastUtils.showError("查询评分统计失败: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isScoreLoading = false;
+        });
       }
-
-      // 从左往右日期逐渐变大，所以数据要翻转
-      malScoreList.addAll([tempScores.reversed.toList()]);
-    });
-
-    setState(() {
-      isScoreLoading = false;
-    });
+    }
   }
 
   // 查询图片
@@ -108,20 +122,28 @@ class _MALItemDetailPageState extends State<MALItemDetailPage> {
       isPictureLoading = true;
     });
 
-    var pics = await getJikanPictures(
-      jkdata.malId,
-      type: (widget.malType.value as MALType),
-    );
+    try {
+      var pics = await getJikanPictures(
+        jkdata.malId,
+        type: (widget.malType.value as MALType),
+      );
 
-    if (!mounted) return;
-    setState(() {
-      // 添加图片
-      malPictureList = pics;
-    });
-
-    setState(() {
-      isPictureLoading = false;
-    });
+      if (!mounted) return;
+      setState(() {
+        // 添加图片
+        malPictureList = pics;
+      });
+    } on CusHttpException catch (e) {
+      debugPrint(e.toString());
+    } catch (e) {
+      if (mounted) ToastUtils.showError("查询图片失败: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isPictureLoading = false;
+        });
+      }
+    }
   }
 
   /// 查询角色
@@ -132,109 +154,122 @@ class _MALItemDetailPageState extends State<MALItemDetailPage> {
       isCharacterLoading = true;
     });
 
-    var temp = await getJikanRelatedCharacters(
-      widget.item.malId,
-      type: (widget.malType.value as MALType),
-    );
+    try {
+      var temp = await getJikanRelatedCharacters(
+        widget.item.malId,
+        type: (widget.malType.value as MALType),
+      );
 
-    if (!mounted) return;
-    setState(() {
-      // 添加图片
-      malCharacterList = temp.data;
-    });
-
-    setState(() {
-      isCharacterLoading = false;
-    });
+      if (!mounted) return;
+      setState(() {
+        // 添加图片
+        malCharacterList = temp.data;
+      });
+    } on CusHttpException catch (e) {
+      debugPrint(e.toString());
+    } catch (e) {
+      if (mounted) ToastUtils.showError("查询角色失败: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isCharacterLoading = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      appBar: AppBar(title: Text("${widget.malType.cnLabel}详情")),
-      body: buildBodyDetail(jkdata, (widget.malType.value as MALType)),
+    return CusContentWidth(
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        appBar: AppBar(title: Text("${widget.malType.cnLabel}详情")),
+        body: buildBodyDetail(jkdata, (widget.malType.value as MALType)),
+      ),
     );
   }
 
   /// 构建详情页面主体内容
+  /// 2026-09-04 桌面端适配：详情骨架限宽居中
   Widget buildBodyDetail(JKData item, MALType malType) {
-    return ListView(
-      children: [
-        /// 标题
-        TranslatableTitleButton(
-          title: item.title ?? item.name ?? "",
-          url: item.url,
-        ),
+    return CusContentWidth(
+      child: ListView(
+        children: [
+          /// 标题
+          TranslatableTitleButton(
+            title: item.title ?? item.name ?? "",
+            url: item.url,
+          ),
 
-        /// 预览图和评分区域
-        buildImageAndRatingArea(
-          context,
-          item.images.jpg?.imageUrl ?? "",
-          "mal",
-          _buildSubRatingChildren(item, malType),
-        ),
+          /// 预览图和评分区域
+          buildImageAndRatingArea(
+            context,
+            item.images.jpg?.imageUrl ?? "",
+            "mal",
+            _buildSubRatingChildren(item, malType),
+          ),
 
-        /// 显示角色表、图片集、演职表
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            // 只有动画和漫画才显示角色表
-            if ((widget.malType.value as MALType) == MALType.anime ||
-                (widget.malType.value as MALType) == MALType.manga)
+          /// 显示角色表、图片集、演职表
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              // 只有动画和漫画才显示角色表
+              if ((widget.malType.value as MALType) == MALType.anime ||
+                  (widget.malType.value as MALType) == MALType.manga)
+                TextButton(
+                  onPressed: () {
+                    setState(() => isShowCharacter = !isShowCharacter);
+                    // 如果角色不为空，则已经查询过了，不用再查了，直接展示即可
+                    if (isShowCharacter && malCharacterList.isEmpty) {
+                      queryMALCharacters();
+                    }
+                  },
+                  child: Text(isShowCharacter ? "隐藏角色表" : "显示角色表"),
+                ),
               TextButton(
                 onPressed: () {
-                  setState(() => isShowCharacter = !isShowCharacter);
-                  // 如果角色不为空，则已经查询过了，不用再查了，直接展示即可
-                  if (isShowCharacter && malCharacterList.isEmpty) {
-                    queryMALCharacters();
+                  setState(() => isShowPicture = !isShowPicture);
+                  // 如果图片不为空，则已经查询过了，不用再查了，直接展示即可
+                  if (isShowPicture && malPictureList.isEmpty) {
+                    queryMALPictures();
                   }
                 },
-                child: Text(isShowCharacter ? "隐藏角色表" : "显示角色表"),
+                child: Text(isShowPicture ? "隐藏图片集" : "显示图片集"),
               ),
-            TextButton(
-              onPressed: () {
-                setState(() => isShowPicture = !isShowPicture);
-                // 如果图片不为空，则已经查询过了，不用再查了，直接展示即可
-                if (isShowPicture && malPictureList.isEmpty) {
-                  queryMALPictures();
-                }
-              },
-              child: Text(isShowPicture ? "隐藏图片集" : "显示图片集"),
-            ),
-          ],
-        ),
-        if (isShowCharacter) buildCharacterArea(),
-        if (isShowPicture) buildPictureArea(),
+            ],
+          ),
+          if (isShowCharacter) buildCharacterArea(),
+          if (isShowPicture) buildPictureArea(),
 
-        /// 基础信息栏位
-        buildTitleText("信息"),
-        if (malType == MALType.anime) ...buildAnmieNote(item),
-        if (malType == MALType.manga) ...buildMangaNote(item),
-        if (malType == MALType.characters) ...buildCharactersNote(item),
-        if (malType == MALType.people) ...buildPeopleNote(item),
+          /// 基础信息栏位
+          buildTitleText("信息"),
+          if (malType == MALType.anime) ...buildAnmieNote(item),
+          if (malType == MALType.manga) ...buildMangaNote(item),
+          if (malType == MALType.characters) ...buildCharactersNote(item),
+          if (malType == MALType.people) ...buildPeopleNote(item),
 
-        /// 简介和背景栏位
-        Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [buildTitleText("简介")],
-        ),
-        TranslatableText(
-          text: item.synopsis ?? item.about ?? "",
-          isAppend: false,
-          stream: true,
-        ),
-
-        /// 角色和人物没有背景栏位
-        if (item.background != null && item.background!.isNotEmpty) ...[
+          /// 简介和背景栏位
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
-            children: [buildTitleText("背景")],
+            children: [buildTitleText("简介")],
           ),
-          TranslatableText(text: item.background ?? "", isAppend: false),
+          TranslatableText(
+            text: item.synopsis ?? item.about ?? "",
+            isAppend: false,
+            stream: true,
+          ),
+
+          /// 角色和人物没有背景栏位
+          if (item.background != null && item.background!.isNotEmpty) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [buildTitleText("背景")],
+            ),
+            TranslatableText(text: item.background ?? "", isAppend: false),
+          ],
+          SizedBox(height: 20.sp),
         ],
-        SizedBox(height: 20.sp),
-      ],
+      ),
     );
   }
 

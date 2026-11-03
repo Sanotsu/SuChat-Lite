@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../core/utils/screen_helper.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import '../../../../../shared/widgets/audio_player_widget.dart';
 import '../../../../../shared/widgets/common_error_empty_widgets.dart';
 import '../../../../../shared/widgets/image_preview_helper.dart';
@@ -50,7 +52,18 @@ class _OneDetailPageState extends State<OneDetailPage> {
   bool _isDarkMode = false;
   double _fontSize = 16.0;
   bool _showReadingProgress = true;
-  double _readingProgress = 0.0;
+
+  // 2026-10-13 PERF：滚动进度用 ValueNotifier 局部刷新——此前滚动中
+  // 每 1% 进度 setState 一次，整个页面(含长文 SelectableText 与
+  // ThemeData)全部重建，是长文章滚动卡顿的主因
+  final ValueNotifier<double> _readingProgressNotifier = ValueNotifier(0.0);
+
+  // 2026-10-13 PERF：ThemeData 构造成本高，缓存避免每次 build 重建
+  late ThemeData _pageTheme;
+
+  // 2026-10-13 PERF：正文 filterHtmlTags 正则结果缓存(加载后算一次，
+  // 此前每次 build 都对全文重跑正则)
+  String? _cachedPlainContent;
 
   @override
   void initState() {
@@ -73,12 +86,14 @@ class _OneDetailPageState extends State<OneDetailPage> {
       _fontSize = _settingsService.getFontSize();
       _isDarkMode = _settingsService.getIsDarkMode();
       _showReadingProgress = _settingsService.getShowReadingProgress();
+      _pageTheme = _isDarkMode ? ThemeData.dark() : ThemeData.light();
     });
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _readingProgressNotifier.dispose();
     super.dispose();
   }
 
@@ -92,10 +107,9 @@ class _OneDetailPageState extends State<OneDetailPage> {
             ? (currentScroll / maxScroll).clamp(0.0, 1.0)
             : 0.0;
 
-        if ((progress - _readingProgress).abs() > 0.01) {
-          setState(() {
-            _readingProgress = progress;
-          });
+        // 只更新 notifier(相同值不通知)，不再触发全页 setState
+        if ((progress - _readingProgressNotifier.value).abs() > 0.01) {
+          _readingProgressNotifier.value = progress;
         }
       }
     });
@@ -115,6 +129,7 @@ class _OneDetailPageState extends State<OneDetailPage> {
         if (mounted) {
           setState(() {
             _hpDetail = detail;
+            _cachePlainContent();
           });
         }
       } else {
@@ -126,6 +141,7 @@ class _OneDetailPageState extends State<OneDetailPage> {
         if (mounted) {
           setState(() {
             _contentDetail = detail;
+            _cachePlainContent();
           });
         }
       }
@@ -156,6 +172,48 @@ class _OneDetailPageState extends State<OneDetailPage> {
 
   /// 切换阅读设置
   void _showReadingSettings() {
+    // 2026-09-04 桌面端适配：桌面改居中弹窗，移动端保持底部抽屉
+    if (ScreenHelper.isDesktop()) {
+      showDialog<void>(
+        context: context,
+        builder: (context) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            width: 520,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.7,
+            ),
+            child: OneReadingSettings(
+              isDarkMode: _isDarkMode,
+              fontSize: _fontSize,
+              showReadingProgress: _showReadingProgress,
+              onDarkModeChanged: (value) async {
+                setState(() {
+                  _isDarkMode = value;
+                });
+                await _settingsService.setIsDarkMode(value);
+              },
+              onFontSizeChanged: (value) async {
+                setState(() {
+                  _fontSize = value;
+                });
+                await _settingsService.setFontSize(value);
+              },
+              onShowProgressChanged: (value) async {
+                setState(() {
+                  _showReadingProgress = value;
+                });
+                await _settingsService.setShowReadingProgress(value);
+              },
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -176,6 +234,8 @@ class _OneDetailPageState extends State<OneDetailPage> {
           onDarkModeChanged: (value) async {
             setState(() {
               _isDarkMode = value;
+              // 2026-10-13 PERF：主题只在切换时重建一次
+              _pageTheme = value ? ThemeData.dark() : ThemeData.light();
             });
             await _settingsService.setIsDarkMode(value);
           },
@@ -198,51 +258,61 @@ class _OneDetailPageState extends State<OneDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Theme(
-      data: _isDarkMode ? ThemeData.dark() : ThemeData.light(),
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            widget.title,
-            style: TextStyle(fontSize: 20),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          backgroundColor: _isDarkMode
-              ? Colors.grey[900]
-              : Theme.of(context).primaryColor,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.settings, color: Colors.white),
-              onPressed: _showReadingSettings,
+    return CusContentWidth(
+      child: Theme(
+        // 2026-10-13 PERF：用缓存的 Theme(此前每次 build 新建 ThemeData)
+        data: _pageTheme,
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(
+              widget.title,
+              style: TextStyle(fontSize: 20),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-          ],
-        ),
-        body: Column(
-          children: [
-            // 阅读进度条
-            if (_showReadingProgress)
-              LinearProgressIndicator(
-                value: _readingProgress,
-                backgroundColor: _isDarkMode ? Colors.grey : Colors.grey[300],
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  _isDarkMode ? Colors.white : Theme.of(context).primaryColor,
-                ),
+            backgroundColor: _isDarkMode
+                ? Colors.grey[900]
+                : Theme.of(context).primaryColor,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.settings, color: Colors.white),
+                onPressed: _showReadingSettings,
               ),
-            // 内容区域
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _error != null
-                  ? buildCommonErrorWidget(
-                      error: _error,
-                      onRetry: _loadDetailData,
-                    )
-                  : _buildDetailContent(),
-            ),
-          ],
+            ],
+          ),
+          body: Column(
+            children: [
+              // 阅读进度条(ValueListenableBuilder局部刷新，不重建页面)
+              if (_showReadingProgress)
+                ValueListenableBuilder<double>(
+                  valueListenable: _readingProgressNotifier,
+                  builder: (context, progress, _) => LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: _isDarkMode
+                        ? Colors.grey
+                        : Colors.grey[300],
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      _isDarkMode
+                          ? Colors.white
+                          : Theme.of(context).primaryColor,
+                    ),
+                  ),
+                ),
+              // 内容区域
+              Expanded(
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _error != null
+                    ? buildCommonErrorWidget(
+                        error: _error,
+                        onRetry: _loadDetailData,
+                      )
+                    : _buildDetailContent(),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -470,17 +540,20 @@ class _OneDetailPageState extends State<OneDetailPage> {
         .trim();
   }
 
-  /// 构建正文内容
-  Widget _buildContentSection() {
+  /// 缓存正文的纯文本(filterHtmlTags 只算一次)
+  void _cachePlainContent() {
     String? content;
-
     if (_contentDetail?.jsonContent?.content != null) {
       content = _contentDetail!.jsonContent!.content;
     } else if (_hpDetail?.forward != null) {
       content = _hpDetail!.forward;
     }
+    _cachedPlainContent = content == null ? null : filterHtmlTags(content);
+  }
 
-    if (content == null) return const SizedBox.shrink();
+  /// 构建正文内容
+  Widget _buildContentSection() {
+    if (_cachedPlainContent == null) return const SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -489,14 +562,20 @@ class _OneDetailPageState extends State<OneDetailPage> {
         children: [
           // const Divider(),
           const SizedBox(height: 16),
-          SelectableText(
-            filterHtmlTags(content),
-            style: TextStyle(
-              fontSize: _fontSize,
-              height: 1.6,
-              color: _isDarkMode ? Colors.white : Colors.black87,
+          // 2026-09-04 桌面端适配：正文限宽居中，避免宽屏长行
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 680),
+              child: SelectableText(
+                _cachedPlainContent!,
+                style: TextStyle(
+                  fontSize: _fontSize,
+                  height: 1.6,
+                  color: _isDarkMode ? Colors.white : Colors.black87,
+                ),
+                textAlign: TextAlign.justify,
+              ),
             ),
-            textAlign: TextAlign.justify,
           ),
         ],
       ),

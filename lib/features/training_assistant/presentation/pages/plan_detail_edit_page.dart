@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import '../../../../core/utils/screen_helper.dart';
 import '../../../../shared/constants/constants.dart';
 import '../../domain/entities/training_plan_detail.dart';
@@ -33,15 +34,17 @@ class _PlanDetailEditPageState extends State<PlanDetailEditPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('编辑${dayWeekMapping[widget.day]}训练'),
-        actions: [TextButton(onPressed: _saveChanges, child: const Text('保存'))],
-      ),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : Form(
+    return CusContentWidth(
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('编辑${dayWeekMapping[widget.day]}训练'),
+          actions: [
+            TextButton(onPressed: _saveChanges, child: const Text('保存')),
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Form(
                 key: _formKey,
                 child: ListView(
                   padding: const EdgeInsets.all(16),
@@ -60,14 +63,11 @@ class _PlanDetailEditPageState extends State<PlanDetailEditPage> {
                       onPressed: _addNewExercise,
                       icon: const Icon(Icons.add),
                       label: const Text('添加动作'),
-                      style:
-                          ScreenHelper.isDesktop()
-                              ? ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 24,
-                                ),
-                              )
-                              : null,
+                      style: ScreenHelper.isDesktop()
+                          ? ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 24),
+                            )
+                          : null,
                     ),
 
                     // 底部留白，确保滚动时最后一项可以完全显示
@@ -75,6 +75,7 @@ class _PlanDetailEditPageState extends State<PlanDetailEditPage> {
                   ],
                 ),
               ),
+      ),
     );
   }
 
@@ -124,8 +125,8 @@ class _PlanDetailEditPageState extends State<PlanDetailEditPage> {
             TextFormField(
               controller: exerciseNameController,
               decoration: const InputDecoration(labelText: '动作名称'),
-              validator:
-                  (value) => value == null || value.isEmpty ? '请输入动作名称' : null,
+              validator: (value) =>
+                  value == null || value.isEmpty ? '请输入动作名称' : null,
               onChanged: (value) {
                 _details[index] = _details[index].copyWith(exerciseName: value);
               },
@@ -135,8 +136,8 @@ class _PlanDetailEditPageState extends State<PlanDetailEditPage> {
             TextFormField(
               controller: muscleGroupController,
               decoration: const InputDecoration(labelText: '肌肉群组'),
-              validator:
-                  (value) => value == null || value.isEmpty ? '请输入肌肉群组' : null,
+              validator: (value) =>
+                  value == null || value.isEmpty ? '请输入肌肉群组' : null,
               onChanged: (value) {
                 _details[index] = _details[index].copyWith(muscleGroup: value);
               },
@@ -150,9 +151,8 @@ class _PlanDetailEditPageState extends State<PlanDetailEditPage> {
                     controller: setsController,
                     decoration: const InputDecoration(labelText: '组数'),
                     keyboardType: TextInputType.number,
-                    validator:
-                        (value) =>
-                            value == null || value.isEmpty ? '请输入组数' : null,
+                    validator: (value) =>
+                        value == null || value.isEmpty ? '请输入组数' : null,
                     onChanged: (value) {
                       _details[index] = _details[index].copyWith(
                         sets: int.tryParse(value) ?? 3,
@@ -167,9 +167,8 @@ class _PlanDetailEditPageState extends State<PlanDetailEditPage> {
                     decoration: const InputDecoration(
                       labelText: '次数 (如: 8-12)',
                     ),
-                    validator:
-                        (value) =>
-                            value == null || value.isEmpty ? '请输入次数' : null,
+                    validator: (value) =>
+                        value == null || value.isEmpty ? '请输入次数' : null,
                     onChanged: (value) {
                       _details[index] = _details[index].copyWith(reps: value);
                     },
@@ -186,9 +185,8 @@ class _PlanDetailEditPageState extends State<PlanDetailEditPage> {
                     controller: countdownController,
                     decoration: const InputDecoration(labelText: '单组完成耗时 (秒)'),
                     keyboardType: TextInputType.number,
-                    validator:
-                        (value) =>
-                            value == null || value.isEmpty ? '请输入单组完成耗时' : null,
+                    validator: (value) =>
+                        value == null || value.isEmpty ? '请输入单组完成耗时' : null,
                     onChanged: (value) {
                       _details[index] = _details[index].copyWith(
                         countdown: int.tryParse(value) ?? 60,
@@ -202,9 +200,8 @@ class _PlanDetailEditPageState extends State<PlanDetailEditPage> {
                     controller: restTimeController,
                     decoration: const InputDecoration(labelText: '组间休息时间 (秒)'),
                     keyboardType: TextInputType.number,
-                    validator:
-                        (value) =>
-                            value == null || value.isEmpty ? '请输入组间休息时间' : null,
+                    validator: (value) =>
+                        value == null || value.isEmpty ? '请输入组间休息时间' : null,
                     onChanged: (value) {
                       _details[index] = _details[index].copyWith(
                         restTime: int.tryParse(value) ?? 30,

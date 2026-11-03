@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import '../../../../core/storage/db_config.dart';
 import '../models/unified_platform_spec.dart';
 import 'buildin_models/index.dart';
+import 'builtin_mcp_servers.dart';
 import 'builtin_partners.dart';
 import 'builtin_platforms.dart';
 
@@ -27,6 +28,7 @@ class UnifiedChatDdl {
         host_url                      TEXT      NOT NULL,
         cc_prefix                     TEXT      NOT NULL    DEFAULT '/v1/chat/completions',
         img_gen_prefix                TEXT,
+        video_gen_prefix              TEXT,
         tts_prefix                    TEXT,
         asr_prefix                    TEXT,
         is_built_in                   INTEGER   NOT NULL    DEFAULT 0,
@@ -62,6 +64,7 @@ class UnifiedChatDdl {
         supports_thinking           INTEGER   NOT NULL    DEFAULT 0,
         supports_vision             INTEGER   NOT NULL    DEFAULT 0,
         supports_tool_calling       INTEGER   NOT NULL    DEFAULT 0,
+        supports_image_input        INTEGER   NOT NULL    DEFAULT 0,
         is_built_in                 INTEGER   NOT NULL    DEFAULT 0,
         is_active                   INTEGER   NOT NULL    DEFAULT 1,
         is_favorite                 INTEGER   NOT NULL    DEFAULT 0,
@@ -76,10 +79,37 @@ class UnifiedChatDdl {
   /// 聊天搭档表
   /// 这就和之前的角色功能类似,但是只适用最基础的配置
   /// 最主要就是: 系统提示词\创造性参数等内容,context_message_length为调用API时最多发送的消息数量
+  /// 翻译历史(2026-09-03 快速翻译新增)
+  static const String tableTranslationHistory = 'translation_history';
+
+  static const String ddlForTranslationHistory =
+      '''
+  CREATE TABLE IF NOT EXISTS $tableTranslationHistory (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TEXT NOT NULL,
+    source_lang TEXT NOT NULL,
+    target_lang TEXT NOT NULL,
+    source_text TEXT NOT NULL,
+    translated_text TEXT NOT NULL,
+    model_name TEXT,
+    platform_name TEXT,
+    audio_path TEXT
+  )
+''';
+
+  /// 翻译历史索引(按时间倒序查询)
+  static const String ddlIndexTranslationHistory =
+      '''
+  CREATE INDEX IF NOT EXISTS idx_translation_history_created_at
+  ON $tableTranslationHistory (created_at DESC)
+''';
+
   static const String tableUnifiedChatPartner =
       '${DBInitConfig.tablePerfix}unified_chat_partner';
 
   /// 聊天搭档表创建语句
+  /// 2026-08-31 合并旧版角色卡系统：搭档=轻量人格(仅prompt)或角色卡
+  /// (结构化人设+开场白+专属背景+偏好模型)，结构化字段均可空，存量搭档行为不变
   static const String ddlForUnifiedChatPartner =
       '''
       CREATE TABLE IF NOT EXISTS $tableUnifiedChatPartner (
@@ -96,7 +126,17 @@ class UnifiedChatDdl {
         max_tokens                    INTEGER,
         is_stream                     INTEGER               DEFAULT 1,
         created_at                    INTEGER   NOT NULL,
-        updated_at                    INTEGER   NOT NULL
+        updated_at                    INTEGER   NOT NULL,
+        description                   TEXT,
+        personality                   TEXT,
+        scenario                      TEXT,
+        first_message                 TEXT,
+        example_dialogue              TEXT,
+        tags                          TEXT,
+        preferred_model_id            TEXT,
+        background                    TEXT,
+        background_opacity            REAL,
+        skill_ids                     TEXT
       )
     ''';
 
@@ -117,12 +157,14 @@ class UnifiedChatDdl {
         platform_id                 TEXT      NOT NULL,
         partner_id                  TEXT,
         system_prompt               TEXT,
+        -- 2026-09-09 v4: temperature/max_tokens/top_p/context_message_length
+        -- 可空(null=未设置→请求不传该参数/上下文不限制)，去掉NOT NULL
         temperature                 REAL                    DEFAULT 0.7,
-        max_tokens                  INTEGER   NOT NULL      DEFAULT 4096,
+        max_tokens                  INTEGER                 DEFAULT 4096,
         top_p                       REAL                    DEFAULT 1.0,
         frequency_penalty           REAL                    DEFAULT 0.0,
         presence_penalty            REAL                    DEFAULT 0.0,
-        context_message_length      INTEGER   NOT NULL      DEFAULT 6,
+        context_message_length      INTEGER                 DEFAULT 6,
         is_stream                   INTEGER   NOT NULL      DEFAULT 1,
         extra_params                TEXT,
         message_count               INTEGER   NOT NULL      DEFAULT 0,
@@ -132,6 +174,7 @@ class UnifiedChatDdl {
         is_archived                 INTEGER   NOT NULL      DEFAULT 0,
         created_at                  INTEGER   NOT NULL,
         updated_at                  INTEGER   NOT NULL,
+        current_branch_path         TEXT,
         FOREIGN KEY (model_id) REFERENCES $tableUnifiedModelSpec (id),
         FOREIGN KEY (platform_id) REFERENCES $tableUnifiedPlatformSpec (id)
       )
@@ -139,7 +182,12 @@ class UnifiedChatDdl {
 
   /// 对话消息表
   /// 每个对话都要保留使用的平台和模型名(作为请求参数的那个)
-  /// model_name_used platform_id_used 具体的模型平台信息、以及音频视频等媒体资源的地址信息，都放在metadata中
+  /// model_name_used platform_id_used 具体的模型、平台信息、以及音频视频等媒体资源的地址信息，都放在metadata中
+  /// 2026-08-31 v2 增加分支对话支持：
+  ///   parent_id: 父消息id(树形结构指针)；根消息和系统消息为null
+  ///   branch_index: 同父节点下兄弟消息的序号(从0开始)
+  ///   depth: 树深度(根为0)；系统消息不入树，固定为-1
+  ///   branch_path: 根到当前消息的路径字符串，比如 "0/1/0"；系统消息为空字符串
   static const tableUnifiedChatMessage =
       '${DBInitConfig.tablePerfix}unified_chat_message';
 
@@ -165,12 +213,17 @@ class UnifiedChatDdl {
         platform_id_used    TEXT,
         response_time_ms    INTEGER,
         search_references   TEXT,
+        segments            TEXT,
         is_streaming        INTEGER   NOT NULL     DEFAULT 0,
         is_error            INTEGER   NOT NULL     DEFAULT 0,
         error_message       TEXT,
         metadata            TEXT,
         created_at          INTEGER   NOT NULL,
         updated_at          INTEGER   NOT NULL,
+        parent_id           TEXT,
+        branch_index        INTEGER   NOT NULL     DEFAULT 0,
+        depth               INTEGER   NOT NULL     DEFAULT 0,
+        branch_path         TEXT      NOT NULL     DEFAULT '',
         FOREIGN KEY (conversation_id) REFERENCES $tableUnifiedConversation (id) ON DELETE CASCADE
       )
     ''';
@@ -193,6 +246,81 @@ class UnifiedChatDdl {
         FOREIGN KEY (platform_id) REFERENCES $tableUnifiedPlatformSpec (id) ON DELETE CASCADE
       )
     ''';
+
+  /// MCP server 配置表
+  /// 2026-09-11 MCP集成(v7)：name为工具命名空间名(唯一)，
+  /// 认证头敏感值不落库存UnifiedSecureStorage
+  static const tableUnifiedMcpServer =
+      '${DBInitConfig.tablePerfix}unified_mcp_server';
+
+  static const ddlForUnifiedMcpServer =
+      '''
+      CREATE TABLE $tableUnifiedMcpServer (
+        id            TEXT      PRIMARY KEY,
+        name          TEXT      NOT NULL    UNIQUE,
+        display_name  TEXT      NOT NULL,
+        transport     TEXT      NOT NULL    DEFAULT 'http',
+        url           TEXT,
+        command       TEXT,
+        args          TEXT,
+        env           TEXT,
+        headers       TEXT,
+        enabled       INTEGER   NOT NULL    DEFAULT 1,
+        is_built_in   INTEGER   NOT NULL    DEFAULT 0,
+        is_search_source INTEGER NOT NULL    DEFAULT 0,
+        approval_required INTEGER NOT NULL    DEFAULT 0,
+        tools_cache   TEXT,
+        oauth_client_id TEXT,
+        oauth_scopes  TEXT,
+        created_at    INTEGER   NOT NULL,
+        updated_at    INTEGER   NOT NULL
+      )
+    ''';
+
+  /// Agent Skills 技能元数据表
+  /// 2026-09-16 SKILLS P0-1：技能本体(SKILL.md+附属文件)存应用支持目录，
+  /// DB只存元数据与索引；id即frontmatter name(name已唯一，不再单设uuid)
+  static const tableUnifiedSkill = '${DBInitConfig.tablePerfix}unified_skill';
+
+  static const ddlForUnifiedSkill =
+      '''
+      CREATE TABLE $tableUnifiedSkill (
+        id            TEXT      PRIMARY KEY,
+        name          TEXT      NOT NULL    UNIQUE,
+        description   TEXT,
+        source        TEXT      NOT NULL    DEFAULT 'import',
+        source_url    TEXT,
+        enabled       INTEGER   NOT NULL    DEFAULT 1,
+        dir_path      TEXT      NOT NULL,
+        aux_count     INTEGER   NOT NULL    DEFAULT 0,
+        file_size     INTEGER   NOT NULL    DEFAULT 0,
+        created_at    INTEGER   NOT NULL,
+        updated_at    INTEGER   NOT NULL
+      )
+    ''';
+
+  // 初始化内置MCP server种子(仅按name补插缺失行，不覆盖用户修改)
+  static Future<void> initDefaultMcpServers(Database db) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final batch = db.batch();
+
+    for (final server in BUILD_IN_MCP_SERVERS) {
+      batch.insert(
+        tableUnifiedMcpServer,
+        {
+          ...server,
+          'id': 'builtin_mcp_${server['name']}',
+          'enabled': 0,
+          'is_built_in': 1,
+          'created_at': now,
+          'updated_at': now,
+        },
+        // 用户可能已改过该行配置，种子只补缺不覆盖
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+    }
+    await batch.commit();
+  }
 
   // 初始化一些内置平台和模型
   static Future<void> initDefaultPlatforms(

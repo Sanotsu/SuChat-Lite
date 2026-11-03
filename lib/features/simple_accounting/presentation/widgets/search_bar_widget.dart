@@ -67,13 +67,12 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
         decoration: InputDecoration(
           hintText: widget.hintText,
           prefixIcon: const Icon(Icons.search),
-          suffixIcon:
-              _hasText
-                  ? IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: _clearSearch,
-                  )
-                  : null,
+          suffixIcon: _hasText
+              ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: _clearSearch,
+                )
+              : null,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 12),
         ),

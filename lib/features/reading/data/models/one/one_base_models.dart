@@ -2,6 +2,19 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'one_base_models.g.dart';
 
+/// 2026-10-13 FIX：ONE API 的部分数值栏位类型不稳定——同一字段有时返回 num 有时返回 String
+/// (实锤 display_category：条目A为 6、条目B为 "5"，直接 as num? 强转崩溃)。
+/// 所有 int 模型字段统一走此 readValue 容错解析
+Object? tolerantIntReadValue(Map<dynamic, dynamic> json, String key) {
+  final v = json[key];
+  if (v is num) return v.toInt();
+  if (v is String) {
+    final s = v.trim();
+    return int.tryParse(s) ?? num.tryParse(s)?.toInt();
+  }
+  return null;
+}
+
 /// “one一个” app 请求响应的基类
 /// 所有的API返回结果都是这样的
 @JsonSerializable(genericArgumentFactories: true, explicitToJson: true)

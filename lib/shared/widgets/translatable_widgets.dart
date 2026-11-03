@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/utils/simple_tools.dart';
+import '../../features/unified_chat/data/models/openai_response.dart';
 import '../services/translation_service.dart';
 import 'toast_utils.dart';
 
@@ -19,14 +20,29 @@ class TranslatableTitleButton extends StatefulWidget {
 
 class _TranslatableTitleButtonState extends State<TranslatableTitleButton> {
   String? translatedText;
+  // 2026-10-13 翻译进行中标志：防重复点击(思考模型响应慢)
+  bool _translating = false;
 
   Future<void> _translateText() async {
-    String translation = await TranslationService.translateToChinese(
-      widget.title,
-    );
+    if (_translating) return;
     setState(() {
-      translatedText = translation;
+      _translating = true;
     });
+    try {
+      String translation = await TranslationService.translateToChinese(
+        widget.title,
+      );
+      if (!mounted) return;
+      setState(() {
+        translatedText = translation;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _translating = false;
+        });
+      }
+    }
   }
 
   @override
@@ -58,8 +74,17 @@ class _TranslatableTitleButtonState extends State<TranslatableTitleButton> {
                     icon: Icon(Icons.clear, size: 16),
                   )
                 : IconButton(
-                    onPressed: _translateText,
-                    icon: Icon(Icons.translate, size: 16),
+                    // 翻译中显示加载圈并禁点，避免重复请求
+                    onPressed: _translating ? null : _translateText,
+                    icon: _translating
+                        ? SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: const CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Icon(Icons.translate, size: 16),
                   ),
           ],
         ),
@@ -91,18 +116,38 @@ class TranslatableText extends StatefulWidget {
 
 class _TranslatableTextState extends State<TranslatableText> {
   String translatedText = "";
+  // 2026-10-13 翻译进行中标志：防重复点击(思考模型首字延迟可能很久)
+  bool _translating = false;
+  // 流式模式下是否已收到正文(用于区分"思考中"与"翻译中")
+  bool _receivedContent = false;
 
   Future<void> _translateText() async {
+    if (_translating) return;
+    setState(() {
+      _translating = true;
+      _receivedContent = false;
+    });
     try {
       if (widget.stream == true) {
         final (stream, cancelFunc) =
             await TranslationService.translateStreamToChinese(widget.text);
 
         await for (final chunk in stream) {
-          if (mounted) {
-            setState(() {
-              translatedText += chunk.cusText;
-            });
+          if (!mounted) {
+            cancelFunc();
+            break;
+          }
+          // 2026-10-13 FIX：chunk.cusText 是旧协议残留(该getter不存在，
+          // 运行时NoSuchMethodError)——流式契约正文在delta.content
+          if (chunk is OpenAIChatCompletionResponse &&
+              chunk.choices.isNotEmpty) {
+            final content = chunk.choices.first.delta?.content;
+            if (content != null && content.isNotEmpty) {
+              setState(() {
+                translatedText += content;
+                _receivedContent = true;
+              });
+            }
           }
         }
       } else {
@@ -119,9 +164,17 @@ class _TranslatableTextState extends State<TranslatableText> {
     } catch (e) {
       ToastUtils.showError("翻译出错：${e.toString()}");
 
-      setState(() {
-        translatedText = widget.text;
-      });
+      if (mounted) {
+        setState(() {
+          translatedText = widget.text;
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _translating = false;
+        });
+      }
     }
   }
 
@@ -132,14 +185,33 @@ class _TranslatableTextState extends State<TranslatableText> {
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            IconButton(
-              onPressed: _translateText,
-              icon: Icon(Icons.translate, size: 20),
-            ),
+            // 翻译中显示状态提示：未收到正文时思考模型可能在长时间思考
+            if (_translating && widget.stream == true)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Text(
+                  _receivedContent ? '翻译中...' : '思考中...',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ),
+            // 2026-10-13 FIX：已有译文时只显示清除按钮——此前翻译按钮
+            // 仍可点击，流式追加模式再点会重复追加译文
             if (translatedText.isNotEmpty)
               IconButton(
                 onPressed: () => setState(() => translatedText = ""),
                 icon: Icon(Icons.clear, size: 20),
+              )
+            else
+              IconButton(
+                // 翻译中禁点，避免重复请求；图标变加载圈
+                onPressed: _translating ? null : _translateText,
+                icon: _translating
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: const CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(Icons.translate, size: 20),
               ),
           ],
         ),

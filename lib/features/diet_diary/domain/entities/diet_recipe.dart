@@ -49,14 +49,12 @@ class DietRecipe {
       mealsPerDay: map['mealsPerDay'],
       dietaryPreference: map['dietaryPreference'],
       analysisId: map['analysisId'],
-      gmtCreate:
-          map['gmtCreate'] != null
-              ? DateTime.parse(map['gmtCreate'])
-              : DateTime.now(),
-      gmtModified:
-          map['gmtModified'] != null
-              ? DateTime.parse(map['gmtModified'])
-              : DateTime.now(),
+      gmtCreate: map['gmtCreate'] != null
+          ? DateTime.parse(map['gmtCreate'])
+          : DateTime.now(),
+      gmtModified: map['gmtModified'] != null
+          ? DateTime.parse(map['gmtModified'])
+          : DateTime.now(),
     );
   }
 

@@ -32,6 +32,11 @@ set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_RELEASE}")
 # Use Unicode for all projects.
 add_definitions(-DUNICODE -D_UNICODE)
 
+# permission_handler_windows(最新 0.2.2) 的 CMake 仍使用 /await 实验性协程开关，
+# VS 18 (MSVC 14.5x) 对其默认按错误处理(STL1011)。此处启用微软在错误信息中
+# 官方提供的过渡静默宏，待上游适配后移除。
+add_compile_definitions(_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+
 # Compilation settings that should be applied to most targets.
 #
 # Be cautious about adding new options here, as plugins use this function by

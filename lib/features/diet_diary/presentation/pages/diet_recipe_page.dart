@@ -1,16 +1,16 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/entities/cus_llm_model.dart';
 import '../../../../core/entities/user_info.dart';
 import '../../../../core/viewmodels/user_info_viewmodel.dart';
-import '../../../../shared/constants/constant_llm_enum.dart';
 import '../../../../shared/constants/constants.dart';
-import '../../../../shared/services/model_manager_service.dart';
+import '../../../../shared/services/unified_llm_service.dart';
 import '../../../../shared/widgets/cus_dropdown_button.dart';
+import '../../../../shared/widgets/cus_thinking_collapse.dart';
 import '../../../../shared/widgets/markdown_render/cus_markdown_renderer.dart';
 import '../../../../shared/widgets/show_tool_prompt_dialog.dart';
 import '../../../../shared/widgets/toast_utils.dart';
@@ -34,14 +34,20 @@ class DietRecipePage extends StatefulWidget {
 
 class _DietRecipePageState extends State<DietRecipePage> {
   // 大模型相关状态
-  List<CusLLMSpec> _modelList = [];
-  CusLLMSpec? _selectedModel;
+  // 2026-09-07 旧LLM体系退役：模型列表改为统一模型库条目(模型+所属平台)
+  List<UnifiedModelEntry> _modelList = [];
+  UnifiedModelEntry? _selectedModel;
 
   // 食谱生成状态
   bool _isGenerating = false;
   StreamSubscription? _recipeSubscription;
   VoidCallback? _cancelGeneration;
   String _recipeResult = '';
+
+  // 2026-09-04 思考模型的思考过程(reasoning_content)单独累积展示
+  String _thinkingResult = '';
+  DateTime? _thinkingStartTime;
+  int? _thinkingSeconds;
 
   // 自定义生成食谱的提示词
   String? _customPrompt;
@@ -77,15 +83,20 @@ class _DietRecipePageState extends State<DietRecipePage> {
 
   Future<void> _initModels() async {
     try {
-      // 获取支持文本生成的大模型列表
-      final availableModels =
-          await ModelManagerService.getAvailableModelByTypes([LLModelType.cc]);
+      // 接入平台管理统一模型库(无内置免费模型)
+      final availableModels = await UnifiedLLMService.loadModelEntries();
 
+      if (!mounted) return;
       setState(() {
         _modelList = availableModels;
-        _selectedModel =
-            availableModels.isNotEmpty ? availableModels.first : null;
+        _selectedModel = availableModels.isNotEmpty
+            ? availableModels.first
+            : null;
       });
+
+      if (availableModels.isEmpty) {
+        ToastUtils.showError('无可用对话模型，请在聊天页-平台管理中配置');
+      }
     } catch (e) {
       if (mounted) {
         ToastUtils.showError('加载模型列表失败: $e');
@@ -135,6 +146,9 @@ class _DietRecipePageState extends State<DietRecipePage> {
       _displayedRecipe = recipe;
       _recipeResult = recipe.content;
       _isGenerating = false;
+      _thinkingResult = '';
+      _thinkingStartTime = null;
+      _thinkingSeconds = null;
     });
   }
 
@@ -162,12 +176,15 @@ class _DietRecipePageState extends State<DietRecipePage> {
       _isGenerating = true;
       _recipeResult = '';
       _displayedRecipe = null;
+      _thinkingResult = '';
+      _thinkingStartTime = null;
+      _thinkingSeconds = null;
     });
 
     try {
       // 调用食谱生成服务
       final (stream, cancel) = await _recipeService.generatePersonalizedRecipe(
-        model: _selectedModel!,
+        entry: _selectedModel!,
         userInfo: userViewModel.currentUser!,
         dailyNutrition: viewModel.dailyNutrition,
         dailyRecommended: userViewModel.dailyRecommendedIntake,
@@ -179,11 +196,33 @@ class _DietRecipePageState extends State<DietRecipePage> {
 
       _cancelGeneration = cancel;
 
-      // 订阅流式响应
+      // 订阅流式响应(完整响应：delta含reasoningContent与content，分类累积)
       _recipeSubscription = stream.listen(
-        (content) {
+        (resp) {
           setState(() {
-            _recipeResult += content;
+            final delta = resp.choices.isNotEmpty
+                ? resp.choices.first.delta
+                : null;
+            if (delta != null) {
+              final reasoning = delta.reasoningContent;
+              final content = delta.content;
+              if (reasoning != null && reasoning.isNotEmpty) {
+                _thinkingStartTime ??= DateTime.now();
+                _thinkingResult += reasoning;
+              } else if (content != null && content.isNotEmpty) {
+                if (resp.id == 'error') {
+                  // 请求异常时customText为完整错误信息(delta只是[ERROR]占位)
+                  _recipeResult += resp.customText;
+                } else {
+                  if (_thinkingStartTime != null && _thinkingSeconds == null) {
+                    _thinkingSeconds = DateTime.now()
+                        .difference(_thinkingStartTime!)
+                        .inSeconds;
+                  }
+                  _recipeResult += content;
+                }
+              }
+            }
           });
         },
         onDone: () async {
@@ -197,7 +236,10 @@ class _DietRecipePageState extends State<DietRecipePage> {
               try {
                 final savedRecipe = await viewModel.saveDietRecipe(
                   content: _recipeResult,
-                  modelName: _selectedModel?.name ?? '未知模型',
+                  modelName:
+                      _selectedModel?.model.displayName ??
+                      _selectedModel?.model.modelName ??
+                      '未知模型',
                   days: _selectedDays,
                   mealsPerDay: _selectedMealCount,
                   dietaryPreference: _preferencesController.text,
@@ -252,87 +294,99 @@ class _DietRecipePageState extends State<DietRecipePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('定制食谱'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.history),
-            tooltip: '历史记录',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const DietRecipeHistoryPage(),
-                ),
-              ).then((result) async {
-                // 历史记录可能被删除，重新加载
-                await _loadExistingRecipes();
+    return CusContentWidth(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('定制食谱'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.history),
+              tooltip: '历史记录',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const DietRecipeHistoryPage(),
+                  ),
+                ).then((result) async {
+                  // 历史记录可能被删除，重新加载
+                  await _loadExistingRecipes();
 
-                // 处理从历史页面返回的食谱数据
-                if (result != null && result is DietRecipe) {
-                  _showRecipe(result);
-                }
-              });
-            },
-          ),
-        ],
-      ),
-      body: Consumer2<DietDiaryViewModel, UserInfoViewModel>(
-        builder: (context, viewModel, userViewModel, child) {
-          if (viewModel.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // 用户信息卡片
-                if (userViewModel.currentUser != null) ...[
-                  userInfoCard(userViewModel.currentUser!),
-                  const SizedBox(height: 16),
-                ],
-
-                /// 营养摄入卡片
-                nutritionCard(viewModel),
-                MealFoodListCard(viewModel: viewModel),
-                const SizedBox(height: 16),
-
-                /// 食谱定制选项卡片
-                recipeCustomizationCard(),
-                const SizedBox(height: 16),
-
-                // 模型选择卡片
-                modelSelectionCard(),
-                const SizedBox(height: 16),
-
-                // 生成按钮
-                Row(
-                  children: [
-                    Expanded(child: showPromptButton()),
-                    const SizedBox(width: 16),
-                    Expanded(child: generateButton()),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                /// 历史食谱记录
-                if (_recipeHistory.isNotEmpty) ...[
-                  recipeHistoryCard(),
-                  const SizedBox(height: 16),
-                ],
-
-                // 当前显示的食谱记录
-                if (_recipeResult.isNotEmpty) ...[
-                  recipeResultCard(viewModel),
-                  const SizedBox(height: 16),
-                ],
-              ],
+                  // 处理从历史页面返回的食谱数据
+                  if (result != null && result is DietRecipe) {
+                    _showRecipe(result);
+                  }
+                });
+              },
             ),
-          );
-        },
+          ],
+        ),
+        body: Consumer2<DietDiaryViewModel, UserInfoViewModel>(
+          builder: (context, viewModel, userViewModel, child) {
+            if (viewModel.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 用户信息卡片
+                  if (userViewModel.currentUser != null) ...[
+                    userInfoCard(userViewModel.currentUser!),
+                    const SizedBox(height: 16),
+                  ],
+
+                  /// 营养摄入卡片
+                  nutritionCard(viewModel),
+                  MealFoodListCard(viewModel: viewModel),
+                  const SizedBox(height: 16),
+
+                  /// 食谱定制选项卡片
+                  recipeCustomizationCard(),
+                  const SizedBox(height: 16),
+
+                  // 模型选择卡片
+                  modelSelectionCard(),
+                  const SizedBox(height: 16),
+
+                  // 生成按钮
+                  Row(
+                    children: [
+                      Expanded(child: showPromptButton()),
+                      const SizedBox(width: 16),
+                      Expanded(child: generateButton()),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  /// 历史食谱记录
+                  if (_recipeHistory.isNotEmpty) ...[
+                    recipeHistoryCard(),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // 思考过程折叠区(思考模型，正文开始后默认收起)
+                  if (_thinkingResult.isNotEmpty) ...[
+                    CusThinkingCollapse(
+                      thinkingText: _thinkingResult,
+                      isThinking: _isGenerating && _recipeResult.isEmpty,
+                      thinkingSeconds: _thinkingSeconds,
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+
+                  // 当前显示的食谱记录
+                  if (_recipeResult.isNotEmpty) ...[
+                    recipeResultCard(viewModel),
+                    const SizedBox(height: 16),
+                  ],
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -582,12 +636,11 @@ class _DietRecipePageState extends State<DietRecipePage> {
                           vertical: 8.0,
                         ),
                         decoration: BoxDecoration(
-                          color:
-                              isSelected
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(
-                                    context,
-                                  ).colorScheme.surfaceContainerHighest,
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Column(
@@ -605,16 +658,18 @@ class _DietRecipePageState extends State<DietRecipePage> {
                               DateFormat(formatToHMS).format(recipe.gmtCreate),
                               style: TextStyle(
                                 fontSize: 12,
-                                color:
-                                    isSelected ? Colors.white70 : Colors.grey,
+                                color: isSelected
+                                    ? Colors.white70
+                                    : Colors.grey,
                               ),
                             ),
                             Text(
                               recipe.modelName,
                               style: TextStyle(
                                 fontSize: 12,
-                                color:
-                                    isSelected ? Colors.white70 : Colors.grey,
+                                color: isSelected
+                                    ? Colors.white70
+                                    : Colors.grey,
                               ),
                             ),
                           ],
@@ -741,16 +796,15 @@ class _DietRecipePageState extends State<DietRecipePage> {
               ],
             ),
             const SizedBox(height: 16),
-            buildDropdownButton2<CusLLMSpec?>(
+            buildDropdownButton2<UnifiedModelEntry?>(
               value: _selectedModel,
               items: _modelList,
               height: 56,
               hintLabel: "选择大模型",
               alignment: Alignment.centerLeft,
               onChanged: (value) => setState(() => _selectedModel = value!),
-              itemToString:
-                  (e) =>
-                      "${CP_NAME_MAP[(e as CusLLMSpec).platform]} - ${e.name}",
+              itemToString: (e) =>
+                  "${(e as UnifiedModelEntry).platform.displayName} - ${e.model.displayName}",
             ),
           ],
         ),
@@ -819,22 +873,22 @@ class _DietRecipePageState extends State<DietRecipePage> {
   Widget generateButton() {
     return ElevatedButton.icon(
       onPressed: _isGenerating ? _cancelGenerationProcess : _generateRecipe,
-      icon:
-          _isGenerating
-              ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-              : const Icon(Icons.restaurant_menu),
+      icon: _isGenerating
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : const Icon(Icons.restaurant_menu),
       label: Text(_isGenerating ? '取消生成' : '生成定制食谱'),
       style: ElevatedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 8),
-        backgroundColor:
-            _isGenerating ? Colors.red : Theme.of(context).colorScheme.primary,
+        backgroundColor: _isGenerating
+            ? Colors.red
+            : Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
       ),
     );

@@ -9,13 +9,14 @@ part of 'one_detail_models.dart';
 OneHpDetail _$OneHpDetailFromJson(Map<String, dynamic> json) => OneHpDetail(
   id: json['id'] as String?,
   category: json['category'] as String?,
-  displayCategory: (json['display_category'] as num?)?.toInt(),
+  displayCategory: (tolerantIntReadValue(json, 'display_category') as num?)
+      ?.toInt(),
   itemId: json['item_id'] as String?,
   title: json['title'] as String?,
   forward: json['forward'] as String?,
   imgUrl: json['img_url'] as String?,
   picIpX: json['pic_ipX'] as String?,
-  likeCount: (json['like_count'] as num?)?.toInt(),
+  likeCount: (tolerantIntReadValue(json, 'like_count') as num?)?.toInt(),
   postDate: json['post_date'] as String?,
   lastUpdateDate: json['last_update_date'] as String?,
   author: json['author'] == null
@@ -23,17 +24,18 @@ OneHpDetail _$OneHpDetailFromJson(Map<String, dynamic> json) => OneHpDetail(
       : OneAuthor.fromJson(json['author'] as Map<String, dynamic>),
   videoUrl: json['video_url'] as String?,
   audioUrl: json['audio_url'] as String?,
-  audioPlatform: (json['audio_platform'] as num?)?.toInt(),
+  audioPlatform: (tolerantIntReadValue(json, 'audio_platform') as num?)
+      ?.toInt(),
   startVideo: json['start_video'] as String?,
-  hasReading: (json['has_reading'] as num?)?.toInt(),
+  hasReading: (tolerantIntReadValue(json, 'has_reading') as num?)?.toInt(),
   volume: json['volume'] as String?,
   picInfo: json['pic_info'] as String?,
   wordsInfo: json['words_info'] as String?,
   subtitle: json['subtitle'] as String?,
-  number: (json['number'] as num?)?.toInt(),
-  serialId: (json['serial_id'] as num?)?.toInt(),
+  number: (tolerantIntReadValue(json, 'number') as num?)?.toInt(),
+  serialId: (tolerantIntReadValue(json, 'serial_id') as num?)?.toInt(),
   serialList: json['serial_list'] as List<dynamic>?,
-  movieStoryId: (json['movie_story_id'] as num?)?.toInt(),
+  movieStoryId: (tolerantIntReadValue(json, 'movie_story_id') as num?)?.toInt(),
   contentId: json['content_id'] as String?,
   contentType: json['content_type'] as String?,
   contentBgcolor: json['content_bgcolor'] as String?,
@@ -85,7 +87,7 @@ OneContentDetail _$OneContentDetailFromJson(Map<String, dynamic> json) =>
       serialId: json['serial_id'] as String?,
       audio: json['audio'] as String?,
       anchor: json['anchor'] as String?,
-      category: (json['category'] as num?)?.toInt(),
+      category: (tolerantIntReadValue(json, 'category') as num?)?.toInt(),
       id: json['id'] as String?,
       title: json['title'] as String?,
       webUrl: json['web_url'] as String?,
@@ -103,8 +105,8 @@ OneContentDetail _$OneContentDetailFromJson(Map<String, dynamic> json) =>
       musicId: json['music_id'] as String?,
       homeImage: json['home_image'] as String?,
       musicException: json['music_exception'] as String?,
-      praisenum: (json['praisenum'] as num?)?.toInt(),
-      commentnum: (json['commentnum'] as num?)?.toInt(),
+      praisenum: (tolerantIntReadValue(json, 'praisenum') as num?)?.toInt(),
+      commentnum: (tolerantIntReadValue(json, 'commentnum') as num?)?.toInt(),
       jsonContent: json['json_content'] == null
           ? null
           : OneContentDetailJson.fromJson(
@@ -146,7 +148,7 @@ OneContentDetailJson _$OneContentDetailJsonFromJson(
 ) =>
     OneContentDetailJson(
         json['type'] as String?,
-        (json['id'] as num?)?.toInt(),
+        (tolerantIntReadValue(json, 'id') as num?)?.toInt(),
         json['title'] as String?,
         json['author'] == null
             ? null
@@ -154,7 +156,7 @@ OneContentDetailJson _$OneContentDetailJsonFromJson(
                 json['author'] as Map<String, dynamic>,
               ),
         json['audio_url'] as String?,
-        (json['audio_platform'] as num?)?.toInt(),
+        (tolerantIntReadValue(json, 'audio_platform') as num?)?.toInt(),
         json['platform_name'] as String?,
         json['platform_icon'] as String?,
         json['music_header'] == null
@@ -237,7 +239,7 @@ Map<String, dynamic> _$OneContentJsonAuthorToJson(
 OneContentBriefAuthor _$OneContentBriefAuthorFromJson(
   Map<String, dynamic> json,
 ) => OneContentBriefAuthor(
-  id: (json['id'] as num?)?.toInt(),
+  id: (tolerantIntReadValue(json, 'id') as num?)?.toInt(),
   avatar: json['avatar'] as String?,
   name: json['name'] as String?,
   brief: json['brief'] as String?,
@@ -297,8 +299,8 @@ Map<String, dynamic> _$OneDataArticleToJson(OneDataArticle instance) =>
     };
 
 OneSerialNav _$OneSerialNavFromJson(Map<String, dynamic> json) => OneSerialNav(
-  prev: (json['prev'] as num?)?.toInt(),
-  next: (json['next'] as num?)?.toInt(),
+  prev: (tolerantIntReadValue(json, 'prev') as num?)?.toInt(),
+  next: (tolerantIntReadValue(json, 'next') as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$OneSerialNavToJson(OneSerialNav instance) =>
@@ -306,7 +308,7 @@ Map<String, dynamic> _$OneSerialNavToJson(OneSerialNav instance) =>
 
 OneCommentList _$OneCommentListFromJson(Map<String, dynamic> json) =>
     OneCommentList(
-      count: (json['count'] as num?)?.toInt(),
+      count: (tolerantIntReadValue(json, 'count') as num?)?.toInt(),
       data: (json['data'] as List<dynamic>?)
           ?.map((e) => OneComment.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -322,7 +324,7 @@ OneComment _$OneCommentFromJson(Map<String, dynamic> json) => OneComment(
   id: json['id'] as String?,
   quote: json['quote'] as String?,
   content: json['content'] as String?,
-  praisenum: (json['praisenum'] as num?)?.toInt(),
+  praisenum: (tolerantIntReadValue(json, 'praisenum') as num?)?.toInt(),
   deviceToken: json['device_token'] as String?,
   delFlag: json['del_flag'] as String?,
   reviewed: json['reviewed'] as String?,
@@ -336,7 +338,7 @@ OneComment _$OneCommentFromJson(Map<String, dynamic> json) => OneComment(
   touser: json['touser'] == null
       ? null
       : OneUser.fromJson(json['touser'] as Map<String, dynamic>),
-  type: (json['type'] as num?)?.toInt(),
+  type: (tolerantIntReadValue(json, 'type') as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$OneCommentToJson(OneComment instance) =>

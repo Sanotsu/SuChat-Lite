@@ -1,12 +1,19 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/services/upgrade_migrator.dart';
+import '../../core/utils/screen_helper.dart';
 import '../../core/utils/simple_tools.dart';
 import '../../core/viewmodels/user_info_viewmodel.dart';
+import '../../shared/widgets/cus_content_width.dart';
 import '../../shared/widgets/toast_utils.dart';
+import 'pages/ai_translation_model_page.dart';
 import 'pages/backup_and_restore_page.dart';
+import 'pages/content_source_keys_page.dart';
 import 'pages/user_info_page.dart';
 
 class UserAndSettings extends StatefulWidget {
@@ -45,80 +52,228 @@ class _UserAndSettingsState extends State<UserAndSettings> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('用户设置'),
-        centerTitle: true,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              buildUserInfoSection(theme),
-              const SizedBox(height: 24),
-              _buildSectionTitle('数据', theme),
-              CusSettingCard(
-                icon: Icons.backup_outlined,
-                title: "备份恢复",
-                description: "导出或恢复您的聊天数据",
-                onTap:
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder:
-                            (context) => BackupAndRestorePage(
-                              packageVersion: _packageInfo.version,
-                            ),
+    // 2026-09-07 桌面适配：限宽居中，设置分组不在宽窗口横向拉伸
+    return CusContentWidth.form(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('用户设置'),
+          centerTitle: true,
+          elevation: 0,
+        ),
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                buildUserInfoSection(theme),
+                const SizedBox(height: 24),
+                _buildSectionTitle('数据', theme),
+                CusSettingCard(
+                  icon: Icons.backup_outlined,
+                  title: "备份恢复",
+                  description: "导出或恢复您的聊天数据",
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => BackupAndRestorePage(
+                        packageVersion: _packageInfo.version,
                       ),
                     ),
-                accentColor: Colors.blue,
-              ),
-              const SizedBox(height: 24),
-              _buildSectionTitle('支持', theme),
-              CusSettingCard(
-                icon: Icons.info_outline,
-                title: '应用信息',
-                description: '应用相关基础信息',
-                onTap: _showAboutDialog,
-                accentColor: Colors.orangeAccent,
-              ),
-              CusSettingCard(
-                icon: Icons.help_outline,
-                title: '常见问题(TBD)',
-                description: '查看使用过程中常见问题的解答',
-                onTap: () {},
-                accentColor: Colors.green,
-              ),
-              const SizedBox(height: 24),
-              _buildSectionTitle('关于', theme),
-              CusSettingCard(
-                icon: Icons.article_outlined,
-                title: '用户协议(TBD)',
-                description: '查看应用使用条款和条件',
-                accentColor: Colors.purple,
-                onTap: () {},
-              ),
-              CusSettingCard(
-                icon: Icons.privacy_tip_outlined,
-                title: '隐私政策(TBD)',
-                description: '了解我们如何处理您的数据',
-                accentColor: Colors.teal,
-                onTap: () {},
-              ),
-              CusSettingCard(
-                icon: Icons.security_outlined,
-                title: '应用权限(TBD)',
-                description: '管理应用所需的权限',
-                accentColor: Colors.red,
-                onTap: () {},
-              ),
-              const SizedBox(height: 24),
-              _buildAppVersionInfo(),
-            ],
+                  ),
+                  accentColor: Colors.blue,
+                ),
+                CusSettingCard(
+                  icon: Icons.move_up,
+                  title: "旧版数据迁移",
+                  description: "从 0.1.4 旧版迁移数据到当前版本",
+                  onTap: () => _showLegacyMigrationSheet(context),
+                  accentColor: Colors.teal,
+                ),
+                CusSettingCard(
+                  icon: Icons.vpn_key_outlined,
+                  title: "内容源 API 配置",
+                  description: "TMDB/USDA/NewsAPI 使用自备 Key",
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ContentSourceKeysPage(),
+                    ),
+                  ),
+                  accentColor: Colors.deepPurpleAccent,
+                ),
+                CusSettingCard(
+                  icon: Icons.translate,
+                  title: "AI 翻译模型",
+                  description: "页面内 AI 翻译(如 MAL 详情)使用的模型",
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AiTranslationModelPage(),
+                    ),
+                  ),
+                  accentColor: Colors.pinkAccent,
+                ),
+                const SizedBox(height: 24),
+                _buildSectionTitle('支持', theme),
+                CusSettingCard(
+                  icon: Icons.info_outline,
+                  title: '应用信息',
+                  description: '应用相关基础信息',
+                  onTap: _showAboutDialog,
+                  accentColor: Colors.orangeAccent,
+                ),
+                CusSettingCard(
+                  icon: Icons.help_outline,
+                  title: '常见问题(TBD)',
+                  description: '查看使用过程中常见问题的解答',
+                  onTap: () {},
+                  accentColor: Colors.green,
+                ),
+                const SizedBox(height: 24),
+                _buildSectionTitle('关于', theme),
+                CusSettingCard(
+                  icon: Icons.article_outlined,
+                  title: '用户协议(TBD)',
+                  description: '查看应用使用条款和条件',
+                  accentColor: Colors.purple,
+                  onTap: () {},
+                ),
+                CusSettingCard(
+                  icon: Icons.privacy_tip_outlined,
+                  title: '隐私政策(TBD)',
+                  description: '了解我们如何处理您的数据',
+                  accentColor: Colors.teal,
+                  onTap: () {},
+                ),
+                CusSettingCard(
+                  icon: Icons.security_outlined,
+                  title: '应用权限(TBD)',
+                  description: '管理应用所需的权限',
+                  accentColor: Colors.red,
+                  onTap: () {},
+                ),
+                const SizedBox(height: 24),
+                _buildAppVersionInfo(),
+              ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+
+  /// 旧版数据迁移入口(0.1.5)：
+  /// - 0.1.4 → 0.1.5 的库/媒体/配置/旧分支聊天由升级迁移器自动完成，
+  ///   此处可手动重跑(未授权时先请求权限)
+  /// 桌面端用居中弹窗(与其他弹窗风格一致)，移动端保持底部弹窗
+  void _showLegacyMigrationSheet(BuildContext context) {
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(0, 0, 0, 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '升级到 0.1.5 时，旧版本的数据库、媒体、配置与旧分支聊天'
+              '会自动迁移。若首次启动时选择了"暂不迁移"或未授权，'
+              '可在此重新扫描完成迁移。',
+            ),
+          ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.refresh, color: Colors.teal),
+          title: const Text('重新扫描本机旧版数据'),
+          subtitle: const Text('手动执行一次 0.1.4 数据自动迁移'),
+          onTap: () async {
+            Navigator.pop(context);
+            // 2026-10-12 FIX：未授权时此前直接返回needsPermission被
+            // 归类成"未发现可迁移的旧数据"，且拒绝过引导的用户再无
+            // 授权入口——此处是用户主动触发，直接请求权限
+            if (Platform.isAndroid &&
+                !await UpgradeMigrator.isLegacyPermissionGranted()) {
+              final granted = await UpgradeMigrator.requestLegacyPermission();
+              if (!granted) {
+                ToastUtils.showError('需要"所有文件访问"权限才能读取旧版数据，可在系统设置中授权后重试');
+                return;
+              }
+            }
+
+            // withLoading 保证结束(含异常)必关遮罩；
+            // 之前直接 showLoading 不持有 CancelFunc，遮罩永不关闭锁死界面
+            try {
+              final result = await ToastUtils.withLoading(
+                () => UpgradeMigrator.runIfNeeded(force: true),
+                '正在扫描迁移旧版数据...',
+              );
+              // 2026-09-18 FIX：迁移器不再吞失败(此前库复制失败也被
+              // 标记完成，重扫永远显示成功)。按真实结果分流提示
+              if (result.needsPermission) {
+                ToastUtils.showError('需要"所有文件访问"权限才能扫描旧版数据');
+              } else if (!result.migrated) {
+                ToastUtils.showSuccess('未发现可迁移的旧版数据');
+              } else if (result.success) {
+                ToastUtils.showSuccess('旧版数据迁移完成');
+              } else {
+                ToastUtils.showError(result.error ?? '旧版数据迁移失败');
+              }
+            } catch (e) {
+              ToastUtils.showError('旧版数据迁移失败: $e');
+            }
+          },
+        ),
+        // 2026-10-12 移除"从备份包导入旧聊天"入口：恢复向导已同时
+        // 兼容0.1.4/0.1.5备份包(备份恢复功能入口已有)，无需在此单设
+      ],
+    );
+
+    if (ScreenHelper.isDesktop()) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('旧版数据迁移'),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: content,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('关闭'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '旧版数据迁移',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+              child: content,
+            ),
+            const SizedBox(height: 8),
+          ],
         ),
       ),
     );
@@ -127,58 +282,51 @@ class _UserAndSettingsState extends State<UserAndSettings> {
   void _showAboutDialog() {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('关于 SuChat'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 16),
-                Text(
-                  _packageInfo.appName,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  '版本: ${_packageInfo.version} (${_packageInfo.buildNumber})',
-                ),
-                const SizedBox(height: 16),
-                _buildLinkButton(
-                  icon: Icons.code,
-                  label: "GitHub 项目",
-                  url: "https://github.com/Sanotsu/SuChat-Lite",
-                ),
-
-                // _buildLinkButton(
-                //   icon: Icons.contact_support,
-                //   label: "联系开发者",
-                //   url: "callmedavidsu@gmail.com",
-                // ),
-                TextButton.icon(
-                  icon: Icon(Icons.contact_support, size: 18),
-                  label: Text('联系开发者'),
-                  onPressed: () {
-                    Clipboard.setData(
-                      ClipboardData(text: 'callmedavidsu@gmail.com'),
-                    );
-                    ToastUtils.showSuccess(
-                      '已复制开发者邮箱地址',
-                      align: Alignment.center,
-                    );
-                  },
-                  style: TextButton.styleFrom(
-                    alignment: Alignment.centerLeft,
-                    minimumSize: const Size(double.infinity, 36),
-                  ),
-                ),
-              ],
+      builder: (context) => AlertDialog(
+        title: const Text('关于 SuChat'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 16),
+            Text(
+              _packageInfo.appName,
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('关闭'),
+            Text('版本: ${_packageInfo.version} (${_packageInfo.buildNumber})'),
+            const SizedBox(height: 16),
+            _buildLinkButton(
+              icon: Icons.code,
+              label: "GitHub 项目",
+              url: "https://github.com/Sanotsu/SuChat-Lite",
+            ),
+            // _buildLinkButton(
+            //   icon: Icons.contact_support,
+            //   label: "联系开发者",
+            //   url: "callmedavidsu@gmail.com",
+            // ),
+            TextButton.icon(
+              icon: Icon(Icons.contact_support, size: 18),
+              label: Text('联系开发者'),
+              onPressed: () {
+                Clipboard.setData(
+                  ClipboardData(text: 'callmedavidsu@gmail.com'),
+                );
+                ToastUtils.showSuccess('已复制开发者邮箱地址', align: Alignment.center);
+              },
+              style: TextButton.styleFrom(
+                alignment: Alignment.centerLeft,
+                minimumSize: const Size(double.infinity, 36),
               ),
-            ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('关闭'),
           ),
+        ],
+      ),
     );
   }
 
@@ -210,11 +358,10 @@ class _UserAndSettingsState extends State<UserAndSettings> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder:
-                        (context) => ChangeNotifierProvider.value(
-                          value: viewModel,
-                          child: const UserInfoPage(),
-                        ),
+                    builder: (context) => ChangeNotifierProvider.value(
+                      value: viewModel,
+                      child: const UserInfoPage(),
+                    ),
                   ),
                 );
               },

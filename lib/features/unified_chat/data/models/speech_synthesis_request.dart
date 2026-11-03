@@ -62,20 +62,48 @@ class SpeechSynthesisRequest {
   Map<String, dynamic> toJson() => _$SpeechSynthesisRequestToJson(this);
 
   /// 转换为阿里百炼API格式
+  /// 2026-10-14 FIX：Qwen-Audio-TTS系列(qwen-audio-*-tts*)与Qwen-TTS
+  /// 协议不同(官方文档 https://help.aliyun.com/zh/model-studio/qwen-audio-tts-http-api)：
+  ///   1. 端点为 /api/v1/services/audio/tts/SpeechSynthesizer(平台规格已更新)
+  ///   2. input为 {text, voice(必选), format, sample_rate}，无language_type
+  ///   3. 音色体系不同：系统音色如longanhuan_v3.6(Cherry是Qwen-TTS音色)
+  /// Qwen-TTS(qwen-tts系列)仍走multimodal-generation，input为
+  /// {text, voice, language_type}
   Map<String, dynamic> toAliyunFormat() {
-    final Map<String, dynamic> inputData = {
-      'text': input,
-      'voice': voice ?? 'Cherry',
-      'language_type': languageType ?? 'Auto',
-    };
+    final Map<String, dynamic> data = {'model': model};
 
-    final Map<String, dynamic> data = {'model': model, 'input': inputData};
+    if (model.startsWith('qwen-audio-')) {
+      data['input'] = {
+        'text': input,
+        // 音色必须属于当前模型的音色列表，不能跨模型混用——混用报
+        // InvalidParameter [cosyvoice:]Engine error [411]
+        // (音色列表: help.aliyun.com/zh/model-studio/qwen-audio-tts-voice-list)
+        'voice': voice ?? _defaultAliyunAudioTtsVoice(),
+        // 默认22050/mp3，显式指定24kHz wav与本地落盘格式一致
+        'format': 'wav',
+        'sample_rate': 24000,
+      };
+    } else {
+      data['input'] = {
+        'text': input,
+        'voice': voice ?? 'Cherry',
+        'language_type': languageType ?? 'Auto',
+      };
+    }
 
     if (stream != null) {
       data['stream'] = stream;
     }
 
     return data;
+  }
+
+  /// Qwen-Audio-TTS各模型的默认音色(音色列表各模型独立，不可混用)：
+  /// 3.1系为_v3.1后缀；3.0-plus为无后缀音色；3.0-flash为_v3.6后缀
+  String _defaultAliyunAudioTtsVoice() {
+    if (model.contains('3.1')) return 'longanhuan_v3.1';
+    if (model.contains('plus')) return 'longanlingxin';
+    return 'longanhuan_v3.6';
   }
 
   /// 转换为硅基流动API格式
@@ -148,6 +176,25 @@ class SpeechSynthesisRequest {
     }
 
     return data;
+  }
+
+  /// 转换为小米MiMo API格式(2026-09-10 chat completions风格，不走audio端点)
+  /// 要合成的文本放在assistant消息中，音色/格式放在audio对象；
+  /// 仅mimo-v2.5-tts-voicedesign需要user消息(音色描述)，内置tts模型不需要
+  Map<String, dynamic> toMimoFormat() {
+    return {
+      'model': model,
+      'messages': [
+        {'role': 'assistant', 'content': input},
+      ],
+      'audio': {
+        // 内置音色，默认mimo_default；支持：冰糖/茉莉/苏打/白桦/Mia/Chloe/Milo/Dean
+        'voice': voice ?? 'mimo_default',
+        // 仅支持wav/mp3/pcm/pcm16，默认wav
+        'format': responseFormat ?? 'wav',
+      },
+      'stream': stream ?? false,
+    };
   }
 
   SpeechSynthesisRequest copyWith({

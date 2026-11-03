@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import '../../../data/datasources/tmdb/tmdb_apis.dart';
 import '../../../data/models/tmdb/tmdb_common.dart';
 import '../../../data/models/tmdb/tmdb_result_resp.dart';
@@ -63,20 +64,30 @@ class _TmdbSimilarPageState extends State<TmdbSimilarPage> {
     try {
       TmdbResultResp? response;
 
+      // 2026-09-07 修复分页：原调用未传页码，滚动加载永远取第 1 页，
+      // 列表反复堆叠同一批数据
       if (widget.mediaType == 'movie') {
         if (widget.contentType == 'similar') {
-          response = await TmdbApiManager().getMovieSimilar(widget.mediaId);
+          response = await TmdbApiManager().getMovieSimilar(
+            widget.mediaId,
+            page: _currentPage,
+          );
         } else {
           response = await TmdbApiManager().getMovieRecommendations(
             widget.mediaId,
+            page: _currentPage,
           );
         }
       } else if (widget.mediaType == 'tv') {
         if (widget.contentType == 'similar') {
-          response = await TmdbApiManager().getTvSimilar(widget.mediaId);
+          response = await TmdbApiManager().getTvSimilar(
+            widget.mediaId,
+            page: _currentPage,
+          );
         } else {
           response = await TmdbApiManager().getTvRecommendations(
             widget.mediaId,
+            page: _currentPage,
           );
         }
       }
@@ -123,41 +134,43 @@ class _TmdbSimilarPageState extends State<TmdbSimilarPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: _items.isEmpty && _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _items.isEmpty
-          ? const Center(child: Text('暂无内容'))
-          : GridView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.7,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-              ),
-              itemCount: _items.length + (_hasMore ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == _items.length) {
-                  return _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : const SizedBox.shrink();
-                }
+    return CusContentWidth(
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.title),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+        ),
+        body: _items.isEmpty && _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _items.isEmpty
+            ? const Center(child: Text('暂无内容'))
+            : GridView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.all(16),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.7,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: _items.length + (_hasMore ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index == _items.length) {
+                    return _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : const SizedBox.shrink();
+                  }
 
-                final item = _items[index];
-                return TmdbItemCard(
-                  item: item,
-                  onTap: () => _navigateToDetail(item),
-                  isHorizontal: true,
-                );
-              },
-            ),
+                  final item = _items[index];
+                  return TmdbItemCard(
+                    item: item,
+                    onTap: () => _navigateToDetail(item),
+                    isHorizontal: true,
+                  );
+                },
+              ),
+      ),
     );
   }
 }

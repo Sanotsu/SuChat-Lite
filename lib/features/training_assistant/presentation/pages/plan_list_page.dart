@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
+
 import 'package:provider/provider.dart';
 
 import '../../../../shared/widgets/simple_tool_widget.dart';
@@ -127,21 +129,20 @@ class _PlanListPageState extends State<PlanListPage> {
             onPlanDeleted: (plan) async {
               final confirmed = await showDialog<bool>(
                 context: context,
-                builder:
-                    (context) => AlertDialog(
-                      title: const Text('删除计划'),
-                      content: const Text('确定要删除此训练计划吗？此操作不可撤销。'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          child: const Text('取消'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          child: const Text('删除'),
-                        ),
-                      ],
+                builder: (context) => AlertDialog(
+                  title: const Text('删除计划'),
+                  content: const Text('确定要删除此训练计划吗？此操作不可撤销。'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('取消'),
                     ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('删除'),
+                    ),
+                  ],
+                ),
               );
 
               if (confirmed == true) {
@@ -173,11 +174,14 @@ class _PlanListPageState extends State<PlanListPage> {
         );
 
         // 根据是否显示AppBar返回不同的布局
+        // 2026-09-04 桌面端适配：独立页时内容限宽(嵌入主页tab时由父级限宽)
         return widget.showAppBar
-            ? Scaffold(
-              appBar: AppBar(title: const Text('训练计划列表')),
-              body: content,
-            )
+            ? CusContentWidth(
+                child: Scaffold(
+                  appBar: AppBar(title: const Text('训练计划列表')),
+                  body: content,
+                ),
+              )
             : content;
       },
     );

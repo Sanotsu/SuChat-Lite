@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:get_storage/get_storage.dart';
+import '../utils/storage_paths.dart';
 import 'base_api_config.dart';
 
 /// 通用API初始化基类
@@ -7,16 +8,38 @@ import 'base_api_config.dart';
 class BaseApiInit {
   static final Map<String, bool> _initializedModules = {};
 
+  // 2026-10-13 FIX：并发去重——此前仅靠 _initializedModules 检查，
+  // 两个调用同时进入(async 检查非原子)会双份初始化(日志重复打两遍)
+  static final Map<String, Future<void>> _initFutures = {};
+
   /// 初始化指定模块的存储
   static Future<void> initModule(BaseApiConfig config) async {
+    final existing = _initFutures[config.moduleName];
+    if (existing != null) return existing;
+
+    final future = _initModuleInner(config);
+    _initFutures[config.moduleName] = future;
+    try {
+      await future;
+    } catch (_) {
+      // 失败移除，允许后续重试
+      _initFutures.remove(config.moduleName);
+      rethrow;
+    }
+  }
+
+  static Future<void> _initModuleInner(BaseApiConfig config) async {
     if (_initializedModules[config.moduleName] == true) return;
 
     try {
+      // 2026-09-04 容器文件统一收纳进私有区目录
+      final gsPath = (await getGetStorageDir()).path;
+
       // 初始化缓存存储
-      await GetStorage.init(config.cacheKey);
+      await GetStorage(config.cacheKey, gsPath).initStorage;
 
       // 初始化请求日志存储
-      await GetStorage.init(config.requestLogKey);
+      await GetStorage(config.requestLogKey, gsPath).initStorage;
 
       _initializedModules[config.moduleName] = true;
       if (kDebugMode) {
@@ -60,7 +83,7 @@ class BaseApiInit {
       try {
         final cacheStorage = GetStorage("suchat_${moduleName}_cache");
         final logStorage = GetStorage("suchat_${moduleName}_request_log");
-        
+
         await cacheStorage.erase();
         await logStorage.erase();
       } catch (e) {
@@ -69,7 +92,7 @@ class BaseApiInit {
         }
       }
     }
-    
+
     _initializedModules.clear();
     if (kDebugMode) {
       print('✅ 所有API存储清理完成');

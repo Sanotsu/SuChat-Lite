@@ -23,10 +23,9 @@ class ImageColorUtils {
       try {
         // 如果使用compute失败，在主线程中尝试处理
 
-        final file =
-            imagePath.startsWith('assets')
-                ? (await getImageFileFromAssets(imagePath))
-                : File(imagePath);
+        final file = imagePath.startsWith('assets')
+            ? (await getImageFileFromAssets(imagePath))
+            : File(imagePath);
         if (!file.existsSync()) {
           ToastUtils.showError('文件不存在: $e');
 

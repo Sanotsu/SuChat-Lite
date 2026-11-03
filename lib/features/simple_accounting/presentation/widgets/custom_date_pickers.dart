@@ -567,10 +567,9 @@ class _CustomDateRangePickerState extends State<CustomDateRangePicker> {
                   child: const Text('取消'),
                 ),
                 ElevatedButton(
-                  onPressed:
-                      () => Navigator.of(
-                        context,
-                      ).pop(DateRange(_startDate, _endDate)),
+                  onPressed: () => Navigator.of(
+                    context,
+                  ).pop(DateRange(_startDate, _endDate)),
                   child: const Text('确定'),
                 ),
               ],
@@ -606,14 +605,13 @@ Future<date_pickers.DatePeriod?> showCustomWeekPicker({
   // 显示对话框
   final result = await showDialog<date_pickers.DatePeriod>(
     context: context,
-    builder:
-        (context) => CustomWeekPicker(
-          selectedDate: selectedDate,
-          onChanged: onChanged,
-          firstDate: firstDate!,
-          lastDate: lastDate!,
-          dateFormat: dateFormat ?? DateFormat(formatToYMDzh),
-        ),
+    builder: (context) => CustomWeekPicker(
+      selectedDate: selectedDate,
+      onChanged: onChanged,
+      firstDate: firstDate!,
+      lastDate: lastDate!,
+      dateFormat: dateFormat ?? DateFormat(formatToYMDzh),
+    ),
   );
 
   return result;
@@ -635,14 +633,13 @@ Future<DateTime?> showCustomMonthPicker({
   // 显示对话框
   final result = await showDialog<DateTime>(
     context: context,
-    builder:
-        (context) => CustomMonthPicker(
-          selectedYear: selectedYear,
-          selectedMonth: selectedMonth,
-          onChanged: onChanged,
-          firstDate: firstDate!,
-          lastDate: lastDate!,
-        ),
+    builder: (context) => CustomMonthPicker(
+      selectedYear: selectedYear,
+      selectedMonth: selectedMonth,
+      onChanged: onChanged,
+      firstDate: firstDate!,
+      lastDate: lastDate!,
+    ),
   );
 
   return result;
@@ -663,13 +660,12 @@ Future<DateTime?> showCustomYearPicker({
   // 显示对话框
   final result = await showDialog<DateTime>(
     context: context,
-    builder:
-        (context) => CustomYearPicker(
-          selectedYear: selectedYear,
-          onChanged: onChanged,
-          firstYear: firstYear!,
-          lastYear: lastYear!,
-        ),
+    builder: (context) => CustomYearPicker(
+      selectedYear: selectedYear,
+      onChanged: onChanged,
+      firstYear: firstYear!,
+      lastYear: lastYear!,
+    ),
   );
 
   return result;
@@ -692,15 +688,14 @@ Future<DateRange?> showCustomDateRangePicker({
   // 显示对话框
   final result = await showDialog<DateRange>(
     context: context,
-    builder:
-        (context) => CustomDateRangePicker(
-          startDate: startDate,
-          endDate: endDate,
-          onChanged: onChanged,
-          firstDate: firstDate!,
-          lastDate: lastDate!,
-          dateFormat: dateFormat ?? DateFormat(formatToYMDzh),
-        ),
+    builder: (context) => CustomDateRangePicker(
+      startDate: startDate,
+      endDate: endDate,
+      onChanged: onChanged,
+      firstDate: firstDate!,
+      lastDate: lastDate!,
+      dateFormat: dateFormat ?? DateFormat(formatToYMDzh),
+    ),
   );
 
   return result;

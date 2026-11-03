@@ -5,6 +5,7 @@ import 'package:gpt_markdown/custom_widgets/selectable_adapter.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 
 import '../../../core/utils/simple_tools.dart';
+import '../image_preview_helper.dart';
 import 'cus_code_field.dart';
 import 'latex_string_normalize.dart';
 
@@ -52,9 +53,11 @@ class CusMarkdownRenderer {
   ];
 
   // 预定义的所有内联组件
+  // 注意：传入自定义列表会整体替换包默认列表，默认列表含 AutolinkMd(裸URL自动成链接)，必须带上
   static final List<MarkdownComponent> _allInlineComponents = [
     ImageMd(),
     ATagMd(),
+    AutolinkMd(),
     TableMd(),
     StrikeMd(),
     BoldMd(),
@@ -121,29 +124,72 @@ class CusMarkdownRenderer {
 
         // print("处理后的text:\n $text");
 
-        final child = GptMarkdown(
-          text,
-          style:
-              textStyle ??
-              TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
-          onLinkTab: (url, title) {
-            debugPrint('链接点击: $url, 标题: $title');
-            launchStringUrl(url);
-          },
-          highlightBuilder: _buildHighlight,
-          latexWorkaround: _processLatexText,
-          imageBuilder: _buildImage,
-          latexBuilder:
-              (context, tex, textStyle, inline) =>
-                  _buildLatex(context, tex, textStyle, inline),
-          sourceTagBuilder: _buildSourceTag,
-          linkBuilder: _buildLink,
-          codeBuilder: _buildCode,
-          components: _allComponents,
-          inlineComponents: _allInlineComponents,
+        // 2026-09-03 适配 gpt_markdown 1.2.1：
+        // 1. onLinkTab更名onLinkTap；2. highlightBuilder已废弃，改用inlineCodeStyle
+        // (新版内联代码chip按行绘制、可换行可选中，观感优于旧WidgetSpan实现)；
+        // 3. linkBuilder已无必要——默认LinkButton自带hover变色，自定义反而丢失；
+        // 4. imageBuilder签名增加alt文本解析出的宽高参数
+        //
+        // 2026-09-03 轻量美化：默认h1/h2用headlineLarge/Medium(32/28)过大，
+        // 收敛标题层级；链接色从硬编码蓝/红改为主题primary/tertiary色
+        final mdTheme = GptMarkdownThemeData(
+          brightness: Theme.of(context).brightness,
+          h1: TextStyle(fontSize: 21, fontWeight: FontWeight.w600, height: 1.4),
+          h2: TextStyle(
+            fontSize: 18.5,
+            fontWeight: FontWeight.w600,
+            height: 1.4,
+          ),
+          h3: TextStyle(
+            fontSize: 16.5,
+            fontWeight: FontWeight.w600,
+            height: 1.35,
+          ),
+          h4: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+          linkColor: Theme.of(context).colorScheme.primary,
+          linkHoverColor: Theme.of(context).colorScheme.tertiary,
         );
 
-        return selectable ? SelectionArea(child: child) : child;
+        final child = GptMarkdownTheme(
+          gptThemeData: mdTheme,
+          child: GptMarkdown(
+            text,
+            style:
+                textStyle ??
+                TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+            onLinkTap: (url, title) {
+              debugPrint('链接点击: $url, 标题: $title');
+              launchStringUrl(url);
+            },
+            latexWorkaround: _processLatexText,
+            imageBuilder: _buildImage,
+            latexBuilder: (context, tex, textStyle, inline) =>
+                _buildLatex(context, tex, textStyle, inline),
+            sourceTagBuilder: _buildSourceTag,
+            codeBuilder: _buildCode,
+            inlineCodeStyle: InlineCodeStyle(
+              color: Theme.of(context).colorScheme.onSecondaryContainer,
+              backgroundColor: Theme.of(
+                context,
+              ).colorScheme.secondaryContainer.withValues(alpha: 0.55),
+              borderColor: Theme.of(
+                context,
+              ).colorScheme.secondary.withValues(alpha: 0.5),
+            ),
+            components: _allComponents,
+            inlineComponents: _allInlineComponents,
+          ),
+        );
+
+        // 2026-11-03 屏蔽SelectionArea系统默认文本选择菜单：未选中状态下
+        // 右键(桌面)/长按(移动)会弹出仅含"全选"的系统工具条，与消息自定义
+        // 菜单(showMessageOptions)叠加造成困惑；文本选择能力仍保留
+        return selectable
+            ? SelectionArea(
+                contextMenuBuilder: (_, _) => const SizedBox.shrink(),
+                child: child,
+              )
+            : child;
       },
     );
   }
@@ -173,29 +219,64 @@ class CusMarkdownRenderer {
     }
   }
 
-  // 高亮文本构建器
-  Widget _buildHighlight(BuildContext context, String text, TextStyle style) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(
-          color: theme.colorScheme.secondary.withValues(alpha: 0.5),
-          width: 1,
-        ),
+  // 图片构建器(width/height来自图片alt文本的WxH解析，如![100x200](url))
+  // 2026-09-15 修复：无标注时原实现强制100x100小框(截图里图表显示很小)，
+  // 改为自适应可用宽度(按原图比例，小图不放大、大图缩到约束内)；
+  // 并支持点击放大预览(photo_view缩放)
+  Widget _buildImage(
+    BuildContext context,
+    String url,
+    double? width,
+    double? height,
+  ) {
+    final image = Image.network(
+      url,
+      width: width,
+      height: height,
+      fit: BoxFit.contain,
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        final expected = progress.expectedTotalBytes;
+        return Container(
+          width: width ?? 200,
+          height: height ?? 120,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            value: (expected != null && expected > 0)
+                ? progress.cumulativeBytesLoaded / expected
+                : null,
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) => Icon(
+        Icons.broken_image_outlined,
+        size: 32,
+        color: Theme.of(context).colorScheme.error,
       ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: theme.colorScheme.onSecondaryContainer,
-          fontFamily: 'monospace',
-          fontWeight: FontWeight.bold,
-          fontSize: style.fontSize != null ? style.fontSize! * 0.9 : 13.5,
-          height: style.height,
-        ),
-      ),
+    );
+
+    void tapToPreview() => showImagePreviewDialog(context, url);
+
+    // 有WxH标注：按标注尺寸渲染(尊重作者意图)
+    if (width != null || height != null) {
+      return GestureDetector(
+        onTap: tapToPreview,
+        child: ClipRRect(borderRadius: BorderRadius.circular(8), child: image),
+      );
+    }
+
+    // 无标注：不传尺寸让图片按原比例自适应约束(气泡宽度内，原像素
+    // 小于约束则保持原大小不放大)
+    return GestureDetector(
+      onTap: tapToPreview,
+      child: ClipRRect(borderRadius: BorderRadius.circular(8), child: image),
     );
   }
 
@@ -226,21 +307,6 @@ class CusMarkdownRenderer {
     return tex.replaceAllMapped(RegExp(r"align\*"), (match) => "aligned");
   }
 
-  // 图片构建器
-  Widget _buildImage(BuildContext context, String url) {
-    return Image.network(
-      url,
-      width: 100,
-      height: 100,
-      errorBuilder:
-          (context, error, stackTrace) => Icon(
-            Icons.error,
-            size: 24,
-            color: Theme.of(context).colorScheme.error,
-          ),
-    );
-  }
-
   // LaTeX构建器
   Widget _buildLatex(
     BuildContext context,
@@ -254,20 +320,19 @@ class CusMarkdownRenderer {
 
     final controller = ScrollController();
 
-    final child =
-        inline
-            ? Math.tex(tex, textStyle: textStyle)
-            : Padding(
-              padding: EdgeInsets.all(8),
-              child: Scrollbar(
+    final child = inline
+        ? Math.tex(tex, textStyle: textStyle)
+        : Padding(
+            padding: EdgeInsets.all(8),
+            child: Scrollbar(
+              controller: controller,
+              child: SingleChildScrollView(
                 controller: controller,
-                child: SingleChildScrollView(
-                  controller: controller,
-                  scrollDirection: Axis.horizontal,
-                  child: Math.tex(tex, textStyle: textStyle),
-                ),
+                scrollDirection: Axis.horizontal,
+                child: Math.tex(tex, textStyle: textStyle),
               ),
-            );
+            ),
+          );
 
     return InkWell(
       onTap: () => debugPrint("LaTeX content: $tex"),
@@ -315,22 +380,6 @@ class CusMarkdownRenderer {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  // 链接构建器
-  Widget _buildLink(
-    BuildContext context,
-    String label,
-    String path,
-    TextStyle style,
-  ) {
-    return Text(
-      label,
-      style: style.copyWith(
-        color: Theme.of(context).colorScheme.primary,
-        decoration: TextDecoration.underline,
       ),
     );
   }

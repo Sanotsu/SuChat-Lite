@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../../core/utils/datetime_formatter.dart';
 import '../../../../../shared/constants/constants.dart';
@@ -6,6 +7,15 @@ import '../../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../data/models/daodu_models.dart';
 import '../../pages/daodu/lesson_detail_page.dart';
 import '../../pages/daodu/lesson_single_comment_page.dart';
+
+/// 键盘翻卡意图(←上一张 / →下一张)
+class _PrevCardIntent extends Intent {
+  const _PrevCardIntent();
+}
+
+class _NextCardIntent extends Intent {
+  const _NextCardIntent();
+}
 
 /// 可滑动的卡片组件
 /// 支持文章和评论的卡片式展示
@@ -55,31 +65,61 @@ class _DaoduSwipeableCardWidgetState extends State<DaoduSwipeableCardWidget> {
 
     return Column(
       children: [
-        // 卡片区域
+        // 2026-09-04 桌面端适配：键盘←/→翻卡(鼠标拖拽PageView体验差，且有按钮替代)
         Expanded(
-          child: PageView.builder(
-            controller: _pageController,
-            onPageChanged: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
+          child: Shortcuts(
+            shortcuts: const <ShortcutActivator, Intent>{
+              SingleActivator(LogicalKeyboardKey.arrowLeft): _PrevCardIntent(),
+              SingleActivator(LogicalKeyboardKey.arrowRight): _NextCardIntent(),
             },
-            itemCount: widget.items.length,
-            itemBuilder: (context, index) {
-              final item = widget.items[index];
-              if (item is DaoduLesson) {
-                return _buildArticleCard(item);
-              } else if (item is DaoduComment) {
-                return _buildCommentCard(item);
-              }
-              return const SizedBox();
-            },
+            child: Actions(
+              actions: <Type, Action<Intent>>{
+                _PrevCardIntent: CallbackAction<_PrevCardIntent>(
+                  onInvoke: (_) => _flipCard(-1),
+                ),
+                _NextCardIntent: CallbackAction<_NextCardIntent>(
+                  onInvoke: (_) => _flipCard(1),
+                ),
+              },
+              child: Focus(
+                autofocus: true,
+                child: PageView.builder(
+                  controller: _pageController,
+                  onPageChanged: (index) {
+                    setState(() {
+                      _currentIndex = index;
+                    });
+                  },
+                  itemCount: widget.items.length,
+                  itemBuilder: (context, index) {
+                    final item = widget.items[index];
+                    if (item is DaoduLesson) {
+                      return _buildArticleCard(item);
+                    } else if (item is DaoduComment) {
+                      return _buildCommentCard(item);
+                    }
+                    return const SizedBox();
+                  },
+                ),
+              ),
+            ),
           ),
         ),
 
         // 底部控制区域
         _buildBottomControls(),
       ],
+    );
+  }
+
+  /// 按 direction 翻动一页(-1上一张 / 1下一张)
+  void _flipCard(int direction) {
+    final target = _currentIndex + direction;
+    if (target < 0 || target >= widget.items.length) return;
+    _pageController.animateToPage(
+      target,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
     );
   }
 

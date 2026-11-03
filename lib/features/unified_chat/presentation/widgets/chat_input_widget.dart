@@ -10,17 +10,20 @@ import 'package:record/record.dart';
 import '../../../../core/theme/style/app_colors.dart';
 import '../../../../core/utils/file_picker_utils.dart';
 import '../../../../core/utils/image_picker_utils.dart';
+import '../../../../core/utils/screen_helper.dart';
 import '../../../../shared/services/aliyun_paraformer_realtime_service.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../../translator/data/models/aliyun_asr_realtime_models.dart';
 import '../../data/models/unified_platform_spec.dart';
 import '../../data/models/unified_model_spec.dart';
+import '../../data/services/mcp/mcp_server_manager.dart';
 import '../../data/services/unified_secure_storage.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
 import 'model_selector_dialog.dart';
 import 'chat_settings_dialog.dart';
 import 'image_generation_settings_dialog.dart';
+import 'video_generation_settings_dialog.dart';
 import 'speech_synthesis_settings_dialog.dart';
 import 'speech_recognition_settings_dialog.dart';
 import 'model_type_icon.dart';
@@ -35,6 +38,9 @@ class ChatInputWidget extends StatefulWidget {
 }
 
 class _ChatInputWidgetState extends State<ChatInputWidget> {
+  // 2026-09-11 MCP集成(P1-3b)：判断可用工具数(与管理器保持同一单例)
+  final McpServerManager _mcpManager = McpServerManager();
+
   // 文本控制器
   late TextEditingController _textController;
   final FocusNode _focusNode = FocusNode();
@@ -317,37 +323,37 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   }
 
   // 可启用联网搜索的条件
-  // 1 模型是阿里百炼、智谱平台(平台自带联网搜索)
-  // 2 非百炼智谱平台时，模型支持工具调用，且第三方搜索工具API至少存在一个
+  // 2026-09-09 判定逻辑收口到viewmodel.hasWebSearchCapability()(注册表判定)：
+  // 1 平台注册了自带联网搜索适配器(见builtin_web_search_registry.dart，后续新平台注册即可)
+  // 2 无自带搜索的平台时，模型支持工具调用，且第三方搜索工具API至少存在一个
   bool _canToggleWebSearch(UnifiedChatViewModel viewModel) {
-    // 1 模型是阿里百炼、智谱平台
-    bool isSupportedModel = false;
-    if (viewModel.currentPlatform?.id == UnifiedPlatformId.aliyun.name ||
-        viewModel.currentPlatform?.id == UnifiedPlatformId.zhipu.name) {
-      isSupportedModel = true;
-    }
-
-    //  2 非百炼智谱平台时，模型支持工具调用，且第三方搜索工具API至少存在一个
-    bool isSupportTool = false;
-    if (!isSupportedModel) {
-      isSupportTool =
-          viewModel.hasAvailableSearchTools() &&
-          (viewModel.currentModel?.supportsToolCalling ?? false);
-    }
+    final canToggle = viewModel.hasWebSearchCapability();
 
     // 如果是不可联网，则还需要先恢复不可联网的状态
-    if (!isSupportedModel && !isSupportTool && viewModel.isWebSearchEnabled) {
+    // 2026-09-09 自动关传manual:false——不写"用户手动切换"标记，
+    // 否则之后具备联网能力时不会再自动开启
+    if (!canToggle && viewModel.isWebSearchEnabled) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        viewModel.toggleWebSearch();
+        viewModel.toggleWebSearch(manual: false);
       });
     }
 
-    return isSupportedModel || isSupportTool;
+    return canToggle;
   }
 
   // 是否可以发送
   bool _canSend() {
     return _inputText.trim().isNotEmpty || _hasAttachments();
+  }
+
+  /// 统一清空输入框
+  /// 注意：controller.clear()不会触发onChanged，必须同步重置_inputText状态，
+  /// 否则发送按钮的_canSend()仍为true(残留旧文本)，空内容时仍可点击导致处理出错
+  void _clearInput() {
+    setState(() {
+      _inputText = '';
+      _textController.clear();
+    });
   }
 
   ///
@@ -356,12 +362,26 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   Future<void> _sendMessage(UnifiedChatViewModel viewModel) async {
     unfocusHandle();
 
+    // 2026-09-18 只读降级：无可用模型/平台时明确提示(输入框已禁用，
+    // 此处兜底快捷键/回调路径)
+    if (!viewModel.canContinueChat) {
+      ToastUtils.showInfo('当前无可用平台/模型，仅可浏览历史对话');
+      return;
+    }
+
     if (viewModel.currentModel == null) {
       ToastUtils.showError("请先选择模型");
       return;
     }
 
-    if (!_canSend() || viewModel.isStreaming) return;
+    if (!_canSend() || viewModel.isStreaming) {
+      // 2026-09-15 流式期间禁止发送保持单流模型，但无声return让用户
+      // 以为点按失灵——给明确提示
+      if (viewModel.isStreaming && _canSend()) {
+        ToastUtils.showInfo('有会话正在生成回复中，请稍候再发送');
+      }
+      return;
+    }
 
     final text = _inputText.trim();
 
@@ -382,17 +402,24 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     // 检查当前模型类型
     // 用户需要手动选择图片生成模型来使用图片生成功能
     if (viewModel.isImageGenerationModel) {
-      // 如果是阿里的图生图(图像编辑)，可能必须传入图片
-      if (viewModel.currentPlatform?.id == UnifiedPlatformId.aliyun.name &&
-          viewModel.currentModel?.type == UnifiedModelType.iti) {
-        if (_selectedImages.isEmpty) {
-          ToastUtils.showError('请上传图片');
-          return;
-        }
+      // 支持参考图输入的模型(图生图/图像编辑)，必须传入图片才有意义
+      if (viewModel.currentModel?.supportsImageInput == true &&
+          viewModel.currentModel!.modelName.contains('qwen-mt-image') ==
+              false &&
+          viewModel.currentModel!.modelName.contains('edit') == true &&
+          _selectedImages.isEmpty) {
+        ToastUtils.showError('请上传图片');
+        return;
       }
 
       // 图片生成模型：输入内容作为提示词，选择的图片作为参考图
       await _handleImageGeneration(viewModel, text);
+      return;
+    }
+
+    // 视频生成模型：输入内容作为提示词，选择的图片作为首帧参考图
+    if (viewModel.isVideoGenerationModel) {
+      await _handleVideoGeneration(viewModel, text);
       return;
     }
 
@@ -472,7 +499,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       final List<File> images = List.from(_selectedImages);
 
       // 清空输入框和附件(避免耗时太久输入框等未复原)
-      _textController.clear();
+      _clearInput();
       _clearAllAttachments();
       _isToolExpanded = false;
 
@@ -484,6 +511,49 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       );
     } catch (e) {
       ToastUtils.showError('图片生成失败: $e');
+    }
+  }
+
+  // 处理视频生成
+  Future<void> _handleVideoGeneration(
+    UnifiedChatViewModel viewModel,
+    String prompt,
+  ) async {
+    final model = viewModel.currentModel;
+
+    if (prompt.isEmpty) {
+      ToastUtils.showError('请输入视频描述');
+      return;
+    }
+
+    // 图生视频模型(支持首帧图)必须上传图片
+    if (model?.supportsImageInput == true && _selectedImages.isEmpty) {
+      ToastUtils.showError('请上传首帧图片');
+      return;
+    }
+
+    try {
+      // 获取当前对话的视频生成设置
+      final conversation = viewModel.currentConversation;
+      final Map<String, dynamic> currentSettings =
+          conversation?.extraParams?['videoGenerationParams'] ?? {};
+
+      // 先深拷贝，再清空输入框和附件(避免耗时太久输入框等未复原)
+      final String text = _textController.text.trim();
+      final List<File> images = List.from(_selectedImages);
+
+      _clearInput();
+      _clearAllAttachments();
+      _isToolExpanded = false;
+
+      // 调用专门的视频生成方法
+      await viewModel.sendVideoGenerationMessage(
+        prompt: text,
+        images: images,
+        settings: currentSettings,
+      );
+    } catch (e) {
+      ToastUtils.showError('视频生成失败: $e');
     }
   }
 
@@ -516,7 +586,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       final String textToSynthesize = _textController.text.trim();
 
       // 清空输入框(避免耗时太久输入框等未复原)
-      _textController.clear();
+      _clearInput();
       _isToolExpanded = false;
 
       // 调用专门的语音合成方法
@@ -539,17 +609,17 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
       // 先深拷贝一份输入框文本和音频文件，在发送消息之前清空输入框和附件,避免发送按钮等在发送后依旧可见
       // 录音文件识别不需要输入框文本，只需要选择的单个文件
-      final List<File> files = List.from([_selectedAudio]);
+      final File? audioFile = _selectedAudio;
 
       // 清空输入框和附件(避免耗时太久输入框等未复原)
-      _textController.clear();
+      _clearInput();
       _clearAllAttachments();
       _isToolExpanded = false;
 
-      if (files.isNotEmpty) {
+      if (audioFile != null) {
         // 调用专门的语音识别方法
         await viewModel.sendSpeechRecognitionMessage(
-          audioPath: files.first.path,
+          audioPath: audioFile.path,
           settings: currentSettings,
         );
       }
@@ -657,15 +727,22 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         // 监听编辑状态变化
         _handleEditingStateChange(viewModel);
 
+        // 背景图模式下输入栏透明，背景图透出(对齐旧版)
+        final hasBg = viewModel.hasBackgroundImage;
+
         return Container(
           margin: const EdgeInsets.only(top: 4),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
+            color: hasBg
+                ? Colors.transparent
+                : Theme.of(context).colorScheme.surface,
             border: Border(
               top: BorderSide(
-                color: Theme.of(
-                  context,
-                ).colorScheme.outline.withValues(alpha: 0.2),
+                color: hasBg
+                    ? Colors.transparent
+                    : Theme.of(
+                        context,
+                      ).colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
           ),
@@ -933,30 +1010,77 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
               tooltip: '取消编辑',
             ),
           Expanded(
-            child: TextField(
-              controller: _textController,
-              focusNode: _focusNode,
-              maxLines: 5,
-              minLines: 1,
-              decoration: InputDecoration(
-                hintText: viewModel.isUserEditingMode ? '编辑消息...' : '输入消息...',
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-              ),
-              onChanged: (text) {
-                setState(() {
-                  _inputText = text;
-                });
-              },
-              onSubmitted: (text) => _sendMessage(viewModel),
-            ),
+            child: ScreenHelper.isDesktop()
+                ? _buildDesktopTextField(viewModel)
+                : TextField(
+                    controller: _textController,
+                    focusNode: _focusNode,
+                    // 2026-09-18 只读降级：无可用模型/平台时禁用输入
+                    enabled: viewModel.canContinueChat,
+                    maxLines: 5,
+                    minLines: 1,
+                    decoration: InputDecoration(
+                      hintText: !viewModel.canContinueChat
+                          ? '无可用平台/模型，仅可浏览历史对话'
+                          : viewModel.isUserEditingMode
+                          ? '编辑消息...'
+                          : '输入消息...',
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    onChanged: (text) {
+                      setState(() {
+                        _inputText = text;
+                      });
+                    },
+                    onSubmitted: (text) => _sendMessage(viewModel),
+                  ),
           ),
         ],
       ),
     );
   }
 
+  /// 桌面端输入框：Enter / Ctrl+Enter 发送，Shift+Enter 换行
+  Widget _buildDesktopTextField(UnifiedChatViewModel viewModel) {
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.enter): () =>
+            _sendMessage(viewModel),
+        const SingleActivator(LogicalKeyboardKey.enter, control: true): () =>
+            _sendMessage(viewModel),
+      },
+      child: TextField(
+        // 2026-09-18 只读降级：无可用模型/平台时禁用输入
+        enabled: viewModel.canContinueChat,
+        controller: _textController,
+        focusNode: _focusNode,
+        keyboardType: TextInputType.multiline,
+        maxLines: 5,
+        minLines: 1,
+        decoration: InputDecoration(
+          hintText: !viewModel.canContinueChat
+              ? '无可用平台/模型，仅可浏览历史对话'
+              : viewModel.isUserEditingMode
+              ? '编辑消息...'
+              : '输入消息... (Shift+Enter 换行)',
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.zero,
+        ),
+        onChanged: (text) {
+          setState(() {
+            _inputText = text;
+          });
+        },
+      ),
+    );
+  }
+
   Widget _buildVoiceInputButton(UnifiedChatViewModel viewModel) {
+    // 桌面：点击开始/点击结束(长按+上滑取消是触屏手势，不符合鼠标习惯)
+    if (ScreenHelper.isDesktop()) {
+      return _buildDesktopVoiceInputButton();
+    }
     return GestureDetector(
       onLongPressStart: (details) {
         _initialPanY = details.globalPosition.dy;
@@ -1045,6 +1169,57 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
   }
 
+  /// 桌面端语音输入按钮：点击开始录音、再次点击结束并发送
+  Widget _buildDesktopVoiceInputButton() {
+    return GestureDetector(
+      onTap: () {
+        if (_isRealtimeRecording) {
+          _stopRealtimeRecognition();
+        } else {
+          _startRealtimeRecognition();
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.all(8),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: double.infinity,
+          height: 48,
+          decoration: BoxDecoration(
+            color: _isRealtimeRecording ? Colors.red : AppColors.success,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                _isRealtimeRecording ? Icons.stop : Icons.mic_none,
+                size: 24,
+                color: Colors.white,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                _isRealtimeRecording ? '点击结束并发送' : '点击开始录音',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildToolsArea(UnifiedChatViewModel viewModel) {
     final model = viewModel.currentModel;
 
@@ -1067,9 +1242,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           // 第一行工具
           Row(
             children: [
-              // 可选择图片(视觉模型、图生图模型)
-              if (model.supportsVision ||
-                  model.type == UnifiedModelType.iti) ...[
+              // 可选择图片(视觉模型、支持参考图输入的图片/视频生成模型)
+              if (model.supportsVision || model.supportsImageInput) ...[
                 _buildToolButton(
                   icon: Icons.image_outlined,
                   label: '图片',
@@ -1232,7 +1406,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             InkWell(
               onTap: _canToggleWebSearch(viewModel)
                   ? () => viewModel.toggleWebSearch()
-                  : () => ToastUtils.showInfo("该平台或模型不支持联网搜索"),
+                  : () => ToastUtils.showInfo("该平台或模型不支持联网搜索，或未配置联网搜索服务"),
               onLongPress: () => _showTooltipDialog(),
               borderRadius: BorderRadius.circular(20),
               child: Container(
@@ -1243,6 +1417,58 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   color:
                       viewModel.hasAvailableSearchTools() &&
                           viewModel.isWebSearchEnabled
+                      ? Theme.of(context).primaryColor
+                      : Theme.of(context).disabledColor,
+                ),
+              ),
+            ),
+
+          // 2026-09-11 MCP集成(P1-3b 实测修订)：MCP工具开关，与联网搜索
+          // 并列同为对话模型(cc)显示；点击切换会话级开关(即时持久化)
+          // 三轮修订：开启前先ensureAllConnected——热重载/首次点击时内存
+          // 无会话(懒连接尚未发生)，直接判断getTools会误报"无可用工具"
+          // 2026-09-16 四轮：全局启用开关打开时按钮隐藏——所有会话已强制
+          // 携带MCP工具，会话级开关无意义(关闭全局后按钮恢复原会话状态)
+          if (viewModel.currentModel?.type == UnifiedModelType.cc &&
+              !viewModel.isMcpGloballyEnabled)
+            InkWell(
+              onTap: () async {
+                // 2026-09-12 防呆(实测：自定义模型默认不支持工具调用，
+                // MCP工具被service静默跳过仅打日志，表现为模型说完
+                // "我来搜索一下"就结束)：开关入口直接拦截并指引
+                final model = viewModel.currentModel;
+                if (model != null && !model.supportsToolCalling) {
+                  ToastUtils.showInfo(
+                    '当前模型未开启"支持工具调用"，MCP工具无法生效；请在模型管理中编辑该模型开启后再试',
+                  );
+                  return;
+                }
+                if (!viewModel.isMcpEnabled) {
+                  final closeLoading = ToastUtils.showLoading(
+                    '正在连接 MCP server...',
+                  );
+                  try {
+                    await _mcpManager.ensureAllConnected();
+                  } finally {
+                    closeLoading();
+                  }
+                  if (_mcpManager.getTools().isEmpty) {
+                    ToastUtils.showInfo('未发现可用的MCP工具，请先在"MCP 工具"页启用 server');
+                    return;
+                  }
+                }
+                await viewModel.toggleMcpEnabled();
+              },
+              onLongPress: () => _showMcpTooltipDialog(),
+              borderRadius: BorderRadius.circular(20),
+              // 2026-09-18 key 供测试/自动化寻址(FIX_LOG 九十补充四)
+              key: const ValueKey('input_mcp_toggle'),
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                child: Icon(
+                  Icons.extension,
+                  size: 20,
+                  color: viewModel.isMcpEnabled
                       ? Theme.of(context).primaryColor
                       : Theme.of(context).disabledColor,
                 ),
@@ -1261,24 +1487,68 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           Expanded(child: _buildModelSelector(viewModel)),
 
           // 发送按钮
+          // 2026-09-15 切换会话流式修复：STOP显示/点击条件改为"当前会话
+          // 流式中"(原全局isStreaming——A会话生成中切到B，B也显示STOP且
+          // 点击会误停A的流)。其他会话流式期间按钮仍可点发送(单流模型
+          // 在发送入口拦截并提示，不再灰色禁用让用户以为失灵)
+          // 2026-09-18 只读降级：无可用模型/平台时禁用发送
           IconButton(
-            onPressed: _canSend() && !viewModel.isStreaming
-                ? () => _sendMessage(viewModel)
-                : viewModel.isStreaming
+            onPressed: !viewModel.canContinueChat
+                ? null
+                : viewModel.isCurrentSessionStreaming
                 ? () => viewModel.stopStreaming()
+                : _canSend()
+                ? () => _sendMessage(viewModel)
                 : null,
             icon: Icon(
-              viewModel.isStreaming
+              viewModel.isCurrentSessionStreaming
                   ? Icons.stop
                   : viewModel.isUserEditingMode
                   ? Icons.check_circle
                   : Icons.arrow_circle_up,
               size: 32,
-              color: _canSend() || viewModel.isStreaming
+              color: !viewModel.canContinueChat
+                  ? Theme.of(context).disabledColor
+                  : _canSend() || viewModel.isCurrentSessionStreaming
                   ? Theme.of(context).primaryColor
                   : Theme.of(context).disabledColor,
             ),
-            tooltip: viewModel.isUserEditingMode ? '完成编辑' : '发送消息',
+            tooltip: !viewModel.canContinueChat
+                ? '无可用平台/模型，仅可浏览'
+                : viewModel.isUserEditingMode
+                ? '完成编辑'
+                : '发送消息',
+          ),
+        ],
+      ),
+    );
+  }
+
+  ///
+  /// 显示MCP工具说明对话框(2026-09-11 P1-3b，对齐联网搜索说明入口)
+  ///
+  Future _showMcpTooltipDialog() {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('MCP 工具说明', style: TextStyle(fontSize: 16)),
+        content: SingleChildScrollView(
+          child: Text(
+            "1 MCP(Model Context Protocol)是连接大模型与外部工具的标准协议，"
+            "启用后模型可调用MCP server提供的工具(查文档/搜代码等)\n\n"
+            "2 server在右侧工具栏/菜单的'MCP 工具'页管理，"
+            "已内置DeepWiki等免认证测试源，启用即可用\n\n"
+            "3 开关仅在对话模型显示；需模型支持工具调用，"
+            "且对应server连接成功(开关亮起即代表当前会话启用)\n\n"
+            "4 仅对当前对话生效，切换对话后需重新开启",
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('确定'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
           ),
         ],
       ),
@@ -1297,8 +1567,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           child: Text(
             "1 智谱平台使用自带的联网搜索工具\n\n"
             "2 阿里百炼部分模型支持联网搜索\n\n"
-            "3 硅基流动、无问芯穹等不支持联网搜索的平台，使用tools调用外部搜索工具来实现联网搜索，"
-            "需要右上角‘搜索工具设置’中进行设置，且模型支持工具调用\n\n"
+            "3 硅基流动等不支持联网搜索的平台，使用tools调用外部搜索工具来实现联网搜索，"
+            "需要右上角‘搜索设置’中进行设置，且模型支持工具调用\n\n"
             "4 非百炼、智谱等自带联网搜索的平台的Qwen3、GLM4.5、DeepSeek3.1等模型，"
             "对话时最好不要同时开启联网搜索和思考模式，因为可能出现同时使用工具调用和思考模式冲突异常问题\n\n",
           ),
@@ -1320,15 +1590,17 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   ///
   void _showAdvancedSettings(UnifiedChatViewModel viewModel) {
     final currentModel = viewModel.currentModel;
-    final isImageGenerationModel =
-        currentModel?.type == UnifiedModelType.tti ||
-        currentModel?.type == UnifiedModelType.iti;
+    final isImageGenerationModel = currentModel?.type == UnifiedModelType.image;
+    final isVideoGenerationModel = currentModel?.type == UnifiedModelType.video;
     final isSpeechSynthesisModel = currentModel?.type == UnifiedModelType.tts;
     final isSpeechRecognitionModel = currentModel?.type == UnifiedModelType.asr;
 
     if (isImageGenerationModel) {
       // 显示图片生成设置对话框
       _showImageGenerationSettings(viewModel);
+    } else if (isVideoGenerationModel) {
+      // 显示视频生成设置对话框(分辨率/时长直接影响费用)
+      _showVideoGenerationSettings(viewModel);
     } else if (isSpeechSynthesisModel) {
       // 显示语音合成设置对话框
       _showSpeechSynthesisSettings(viewModel);
@@ -1365,11 +1637,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         contextMessageLength:
             conversation?.contextMessageLength ??
             effectivePartner.contextMessageLength,
-        temperature:
-            conversation?.temperature ?? effectivePartner.temperature ?? 0.7,
-        topP: conversation?.topP ?? effectivePartner.topP ?? 1.0,
-        maxTokens:
-            conversation?.maxTokens ?? effectivePartner.maxTokens ?? 4096,
+        // 2026-09-09 参数null=未设置(平台默认)，由设置对话框内部处理显示兜底
+        temperature: conversation?.temperature ?? effectivePartner.temperature,
+        topP: conversation?.topP ?? effectivePartner.topP,
+        maxTokens: conversation?.maxTokens ?? effectivePartner.maxTokens,
         isStream: conversation?.isStream ?? effectivePartner.isStream ?? true,
         // 这个启用思考不是最初的设计，就放在extraParams里，也不放在partner里
         enableThinking: conversation?.extraParams?['enableThinking'],
@@ -1411,6 +1682,27 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           // 保存时也使用同样的参数
           viewModel.updateConversationSettings({
             'imageGenerationParams': settings,
+          });
+        },
+      ),
+    );
+  }
+
+  // 显示视频生成设置对话框
+  void _showVideoGenerationSettings(UnifiedChatViewModel viewModel) {
+    final conversation = viewModel.currentConversation;
+    final Map<String, dynamic> currentSettings =
+        conversation?.extraParams?['videoGenerationParams'] ?? {};
+
+    showDialog(
+      context: context,
+      builder: (context) => VideoGenerationSettingsDialog(
+        currentPlatform: viewModel.currentPlatform,
+        currentModel: viewModel.currentModel,
+        currentSettings: currentSettings,
+        onSave: (settings) {
+          viewModel.updateConversationSettings({
+            'videoGenerationParams': settings,
           });
         },
       ),

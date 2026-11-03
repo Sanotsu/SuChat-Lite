@@ -28,15 +28,13 @@ class MomoyuResp<T> {
   @JsonKey(name: 'data')
   T? data;
 
-  MomoyuResp({
-    this.status,
-    this.message,
-    this.data,
-  });
+  MomoyuResp({this.status, this.message, this.data});
 
   // 从原始 JSON 字符串反序列化
   factory MomoyuResp.fromRawJson(
-      String str, T Function(Object? json) fromJsonT) {
+    String str,
+    T Function(Object? json) fromJsonT,
+  ) {
     final jsonMap = json.decode(str);
     return MomoyuResp.fromJson(jsonMap, fromJsonT);
   }
@@ -47,8 +45,9 @@ class MomoyuResp<T> {
   }
 
   factory MomoyuResp.fromJson(
-          Map<String, dynamic> json, T Function(Object? json) fromJsonT) =>
-      _$MomoyuRespFromJson(json, fromJsonT);
+    Map<String, dynamic> json,
+    T Function(Object? json) fromJsonT,
+  ) => _$MomoyuRespFromJson(json, fromJsonT);
 
   Map<String, dynamic> toJson(Object? Function(T value) toJsonT) =>
       _$MomoyuRespToJson(this, toJsonT);
@@ -67,8 +66,7 @@ class ListWithT<T> {
   factory ListWithT.fromJson(
     Map<String, dynamic> json,
     T Function(Object? json) fromJsonT,
-  ) =>
-      _$ListWithTFromJson<T>(json, fromJsonT);
+  ) => _$ListWithTFromJson<T>(json, fromJsonT);
 
   Map<String, dynamic> toJson(Object Function(T) toJsonT) =>
       _$ListWithTToJson(this, toJsonT);
@@ -86,11 +84,7 @@ class MMYCateData {
   @JsonKey(name: 'data')
   List<MMYData>? data;
 
-  MMYCateData({
-    this.id,
-    this.name,
-    this.data,
-  });
+  MMYCateData({this.id, this.name, this.data});
 
   factory MMYCateData.fromRawJson(String str) =>
       MMYCateData.fromJson(json.decode(str));
@@ -156,10 +150,7 @@ class MMYIdData {
   @JsonKey(name: 'list')
   List<MMYDataItem>? list;
 
-  MMYIdData({
-    this.time,
-    this.list,
-  });
+  MMYIdData({this.time, this.list});
 
   factory MMYIdData.fromRawJson(String str) =>
       MMYIdData.fromJson(json.decode(str));
@@ -186,12 +177,7 @@ class MMYDataItem {
   @JsonKey(name: 'link')
   String? link;
 
-  MMYDataItem({
-    this.id,
-    this.title,
-    this.extra,
-    this.link,
-  });
+  MMYDataItem({this.id, this.title, this.extra, this.link});
 
   factory MMYDataItem.fromRawJson(String str) =>
       MMYDataItem.fromJson(json.decode(str));

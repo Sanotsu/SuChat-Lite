@@ -1,16 +1,13 @@
 import 'dart:convert';
 
-import '../../../../core/entities/cus_llm_model.dart';
-import '../../../../core/network/dio_client/cus_http_client.dart';
-import '../../../../core/network/dio_client/cus_http_request.dart';
-import '../../../../shared/constants/constant_llm_enum.dart';
 import '../../../../shared/constants/constants.dart';
-import '../../../branch_chat/data/services/chat_service.dart';
+import '../../../../shared/services/unified_llm_service.dart';
 import '../../domain/entities/training_plan.dart';
 import '../../domain/entities/training_plan_detail.dart';
 
 class TrainingAssistantService {
   /// 根据用户信息生成训练计划
+  /// 2026-09-07 旧LLM体系退役：改经UnifiedLLMService门面调用(保持非流式)
   Future<Map<String, dynamic>> generateTrainingPlan({
     required String userId,
     required String gender,
@@ -24,22 +21,8 @@ class TrainingAssistantService {
     required int duration,
     required String frequency,
     String? equipment,
-    required CusLLMSpec model,
+    required UnifiedModelEntry entry,
   }) async {
-    // 如果是自定义平台模型，url、apikey等直接在模型规格中
-    Map<String, String> headers;
-    String baseUrl;
-    if (model.platform == ApiPlatform.custom) {
-      headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${model.apiKey}',
-      };
-      baseUrl = "${model.baseUrl}/chat/completions";
-    } else {
-      headers = await ChatService.getHeaders(model);
-      baseUrl = "${ChatService.getBaseUrl(model.platform)}/chat/completions";
-    }
-
     // 构建提示词
     final prompt = buildTrainingPlanPrompt(
       gender: gender,
@@ -55,35 +38,18 @@ class TrainingAssistantService {
       equipment: equipment,
     );
 
-    // 基础请求体
-    final Map<String, dynamic> requestBody = {
-      'model': model.model,
-      'messages': [
+    final response = await UnifiedLLMService.sendChat(
+      entry: entry,
+      messages: [
         {'role': 'system', 'content': '你是一位专业的健身教练。'},
         {'role': 'user', 'content': prompt},
       ],
-      // 'temperature': 0.7,
-    };
-
-    // // ??? 注意，这里是非流式响应，很多模型无法正常配置和处理
-    // if (model.model.toLowerCase().contains("qwen3")) {
-    //   // requestBody['stream'] = false;
-    //   // requestBody['enable_thinking '] = false;
-    //   requestBody['parameters'] = {"enable_thinking": false};
-    //   requestBody['response_format '] = {'type': 'json_object'};
-    // }
-
-    final response = await HttpUtils.post(
-      path: baseUrl,
-      headers: headers,
-      data: requestBody,
-      responseType: CusRespType.json,
-      showLoading: false,
-      showErrorMessage: false,
     );
 
     // 解析响应
-    var content = response['choices'][0]['message']['content'];
+    var content = response.choices.isNotEmpty
+        ? response.choices.first.message?.content
+        : null;
     if (content is! String) {
       content = content.toString();
     }
@@ -109,42 +75,20 @@ class TrainingAssistantService {
     required String frequency,
     String? equipment,
     required String customPrompt,
-    required CusLLMSpec model,
+    required UnifiedModelEntry entry,
   }) async {
-    // 如果是自定义平台模型，url、apikey等直接在模型规格中
-    Map<String, String> headers;
-    String baseUrl;
-    if (model.platform == ApiPlatform.custom) {
-      headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${model.apiKey}',
-      };
-      baseUrl = "${model.baseUrl}/chat/completions";
-    } else {
-      headers = await ChatService.getHeaders(model);
-      baseUrl = "${ChatService.getBaseUrl(model.platform)}/chat/completions";
-    }
-
-    // 基础请求体
-    final Map<String, dynamic> requestBody = {
-      'model': model.model,
-      'messages': [
+    final response = await UnifiedLLMService.sendChat(
+      entry: entry,
+      messages: [
         {'role': 'system', 'content': '你是一位专业的健身教练。'},
         {'role': 'user', 'content': customPrompt},
       ],
-    };
-
-    final response = await HttpUtils.post(
-      path: baseUrl,
-      headers: headers,
-      data: requestBody,
-      responseType: CusRespType.json,
-      showLoading: false,
-      showErrorMessage: false,
     );
 
     // 解析响应
-    var content = response['choices'][0]['message']['content'];
+    var content = response.choices.isNotEmpty
+        ? response.choices.first.message?.content
+        : null;
     if (content is! String) {
       content = content.toString();
     }
@@ -340,10 +284,9 @@ class TrainingAssistantService {
             final daySchedule = schedule[i];
 
             // 确定对应的训练日
-            final int mappedDay =
-                i < selectedDaysLength
-                    ? selectedDays[i] // 使用用户选择的训练日
-                    : (i % 7) + 1; // 如果超出选择的训练日数量，则循环使用1-7
+            final int mappedDay = i < selectedDaysLength
+                ? selectedDays[i] // 使用用户选择的训练日
+                : (i % 7) + 1; // 如果超出选择的训练日数量，则循环使用1-7
 
             if (daySchedule['exercises'] != null) {
               for (var exercise in daySchedule['exercises']) {
@@ -357,12 +300,11 @@ class TrainingAssistantService {
                     reps: exercise['reps'] ?? '8-12',
                     countdown: exercise['countdown'] ?? 60,
                     restTime: exercise['restTime'] ?? 30,
-                    instructions:
-                        exercise['instructions'] is List
-                            ? (exercise['instructions'] as List)
-                                .map((e) => e.toString())
-                                .join('\n\n')
-                            : exercise['instructions']?.toString() ?? '',
+                    instructions: exercise['instructions'] is List
+                        ? (exercise['instructions'] as List)
+                              .map((e) => e.toString())
+                              .join('\n\n')
+                        : exercise['instructions']?.toString() ?? '',
                   ),
                 );
               }

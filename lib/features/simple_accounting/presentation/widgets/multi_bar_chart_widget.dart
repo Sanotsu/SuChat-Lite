@@ -62,7 +62,10 @@ class MultiBarChartWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (data.isEmpty) {
-      return SizedBox(height: height, child: const Center(child: Text('暂无数据')));
+      return SizedBox(
+        height: height,
+        child: const Center(child: Text('暂无数据')),
+      );
     }
 
     return Column(
@@ -112,10 +115,9 @@ class MultiBarChartWidget extends StatelessWidget {
                 decimalDigits: ScreenHelper.isMobile() ? 0 : 1,
               ),
               labelStyle: TextStyle(fontSize: ScreenHelper.isMobile() ? 8 : 10),
-              title:
-                  yAxisTitle != null
-                      ? AxisTitle(text: yAxisTitle!)
-                      : const AxisTitle(text: ''),
+              title: yAxisTitle != null
+                  ? AxisTitle(text: yAxisTitle!)
+                  : const AxisTitle(text: ''),
             ),
             legend: Legend(
               isVisible: showLegend,

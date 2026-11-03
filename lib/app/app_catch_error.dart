@@ -2,23 +2,37 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:video_player_media_kit/video_player_media_kit.dart';
 
+import '../core/network/dio_client/interceptor_error.dart';
+import '../core/services/desktop_window_service.dart';
+import '../core/services/legacy_llm_migrator.dart';
+import '../core/services/upgrade_migrator.dart';
 import '../core/storage/cus_get_storage.dart';
 import '../core/utils/simple_tools.dart';
-import '../features/branch_chat/presentation/viewmodels/branch_store.dart';
-import '../shared/services/model_manager_service.dart';
+import '../core/utils/storage_paths.dart';
 import '../shared/services/network_service.dart';
 import '../shared/widgets/toast_utils.dart';
-import 'permission_check_app.dart';
+import 'migration_permission_gate.dart';
 import 'suchat_app.dart';
 
 class AppCatchError {
   void run() {
+    // 2026-11-03 release 静默控制台输出(debug 构建不受影响，开发照常打印)：
+    // 1) debugPrint 置空——dio 日志拦截器 logPrint=debugPrint、pretty_dio_logger
+    //    及各处 debugPrint 全部静默(含 HTTP 请求/响应刷屏)；
+    // 2) runZonedGuarded 加 ZoneSpecification.print 钩子——吞掉裸 print
+    //    (interceptor_error.dart、proste_logger 等直接 print 的输出)。
+    // 注意：原生层(C++/libmpv等)的 stdout 输出无法经此拦截。
+    if (kReleaseMode) {
+      debugPrint = (String? message, {int? wrapWidth}) {};
+    }
+
     ///Flutter 框架异常
     FlutterError.onError = (FlutterErrorDetails details) async {
       ///线上环境 todo
@@ -40,41 +54,54 @@ class AppCatchError {
         SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
       }
 
-      // 默认使用path_provider 的 getTemporaryDirectory()作为存储路径,且无法修改
-      // 又因为检查设备存储权限等是否授权需要把标记存入缓存,避免每次都弹窗显示,所以要在检查前进行缓存初始化
-      await GetStorage.init(CusGetStorage.storeName);
+      // 2026-09-04 容器文件收纳进私有区(直接以带path的工厂实例化并
+      // 初始化，init()静态方法不支持path参数)
+      final gsPath = (await getGetStorageDir()).path;
+      await GetStorage(CusGetStorage.storeName, gsPath).initStorage;
 
-      // 初始化Logger（有这个工具，暂时未用到）
-      // await LogHelper.init();
+      // 2026-10-12 权限引导门：Android 未授权时先挂引导页(说明框取得
+      // 用户同意后才请求系统权限)，授权/拒绝后再继续正常初始化。
+      // 未授权绝不静默弹权限、不探测旧目录、不标记完成
+      if (await UpgradeMigrator.needsPermissionGate()) {
+        final gateCompleter = Completer<bool>();
+        runApp(MigrationPermissionGate(completer: gateCompleter));
+        await gateCompleter.future;
+      }
 
-      // 启动初始检查权限的界面，而不是直接进入应用
-      runApp(const PermissionCheckApp());
-    }, (error, stack) => catchError(error, stack));
+      // 0.1.5 起零存储权限启动：核心数据在应用私有区，直接初始化应用
+      await initApp();
+    }, (error, stack) => catchError(error, stack),
+      // release 下吞掉 Zone 内所有裸 print 调用
+      zoneSpecification: kReleaseMode
+          ? ZoneSpecification(print: (self, parent, zone, line) {})
+          : null,
+    );
   }
 
-  void initApp() async {
+  Future<void> initApp() async {
+    // 0.1.4 → 0.1.5 升级迁移：sqlite 库文件复制必须先于任何数据库打开；
+    // 媒体移动/路径重写/旧分支聊天转换在后台续跑。
+    // Android 未授权时这里只返回 needsPermission(引导页负责授权交互)，
+    // 授权后正常启动会走完整迁移
+    await UpgradeMigrator.runIfNeeded(quickOnly: true);
+
     /// 只在首次启动时初始化内置模型
     /// 2025-07-04 理论上要加上这个if判断，
     /// 这里注释掉是担心直接删除了应用下DB文件夹后，再打开APP时会没有默认模型
 
     // if (CusGetStorage().isFirstLaunch()) {
-    await ModelManagerService.initBuiltinModels(isAppInit: true);
     // await CusGetStorage().markLaunched();
     // }
 
-    // 初始化 ObjectBox
-    final store = await BranchStore.create();
-
-    // 在应用退出时关闭 Store
-    WidgetsBinding.instance.addObserver(
-      LifecycleEventHandler(
-        detached: () async {
-          store.store.close();
-        },
-      ),
-    );
+    // 2026-09-07 LLM旧体系退役：旧版user_ak_map中的平台AK转入secure storage
+    // (幂等，仅在未打标时执行；须先于任何扩展功能LLM调用)
+    await LegacyLLMMigrator.runIfNeeded();
 
     NetworkStatusService().initialize();
+
+    // 桌面端窗口管理：最小尺寸约束 + 窗口大小/位置记忆
+    // （必须在 runApp 前完成 waitUntilReadyToShow，否则首帧会闪默认窗口）
+    await DesktopWindowService.instance.init();
 
     // 单行初始化后，您可以正常在多个平台使用 video_player
     VideoPlayerMediaKit.ensureInitialized(
@@ -104,6 +131,20 @@ class AppCatchError {
     pl.d(error);
     debugPrint('AppCatchError>>>>>>>>>> [ Stack ] \n$stack');
 
+    // 2026-09-09 用户主动中断是正常业务逻辑，不该按错误提示：
+    // 流式请求被手动取消时，dio错误在生成器已取消状态下抛出无人接收，
+    // 逃逸到Zone进入本方法；静默记录即可，不弹错误toast
+    final errorText = error.toString();
+    final isUserCancelled =
+        (error is DioException && error.type == DioExceptionType.cancel) ||
+        (error is CusHttpException && error.cusCode == -2) ||
+        errorText.contains('manually cancelled by the user') ||
+        errorText.contains('请求被取消');
+    if (isUserCancelled) {
+      debugPrint('AppCatchError>>>>>>>>>> 用户主动取消，静默处理不提示');
+      return;
+    }
+
     // 判断是否可以显示Toast
     try {
       // 尝试显示错误提示
@@ -122,26 +163,6 @@ class AppCatchError {
       if (kDebugMode) {
         print(error);
       }
-    }
-  }
-}
-
-/// 生命周期事件处理器
-class LifecycleEventHandler extends WidgetsBindingObserver {
-  final AsyncCallback? detached;
-
-  LifecycleEventHandler({this.detached});
-
-  @override
-  Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
-    switch (state) {
-      case AppLifecycleState.detached:
-        if (detached != null) {
-          await detached!();
-        }
-        break;
-      default:
-        break;
     }
   }
 }

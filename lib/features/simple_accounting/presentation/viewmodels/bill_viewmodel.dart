@@ -145,16 +145,15 @@ class BillViewModel extends ChangeNotifier {
 
       // 如果有金额范围筛选，在内存中过滤
       if (minAmount != null || maxAmount != null) {
-        _billItems =
-            _billItems.where((bill) {
-              if (minAmount != null && bill.value < minAmount) {
-                return false;
-              }
-              if (maxAmount != null && bill.value > maxAmount) {
-                return false;
-              }
-              return true;
-            }).toList();
+        _billItems = _billItems.where((bill) {
+          if (minAmount != null && bill.value < minAmount) {
+            return false;
+          }
+          if (maxAmount != null && bill.value > maxAmount) {
+            return false;
+          }
+          return true;
+        }).toList();
       }
 
       _currentStatistics = await _repository.getMonthlyStatistics(
@@ -198,16 +197,15 @@ class BillViewModel extends ChangeNotifier {
 
       // 如果有金额范围筛选，在内存中过滤
       if (minAmount != null || maxAmount != null) {
-        _billItems =
-            _billItems.where((bill) {
-              if (minAmount != null && bill.value < minAmount) {
-                return false;
-              }
-              if (maxAmount != null && bill.value > maxAmount) {
-                return false;
-              }
-              return true;
-            }).toList();
+        _billItems = _billItems.where((bill) {
+          if (minAmount != null && bill.value < minAmount) {
+            return false;
+          }
+          if (maxAmount != null && bill.value > maxAmount) {
+            return false;
+          }
+          return true;
+        }).toList();
       }
 
       _currentStatistics = await _repository.getMonthlyStatistics(
@@ -263,16 +261,15 @@ class BillViewModel extends ChangeNotifier {
 
         // 如果有金额范围筛选，在内存中过滤
         if (minAmount != null || maxAmount != null) {
-          previousMonthItems =
-              previousMonthItems.where((bill) {
-                if (minAmount != null && bill.value < minAmount) {
-                  return false;
-                }
-                if (maxAmount != null && bill.value > maxAmount) {
-                  return false;
-                }
-                return true;
-              }).toList();
+          previousMonthItems = previousMonthItems.where((bill) {
+            if (minAmount != null && bill.value < minAmount) {
+              return false;
+            }
+            if (maxAmount != null && bill.value > maxAmount) {
+              return false;
+            }
+            return true;
+          }).toList();
         }
 
         if (previousMonthItems.isNotEmpty) {
@@ -347,12 +344,11 @@ class BillViewModel extends ChangeNotifier {
 
         // 金额范围筛选
         if (minAmount != null || maxAmount != null) {
-          previousMonthItems =
-              previousMonthItems.where((bill) {
-                if (minAmount != null && bill.value < minAmount) return false;
-                if (maxAmount != null && bill.value > maxAmount) return false;
-                return true;
-              }).toList();
+          previousMonthItems = previousMonthItems.where((bill) {
+            if (minAmount != null && bill.value < minAmount) return false;
+            if (maxAmount != null && bill.value > maxAmount) return false;
+            return true;
+          }).toList();
         }
 
         if (previousMonthItems.isNotEmpty) {
@@ -416,16 +412,15 @@ class BillViewModel extends ChangeNotifier {
 
         // 如果有金额范围筛选，在内存中过滤
         if (minAmount != null || maxAmount != null) {
-          nextMonthItems =
-              nextMonthItems.where((bill) {
-                if (minAmount != null && bill.value < minAmount) {
-                  return false;
-                }
-                if (maxAmount != null && bill.value > maxAmount) {
-                  return false;
-                }
-                return true;
-              }).toList();
+          nextMonthItems = nextMonthItems.where((bill) {
+            if (minAmount != null && bill.value < minAmount) {
+              return false;
+            }
+            if (maxAmount != null && bill.value > maxAmount) {
+              return false;
+            }
+            return true;
+          }).toList();
         }
 
         if (nextMonthItems.isNotEmpty) {
@@ -554,16 +549,15 @@ class BillViewModel extends ChangeNotifier {
 
       // 如果有金额范围筛选，在内存中过滤
       if (minAmount != null || maxAmount != null) {
-        _billItems =
-            _billItems.where((bill) {
-              if (minAmount != null && bill.value < minAmount) {
-                return false;
-              }
-              if (maxAmount != null && bill.value > maxAmount) {
-                return false;
-              }
-              return true;
-            }).toList();
+        _billItems = _billItems.where((bill) {
+          if (minAmount != null && bill.value < minAmount) {
+            return false;
+          }
+          if (maxAmount != null && bill.value > maxAmount) {
+            return false;
+          }
+          return true;
+        }).toList();
       }
 
       _currentStatistics = await _repository.getMonthlyStatistics(
@@ -630,16 +624,15 @@ class BillViewModel extends ChangeNotifier {
         // 如果有金额范围筛选，在内存中过滤
         List<BillItem> filteredItems = previousMonthItems;
         if (minAmount != null || maxAmount != null) {
-          filteredItems =
-              previousMonthItems.where((bill) {
-                if (minAmount != null && bill.value < minAmount) {
-                  return false;
-                }
-                if (maxAmount != null && bill.value > maxAmount) {
-                  return false;
-                }
-                return true;
-              }).toList();
+          filteredItems = previousMonthItems.where((bill) {
+            if (minAmount != null && bill.value < minAmount) {
+              return false;
+            }
+            if (maxAmount != null && bill.value > maxAmount) {
+              return false;
+            }
+            return true;
+          }).toList();
         }
 
         if (filteredItems.isNotEmpty) {
@@ -680,16 +673,15 @@ class BillViewModel extends ChangeNotifier {
         // 如果有金额范围筛选，在内存中过滤
         List<BillItem> filteredItems = nextMonthItems;
         if (minAmount != null || maxAmount != null) {
-          filteredItems =
-              nextMonthItems.where((bill) {
-                if (minAmount != null && bill.value < minAmount) {
-                  return false;
-                }
-                if (maxAmount != null && bill.value > maxAmount) {
-                  return false;
-                }
-                return true;
-              }).toList();
+          filteredItems = nextMonthItems.where((bill) {
+            if (minAmount != null && bill.value < minAmount) {
+              return false;
+            }
+            if (maxAmount != null && bill.value > maxAmount) {
+              return false;
+            }
+            return true;
+          }).toList();
         }
 
         if (filteredItems.isNotEmpty) {
@@ -735,16 +727,15 @@ class BillViewModel extends ChangeNotifier {
 
       // 应用金额范围筛选
       if (minAmount != null || maxAmount != null) {
-        results =
-            results.where((bill) {
-              if (minAmount != null && bill.value < minAmount) {
-                return false;
-              }
-              if (maxAmount != null && bill.value > maxAmount) {
-                return false;
-              }
-              return true;
-            }).toList();
+        results = results.where((bill) {
+          if (minAmount != null && bill.value < minAmount) {
+            return false;
+          }
+          if (maxAmount != null && bill.value > maxAmount) {
+            return false;
+          }
+          return true;
+        }).toList();
       }
 
       return results;
@@ -800,6 +791,27 @@ class BillViewModel extends ChangeNotifier {
   Future<bool> deleteBill(int id) async {
     try {
       await _repository.deleteBillItem(id);
+
+      // 刷新当前数据
+      if (_currentStatisticsType == 'month') {
+        await refreshCurrentMonthData(null, null);
+      } else if (_currentStatisticsType == 'week') {
+        await loadWeeklyData(_weekStartDate, _weekEndDate);
+      } else {
+        await loadYearlyData(_selectedYear);
+      }
+
+      return true;
+    } catch (e) {
+      _setError('删除账单失败', e.toString());
+      return false;
+    }
+  }
+
+  /// 清空账单（比如重新导入数据时需要）
+  Future<bool> clearBill() async {
+    try {
+      await _repository.clearAllBillItem();
 
       // 刷新当前数据
       if (_currentStatisticsType == 'month') {
@@ -887,20 +899,20 @@ class BillViewModel extends ChangeNotifier {
       if (minAmount != null || maxAmount != null) {
         // 获取当前显示的账单中属于指定月份的数据
         final monthKey = '$year-${month.toString().padLeft(2, '0')}';
-        final monthlyBills =
-            _billItems.where((bill) => bill.date.startsWith(monthKey)).toList();
+        final monthlyBills = _billItems
+            .where((bill) => bill.date.startsWith(monthKey))
+            .toList();
 
         // 应用金额筛选
-        final filteredBills =
-            monthlyBills.where((bill) {
-              if (minAmount != null && bill.value < minAmount) {
-                return false;
-              }
-              if (maxAmount != null && bill.value > maxAmount) {
-                return false;
-              }
-              return true;
-            }).toList();
+        final filteredBills = monthlyBills.where((bill) {
+          if (minAmount != null && bill.value < minAmount) {
+            return false;
+          }
+          if (maxAmount != null && bill.value > maxAmount) {
+            return false;
+          }
+          return true;
+        }).toList();
 
         // 重新计算统计数据
         _currentStatistics = _calculateFilteredStatistics(filteredBills);
@@ -952,13 +964,12 @@ class BillViewModel extends ChangeNotifier {
     final categories = type == 0 ? incomeCategories : expenseCategories;
     return categories.firstWhere(
       (category) => category.name == name,
-      orElse:
-          () => BillCategory(
-            name: name,
-            icon: type == 0 ? 'arrow_downward' : 'arrow_upward',
-            color: type == 0 ? '#4CAF50' : '#F44336',
-            type: type,
-          ),
+      orElse: () => BillCategory(
+        name: name,
+        icon: type == 0 ? 'arrow_downward' : 'arrow_upward',
+        color: type == 0 ? '#4CAF50' : '#F44336',
+        type: type,
+      ),
     );
   }
 

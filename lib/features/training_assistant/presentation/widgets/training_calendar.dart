@@ -244,15 +244,13 @@ class _TrainingCalendarState extends State<TrainingCalendar> {
     }
 
     // 分类事件
-    final planEvents =
-        events.where((e) {
-          return e is Map && e['type'] == 'plan';
-        }).toList();
+    final planEvents = events.where((e) {
+      return e is Map && e['type'] == 'plan';
+    }).toList();
 
-    final recordEvents =
-        events.where((e) {
-          return e is Map && e['type'] == 'record';
-        }).toList();
+    final recordEvents = events.where((e) {
+      return e is Map && e['type'] == 'record';
+    }).toList();
 
     return SingleChildScrollView(
       child: Column(

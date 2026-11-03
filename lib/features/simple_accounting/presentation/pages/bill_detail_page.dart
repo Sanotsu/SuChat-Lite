@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -44,18 +45,15 @@ class _BillDetailPageState extends State<BillDetailPage> {
 
       if (_billItem != null) {
         // 获取分类对象
-        final categories =
-            _billItem!.itemType == 0
-                ? viewModel.incomeCategories
-                : viewModel.expenseCategories;
+        final categories = _billItem!.itemType == 0
+            ? viewModel.incomeCategories
+            : viewModel.expenseCategories;
 
         _category = categories.firstWhere(
           (c) => c.name == _billItem!.category,
-          orElse:
-              () =>
-                  categories.isNotEmpty
-                      ? categories.first
-                      : throw Exception('没有可用的分类'),
+          orElse: () => categories.isNotEmpty
+              ? categories.first
+              : throw Exception('没有可用的分类'),
         );
       }
     } catch (e) {
@@ -88,21 +86,20 @@ class _BillDetailPageState extends State<BillDetailPage> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('确认删除'),
-            content: const Text('确定要删除这条账单记录吗？此操作不可撤销。'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('删除', style: TextStyle(color: Colors.red)),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('确认删除'),
+        content: const Text('确定要删除这条账单记录吗？此操作不可撤销。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('删除', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
     );
 
     if (confirmed == true && mounted) {
@@ -130,22 +127,25 @@ class _BillDetailPageState extends State<BillDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('账单详情'),
-        actions: [
-          if (_billItem != null) ...[
-            IconButton(icon: const Icon(Icons.edit), onPressed: _editBill),
-            IconButton(icon: const Icon(Icons.delete), onPressed: _deleteBill),
+    return CusContentWidth(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('账单详情'),
+          actions: [
+            if (_billItem != null) ...[
+              IconButton(icon: const Icon(Icons.edit), onPressed: _editBill),
+              IconButton(
+                icon: const Icon(Icons.delete),
+                onPressed: _deleteBill,
+              ),
+            ],
           ],
-        ],
-      ),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _billItem == null
-              ? const Center(child: Text('未找到账单信息'))
-              : SingleChildScrollView(
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _billItem == null
+            ? const Center(child: Text('未找到账单信息'))
+            : SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,6 +175,7 @@ class _BillDetailPageState extends State<BillDetailPage> {
                   ],
                 ),
               ),
+      ),
     );
   }
 

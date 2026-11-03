@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -122,25 +123,25 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
 
   void _initWorkout() {
     // 过滤当天的训练内容
-    _todaysExercises =
-        widget.details.where((detail) => detail.day == widget.day).toList();
+    _todaysExercises = widget.details
+        .where((detail) => detail.day == widget.day)
+        .toList();
 
     // 初始化每个动作实际完成的组数为0
     _completedSetsPerExercise = List.filled(_todaysExercises.length, 0);
 
     // 初始化训练记录
-    _recordDetails =
-        _todaysExercises.map((exercise) {
-          return TrainingRecordDetail(
-            recordId: '', // 将在保存时设置
-            detailId: exercise.detailId,
-            exerciseName: exercise.exerciseName,
-            completed: false,
-            actualSets: 0,
-            actualReps: '0',
-            notes: null,
-          );
-        }).toList();
+    _recordDetails = _todaysExercises.map((exercise) {
+      return TrainingRecordDetail(
+        recordId: '', // 将在保存时设置
+        detailId: exercise.detailId,
+        exerciseName: exercise.exerciseName,
+        completed: false,
+        actualSets: 0,
+        actualReps: '0',
+        notes: null,
+      );
+    }).toList();
 
     _totalTimeStopwatch = Stopwatch()..start();
   }
@@ -383,8 +384,9 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
     });
 
     // 计算完成率
-    int completedExercises =
-        _recordDetails.where((detail) => detail.completed).length;
+    int completedExercises = _recordDetails
+        .where((detail) => detail.completed)
+        .length;
     double completionRate = completedExercises / _todaysExercises.length;
 
     // 播放训练完成的语音提示
@@ -436,10 +438,18 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
           );
         } else if (i == _currentExerciseIndex && !_isCompleted) {
           // 当前动作更新为当前完成的组数
-          final isLastSet = _currentSet == _todaysExercises[i].sets;
+          // 2026-09-07 修复：提前结束训练时，正在跟练中的当前组此前
+          // 只有点击"下一组"才会计入（_completedSetsPerExercise 在
+          // _nextSet 中递增），导致当前组的努力被丢弃；现按休息状态
+          // 区分——休息中说明当前组已计入，跟练中则将进行中的当前组
+          // 视为已完成一并计入
+          final restingNow = _isResting || _isRestingBetweenExercises;
+          final doneSets = restingNow
+              ? _completedSetsPerExercise[i]
+              : _completedSetsPerExercise[i] + 1;
           _recordDetails[i] = _recordDetails[i].copyWith(
-            completed: isLastSet, // 如果是最后一组，则标记为已完成
-            actualSets: _completedSetsPerExercise[i], // 实际完成的组数
+            completed: doneSets >= _todaysExercises[i].sets, // 全部组完成才标记
+            actualSets: doneSets, // 实际完成的组数
           );
         }
 
@@ -458,10 +468,9 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
                 '完成率: ${(completionRateForExercise * 100).round()}%';
 
             _recordDetails[i] = _recordDetails[i].copyWith(
-              notes:
-                  currentNotes == null
-                      ? completionNote
-                      : '$currentNotes，$completionNote',
+              notes: currentNotes == null
+                  ? completionNote
+                  : '$currentNotes，$completionNote',
             );
           }
         }
@@ -504,9 +513,11 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
   @override
   Widget build(BuildContext context) {
     if (_todaysExercises.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('训练模式')),
-        body: const Center(child: Text('今天没有安排训练内容')),
+      return CusContentWidth(
+        child: Scaffold(
+          appBar: AppBar(title: const Text('训练模式')),
+          body: const Center(child: Text('今天没有安排训练内容')),
+        ),
       );
     }
 
@@ -526,24 +537,23 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
                 // 显示确认对话框
                 showDialog(
                   context: context,
-                  builder:
-                      (context) => AlertDialog(
-                        title: const Text('结束训练'),
-                        content: const Text('确定要结束当前训练吗？您的训练记录将被保存。'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: const Text('取消'),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                              _completeWorkout();
-                            },
-                            child: const Text('确定'),
-                          ),
-                        ],
+                  builder: (context) => AlertDialog(
+                    title: const Text('结束训练'),
+                    content: const Text('确定要结束当前训练吗？您的训练记录将被保存。'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('取消'),
                       ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _completeWorkout();
+                        },
+                        child: const Text('确定'),
+                      ),
+                    ],
+                  ),
                 );
               },
             ),
@@ -572,20 +582,16 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
 
           // 主体内容
           Expanded(
-            child:
-                _isCompleted
-                    ? _buildCompletionScreen()
-                    : _isPreparing
-                    ? _buildPreparationScreen()
-                    : _isRestingBetweenExercises
-                    ? _buildExerciseRestScreen()
-                    : Padding(
-                      padding: const EdgeInsets.all(5),
-                      child: _buildWorkoutScreen(
-                        currentExercise,
-                        totalExercises,
-                      ),
-                    ),
+            child: _isCompleted
+                ? _buildCompletionScreen()
+                : _isPreparing
+                ? _buildPreparationScreen()
+                : _isRestingBetweenExercises
+                ? _buildExerciseRestScreen()
+                : Padding(
+                    padding: const EdgeInsets.all(5),
+                    child: _buildWorkoutScreen(currentExercise, totalExercises),
+                  ),
           ),
         ],
       ),
@@ -788,64 +794,62 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
 
   Widget _buildCompletionScreen() {
     // 计算完成率
-    int completedExercises =
-        _recordDetails.where((detail) => detail.completed).length;
+    int completedExercises = _recordDetails
+        .where((detail) => detail.completed)
+        .length;
     double completionRate = completedExercises / _todaysExercises.length;
     int completionPercentage = (completionRate * 100).round();
 
     return Center(
-      child:
-          _isSaving
-              ? const Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('正在保存训练记录...'),
-                ],
-              )
-              : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.green, size: 80),
-                  const SizedBox(height: 16),
-                  Text(
-                    '训练完成！',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '训练时长: ${formatSecondsToMMSS(_totalTimeStopwatch.elapsed.inSeconds)}',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '完成率: $completionPercentage%',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.bar_chart),
-                    label: const Text('返回'),
-                    onPressed: () {
-                      // 延迟后返回到训练助手主页面并切换到训练统计标签
-                      Future.delayed(const Duration(seconds: 1), () {
-                        if (mounted) {
-                          Navigator.of(
-                            context,
-                          ).pop({'switchToStatistics': true});
-                        }
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 16,
-                      ),
+      child: _isSaving
+          ? const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('正在保存训练记录...'),
+              ],
+            )
+          : Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.check_circle, color: Colors.green, size: 80),
+                const SizedBox(height: 16),
+                Text(
+                  '训练完成！',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '训练时长: ${formatSecondsToMMSS(_totalTimeStopwatch.elapsed.inSeconds)}',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '完成率: $completionPercentage%',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.bar_chart),
+                  label: const Text('返回'),
+                  onPressed: () {
+                    // 延迟后返回到训练助手主页面并切换到训练统计标签
+                    Future.delayed(const Duration(seconds: 1), () {
+                      if (mounted) {
+                        Navigator.of(context).pop({'switchToStatistics': true});
+                      }
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 16,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
     );
   }
 }

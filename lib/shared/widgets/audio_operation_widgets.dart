@@ -26,11 +26,10 @@ class WaveformPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint =
-        Paint()
-          ..color = color
-          ..strokeWidth = 2.0
-          ..strokeCap = StrokeCap.round;
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round;
 
     if (amplitudes.isEmpty) return;
 
@@ -43,9 +42,11 @@ class WaveformPainter extends CustomPainter {
     final step = width / amplitudes.length;
 
     for (int i = 0; i < amplitudes.length; i++) {
-      final normalizedAmplitude = (amplitudes[i] /
-              (maxAmplitude == 0 ? 1 : maxAmplitude))
-          .clamp(0.0, 1.0);
+      final normalizedAmplitude =
+          (amplitudes[i] / (maxAmplitude == 0 ? 1 : maxAmplitude)).clamp(
+            0.0,
+            1.0,
+          );
       final x = i * step;
       final barHeight = normalizedAmplitude * height * 0.8;
       canvas.drawLine(
@@ -389,13 +390,12 @@ class _CloudAudioUrlInputState extends State<CloudAudioUrlInput> {
               border: OutlineInputBorder(),
               hintText: '输入云端音频URL (http://或https://)',
               prefixIcon: Icon(Icons.link),
-              suffixIcon:
-                  widget.controller.text.isNotEmpty
-                      ? IconButton(
-                        icon: Icon(Icons.clear),
-                        onPressed: widget.onClear,
-                      )
-                      : null,
+              suffixIcon: widget.controller.text.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(Icons.clear),
+                      onPressed: widget.onClear,
+                    )
+                  : null,
             ),
             onChanged: widget.onChanged,
           ),
@@ -653,10 +653,9 @@ class RecordingButtonGroup extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: isRecording ? Colors.red : AppColors.primary,
               foregroundColor: Colors.white,
-              padding:
-                  isDesktop
-                      ? const EdgeInsets.symmetric(horizontal: 24, vertical: 16)
-                      : null,
+              padding: isDesktop
+                  ? const EdgeInsets.symmetric(horizontal: 24, vertical: 16)
+                  : null,
             ),
           ),
         // 选择录音文件按钮
@@ -667,10 +666,9 @@ class RecordingButtonGroup extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.success,
             foregroundColor: Colors.white,
-            padding:
-                isDesktop
-                    ? const EdgeInsets.symmetric(horizontal: 24, vertical: 16)
-                    : null,
+            padding: isDesktop
+                ? const EdgeInsets.symmetric(horizontal: 24, vertical: 16)
+                : null,
           ),
         ),
       ],
@@ -729,24 +727,23 @@ class SubmitButton extends StatelessWidget {
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
         ),
-        child:
-            isSubmitting
-                ? Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
+        child: isSubmitting
+            ? Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
                     ),
-                    SizedBox(width: 12),
-                    Text(loadingText),
-                  ],
-                )
-                : Text(buttonText),
+                  ),
+                  SizedBox(width: 12),
+                  Text(loadingText),
+                ],
+              )
+            : Text(buttonText),
       ),
     );
   }

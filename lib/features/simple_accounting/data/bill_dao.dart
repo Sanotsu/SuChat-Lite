@@ -70,6 +70,15 @@ class BillDao {
     );
   }
 
+  /// 清空所有账单数据
+  Future<int> clearAllBillItem() async {
+    final db = await dbInit.database;
+    return await db.delete(
+      SimpleAccountingDdl.tableBillItem,
+      where: '1 = 1', // 恒为真，删除所有记录
+    );
+  }
+
   /// 获取账单条目
   Future<BillItem?> getBillItem(int id) async {
     final db = await dbInit.database;
@@ -454,8 +463,9 @@ class BillDao {
   Future<int> importFromJson(String jsonString) async {
     try {
       final List<dynamic> jsonList = json.decode(jsonString);
-      final List<BillItem> billItems =
-          jsonList.map((item) => BillItem.fromMap(item)).toList();
+      final List<BillItem> billItems = jsonList
+          .map((item) => BillItem.fromMap(item))
+          .toList();
 
       final db = await dbInit.database;
       int count = 0;
@@ -481,8 +491,9 @@ class BillDao {
   /// 导出账单数据为JSON
   Future<String> exportToJson() async {
     final billItems = await getAllBillItems();
-    final List<Map<String, dynamic>> jsonList =
-        billItems.map((item) => item.toMap()).toList();
+    final List<Map<String, dynamic>> jsonList = billItems
+        .map((item) => item.toMap())
+        .toList();
     return json.encode(jsonList);
   }
 

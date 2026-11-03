@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/storage/cus_get_storage.dart';
+import '../../../../core/utils/screen_helper.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
+import '../widgets/chat_background.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
 import '../widgets/chat_message_list.dart';
 import '../widgets/chat_input_widget.dart';
 import '../widgets/chat_history_drawer.dart';
+import '../widgets/chat_history_panel.dart';
 import '../widgets/chat_app_bar.dart';
+import '../widgets/chat_desktop_toolbar.dart';
+import '../widgets/draggable_partner_avatar_preview.dart';
+import '../widgets/mcp_approval_banner.dart';
 import '../widgets/partner_horizontal_list.dart';
 import 'platform_list_page.dart';
 
@@ -22,16 +29,60 @@ class _UnifiedChatPageState extends State<UnifiedChatPage> {
   late UnifiedChatViewModel _viewModel;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  // 桌面常驻会话侧栏可见性(记忆用户偏好)
+  static const _sidebarVisibleKey = 'desktop_sidebar_visible';
+  bool _sidebarVisible = true;
+  bool _sidebarReady = false;
+
+  // 桌面内容区宽屏模式：false=限宽880居中(默认，保可读性)，true=铺满内容区
+  // (对齐Chatbox/ChatGPT的"限宽为默认+可切换宽屏"做法，记忆用户偏好)
+  static const _widescreenKey = 'desktop_content_widescreen';
+  bool _widescreen = false;
+
   @override
   void initState() {
     super.initState();
     _initializeChat();
+    _loadSidebarVisible();
+    _loadWidescreen();
+  }
+
+  void _loadWidescreen() {
+    final saved = CusGetStorage().box.read(_widescreenKey);
+    if (saved is bool) {
+      setState(() => _widescreen = saved);
+    }
+  }
+
+  Future<void> _toggleWidescreen() async {
+    setState(() => _widescreen = !_widescreen);
+    await CusGetStorage().box.write(_widescreenKey, _widescreen);
+  }
+
+  void _loadSidebarVisible() {
+    final saved = CusGetStorage().box.read(_sidebarVisibleKey);
+    if (saved is bool) {
+      setState(() {
+        _sidebarVisible = saved;
+        _sidebarReady = true;
+      });
+    } else {
+      _sidebarReady = true;
+    }
+  }
+
+  Future<void> _toggleSidebar() async {
+    setState(() => _sidebarVisible = !_sidebarVisible);
+    await CusGetStorage().box.write(_sidebarVisibleKey, _sidebarVisible);
   }
 
   Future<void> _initializeChat() async {
     _viewModel = UnifiedChatViewModel();
     await _viewModel.initialize();
   }
+
+  // 2026-10-12 移除"检测到旧版聊天数据"引导弹窗：ObjectBox 旧库已由
+  // 迁移器直接自动转换导入(无需备份中转)，该引导已无意义
 
   @override
   void dispose() {
@@ -43,13 +94,10 @@ class _UnifiedChatPageState extends State<UnifiedChatPage> {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider.value(
       value: _viewModel,
-      child: Scaffold(
-        key: _scaffoldKey,
-        appBar: ChatAppBar(
-          onMenuPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
-        ),
-        endDrawer: const ChatHistoryDrawer(),
-        body: GestureDetector(
+      // 背景铺在整个页面最底层(含AppBar/输入区域，对齐旧版AdaptiveChatLayout布局)：
+      // Scaffold在背景模式下透明，背景从状态栏下方一直透到输入栏
+      child: Consumer<UnifiedChatViewModel>(
+        child: GestureDetector(
           // 允许子控件（如TextField）接收点击事件
           behavior: HitTestBehavior.translucent,
           // 点击空白处可以移除焦点，关闭键盘
@@ -145,6 +193,56 @@ class _UnifiedChatPageState extends State<UnifiedChatPage> {
                       viewModel.currentPartner != null)
                     _buildSelectedPartnerCard(viewModel),
 
+                  // 2026-09-14 P3-1 工具调用审批横幅(输入框上方)：
+                  // 挂起时展示工具名+参数，允许/拒绝后Agent循环继续
+                  if (viewModel.pendingApproval != null)
+                    McpApprovalBanner(
+                      request: viewModel.pendingApproval!,
+                      onAllow: () => viewModel.approveToolCall(),
+                      onAllowAlways: () =>
+                          viewModel.approveToolCall(alwaysForSession: true),
+                      onDeny: () => viewModel.denyToolCall(),
+                    ),
+
+                  // 2026-09-18 旧数据只读降级：无可用平台/模型(未配置AK、
+                  // 迁移后平台未激活等)时，历史会话仅可浏览——输入框上方
+                  // 给出明确的降级说明，配合输入区禁用
+                  if (!viewModel.canContinueChat)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.history_edu,
+                            size: 18,
+                            color: Theme.of(context).hintColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '当前无可用平台或模型，历史对话仅可浏览，'
+                              '配置平台API Key后可继续对话',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: Theme.of(context).hintColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
                   // 输入组件
                   ChatInputWidget(),
                 ],
@@ -152,7 +250,92 @@ class _UnifiedChatPageState extends State<UnifiedChatPage> {
             },
           ),
         ),
+        builder: (context, viewModel, child) {
+          final hasBg = viewModel.hasBackgroundImage;
+          final isDesktop = ScreenHelper.isDesktop();
+          return Stack(
+            children: [
+              // 2026-09-05 修复移动端自定义背景"一片黑"：Android 窗口底为黑色，
+              // 半透明背景图叠在黑底上整体发暗且看不清内容；
+              // 补一层主题底色后再叠背景图，两端表现一致
+              Positioned.fill(
+                child: ColoredBox(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                ),
+              ),
+              // ChatBackground内部自带Positioned.fill，铺满整个页面
+              ChatBackground(
+                backgroundImage: viewModel.backgroundImage,
+                opacity: viewModel.backgroundOpacity,
+              ),
+              Scaffold(
+                key: _scaffoldKey,
+                backgroundColor: hasBg ? Colors.transparent : null,
+                appBar: ChatAppBar(
+                  // 桌面：菜单按钮切换常驻侧栏；移动：打开左侧历史抽屉
+                  onMenuPressed: isDesktop
+                      ? _toggleSidebar
+                      : () => _scaffoldKey.currentState?.openDrawer(),
+                  // 桌面：内容区宽度切换(标准880限宽/宽屏铺满)
+                  onToggleWidescreen: isDesktop ? _toggleWidescreen : null,
+                  isWidescreen: _widescreen,
+                ),
+                // 移动端抽屉放左侧(leading 菜单按钮在左，抽屉也从左弹出)
+                drawer: isDesktop ? null : const ChatHistoryDrawer(),
+                body: isDesktop ? _buildDesktopBody(hasBg, child) : child,
+              ),
+              // 搭档立绘：选中搭档且头像非空时显示，
+              // 小立绘可点击放大为可拖动/缩放的悬浮预览(旧版特性)
+              // 2026-09-07 移动端也显示(组件内已有单指拖动/双指缩放分支)
+              if (viewModel.currentPartner?.avatarUrl != null &&
+                  viewModel.currentPartner!.avatarUrl!.trim().isNotEmpty)
+                DraggablePartnerAvatarPreview(
+                  key: ValueKey(viewModel.currentPartner!.avatarUrl),
+                  partner: viewModel.currentPartner!,
+                  // 桌面端距左侧随会话侧栏可见性让位(侧栏固定宽280)；
+                  // 移动端侧栏为抽屉无常驻面板，恒贴左缘
+                  left: isDesktop && _sidebarVisible && _sidebarReady ? 284 : 4,
+                  width: isDesktop ? 48 : 36,
+                  height: isDesktop ? 64 : 48,
+                ),
+            ],
+          );
+        },
       ),
+    );
+  }
+
+  /// 桌面布局：左侧常驻会话侧栏 + 主内容区 + 右侧功能工具栏
+  /// 内容区默认限宽880居中保证宽屏可读性；宽屏模式(_widescreen)铺满
+  /// 2026-09-05 两侧面板改为透明，让自定义背景延伸覆盖，消除割裂感
+  Widget _buildDesktopBody(bool hasBg, Widget? content) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_sidebarVisible && _sidebarReady)
+          Material(
+            color: Colors.transparent,
+            child: ChatHistoryPanel(width: 280),
+          ),
+        if (_sidebarVisible && _sidebarReady)
+          VerticalDivider(width: 1, color: Theme.of(context).dividerColor),
+        Expanded(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: _widescreen ? double.infinity : 880,
+              ),
+              child: content ?? const SizedBox.shrink(),
+            ),
+          ),
+        ),
+        // 2026-09-05 恢复旧版桌面右侧功能工具栏(条目对齐"更多操作"菜单)
+        VerticalDivider(width: 1, color: Theme.of(context).dividerColor),
+        Material(
+          color: Colors.transparent,
+          child: SizedBox(width: 86, child: ChatDesktopToolbar()),
+        ),
+      ],
     );
   }
 

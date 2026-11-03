@@ -24,6 +24,32 @@ class OpenAIChatCompletionResponse {
   // 自定义消息栏位(直接获取message和delta中用于展示的消息内容，方便显示时直接获得)
   String customText;
 
+  /// 2026-09-12 工具调用哨兵(P3-10分段重构)：service在执行工具前
+  /// 合成一个仅带此字段的响应注入流，viewmodel据此在气泡内插入
+  /// "工具调用段"并封上一段；非流式标准字段，不参与序列化
+  @JsonKey(includeIfNull: false)
+  String? toolInvoking;
+
+  /// 2026-09-14 工具结果随哨兵下发：哨兵在工具执行完成后注入，
+  /// 直接携带该工具的结果文本与参数摘要，viewmodel写入气泡的
+  /// 工具段(渲染为可展开卡片)；非流式标准字段，不参与序列化
+  @JsonKey(includeIfNull: false)
+  String? toolResult;
+
+  @JsonKey(includeIfNull: false)
+  String? toolArgsSummary;
+
+  /// 2026-09-14 P3-14 工具执行耗时(毫秒)：随哨兵下发，工具卡片展示；
+  /// 非流式标准字段，不参与序列化
+  @JsonKey(includeIfNull: false)
+  int? toolElapsedMs;
+
+  /// 2026-09-16 轮次上限提示哨兵：service在强制无工具续传前注入，
+  /// viewmodel据此在气泡内插入独立notice横幅段(与工具折叠组件平级)；
+  /// 非流式标准字段，不参与序列化
+  @JsonKey(includeIfNull: false)
+  String? limitNotice;
+
   OpenAIChatCompletionResponse({
     required this.id,
     this.object,
@@ -33,6 +59,11 @@ class OpenAIChatCompletionResponse {
     required this.choices,
     this.usage,
     String? customText,
+    this.toolInvoking,
+    this.toolResult,
+    this.toolArgsSummary,
+    this.toolElapsedMs,
+    this.limitNotice,
   }) : customText = customText ?? _generateCustomText(choices);
 
   // 自定义的响应文本(比如流式返回最后是个[DONE]没法转型，但可以自行设定；而正常响应时可以从其他值中得到)
@@ -375,46 +406,6 @@ class OpenAIModelsResponse {
       _$OpenAIModelsResponseFromJson(json);
 
   Map<String, dynamic> toJson() => _$OpenAIModelsResponseToJson(this);
-}
-
-/// 嵌入数据
-@JsonSerializable(explicitToJson: true)
-class OpenAIEmbeddingData {
-  final String object;
-  final List<double> embedding;
-  final int index;
-
-  const OpenAIEmbeddingData({
-    required this.object,
-    required this.embedding,
-    required this.index,
-  });
-
-  factory OpenAIEmbeddingData.fromJson(Map<String, dynamic> json) =>
-      _$OpenAIEmbeddingDataFromJson(json);
-
-  Map<String, dynamic> toJson() => _$OpenAIEmbeddingDataToJson(this);
-}
-
-/// 嵌入响应
-@JsonSerializable(explicitToJson: true)
-class OpenAIEmbeddingResponse {
-  final String object;
-  final List<OpenAIEmbeddingData> data;
-  final String model;
-  final OpenAIUsage usage;
-
-  const OpenAIEmbeddingResponse({
-    required this.object,
-    required this.data,
-    required this.model,
-    required this.usage,
-  });
-
-  factory OpenAIEmbeddingResponse.fromJson(Map<String, dynamic> json) =>
-      _$OpenAIEmbeddingResponseFromJson(json);
-
-  Map<String, dynamic> toJson() => _$OpenAIEmbeddingResponseToJson(this);
 }
 
 /// 图片数据

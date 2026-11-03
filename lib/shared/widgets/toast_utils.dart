@@ -80,25 +80,39 @@ class ToastUtils {
   /// 6. 显示加载中 (可手动关闭)
   static CancelFunc showLoading([String? message]) {
     return BotToast.showCustomLoading(
-      toastBuilder:
-          (_) => Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.7),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CircularProgressIndicator(color: Colors.white),
-                if (message != null) ...[
-                  SizedBox(height: 8),
-                  Text(message, style: const TextStyle(color: Colors.white)),
-                ],
-              ],
-            ),
-          ),
+      toastBuilder: (_) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(color: Colors.white),
+            if (message != null) ...[
+              SizedBox(height: 8),
+              Text(message, style: const TextStyle(color: Colors.white)),
+            ],
+          ],
+        ),
+      ),
     );
+  }
+
+  /// 7. 执行异步任务期间显示 loading，正常/异常结束均自动关闭。
+  /// 杜绝"showLoading 后未关遮罩导致界面锁死"的用法(loading 遮罩
+  /// 必须由本方法或调用方持有的 CancelFunc 关闭，showXxx 通知不会关它)
+  static Future<T> withLoading<T>(
+    Future<T> Function() task, [
+    String? message,
+  ]) async {
+    final close = showLoading(message);
+    try {
+      return await task();
+    } finally {
+      close();
+    }
   }
 
   /// 图标提示的私有实现方法

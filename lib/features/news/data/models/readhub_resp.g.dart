@@ -32,7 +32,7 @@ Map<String, dynamic> _$ReadhubRespToJson(ReadhubResp instance) =>
 ReadhubItem _$ReadhubItemFromJson(Map<String, dynamic> json) => ReadhubItem(
   uid: json['uid'] as String,
   title: json['title'] as String,
-  summary: json['summary'] as String,
+  summary: json['summary'] as String?,
   createdAt: json['createdAt'] as String?,
   publishDate: json['publishDate'] as String?,
   siteNameDisplay: json['siteNameDisplay'] as String?,

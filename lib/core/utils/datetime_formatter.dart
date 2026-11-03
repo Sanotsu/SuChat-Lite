@@ -75,9 +75,11 @@ String formatTimeAgo(String timeString) {
 String formatTimestampAgo(int? timestamp) {
   if (timestamp == null) return '';
 
-  final dateTime = timestamp.bitLength > 10
+  // 2026-09-07 A-5 修复：原 timestamp.bitLength > 10 对一切正常时间戳恒真，
+  // 秒级分支不可达。改为按量级区分：>= 1e11 视为毫秒，否则视为秒
+  final dateTime = timestamp >= 100000000000
       ? DateTime.fromMillisecondsSinceEpoch(timestamp)
-      : DateTime.fromMicrosecondsSinceEpoch(timestamp);
+      : DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
   final now = DateTime.now();
   final difference = now.difference(dateTime);
 

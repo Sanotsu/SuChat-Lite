@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/cus_content_width.dart';
 import 'package:intl/intl.dart';
 
 import '../../../data/models/daodu_models.dart';
@@ -186,26 +187,28 @@ class _DaoduExplorePageState extends State<DaoduExplorePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('探索'),
-        actions: [
-          // 快速选择今日
-          IconButton(
-            icon: const Icon(Icons.calendar_month),
-            onPressed: _selectSingleDate,
-            tooltip: '今日文章',
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // 顶部控制区域
-          _buildTopControls(),
+    return CusContentWidth(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('探索'),
+          actions: [
+            // 快速选择今日
+            IconButton(
+              icon: const Icon(Icons.calendar_month),
+              onPressed: _selectSingleDate,
+              tooltip: '今日文章',
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            // 顶部控制区域
+            _buildTopControls(),
 
-          // 内容列表
-          Expanded(child: _buildContentList()),
-        ],
+            // 内容列表
+            Expanded(child: _buildContentList()),
+          ],
+        ),
       ),
     );
   }

@@ -80,10 +80,9 @@ class _CreateColorItemDialogState extends State<CreateColorItemDialog> {
           ),
           const SizedBox(height: 8),
           Expanded(
-            child:
-                _showAdvancedPicker
-                    ? _buildAdvancedColorPicker()
-                    : _buildPresetColorPicker(),
+            child: _showAdvancedPicker
+                ? _buildAdvancedColorPicker()
+                : _buildPresetColorPicker(),
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -135,10 +134,9 @@ class _CreateColorItemDialogState extends State<CreateColorItemDialog> {
                 decoration: BoxDecoration(
                   color: color,
                   shape: BoxShape.circle,
-                  border:
-                      selectedColor == colorValue
-                          ? Border.all(color: Colors.black, width: 2)
-                          : null,
+                  border: selectedColor == colorValue
+                      ? Border.all(color: Colors.black, width: 2)
+                      : null,
                 ),
               ),
             );

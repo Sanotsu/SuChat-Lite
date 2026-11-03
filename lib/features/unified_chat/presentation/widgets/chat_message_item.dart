@@ -7,12 +7,15 @@ import '../../../../core/utils/datetime_formatter.dart';
 import '../../../../core/utils/screen_helper.dart';
 import '../../../../core/utils/simple_tools.dart';
 import '../../../../shared/widgets/toast_utils.dart';
-import '../../../branch_chat/presentation/widgets/text_edit_dialog.dart';
-import '../../../branch_chat/presentation/widgets/text_selection_dialog.dart';
+import './text_edit_dialog.dart';
+import './text_selection_dialog.dart';
 import '../../data/models/unified_chat_message.dart';
 import '../../data/models/unified_model_spec.dart';
+import '../../data/services/unified_branch_utils.dart';
+import '../../data/services/unified_chat_service.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
 import 'multimodal_content_widget.dart';
+import 'unified_branch_tree_dialog.dart';
 
 /// 聊天消息项组件
 /// 参考Chatbox简单显示全都靠右
@@ -44,20 +47,184 @@ class ChatMessageItem extends StatefulWidget {
 }
 
 class _ChatMessageItemState extends State<ChatMessageItem> {
+  // 2026-09-11 MCP集成(P1-5)：展开的工具结果卡片消息id集合
+  final Set<String> _expandedToolCardIds = {};
+
+  // 是否启用背景图(气泡透明化+字体颜色配置生效)
+  bool get _hasBg => widget.viewModel.hasBackgroundImage;
+
+  // 是否简洁显示(隐藏头像/元信息/分支切换器)
+  bool get _isBrief => widget.viewModel.isBriefDisplay;
+
+  // 消息正文颜色(背景模式下使用用户配置的字体颜色)
+  Color get _contentColor {
+    if (_hasBg) {
+      final fc = widget.viewModel.messageFontColor;
+      return widget.message.isUser ? fc.userTextColor : fc.aiNormalTextColor;
+    }
+    return widget.message.isUser
+        ? Theme.of(context).colorScheme.onPrimary
+        : Theme.of(context).colorScheme.onSurfaceVariant;
+  }
+
+  // 气泡内次要元素颜色(流式指示/参考链接等)
+  Color _secondaryColor({double alpha = 0.7}) {
+    if (_hasBg) {
+      return _contentColor.withValues(alpha: alpha);
+    }
+    return widget.message.isUser
+        ? Theme.of(context).colorScheme.onPrimary.withValues(alpha: alpha)
+        : Theme.of(
+            context,
+          ).colorScheme.onSurfaceVariant.withValues(alpha: alpha);
+  }
+
+  // 推理内容颜色(背景模式下使用配置的思考字体颜色)
+  Color get _thinkingColor => _hasBg
+      ? widget.viewModel.messageFontColor.aiThinkingTextColor
+      : Theme.of(context).colorScheme.primary;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final isUser = widget.message.isUser;
+
+    // 2026-09-11 MCP集成(P1-5)：工具调用结果消息(role=tool)渲染为
+    // 折叠卡片，不走常规AI气泡流程(结果文本可能很长)
+    if (widget.message.role == UnifiedMessageRole.tool) {
+      return _buildToolCallCard(context);
+    }
+
+    // 2026-09-07 微信式对齐：用户消息整体靠右(气泡在前头像在后)，
+    // system/AI消息靠左(头像在前)；下方元信息与分支切换器同向对齐
+    Widget content = Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
-          // AI头像
-          _buildAvatar(context),
+          // AI头像(简洁显示时隐藏，保留缩进占位；区域不随文字缩放)
+          if (!isUser) _buildAvatarArea(context),
 
           SizedBox(width: 4),
-          _buildMessageBubble(),
+          // Flexible(loose)约束：内容窄时气泡按内容收缩，内容宽时钳制到
+          // 剩余空间换行。Row 直接给子项的横向约束是无限宽，不包 Flexible
+          // 会导致气泡无法换行而溢出
+          Flexible(child: _buildMessageBubble()),
+
+          if (isUser) ...[SizedBox(width: 4), _buildAvatarArea(context)],
         ],
       ),
+    );
+
+    // 流式中的消息高频重建，其语义节点变化会触发Windows引擎AXTree增量更新bug
+    // ("Failed to update ui::AXTree... will not be in the tree"海量刷屏)。
+    // 流式期间将该消息整棵子树从语义树摘除(不影响视觉/文本选择)，流完自动恢复
+    if (widget.message.isStreaming) {
+      content = ExcludeSemantics(child: content);
+    }
+    return content;
+  }
+
+  /// 2026-09-11 MCP集成(P1-5)：工具调用结果折叠卡片
+  /// 展开态按消息id记录(列表复用时状态不串)
+  static const String _toolResultTitle = '工具返回结果';
+
+  Widget _buildToolCallCard(BuildContext context) {
+    final message = widget.message;
+    final expanded = _expandedToolCardIds.contains(message.id);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      // 与AI消息同向(靠左)，保留头像缩进
+      padding: const EdgeInsets.only(left: 36),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => setState(() {
+          expanded
+              ? _expandedToolCardIds.remove(message.id)
+              : _expandedToolCardIds.add(message.id);
+        }),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Theme.of(
+                context,
+              ).colorScheme.outlineVariant.withValues(alpha: 0.5),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.build_circle_outlined,
+                    size: 14,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      message.name ?? '工具调用',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Text(
+                    expanded ? '收起' : '详情',
+                    style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                  ),
+                  Icon(
+                    expanded ? Icons.expand_less : Icons.expand_more,
+                    size: 16,
+                    color: Colors.grey[600],
+                  ),
+                ],
+              ),
+              if (expanded) ...[
+                const Divider(height: 10),
+                Text(
+                  _toolResultTitle,
+                  style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 2),
+                SelectableText(
+                  message.content ?? '(无结果)',
+                  style: TextStyle(fontSize: 12, color: _contentColor),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 头像区域反向固定不缩放(避免文字放大时头像行溢出，对齐旧版处理)
+  Widget _buildAvatarArea(BuildContext context) {
+    Widget child;
+    if (_isBrief) {
+      // 简洁显示：隐藏头像，保留与头像等宽的缩进占位
+      child = const SizedBox(width: 32, height: 32);
+    } else {
+      child = _buildAvatar(context);
+    }
+    return MediaQuery(
+      data: MediaQuery.of(
+        context,
+      ).copyWith(textScaler: const TextScaler.linear(1)),
+      child: child,
     );
   }
 
@@ -98,85 +265,256 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
                 showMessageOptions(widget.message, details.globalPosition)
           : null,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        // 2026-09-07 用户消息气泡下方的元信息/分支切换器靠右
+        crossAxisAlignment: isUser
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         children: [
-          // 消息气泡
-          Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width - 56,
-            ),
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: isUser
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 搜索结果参考链接
-                _buildSearchReferences(),
+          // 消息气泡(背景图模式下透明底色+描边，对齐旧版)
+          // 气泡宽度取父级真实约束(桌面内容列已限宽，不能再用全屏宽计算)
+          LayoutBuilder(
+            builder: (context, constraints) => Container(
+              constraints: BoxConstraints(maxWidth: constraints.maxWidth - 16),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: _hasBg
+                    ? Colors.transparent
+                    : isUser
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(16),
+                border: _hasBg ? Border.all(color: _contentColor) : null,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 搜索结果参考链接
+                  _buildSearchReferences(),
 
-                // 多模态内容渲染
-                MultimodalContentWidget(
-                  message: widget.message,
-                  textStyle: TextStyle(
-                    color: isUser
-                        ? Theme.of(context).colorScheme.onPrimary
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                  // 多模态内容渲染
+                  MultimodalContentWidget(
+                    message: widget.message,
+                    textStyle: TextStyle(color: _contentColor),
+                    thinkingColor: _thinkingColor,
                   ),
-                ),
 
-                // 流式生成指示器
-                _buildStreaminigInfo(),
+                  // 流式生成指示器
+                  _buildStreaminigInfo(),
 
-                // 错误状态
-                _buildErrorInfo(),
-              ],
+                  // 错误状态
+                  _buildErrorInfo(),
+                ],
+              ),
             ),
           ),
 
-          // 显示模型标签、消息信息
+          // 显示模型标签、消息信息(简洁显示时仅保留相对时间；区域不随文字缩放)
           const SizedBox(height: 4),
-          _buildNote(),
+          _buildNoteArea(),
+
+          // 分支切换器(有多个兄弟分支时显示；简洁显示时隐藏；区域不随文字缩放)
+          _buildBranchSwitcherArea(),
         ],
+      ),
+    );
+  }
+
+  // 元信息区域反向固定不缩放
+  Widget _buildNoteArea() {
+    return MediaQuery(
+      data: MediaQuery.of(
+        context,
+      ).copyWith(textScaler: const TextScaler.linear(1)),
+      child: _buildNote(),
+    );
+  }
+
+  // 分支切换器区域反向固定不缩放；简洁显示时隐藏
+  // Widget _buildBranchSwitcherArea() {
+  //   if (_isBrief) return const SizedBox.shrink();
+  //   return MediaQuery(
+  //     data: MediaQuery.of(
+  //       context,
+  //     ).copyWith(textScaler: const TextScaler.linear(1)),
+  //     child: _buildBranchSwitcher(),
+  //   );
+  // }
+  Widget _buildBranchSwitcherArea() {
+    if (_isBrief) return const SizedBox.shrink();
+    // 2026-09-07 按消息类型对齐：用户消息靠右，system/AI消息靠左
+    // (原实现写死centerRight，导致AI消息的分支切换器也跑到右侧)
+    final isUser = widget.message.isUser;
+    return MediaQuery(
+      data: MediaQuery.of(
+        context,
+      ).copyWith(textScaler: const TextScaler.linear(1)),
+      child: Align(
+        alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+        // child: Padding(
+        //   padding: isUser
+        //       ? const EdgeInsets.only(right: 16)
+        //       : const EdgeInsets.only(left: 16),
+        child: _buildBranchSwitcher(),
+        // ),
+      ),
+    );
+  }
+
+  /// 分支切换器：‹ 当前分支号/最大分支号(实际剩余分支数) ›
+  /// 显示格式与旧版 branch_chat 对齐：
+  ///   使用存储时的分支编号(branch_index+1)，删除某个分支后编号不复位，
+  ///   括号内为当前实际存在的分支数。
+  ///   例如有分支1、2、3，删除分支2后，分支1下方显示"1/3(2)"，分支3下方显示"3/3(2)"。
+  /// 非流式生成时、且该消息存在兄弟分支时显示
+  Widget _buildBranchSwitcher() {
+    // 流式生成中的消息不显示
+    if (widget.message.isStreaming) return const SizedBox.shrink();
+    // system消息无分支
+    if (widget.message.isSystem) return const SizedBox.shrink();
+
+    final info = widget.viewModel.getBranchSwitchInfo(widget.message);
+    if (info == null) return const SizedBox.shrink();
+
+    final siblings = info.siblings;
+    final currentIndex = info.currentIndex;
+    final total = siblings.length;
+
+    // 兄弟中最大的存储分支索引(删除分支后索引不复位，最大编号保留)
+    final maxBranchIndex = siblings
+        .map((s) => s.branchIndex)
+        .reduce((a, b) => a > b ? a : b);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildBranchArrowButton(
+            icon: Icons.arrow_back_ios,
+            enabled: currentIndex > 0,
+            tooltip: '上一个分支',
+            onTap: () =>
+                widget.viewModel.switchToSiblingBranch(widget.message, -1),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              '${widget.message.branchIndex + 1}/${maxBranchIndex + 1}($total)',
+              style: TextStyle(
+                color: Theme.of(context).disabledColor,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          _buildBranchArrowButton(
+            icon: Icons.arrow_forward_ios,
+            enabled: currentIndex < total - 1,
+            tooltip: '下一个分支',
+            onTap: () =>
+                widget.viewModel.switchToSiblingBranch(widget.message, 1),
+          ),
+          const SizedBox(width: 4),
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _showBranchTreeDialog(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.account_tree,
+                    size: 14,
+                    color: Theme.of(context).disabledColor,
+                  ),
+                  const SizedBox(width: 2),
+                  Text(
+                    '分支树',
+                    style: TextStyle(
+                      color: Theme.of(context).disabledColor,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBranchArrowButton({
+    required IconData icon,
+    required bool enabled,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return SizedBox(
+      width: 24,
+      height: 24,
+      child: IconButton(
+        icon: Icon(icon, size: 14),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+        tooltip: tooltip,
+        color: Theme.of(context).disabledColor,
+        onPressed: enabled ? onTap : null,
+      ),
+    );
+  }
+
+  // 打开分支树对话框
+  void _showBranchTreeDialog() {
+    final viewModel = widget.viewModel;
+    final currentPath =
+        viewModel.currentBranchPath ??
+        UnifiedBranchUtils.defaultLatestPath(viewModel.allMessages);
+    if (currentPath == null) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => UnifiedBranchTreeDialog(
+        messages: viewModel.allMessages,
+        currentPath: currentPath,
+        onPathSelected: (path) {
+          Navigator.pop(context);
+          viewModel.switchBranch(path);
+        },
       ),
     );
   }
 
   Widget _buildStreaminigInfo() {
     if (widget.message.isStreaming) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: 12,
-            height: 12,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                widget.message.isUser
-                    ? Theme.of(context).colorScheme.onPrimary
-                    : Theme.of(context).colorScheme.primary,
+      // 2026-09-11 实测反馈：工具执行期间无提示等待感明显——
+      // 监听service的activeToolCall通知器，实时显示正在调用的工具
+      return ValueListenableBuilder<String?>(
+        valueListenable: UnifiedChatService().activeToolCall,
+        builder: (context, toolName, _) {
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    _hasBg
+                        ? _contentColor
+                        : Theme.of(context).colorScheme.primary,
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '生成中...',
-            style: TextStyle(
-              fontSize: 12,
-              color: widget.message.isUser
-                  ? Theme.of(
-                      context,
-                    ).colorScheme.onPrimary.withValues(alpha: 0.7)
-                  : Theme.of(
-                      context,
-                    ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-            ),
-          ),
-        ],
+              const SizedBox(width: 8),
+              Text(
+                toolName == null ? '生成中...' : '正在调用工具: $toolName...',
+                style: TextStyle(fontSize: 12, color: _secondaryColor()),
+              ),
+            ],
+          );
+        },
       );
     }
     return SizedBox.shrink();
@@ -213,45 +551,44 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
     }
 
     // 放在可折叠的容器中
-    return ExpansionTile(
-      title: Row(
+    return Material(
+      type: MaterialType.transparency,
+      child: ExpansionTile(
+        initiallyExpanded: false,
+        // 2026-09-14 标题与正文左对齐：ExpansionTile默认16px水平内边距
+        // 会让短标题视觉上"缩进/居中"，归零后与markdown正文同起点
+        tilePadding: EdgeInsets.zero,
+        title: Row(
+          children: [
+            Icon(Icons.newspaper, color: _secondaryColor()),
+            const SizedBox(width: 4),
+            Text(
+              '搜索结果',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: _secondaryColor(alpha: 0.8),
+              ),
+            ),
+          ],
+        ),
         children: [
-          Icon(
-            Icons.link,
-            // size: 14,
-            color: widget.message.isUser
-                ? Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)
-                : Theme.of(
-                    context,
-                  ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            '参考链接',
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              color: widget.message.isUser
-                  ? Theme.of(
-                      context,
-                    ).colorScheme.onPrimary.withValues(alpha: 0.8)
-                  : Theme.of(
-                      context,
-                    ).colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+          // 2026-09-15 修复引用卡"居中"：ExpansionTile的children外层
+          // Column默认crossAxisAlignment为center，卡片按内容收缩宽度
+          // 后短卡会被水平居中——SizedBox占满宽度保证整体靠左
+          SizedBox(
+            width: double.infinity,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // const SizedBox(height: 8),
+                ...widget.message.searchReferences!.map(
+                  (ref) => _buildSearchReferenceItem(ref),
+                ),
+              ],
             ),
           ),
         ],
       ),
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // const SizedBox(height: 8),
-            ...widget.message.searchReferences!.map(
-              (ref) => _buildSearchReferenceItem(ref),
-            ),
-          ],
-        ),
-      ],
     );
   }
 
@@ -261,6 +598,9 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
       child: GestureDetector(
         onTap: () => launchStringUrl(ref.url),
         child: Container(
+          // 2026-09-15 统一占满可用宽度：原先按内容收缩，各卡宽度随
+          // title/URL长短参差不齐(见用户截图)；占满后视觉整齐且左对齐
+          width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
             color: widget.message.isUser
@@ -299,7 +639,7 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
                   child: Text(
                     ref.description!,
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: ScreenHelper.metaFontSize(11),
                       color: widget.message.isUser
                           ? Theme.of(
                               context,
@@ -316,7 +656,7 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
                 child: Text(
                   ref.url,
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: ScreenHelper.metaFontSize(10),
                     color: widget.message.isUser
                         ? Theme.of(
                             context,
@@ -337,49 +677,132 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
   }
 
   Widget _buildNote() {
+    // 简洁显示：只保留相对时间，隐藏tokens/耗时/模型等元信息
+    if (_isBrief) {
+      return Row(
+        // 2026-09-07 用户消息元信息靠右
+        mainAxisAlignment: widget.message.isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
+        children: [
+          const SizedBox(width: 8),
+          Text(
+            formatRelativeDate(widget.message.createdAt),
+            style: TextStyle(
+              fontSize: ScreenHelper.metaFontSize(12),
+              color: Theme.of(context).disabledColor,
+            ),
+          ),
+        ],
+      );
+    }
+
+    var msg = widget.message;
+
     String note = '';
-    if (widget.message.tokenCount > 0) {
-      note += 'tokens used: ${widget.message.tokenCount}; ';
+    if (msg.tokenCount > 0) {
+      note += 'tokens used: ${msg.tokenCount}; ';
     }
     // 没有保存模型的价格，所以其实没有实际的花费
-    // if (widget.message.cost > 0) {
-    //   note += 'cost: ${widget.message.cost}; ';
+    // if (msg.cost > 0) {
+    //   note += 'cost: ${msg.cost}; ';
     // }
-    if (widget.message.responseTimeMs != null) {
-      note += 'response time: ${widget.message.responseTimeMs} ms; ';
+    // 2026-09-16 整条消息总耗时(opencode风格，含工具多轮)用格式化时长
+    if (msg.responseTimeMs != null) {
+      note += '耗时 ${msg.responseTimeDescription}; ';
     }
-    if (!widget.message.isUser && widget.message.modelNameUsed != null) {
-      note +=
-          'model: ${widget.message.platformIdUsed ?? ''}(${widget.message.modelNameUsed!}).';
+    // 2026-09-16 轮次上限提示已由气泡内notice横幅段统一承载
+    // (与工具折叠组件平级、无法错过)，元信息行不再重复显示
+    if (!msg.isUser && msg.modelNameUsed != null) {
+      note += '${msg.platformIdUsed ?? ''}(${msg.modelNameUsed!}).';
+      // note +=
+      //     'model: ${msg.platformIdUsed ?? ''}(${msg.modelNameUsed!}).';
     }
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: 0.8.sw),
       child: Row(
+        // 2026-09-07 用户消息元信息靠右
+        mainAxisAlignment: msg.isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
+          _buildQuickActions(),
+
           const SizedBox(width: 8),
-          Expanded(
-            child: RichText(
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              text: TextSpan(
-                children: [
-                  TextSpan(
-                    text: formatRelativeDate(widget.message.createdAt),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).primaryColor,
-                    ),
-                  ),
-                  TextSpan(
-                    text: "    $note",
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).disabledColor,
-                    ),
-                  ),
-                ],
-              ),
+          // 2026-09-14 时间与note拆为独立Text：快捷操作按钮插在两者之间
+          // (按钮 → 时间 → note)，原实现拼在同一RichText无法分离
+          Text(
+            formatRelativeDate(msg.createdAt),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.55),
+              fontSize: ScreenHelper.metaFontSize(12),
             ),
           ),
+
+          if (note.isNotEmpty)
+            Flexible(
+              child: Text(
+                "    $note",
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                // 2026-09-07 用户消息元信息文字右对齐(微信式)
+                textAlign: msg.isUser ? TextAlign.right : TextAlign.left,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).disabledColor,
+                  fontSize: ScreenHelper.metaFontSize(11),
+                ),
+              ),
+            ),
         ],
+      ),
+    );
+  }
+
+  /// 2026-09-14 消息快捷操作按钮行(元信息行内，时间后)：常用操作一键直达，
+  /// 后续可扩展复制/朗读等；流式中隐藏(避免噪音)，简洁模式不显示。
+  /// 当前：AI消息→重新生成
+  Widget _buildQuickActions() {
+    if (widget.message.isStreaming) return const SizedBox.shrink();
+
+    final actions = <Widget>[];
+    if (widget.message.isAssistant) {
+      actions.add(
+        _buildQuickActionButton(
+          icon: Icons.refresh,
+          tooltip: '重新生成',
+          onTap: () => widget.onRegenerate?.call(),
+        ),
+      );
+      actions.add(const SizedBox(width: 8));
+      actions.add(
+        _buildQuickActionButton(
+          icon: Icons.copy,
+          tooltip: '复制',
+          onTap: () => widget.onCopy?.call(),
+        ),
+      );
+    }
+    if (actions.isEmpty) return const SizedBox.shrink();
+    return Row(mainAxisSize: MainAxisSize.min, children: actions);
+  }
+
+  Widget _buildQuickActionButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Padding(
+          padding: const EdgeInsets.all(3),
+          // child: Icon(icon, size: 16, color: Theme.of(context).disabledColor),
+          child: Icon(icon, size: 16, color: Theme.of(context).primaryColor),
+        ),
       ),
     );
   }
@@ -388,22 +811,25 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
   /// 长按消息，显示消息选项
   ///=============================================
   void showMessageOptions(UnifiedChatMessage message, Offset overlayPosition) {
-    // 添加振动反馈
-    HapticFeedback.mediumImpact();
+    // 振动反馈仅移动端(桌面无效调用)
+    if (ScreenHelper.isMobile()) {
+      HapticFeedback.mediumImpact();
+    }
 
     // 只有用户消息可以编辑
     final bool isUser = message.isUser;
     // 只有AI消息可以重新生成
     final bool isAssistant = message.isAssistant;
 
+    // 菜单弹出坐标钳制在屏幕安全范围内(约 200x440 菜单尺寸)，
+    // 避免宽窗口边缘右键时菜单被挤出屏幕
+    final screenSize = MediaQuery.of(context).size;
+    final dx = overlayPosition.dx.clamp(8.0, screenSize.width - 216);
+    final dy = overlayPosition.dy.clamp(8.0, screenSize.height - 456);
+
     showMenu<String>(
       context: context,
-      position: RelativeRect.fromLTRB(
-        overlayPosition.dx,
-        overlayPosition.dy,
-        overlayPosition.dx + 200,
-        overlayPosition.dy + 100,
-      ),
+      position: RelativeRect.fromLTRB(dx, dy, dx, dy),
       items: [
         // 复制按钮
         PopupMenuItem<String>(
@@ -439,6 +865,15 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
               child: buildMenuItemWithIcon(icon: Icons.refresh, text: '重新生成'),
             ),
         ],
+        // 分支树查看(非system消息可用)
+        if (!message.isSystem)
+          PopupMenuItem<String>(
+            value: 'branch_tree',
+            child: buildMenuItemWithIcon(
+              icon: Icons.account_tree,
+              text: '查看分支树',
+            ),
+          ),
         PopupMenuItem<String>(
           value: 'delete',
           child: buildMenuItemWithIcon(
@@ -450,7 +885,15 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
       ],
     ).then((value) async {
       if (value == 'copy') {
-        Clipboard.setData(ClipboardData(text: message.displayContent));
+        // 2026-09-14 分段消息适配：displayContent取content字段(分段落库时
+        // 已是各正文段拼接)；只有思考/工具卡无正文的消息(如内联降级失败)
+        // 复制为空——退化为思考文本，保证总有内容可复制
+        var textToCopy = message.displayContent;
+        if (textToCopy.trim().isEmpty &&
+            (message.thinkingContent ?? '').trim().isNotEmpty) {
+          textToCopy = message.thinkingContent!;
+        }
+        Clipboard.setData(ClipboardData(text: textToCopy));
         ToastUtils.showToast('已复制到剪贴板');
       } else if (value == 'select') {
         _handleMessageSelect(message);
@@ -463,6 +906,8 @@ class _ChatMessageItemState extends State<ChatMessageItem> {
         widget.onResend?.call();
       } else if (value == 'regenerate') {
         widget.onRegenerate?.call();
+      } else if (value == 'branch_tree') {
+        _showBranchTreeDialog();
       } else if (value == 'delete') {
         widget.onDelete?.call();
       }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../shared/widgets/toast_utils.dart';
@@ -46,22 +47,21 @@ class _DietAnalysisHistoryPageState extends State<DietAnalysisHistoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('分析历史')),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _analyses.isEmpty
-              ? const Center(child: Text('暂无分析记录'))
-              : ListView.builder(
+    return CusContentWidth(
+      child: Scaffold(
+        appBar: AppBar(title: const Text('分析历史')),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _analyses.isEmpty
+            ? const Center(child: Text('暂无分析记录'))
+            : ListView.builder(
                 itemCount: _analyses.length,
                 itemBuilder: (context, index) {
                   final analysis = _analyses[index];
 
-                  final previewText =
-                      analysis.content.length > 100
-                          ? '${analysis.content.substring(0, 100)}...'
-                          : analysis.content;
+                  final previewText = analysis.content.length > 100
+                      ? '${analysis.content.substring(0, 100)}...'
+                      : analysis.content;
 
                   final viewModel = Provider.of<DietDiaryViewModel>(
                     context,
@@ -115,25 +115,24 @@ class _DietAnalysisHistoryPageState extends State<DietAnalysisHistoryPage> {
                       onLongPress: () async {
                         var result = await showDialog(
                           context: context,
-                          builder:
-                              (context) => AlertDialog(
-                                title: const Text('删除分析'),
-                                content: const Text('确定要删除该分析吗？'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.pop(context, false);
-                                    },
-                                    child: const Text('取消'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.pop(context, true);
-                                    },
-                                    child: const Text('确定'),
-                                  ),
-                                ],
+                          builder: (context) => AlertDialog(
+                            title: const Text('删除分析'),
+                            content: const Text('确定要删除该分析吗？'),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context, false);
+                                },
+                                child: const Text('取消'),
                               ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context, true);
+                                },
+                                child: const Text('确定'),
+                              ),
+                            ],
+                          ),
                         );
 
                         if (result == true) {
@@ -149,6 +148,7 @@ class _DietAnalysisHistoryPageState extends State<DietAnalysisHistoryPage> {
                   );
                 },
               ),
+      ),
     );
   }
 

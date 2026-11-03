@@ -187,12 +187,11 @@ class _GoalSettingDialogState extends State<GoalSettingDialog> {
                 Text(
                   '${_calorieTarget.toInt()} 千卡/天',
                   style: TextStyle(
-                    color:
-                        _selectedGoal == Goal.loseWeight
-                            ? Colors.red
-                            : (_selectedGoal == Goal.gainMuscle
-                                ? Colors.green
-                                : Colors.blue),
+                    color: _selectedGoal == Goal.loseWeight
+                        ? Colors.red
+                        : (_selectedGoal == Goal.gainMuscle
+                              ? Colors.green
+                              : Colors.blue),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -256,20 +255,19 @@ class _GoalSettingDialogState extends State<GoalSettingDialog> {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<double>(
-          value: _selectedActivityLevel,
+          initialValue: _selectedActivityLevel,
           decoration: const InputDecoration(
             border: OutlineInputBorder(),
             contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           ),
-          items:
-              _activityLevels
-                  .map(
-                    (level) => DropdownMenuItem(
-                      value: level,
-                      child: Text(getActivityLevelText(level)),
-                    ),
-                  )
-                  .toList(),
+          items: _activityLevels
+              .map(
+                (level) => DropdownMenuItem(
+                  value: level,
+                  child: Text(getActivityLevelText(level)),
+                ),
+              )
+              .toList(),
           onChanged: (value) {
             if (value != null) {
               setState(() {

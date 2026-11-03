@@ -87,17 +87,17 @@
         {
           "id": "16:2724089686478491000",
           "name": "parentId",
+          "indexId": "1:1544726077037522817",
           "type": 11,
           "flags": 520,
-          "indexId": "1:1544726077037522817",
           "relationTarget": "BranchChatMessage"
         },
         {
           "id": "17:5656319411491416217",
           "name": "sessionId",
+          "indexId": "2:5804341374734258898",
           "type": 11,
           "flags": 520,
-          "indexId": "2:5804341374734258898",
           "relationTarget": "BranchChatSession"
         },
         {

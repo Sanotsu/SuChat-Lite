@@ -90,7 +90,7 @@ class _OneReadingSettingsState extends State<OneReadingSettings> {
               trailing: Switch(
                 value: _isDarkMode,
                 onChanged: _updateDarkMode,
-                activeColor: Theme.of(context).primaryColor,
+                activeThumbColor: Theme.of(context).primaryColor,
               ),
             ),
 
@@ -149,7 +149,7 @@ class _OneReadingSettingsState extends State<OneReadingSettings> {
               trailing: Switch(
                 value: _showReadingProgress,
                 onChanged: _updateShowProgress,
-                activeColor: Theme.of(context).primaryColor,
+                activeThumbColor: Theme.of(context).primaryColor,
               ),
             ),
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -100,11 +101,9 @@ class _BillAddPageState extends State<BillAddPage> {
       // 找到选中的分类对象
       _selectedCategoryObj = _categories.firstWhere(
         (c) => c.name == _selectedCategory,
-        orElse:
-            () =>
-                _categories.isNotEmpty
-                    ? _categories.first
-                    : throw Exception('没有可用的分类'),
+        orElse: () => _categories.isNotEmpty
+            ? _categories.first
+            : throw Exception('没有可用的分类'),
       );
 
       if (_selectedCategoryObj != null) {
@@ -220,20 +219,20 @@ class _BillAddPageState extends State<BillAddPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.editItem != null ? '编辑账单' : '添加账单'),
-        actions: [
-          TextButton(
-            onPressed: _isLoading ? null : _saveBill,
-            child: const Text('保存'),
-          ),
-        ],
-      ),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
+    return CusContentWidth(
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.editItem != null ? '编辑账单' : '添加账单'),
+          actions: [
+            TextButton(
+              onPressed: _isLoading ? null : _saveBill,
+              child: const Text('保存'),
+            ),
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -260,6 +259,7 @@ class _BillAddPageState extends State<BillAddPage> {
                   ),
                 ),
               ),
+      ),
     );
   }
 
@@ -277,13 +277,12 @@ class _BillAddPageState extends State<BillAddPage> {
                 color: _selectedType == 1 ? Colors.green : null,
               ),
               child: ElevatedButton(
-                onPressed:
-                    _selectedType == 1
-                        ? null
-                        : () {
-                          setState(() => _selectedType = 1);
-                          _loadCategories();
-                        },
+                onPressed: _selectedType == 1
+                    ? null
+                    : () {
+                        setState(() => _selectedType = 1);
+                        _loadCategories();
+                      },
 
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -313,13 +312,12 @@ class _BillAddPageState extends State<BillAddPage> {
                 color: _selectedType == 0 ? Colors.red : null,
               ),
               child: ElevatedButton(
-                onPressed:
-                    _selectedType == 0
-                        ? null
-                        : () {
-                          setState(() => _selectedType = 0);
-                          _loadCategories();
-                        },
+                onPressed: _selectedType == 0
+                    ? null
+                    : () {
+                        setState(() => _selectedType = 0);
+                        _loadCategories();
+                      },
 
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -412,71 +410,69 @@ class _BillAddPageState extends State<BillAddPage> {
         ),
 
         Container(
-          height:
-              ScreenHelper.isDesktop() ? 130 : (_selectedType == 0 ? 110 : 220),
+          height: ScreenHelper.isDesktop()
+              ? 130
+              : (_selectedType == 0 ? 110 : 220),
           padding: EdgeInsets.symmetric(
             horizontal: ScreenHelper.isDesktop() ? 16 : 0,
             vertical: 0,
           ),
-          child:
-              _categories.isEmpty
-                  ? const Center(child: Text('暂无分类数据'))
-                  : ScreenHelper.isDesktop()
-                  ? Wrap(
-                    spacing: 16,
-                    runSpacing: 8,
-                    children:
-                        _categories.map((category) {
-                          return InkWell(
-                            onTap: () {
-                              setState(() {
-                                _selectedCategory = category.name;
-                                _selectedCategoryObj = category;
-                              });
-                            },
-                            child: CategoryIcon(
-                              category: category,
-                              size: 36,
-                              showName: true,
-                              selected: category.name == _selectedCategory,
-                              showDefaultBgColor: false,
-                              showDefaultIconColor: true,
-                            ),
-                          );
-                        }).toList(),
-                  )
-                  : GridView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 6, // 每行显示5个
-                          childAspectRatio: 1, // 保持正方形
-                          crossAxisSpacing: 8, // 水平间距
-                          mainAxisSpacing: 8, // 垂直间距
-                        ),
-                    itemCount: _categories.length,
-                    itemBuilder: (context, index) {
-                      final category = _categories[index];
-                      final isSelected = category.name == _selectedCategory;
-
-                      return InkWell(
-                        onTap: () {
-                          setState(() {
-                            _selectedCategory = category.name;
-                            _selectedCategoryObj = category;
-                          });
-                        },
-                        child: CategoryIcon(
-                          category: category,
-                          size: 30,
-                          showName: true,
-                          selected: isSelected,
-                          showDefaultBgColor: false,
-                          showDefaultIconColor: true,
-                        ),
-                      );
-                    },
+          child: _categories.isEmpty
+              ? const Center(child: Text('暂无分类数据'))
+              : ScreenHelper.isDesktop()
+              ? Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
+                  children: _categories.map((category) {
+                    return InkWell(
+                      onTap: () {
+                        setState(() {
+                          _selectedCategory = category.name;
+                          _selectedCategoryObj = category;
+                        });
+                      },
+                      child: CategoryIcon(
+                        category: category,
+                        size: 36,
+                        showName: true,
+                        selected: category.name == _selectedCategory,
+                        showDefaultBgColor: false,
+                        showDefaultIconColor: true,
+                      ),
+                    );
+                  }).toList(),
+                )
+              : GridView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 6, // 每行显示5个
+                    childAspectRatio: 1, // 保持正方形
+                    crossAxisSpacing: 8, // 水平间距
+                    mainAxisSpacing: 8, // 垂直间距
                   ),
+                  itemCount: _categories.length,
+                  itemBuilder: (context, index) {
+                    final category = _categories[index];
+                    final isSelected = category.name == _selectedCategory;
+
+                    return InkWell(
+                      onTap: () {
+                        setState(() {
+                          _selectedCategory = category.name;
+                          _selectedCategoryObj = category;
+                        });
+                      },
+                      child: CategoryIcon(
+                        category: category,
+                        size: 30,
+                        showName: true,
+                        selected: isSelected,
+                        showDefaultBgColor: false,
+                        showDefaultIconColor: true,
+                      ),
+                    );
+                  },
+                ),
         ),
 
         Padding(

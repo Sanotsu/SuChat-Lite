@@ -71,12 +71,17 @@ class ImageGenerationService {
         (model.modelName.contains('wan2.5-i2i') ||
             model.modelName.contains('qwen-mt-image'));
 
+    // 2026-10-14 FIX：此前同步/图生图/任务轮询三处URL硬编码了
+    // dashscope完整域名，不走平台hostUrl，用户自建代理场景失效；
+    // 统一按平台host拼接
+    final host = platform.hostUrl.replaceAll(RegExp(r'/+$'), '');
+
     try {
       final responseData = await HttpUtils.post(
         path: isAliyunSync
-            ? "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation"
+            ? '$host/api/v1/services/aigc/multimodal-generation/generation'
             : isAliyunImage2image
-            ? 'https://dashscope.aliyuncs.com/api/v1/services/aigc/image2image/image-synthesis'
+            ? '$host/api/v1/services/aigc/image2image/image-synthesis'
             : url,
         headers: headers,
         data: requestBody,
@@ -90,13 +95,17 @@ class ImageGenerationService {
           // 异步的图片生成url为  /text2image/image-synthesis (wanx2、wan2.5、flux等)
           return isAliyunSync
               ? ImageGenerationResponse.fromAliyunSyncResponse(responseData)
-              : _handleAliyunResponse(responseData, apiKey, url);
+              : await _handleAliyunResponse(responseData, apiKey, host);
         case 'siliconCloud':
           return ImageGenerationResponse.fromSiliconCloudResponse(responseData);
         case 'zhipu':
           return ImageGenerationResponse.fromZhipuResponse(responseData);
         case 'volcengine':
           return ImageGenerationResponse.fromVolcengineResponse(responseData);
+        case 'openrouter':
+          // OpenRouter的POST /images同步返回OpenAI兼容结构
+          // (data[].b64_json优先，见generate-an-image文档)
+          return ImageGenerationResponse.fromOpenRouterResponse(responseData);
         default:
           return ImageGenerationResponse.fromSiliconCloudResponse(responseData);
       }
@@ -123,7 +132,7 @@ class ImageGenerationService {
       await Future.delayed(pollInterval);
 
       final pollData = await HttpUtils.get(
-        path: 'https://dashscope.aliyuncs.com/api/v1/tasks/$taskId',
+        path: '$baseUrl/api/v1/tasks/$taskId',
         headers: {'Authorization': 'Bearer $apiKey'},
         showLoading: false,
       );

@@ -9,6 +9,9 @@ List<Map<String, dynamic>> BUILD_IN_PLATFORMS = [
     'cc_prefix': '/compatible-mode/v1/chat/completions',
     // 2025-10-08 目前仅少数生图模型（qwen-image）支持同步任务，所以这里用轮询的异步任务前缀
     'img_gen_prefix': '/api/v1/services/aigc/text2image/image-synthesis',
+    // 视频生成(异步任务提交)，查询统一走 /api/v1/tasks/{taskId}
+    'video_gen_prefix':
+        '/api/v1/services/aigc/video-generation/video-synthesis',
     // 2025-10-09 语言合成 qwen-tts和qwen3-tts 都是同步任务了(和文生图同步任务一样的前缀)
     'tts_prefix': '/api/v1/services/aigc/multimodal-generation/generation',
     'asr_prefix': '/api/v1/services/aigc/multimodal-generation/generation',
@@ -19,6 +22,8 @@ List<Map<String, dynamic>> BUILD_IN_PLATFORMS = [
     'host_url': 'https://api.siliconflow.cn',
     'cc_prefix': '/v1/chat/completions',
     'img_gen_prefix': '/v1/images/generations',
+    // 视频生成(提交任务)，查询走 POST /v1/video/status
+    'video_gen_prefix': '/v1/video/submit',
     'tts_prefix': '/v1/audio/speech',
     'asr_prefix': '/v1/audio/transcriptions',
   },
@@ -28,6 +33,8 @@ List<Map<String, dynamic>> BUILD_IN_PLATFORMS = [
     'host_url': 'https://open.bigmodel.cn/api/paas',
     'cc_prefix': '/v4/chat/completions',
     'img_gen_prefix': '/v4/images/generations',
+    // 视频生成(提交任务)，查询走 GET /v4/async-result/{taskId}
+    'video_gen_prefix': '/v4/videos/generations',
     'tts_prefix': '/v4/audio/speech',
     'asr_prefix': '/v4/audio/transcriptions',
   },
@@ -37,6 +44,8 @@ List<Map<String, dynamic>> BUILD_IN_PLATFORMS = [
     'host_url': 'https://ark.cn-beijing.volces.com/api',
     'cc_prefix': '/v3/chat/completions',
     'img_gen_prefix': '/v3/images/generations',
+    // 视频生成(Seedance系列，内容生成异步任务)，查询走 GET /v3/contents/generations/tasks/{id}
+    'video_gen_prefix': '/v3/contents/generations/tasks',
   },
   {
     'id': 'deepseek',
@@ -45,15 +54,31 @@ List<Map<String, dynamic>> BUILD_IN_PLATFORMS = [
     'cc_prefix': '/v1/chat/completions',
   },
   {
-    'id': 'lingyiwanwu',
-    'display_name': '零一万物',
-    'host_url': 'https://api.lingyiwanwu.com',
+    'id': 'mimo',
+    'display_name': '小米 MiMo',
+    'host_url': 'https://api.xiaomimimo.com',
     'cc_prefix': '/v1/chat/completions',
+    // 2026-09-10 MiMo的语音合成/识别不走OpenAI audio端点，与对话共用
+    // chat completions(chat风格：ASR用input_audio内容块传base64音频，
+    // TTS用user/assistant消息对，合成音频以base64返回在message.audio.data)
+    'tts_prefix': '/v1/chat/completions',
+    'asr_prefix': '/v1/chat/completions',
   },
   {
-    'id': 'infini',
-    'display_name': '无问芯穹',
-    'host_url': 'https://cloud.infini-ai.com/maas',
+    // 2026-09-18 新增内置平台OpenRouter(聚合400+模型的一个OpenAI兼容
+    // 网关)。全模态支持(2026-09-18依官方API文档核定)：
+    // 对话 /v1/chat/completions；图片 POST /images(同步，响应data[].b64_json
+    // 与OpenAI兼容)；视频 POST /videos 提交+GET /videos/{id} 轮询(响应
+    // status+unsigned_urls)；TTS /audio/speech、ASR /audio/transcriptions
+    // (两者均OpenAI兼容零适配)。models检查接口default前缀/v1/models
+    // 正好拼出/api/v1/models，但密钥检查专用轻量的GET /v1/key
+    'id': 'openrouter',
+    'display_name': 'OpenRouter',
+    'host_url': 'https://openrouter.ai/api',
     'cc_prefix': '/v1/chat/completions',
+    'img_gen_prefix': '/images',
+    'video_gen_prefix': '/videos',
+    'tts_prefix': '/audio/speech',
+    'asr_prefix': '/audio/transcriptions',
   },
 ];

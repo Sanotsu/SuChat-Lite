@@ -33,13 +33,14 @@ OneRecommendContent _$OneRecommendContentFromJson(Map<String, dynamic> json) =>
     OneRecommendContent(
       id: json['id'] as String?,
       category: json['category'] as String?,
-      displayCategory: (json['display_category'] as num?)?.toInt(),
+      displayCategory: (tolerantIntReadValue(json, 'display_category') as num?)
+          ?.toInt(),
       itemId: json['item_id'] as String?,
       title: json['title'] as String?,
       forward: json['forward'] as String?,
       imgUrl: json['img_url'] as String?,
       picIpX: json['pic_ipX'] as String?,
-      likeCount: (json['like_count'] as num?)?.toInt(),
+      likeCount: (tolerantIntReadValue(json, 'like_count') as num?)?.toInt(),
       postDate: json['post_date'] as String?,
       lastUpdateDate: json['last_update_date'] as String?,
       author: json['author'] == null
@@ -47,9 +48,10 @@ OneRecommendContent _$OneRecommendContentFromJson(Map<String, dynamic> json) =>
           : OneAuthor.fromJson(json['author'] as Map<String, dynamic>),
       videoUrl: json['video_url'] as String?,
       audioUrl: json['audio_url'] as String?,
-      audioPlatform: (json['audio_platform'] as num?)?.toInt(),
+      audioPlatform: (tolerantIntReadValue(json, 'audio_platform') as num?)
+          ?.toInt(),
       startVideo: json['start_video'] as String?,
-      hasReading: (json['has_reading'] as num?)?.toInt(),
+      hasReading: (tolerantIntReadValue(json, 'has_reading') as num?)?.toInt(),
       volume: json['volume'],
       picInfo: json['pic_info'] as String?,
       wordsInfo: json['words_info'] as String?,
@@ -62,7 +64,8 @@ OneRecommendContent _$OneRecommendContentFromJson(Map<String, dynamic> json) =>
       number: json['number'],
       serialId: json['serial_id'],
       serialList: json['serial_list'] as List<dynamic>?,
-      movieStoryId: (json['movie_story_id'] as num?)?.toInt(),
+      movieStoryId: (tolerantIntReadValue(json, 'movie_story_id') as num?)
+          ?.toInt(),
       contentId: json['content_id'] as String?,
       contentType: json['content_type'] as String?,
       contentBgcolor: json['content_bgcolor'] as String?,
@@ -156,7 +159,7 @@ Map<String, dynamic> _$OneRecommendMenuContentToJson(
 
 OneMonthRecommend _$OneMonthRecommendFromJson(Map<String, dynamic> json) =>
     OneMonthRecommend(
-      id: (json['id'] as num?)?.toInt(),
+      id: (tolerantIntReadValue(json, 'id') as num?)?.toInt(),
       date: json['date'] as String?,
       cover: json['cover'] as String?,
     );

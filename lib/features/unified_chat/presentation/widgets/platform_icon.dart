@@ -31,8 +31,6 @@ Widget buildPlatformIcon(UnifiedPlatformSpec platform, {double size = 24}) {
 String _getPlatformIcon(String platformId) {
   const commonIcon = 'assets/platform_icons/small/';
   switch (platformId) {
-    case 'lingyiwanwu':
-      return '${commonIcon}lingyiwanwu.png';
     case 'deepseek':
       return '${commonIcon}deepseek.png';
     case 'zhipu':
@@ -48,8 +46,10 @@ String _getPlatformIcon(String platformId) {
       return '${commonIcon}aliyun.png';
     case 'siliconCloud':
       return '${commonIcon}siliconcloud.png';
-    case 'infini':
-      return '${commonIcon}infini.png';
+    case 'mimo':
+      return '${commonIcon}mimo.png';
+    case 'openrouter':
+      return '${commonIcon}openrouter.png';
     default:
       return '';
   }

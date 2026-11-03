@@ -21,6 +21,11 @@ OpenAIChatCompletionResponse _$OpenAIChatCompletionResponseFromJson(
       ? null
       : OpenAIUsage.fromJson(json['usage'] as Map<String, dynamic>),
   customText: json['customText'] as String?,
+  toolInvoking: json['toolInvoking'] as String?,
+  toolResult: json['toolResult'] as String?,
+  toolArgsSummary: json['toolArgsSummary'] as String?,
+  toolElapsedMs: (json['toolElapsedMs'] as num?)?.toInt(),
+  limitNotice: json['limitNotice'] as String?,
 );
 
 Map<String, dynamic> _$OpenAIChatCompletionResponseToJson(
@@ -34,6 +39,11 @@ Map<String, dynamic> _$OpenAIChatCompletionResponseToJson(
   'choices': instance.choices.map((e) => e.toJson()).toList(),
   'usage': instance.usage?.toJson(),
   'customText': instance.customText,
+  'toolInvoking': ?instance.toolInvoking,
+  'toolResult': ?instance.toolResult,
+  'toolArgsSummary': ?instance.toolArgsSummary,
+  'toolElapsedMs': ?instance.toolElapsedMs,
+  'limitNotice': ?instance.limitNotice,
 };
 
 OpenAIChoice _$OpenAIChoiceFromJson(Map<String, dynamic> json) => OpenAIChoice(
@@ -289,43 +299,6 @@ Map<String, dynamic> _$OpenAIModelsResponseToJson(
 ) => <String, dynamic>{
   'object': instance.object,
   'data': instance.data.map((e) => e.toJson()).toList(),
-};
-
-OpenAIEmbeddingData _$OpenAIEmbeddingDataFromJson(Map<String, dynamic> json) =>
-    OpenAIEmbeddingData(
-      object: json['object'] as String,
-      embedding: (json['embedding'] as List<dynamic>)
-          .map((e) => (e as num).toDouble())
-          .toList(),
-      index: (json['index'] as num).toInt(),
-    );
-
-Map<String, dynamic> _$OpenAIEmbeddingDataToJson(
-  OpenAIEmbeddingData instance,
-) => <String, dynamic>{
-  'object': instance.object,
-  'embedding': instance.embedding,
-  'index': instance.index,
-};
-
-OpenAIEmbeddingResponse _$OpenAIEmbeddingResponseFromJson(
-  Map<String, dynamic> json,
-) => OpenAIEmbeddingResponse(
-  object: json['object'] as String,
-  data: (json['data'] as List<dynamic>)
-      .map((e) => OpenAIEmbeddingData.fromJson(e as Map<String, dynamic>))
-      .toList(),
-  model: json['model'] as String,
-  usage: OpenAIUsage.fromJson(json['usage'] as Map<String, dynamic>),
-);
-
-Map<String, dynamic> _$OpenAIEmbeddingResponseToJson(
-  OpenAIEmbeddingResponse instance,
-) => <String, dynamic>{
-  'object': instance.object,
-  'data': instance.data.map((e) => e.toJson()).toList(),
-  'model': instance.model,
-  'usage': instance.usage.toJson(),
 };
 
 OpenAIImageData _$OpenAIImageDataFromJson(Map<String, dynamic> json) =>

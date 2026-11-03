@@ -1,12 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 
+import '../../core/utils/screen_helper.dart';
 import '../../core/utils/simple_tools.dart';
 import '../constants/constants.dart';
 import 'simple_tool_widget.dart';
@@ -32,7 +34,8 @@ Widget buildImageViewCarouselSlider(
 }) {
   return CarouselSlider(
     options: CarouselOptions(
-      autoPlay: true, // 自动播放
+      // 桌面不自动播放(单张图自动轮播干扰阅读，桌面场景均关闭)
+      autoPlay: !ScreenHelper.isDesktop(), // 自动播放
       enlargeCenterPage: true, // 居中图片放大
       aspectRatio: aspectRatio ?? 16 / 9, // 图片宽高比
       viewportFraction: 1, // 图片占屏幕宽度的比例
@@ -75,7 +78,8 @@ Widget buildImageCarouselSlider(
 
   return CarouselSlider(
     options: CarouselOptions(
-      autoPlay: true, // 自动播放
+      // 桌面不自动播放(单张图自动轮播干扰阅读，桌面场景均关闭)
+      autoPlay: !ScreenHelper.isDesktop(), // 自动播放
       enlargeCenterPage: true, // 居中图片放大
       aspectRatio: aspectRatio ?? 16 / 9, // 图片宽高比
       viewportFraction: 1, // 图片占屏幕宽度的比例
@@ -178,6 +182,15 @@ Widget _buildPhotoDialog(ImageProvider imageProvider) {
   );
 }
 
+/// 2026-09-15 单张图片全屏预览弹窗(公开入口)：
+/// markdown渲染图片点击放大等场景使用，支持双指/滚轮缩放
+void showImagePreviewDialog(BuildContext context, String imageUrl) {
+  showDialog(
+    context: context,
+    builder: (_) => _buildPhotoDialog(getImageProvider(imageUrl)),
+  );
+}
+
 /// 构建图片画廊弹窗
 Widget _buildPhotoGalleryDialog(List<String> imageList) {
   // 这个弹窗默认是无法全屏的，上下左右会留点空，点击这些空隙可以关闭弹窗
@@ -202,6 +215,35 @@ Widget _buildPhotoView(
   ImageProvider imageProvider, {
   bool enableRotation = true,
 }) {
+  // 2026-09-04 桌面端适配：
+  // 1. 鼠标滚轮缩放(Listener 捕获 PointerScrollEvent 驱动 scaleStateController)
+  // 2. 桌面禁用旋转(鼠标无法双指旋转，避免误触)
+  if (ScreenHelper.isDesktop()) {
+    final scaleController = PhotoViewScaleStateController();
+    return Listener(
+      onPointerSignal: (event) {
+        if (event is PointerScrollEvent) {
+          // 滚轮下: 放大；滚轮上: 缩回。通过切换缩放状态实现
+          scaleController.scaleState = event.scrollDelta.dy > 0
+              ? PhotoViewScaleState.zoomedIn
+              : PhotoViewScaleState.initial;
+        }
+      },
+      child: PhotoView(
+        imageProvider: imageProvider,
+        // 设置图片背景为透明
+        backgroundDecoration: const BoxDecoration(color: Colors.transparent),
+        // 桌面鼠标无法旋转手势，禁用
+        enableRotation: false,
+        scaleStateController: scaleController,
+        // 缩放的最大最小限制
+        minScale: PhotoViewComputedScale.contained * 0.8,
+        maxScale: PhotoViewComputedScale.covered * 2,
+        errorBuilder: (_, _, _) => const Icon(Icons.error),
+      ),
+    );
+  }
+
   return PhotoView(
     imageProvider: imageProvider,
     // 设置图片背景为透明

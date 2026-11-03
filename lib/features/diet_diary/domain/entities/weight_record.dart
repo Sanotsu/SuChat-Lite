@@ -37,12 +37,12 @@ class WeightRecord {
       weight: map['weight'] as double,
       date: DateTime.parse(map['date'] as String),
       note: map['note'] as String?,
-      gmtCreate:
-          map['gmtCreate'] != null ? DateTime.parse(map['gmtCreate']) : null,
-      gmtModified:
-          map['gmtModified'] != null
-              ? DateTime.parse(map['gmtModified'])
-              : null,
+      gmtCreate: map['gmtCreate'] != null
+          ? DateTime.parse(map['gmtCreate'])
+          : null,
+      gmtModified: map['gmtModified'] != null
+          ? DateTime.parse(map['gmtModified'])
+          : null,
     );
   }
 

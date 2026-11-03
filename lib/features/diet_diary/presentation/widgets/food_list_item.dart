@@ -46,22 +46,18 @@ class FoodListItem extends StatelessWidget {
               SizedBox(
                 width: 60,
                 height: 60,
-                child:
-                    hasImage
-                        ? ClipRRect(
+                child: hasImage
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: buildImageViewCarouselSlider([food.imageUrl!]),
+                      )
+                    : Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
                           borderRadius: BorderRadius.circular(8),
-                          child: buildImageViewCarouselSlider([food.imageUrl!]),
-                        )
-                        : Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            Icons.restaurant,
-                            color: Colors.grey[400],
-                          ),
                         ),
+                        child: Icon(Icons.restaurant, color: Colors.grey[400]),
+                      ),
               ),
               const SizedBox(width: 8),
 

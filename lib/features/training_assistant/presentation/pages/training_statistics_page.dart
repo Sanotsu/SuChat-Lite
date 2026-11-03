@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
+
 import 'package:provider/provider.dart';
 
 import '../../domain/entities/training_record.dart';
@@ -111,73 +113,76 @@ class _TrainingStatisticsPageState extends State<TrainingStatisticsPage> {
       ),
     ];
 
-    final content =
-        _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _error != null
-            ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '错误: $_error',
-                    style: const TextStyle(color: Colors.red),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _loadTrainingRecords,
-                    child: const Text('重试'),
-                  ),
-                ],
-              ),
-            )
-            : _records.isEmpty
-            ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.sports_score, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text(
-                    '暂无训练记录',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 8),
-                  Text('完成训练后，这里会显示您的训练统计数据', textAlign: TextAlign.center),
-                ],
-              ),
-            )
-            : TrainingStatistics(
-              records: _records,
-              startDate: _startDate,
-              endDate: _endDate,
-              onRecordTap: (record) {
-                // 导航到训练记录详情页面
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder:
-                        (context) =>
-                            TrainingRecordDetailPage(recordId: record.recordId),
-                  ),
-                );
-              },
-            );
+    final content = _isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : _error != null
+        ? Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '错误: $_error',
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _loadTrainingRecords,
+                  child: const Text('重试'),
+                ),
+              ],
+            ),
+          )
+        : _records.isEmpty
+        ? const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.sports_score, size: 64, color: Colors.grey),
+                SizedBox(height: 16),
+                Text(
+                  '暂无训练记录',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8),
+                Text('完成训练后，这里会显示您的训练统计数据', textAlign: TextAlign.center),
+              ],
+            ),
+          )
+        : TrainingStatistics(
+            records: _records,
+            startDate: _startDate,
+            endDate: _endDate,
+            onRecordTap: (record) {
+              // 导航到训练记录详情页面
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      TrainingRecordDetailPage(recordId: record.recordId),
+                ),
+              );
+            },
+          );
 
     // 根据是否显示AppBar返回不同的布局
+    // 2026-09-04 桌面端适配：内容限宽(两个分支均为独立Scaffold页)
     return widget.showAppBar
-        ? Scaffold(
-          appBar: AppBar(title: const Text('训练统计'), actions: actions),
-          body: content,
-        )
-        : Scaffold(
-          appBar: AppBar(
-            automaticallyImplyLeading: false,
-            title: const SizedBox.shrink(),
-            actions: actions,
-          ),
-          body: content,
-        );
+        ? CusContentWidth(
+            child: Scaffold(
+              appBar: AppBar(title: const Text('训练统计'), actions: actions),
+              body: content,
+            ),
+          )
+        : CusContentWidth(
+            child: Scaffold(
+              appBar: AppBar(
+                automaticallyImplyLeading: false,
+                title: const SizedBox.shrink(),
+                actions: actions,
+              ),
+              body: content,
+            ),
+          );
   }
 }

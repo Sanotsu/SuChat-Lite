@@ -71,76 +71,69 @@ class _MealFoodListCardState extends State<MealFoodListCard> {
           _expandedPanels[index] = !(_expandedPanels[index] ?? false);
         });
       },
-      children:
-          sortedMeals.asMap().entries.map((entry) {
-            final index = entry.key;
-            final meal = entry.value;
-            final mealType = meal.mealType;
-            final mealId = meal.id;
+      children: sortedMeals.asMap().entries.map((entry) {
+        final index = entry.key;
+        final meal = entry.value;
+        final mealType = meal.mealType;
+        final mealId = meal.id;
 
-            // 如果mealId为空，则显示空列表
-            if (mealId == null) {
-              return ExpansionPanel(
-                headerBuilder:
-                    (context, isExpanded) => _buildMealHeader(mealType, 0),
-                body: const Center(child: Text('无法加载餐次详情')),
-                isExpanded: _expandedPanels[index] ?? false,
-              );
-            }
+        // 如果mealId为空，则显示空列表
+        if (mealId == null) {
+          return ExpansionPanel(
+            headerBuilder: (context, isExpanded) =>
+                _buildMealHeader(mealType, 0),
+            body: const Center(child: Text('无法加载餐次详情')),
+            isExpanded: _expandedPanels[index] ?? false,
+          );
+        }
 
-            // 获取该餐次的食品详情
-            final foodDetails = widget.viewModel.mealFoodDetails[mealId] ?? [];
-            final hasFood = foodDetails.isNotEmpty;
+        // 获取该餐次的食品详情
+        final foodDetails = widget.viewModel.mealFoodDetails[mealId] ?? [];
+        final hasFood = foodDetails.isNotEmpty;
 
-            return ExpansionPanel(
-              headerBuilder:
-                  (context, isExpanded) => _buildMealHeader(
-                    mealType,
-                    foodDetails
-                        .fold(0.0, (sum, food) => sum + food.calories)
-                        .toInt(),
-                    hasFood: hasFood,
-                  ),
-              body:
-                  hasFood
-                      ? ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: foodDetails.length,
-                        itemBuilder: (context, index) {
-                          final food = foodDetails[index];
-                          return ListTile(
-                            dense: true,
-                            title: Text(
-                              food.foodName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${food.quantity}${food.unit ?? '克'} · ${food.calories.toInt()}千卡',
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                                Text(
-                                  '碳水: ${food.carbs.toInt()}克 · 蛋白质: ${food.protein.toInt()}克 · 脂肪: ${food.fat.toInt()}克',
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      )
-                      : const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Center(child: Text('未记录食品')),
+        return ExpansionPanel(
+          headerBuilder: (context, isExpanded) => _buildMealHeader(
+            mealType,
+            foodDetails.fold(0.0, (sum, food) => sum + food.calories).toInt(),
+            hasFood: hasFood,
+          ),
+          body: hasFood
+              ? ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: foodDetails.length,
+                  itemBuilder: (context, index) {
+                    final food = foodDetails[index];
+                    return ListTile(
+                      dense: true,
+                      title: Text(
+                        food.foodName,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-              isExpanded: _expandedPanels[index] ?? false,
-            );
-          }).toList(),
+                      subtitle: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${food.quantity}${food.unit ?? '克'} · ${food.calories.toInt()}千卡',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          Text(
+                            '碳水: ${food.carbs.toInt()}克 · 蛋白质: ${food.protein.toInt()}克 · 脂肪: ${food.fat.toInt()}克',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                )
+              : const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Center(child: Text('未记录食品')),
+                ),
+          isExpanded: _expandedPanels[index] ?? false,
+        );
+      }).toList(),
     );
   }
 
@@ -188,10 +181,9 @@ class _MealFoodListCardState extends State<MealFoodListCard> {
       ),
       title: Text(title),
       subtitle: Text('$calories 千卡'),
-      trailing:
-          hasFood
-              ? null
-              : const Icon(Icons.remove_circle_outline, color: Colors.grey),
+      trailing: hasFood
+          ? null
+          : const Icon(Icons.remove_circle_outline, color: Colors.grey),
     );
   }
 }

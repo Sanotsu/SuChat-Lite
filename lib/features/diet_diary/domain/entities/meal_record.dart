@@ -39,12 +39,12 @@ class MealRecord {
       mealType: MealType.values[map['mealType']],
       imageUrls: map['imageUrls']?.split(','),
       description: map['description'],
-      gmtCreate:
-          map['gmtCreate'] != null ? DateTime.tryParse(map['gmtCreate']) : null,
-      gmtModified:
-          map['gmtModified'] != null
-              ? DateTime.tryParse(map['gmtModified'])
-              : null,
+      gmtCreate: map['gmtCreate'] != null
+          ? DateTime.tryParse(map['gmtCreate'])
+          : null,
+      gmtModified: map['gmtModified'] != null
+          ? DateTime.tryParse(map['gmtModified'])
+          : null,
     );
   }
 

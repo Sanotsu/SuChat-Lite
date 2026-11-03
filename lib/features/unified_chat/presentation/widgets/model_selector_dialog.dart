@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/utils/screen_helper.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import '../../data/models/unified_model_spec.dart';
 import '../../data/models/unified_platform_spec.dart';
 import '../../data/database/unified_chat_dao.dart';
@@ -31,6 +32,9 @@ class _ModelSelectorDialogState extends State<ModelSelectorDialog> {
   Map<String, List<UnifiedModelSpec>> _modelsByPlatform = {};
   Map<String, UnifiedPlatformSpec> _platforms = {};
   bool _isLoading = true;
+
+  /// 搜索关键词(按模型名/平台名过滤，2026-08-31 从旧版选择器补齐)
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -94,44 +98,151 @@ class _ModelSelectorDialogState extends State<ModelSelectorDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('选择模型'),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      content: SizedBox(
-        width: double.maxFinite,
-        height: 0.6.sh,
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 收藏模型区域
-                    _buildFavoriteSection(),
+    // 搜索过滤：匹配模型显示名/模型名/平台显示名(不区分大小写)
+    final query = _searchQuery.trim().toLowerCase();
+    final filteredFavorites = query.isEmpty
+        ? _favoriteModels
+        : _favoriteModels.where((m) => _matchesQuery(m, query)).toList();
+    final filteredByPlatform = <String, List<UnifiedModelSpec>>{};
+    for (final entry in _modelsByPlatform.entries) {
+      if (query.isEmpty) {
+        filteredByPlatform[entry.key] = entry.value;
+      } else {
+        final hits = entry.value.where((m) => _matchesQuery(m, query)).toList();
+        if (hits.isNotEmpty) filteredByPlatform[entry.key] = hits;
+      }
+    }
+    final hasResults =
+        filteredFavorites.isNotEmpty || filteredByPlatform.isNotEmpty;
 
-                    // 按平台分组的模型
-                    ..._modelsByPlatform.entries.map((entry) {
-                      return _buildPlatformSection(entry.key, entry.value);
-                    }),
-                  ],
-                ),
-              ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
+    // 2026-09-09 弹窗重叠修复：此前用AlertDialog三段式(title/content/
+    // actions)+固定高度SizedBox——当0.6.sh超过AlertDialog给content的
+    // 高度预算(总高-标题-按钮)时SizedBox无视约束强行溢出，列表绘制
+    // 盖住标题/搜索框/取消按钮。改为自定义Dialog：标题/搜索框/列表/
+    // 按钮同处一个受约束Column，列表用Expanded天然不越界
+    // 2026-09-10 弹窗宽度统一(dialogWidth=640)：与其他AlertDialog弹窗
+    // 同模式——外层Align+ConstrainedBox限宽(内部Dialog的insetPadding16
+    // 在640内扣除，视觉宽度=608)，Container改maxFinite撑满
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isDesktop = ScreenHelper.isDesktop();
+
+    return Align(
+      alignment: Alignment.center,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: CusContentWidth.dialogWidth,
         ),
-      ],
+        child: Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Material(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            clipBehavior: Clip.antiAlias,
+            child: Container(
+              width: double.maxFinite,
+              constraints: BoxConstraints(
+                maxHeight: isDesktop ? 600.0 : screenHeight * 0.75,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 标题栏
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Row(
+                      children: [
+                        Text(
+                          '选择模型',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // 搜索框
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: TextField(
+                      onChanged: (v) => setState(() => _searchQuery = v),
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search, size: 20),
+                        hintText: '搜索模型或平台名称',
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        suffixIcon: _searchQuery.isEmpty
+                            ? null
+                            : IconButton(
+                                icon: const Icon(Icons.clear, size: 18),
+                                onPressed: () =>
+                                    setState(() => _searchQuery = ''),
+                              ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // 模型列表(Expanded约束，不与标题/按钮重叠)
+                  Expanded(
+                    child: _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : hasResults
+                        ? SingleChildScrollView(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // 收藏模型区域
+                                if (filteredFavorites.isNotEmpty)
+                                  _buildFavoriteSection(filteredFavorites),
+
+                                // 按平台分组的模型
+                                ...filteredByPlatform.entries.map((entry) {
+                                  return _buildPlatformSection(
+                                    entry.key,
+                                    entry.value,
+                                  );
+                                }),
+                              ],
+                            ),
+                          )
+                        : const Center(child: Text('没有匹配的模型')),
+                  ),
+
+                  // 底部按钮栏
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 4, 16, 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('取消'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildFavoriteSection() {
-    if (_favoriteModels.isEmpty) {
-      return const SizedBox.shrink();
-    }
+  /// 模型是否匹配搜索关键词
+  bool _matchesQuery(UnifiedModelSpec model, String lowerQuery) {
+    final platform = _platforms[model.platformId];
+    return model.displayName.toLowerCase().contains(lowerQuery) ||
+        model.modelName.toLowerCase().contains(lowerQuery) ||
+        (platform?.displayName.toLowerCase().contains(lowerQuery) ?? false);
+  }
 
+  Widget _buildFavoriteSection(List<UnifiedModelSpec> favorites) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -150,9 +261,7 @@ class _ModelSelectorDialogState extends State<ModelSelectorDialog> {
           ],
         ),
         const SizedBox(height: 12),
-        ..._favoriteModels.map(
-          (model) => _buildModelItem(model, inFavorite: true),
-        ),
+        ...favorites.map((model) => _buildModelItem(model, inFavorite: true)),
         const SizedBox(height: 16),
       ],
     );
@@ -195,54 +304,66 @@ class _ModelSelectorDialogState extends State<ModelSelectorDialog> {
   Widget _buildModelItem(UnifiedModelSpec model, {bool inFavorite = false}) {
     final isSelected = widget.currentModel?.id == model.id;
 
-    return GestureDetector(
-      onTap: () {
-        widget.onModelSelected(model);
-        Navigator.of(context).pop();
-      },
-      child: Container(
-        margin: EdgeInsets.only(bottom: 8),
-        height: 36,
-        decoration: BoxDecoration(
+    // 2026-09-09 滚动重叠修复：此前用Ink(decoration)——Ink把装饰画在
+    // 最近的Material祖先(弹窗根部)表面而非自身，列表滚动后decoration
+    // 仍停留在原位置(不跟随滚动偏移)，产生越界鬼影盖住标题/搜索框/按钮。
+    // 改为每项自带独立Material(shape画边框与底色)，装饰随项一起
+    // 被viewport裁剪平移，永不错位
+    return Container(
+      margin: EdgeInsets.only(bottom: 8),
+      height: 36,
+      child: Material(
+        color: isSelected
+            ? Colors.blue.withValues(alpha: 0.1)
+            : Colors.transparent,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
+          side: BorderSide(
             color: isSelected ? Colors.blue : Colors.grey,
             width: isSelected ? 2 : 1,
           ),
-          color: isSelected ? Colors.blue.withValues(alpha: 0.1) : null,
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(width: 8),
-            (inFavorite && _platforms[model.platformId] != null)
-                ? buildPlatformIcon(_platforms[model.platformId]!, size: 18)
-                // : ModelTypeIcon(type: model.type),
-                : buildModelTypeIconWithTooltip(model, size: 18),
-            SizedBox(width: 4),
-            Expanded(
-              child: Text(
-                model.displayName,
-                style: TextStyle(
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 12,
+        child: InkWell(
+          onTap: () {
+            widget.onModelSelected(model);
+            Navigator.of(context).pop();
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(width: 8),
+              (inFavorite && _platforms[model.platformId] != null)
+                  ? buildPlatformIcon(_platforms[model.platformId]!, size: 18)
+                  // : ModelTypeIcon(type: model.type),
+                  : buildModelTypeIconWithTooltip(model, size: 18),
+              SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  model.displayName,
+                  style: TextStyle(
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                    fontSize: 12,
+                  ),
                 ),
               ),
-            ),
 
-            IconButton(
-              onPressed: () => _toggleFavorite(model),
-              style: IconButton.styleFrom(
-                minimumSize: Size(24, 24),
-                padding: EdgeInsets.zero,
+              IconButton(
+                onPressed: () => _toggleFavorite(model),
+                style: IconButton.styleFrom(
+                  minimumSize: Size(24, 24),
+                  padding: EdgeInsets.zero,
+                ),
+                icon: Icon(
+                  model.isFavorite ? Icons.star : Icons.star_border,
+                  color: model.isFavorite ? Colors.blue : Colors.grey,
+                  size: 20,
+                ),
               ),
-              icon: Icon(
-                model.isFavorite ? Icons.star : Icons.star_border,
-                color: model.isFavorite ? Colors.blue : Colors.grey,
-                size: 20,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

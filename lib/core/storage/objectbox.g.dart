@@ -14,9 +14,9 @@ import 'package:objectbox/internal.dart'
 import 'package:objectbox/objectbox.dart' as obx;
 import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
-import '../../features/branch_chat/domain/entities/branch_chat_message.dart';
-import '../../features/branch_chat/domain/entities/branch_chat_session.dart';
-import '../../features/branch_chat/domain/entities/character_card.dart';
+import '../../core/services/legacy_objectbox/branch_chat_message.dart';
+import '../../core/services/legacy_objectbox/branch_chat_session.dart';
+import '../../core/services/legacy_objectbox/character_card.dart';
 
 export 'package:objectbox/objectbox.dart'; // so that callers only have to import this file
 
@@ -123,6 +123,7 @@ final _entities = <obx_int.ModelEntity>[
         type: 11,
         flags: 520,
         indexId: const obx_int.IdUid(1, 1544726077037522817),
+        relationField: 'parent',
         relationTarget: 'BranchChatMessage',
       ),
       obx_int.ModelProperty(
@@ -131,6 +132,7 @@ final _entities = <obx_int.ModelEntity>[
         type: 11,
         flags: 520,
         indexId: const obx_int.IdUid(2, 5804341374734258898),
+        relationField: 'session',
         relationTarget: 'BranchChatSession',
       ),
       obx_int.ModelProperty(
@@ -406,6 +408,11 @@ Future<obx.Store> openStore({
 /// [obx.Store.new].
 obx_int.ModelDefinition getObjectBoxModel() {
   final model = obx_int.ModelInfo(
+    // If this version is not found, it means that this file was generated
+    // with an older version of the ObjectBox Dart generator.
+    // Please regenerate this file with the current generator version.
+    // Typically, this is done with `dart run build_runner build`.
+    generatorVersion: obx_int.GeneratorVersion.v2025_12_16,
     entities: _entities,
     lastEntityId: const obx_int.IdUid(3, 2476337562814138934),
     lastIndexId: const obx_int.IdUid(2, 5804341374734258898),
@@ -560,6 +567,9 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final omniAudioVoiceParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGetNullable(buffer, rootOffset, 50);
+        final referencesJsonParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGetNullable(buffer, rootOffset, 24);
         final promptTokensParam = const fb.Int64Reader().vTableGetNullable(
           buffer,
           rootOffset,
@@ -584,33 +594,30 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final characterJsonParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGetNullable(buffer, rootOffset, 46);
-        final object =
-            BranchChatMessage(
-                id: idParam,
-                messageId: messageIdParam,
-                role: roleParam,
-                content: contentParam,
-                createTime: createTimeParam,
-                branchIndex: branchIndexParam,
-                depth: depthParam,
-                branchPath: branchPathParam,
-                reasoningContent: reasoningContentParam,
-                thinkingDuration: thinkingDurationParam,
-                contentVoicePath: contentVoicePathParam,
-                imagesUrl: imagesUrlParam,
-                videosUrl: videosUrlParam,
-                audiosUrl: audiosUrlParam,
-                omniAudioVoice: omniAudioVoiceParam,
-                promptTokens: promptTokensParam,
-                completionTokens: completionTokensParam,
-                totalTokens: totalTokensParam,
-                modelLabel: modelLabelParam,
-                characterId: characterIdParam,
-                characterJson: characterJsonParam,
-              )
-              ..referencesJson = const fb.StringReader(
-                asciiOptimization: true,
-              ).vTableGetNullable(buffer, rootOffset, 24);
+        final object = BranchChatMessage(
+          id: idParam,
+          messageId: messageIdParam,
+          role: roleParam,
+          content: contentParam,
+          createTime: createTimeParam,
+          branchIndex: branchIndexParam,
+          depth: depthParam,
+          branchPath: branchPathParam,
+          reasoningContent: reasoningContentParam,
+          thinkingDuration: thinkingDurationParam,
+          contentVoicePath: contentVoicePathParam,
+          imagesUrl: imagesUrlParam,
+          videosUrl: videosUrlParam,
+          audiosUrl: audiosUrlParam,
+          omniAudioVoice: omniAudioVoiceParam,
+          referencesJson: referencesJsonParam,
+          promptTokens: promptTokensParam,
+          completionTokens: completionTokensParam,
+          totalTokens: totalTokensParam,
+          modelLabel: modelLabelParam,
+          characterId: characterIdParam,
+          characterJson: characterJsonParam,
+        );
         object.parent.targetId = const fb.Int64Reader().vTableGet(
           buffer,
           rootOffset,
@@ -757,9 +764,11 @@ obx_int.ModelDefinition getObjectBoxModel() {
             object.additionalSettingsJson == null
             ? null
             : fbb.writeString(object.additionalSettingsJson!);
-        final tagsOffset = fbb.writeList(
-          object.tags.map(fbb.writeString).toList(growable: false),
-        );
+        final tagsOffset = object.tags == null
+            ? null
+            : fbb.writeList(
+                object.tags!.map(fbb.writeString).toList(growable: false),
+              );
         fbb.startTable(19);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, characterIdOffset);
@@ -815,10 +824,12 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final exampleDialogueParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 20, '');
-        final tagsParam = const fb.ListReader<String>(
-          fb.StringReader(asciiOptimization: true),
-          lazy: false,
-        ).vTableGet(buffer, rootOffset, 38, []);
+        final tagsJsonParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 22, '');
+        final preferredModelJsonParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGetNullable(buffer, rootOffset, 24);
         final createTimeParam = DateTime.fromMillisecondsSinceEpoch(
           const fb.Int64Reader().vTableGet(buffer, rootOffset, 26, 0),
         );
@@ -836,6 +847,9 @@ obx_int.ModelDefinition getObjectBoxModel() {
         ).vTableGetNullable(buffer, rootOffset, 32);
         final backgroundOpacityParam = const fb.Float64Reader()
             .vTableGetNullable(buffer, rootOffset, 34);
+        final additionalSettingsJsonParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGetNullable(buffer, rootOffset, 36);
         final object =
             CharacterCard(
                 id: idParam,
@@ -847,22 +861,19 @@ obx_int.ModelDefinition getObjectBoxModel() {
                 scenario: scenarioParam,
                 firstMessage: firstMessageParam,
                 exampleDialogue: exampleDialogueParam,
-                tags: tagsParam,
+                tagsJson: tagsJsonParam,
+                preferredModelJson: preferredModelJsonParam,
                 createTime: createTimeParam,
                 updateTime: updateTimeParam,
                 isSystem: isSystemParam,
                 background: backgroundParam,
                 backgroundOpacity: backgroundOpacityParam,
+                additionalSettingsJson: additionalSettingsJsonParam,
               )
-              ..tagsJson = const fb.StringReader(
-                asciiOptimization: true,
-              ).vTableGet(buffer, rootOffset, 22, '')
-              ..preferredModelJson = const fb.StringReader(
-                asciiOptimization: true,
-              ).vTableGetNullable(buffer, rootOffset, 24)
-              ..additionalSettingsJson = const fb.StringReader(
-                asciiOptimization: true,
-              ).vTableGetNullable(buffer, rootOffset, 36);
+              ..tags = const fb.ListReader<String>(
+                fb.StringReader(asciiOptimization: true),
+                lazy: false,
+              ).vTableGetNullable(buffer, rootOffset, 38);
 
         return object;
       },

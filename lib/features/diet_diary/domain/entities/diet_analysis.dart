@@ -33,14 +33,12 @@ class DietAnalysis {
       date: DateTime.parse(map['date']),
       content: map['content'],
       modelName: map['modelName'],
-      gmtCreate:
-          map['gmtCreate'] != null
-              ? DateTime.parse(map['gmtCreate'])
-              : DateTime.now(),
-      gmtModified:
-          map['gmtModified'] != null
-              ? DateTime.parse(map['gmtModified'])
-              : DateTime.now(),
+      gmtCreate: map['gmtCreate'] != null
+          ? DateTime.parse(map['gmtCreate'])
+          : DateTime.now(),
+      gmtModified: map['gmtModified'] != null
+          ? DateTime.parse(map['gmtModified'])
+          : DateTime.now(),
     );
   }
 

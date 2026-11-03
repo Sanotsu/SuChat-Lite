@@ -94,9 +94,12 @@ class ImageGenerationRequest {
       parameters['size'] = size;
     }
 
-    // 2025-10-08 qwen-image 暂时只支持1张，其他参数会报错
+    // 2025-10-08 qwen-image只支持1张；
+    // 2026-10-14 按官方文档
+    // (qwen-image-generation-and-editing-api-reference)已支持n=1~6，
+    // 直接透传用户值
     if (n != null) {
-      parameters['n'] = 1;
+      parameters['n'] = n;
     }
 
     if (seed != null) {
@@ -105,7 +108,7 @@ class ImageGenerationRequest {
 
     // 两个qwen-image独有的
     // 是否开启prompt智能改写。
-    parameters['prompt_extend '] = false;
+    parameters['prompt_extend'] = false;
 
     // 是否添加水印标识，水印位于图片右下角，文案为“Qwen-Image生成”。
     if (watermark != null) {
@@ -177,7 +180,7 @@ class ImageGenerationRequest {
     }
 
     // 是否开启prompt智能改写。
-    parameters['prompt_extend '] = false;
+    parameters['prompt_extend'] = false;
 
     // 是否添加水印标识，水印位于图片右下角，文案为“AI生成”。
     if (watermark != null) {

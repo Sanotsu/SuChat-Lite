@@ -50,6 +50,12 @@ class ScreenHelper {
     }
   }
 
+  /// 桌面端元信息等小字号放大、移动端保持原值。
+  /// 用于消息时间戳/tokens/参考链接等 10-12 号小字(1080p 桌面偏小)；
+  /// 不用 getFontSize 是因为它在移动端会转成 sp 单位，改变现有视觉。
+  static double metaFontSize(double mobileSize) =>
+      isDesktop() ? mobileSize * 1.2 : mobileSize;
+
   /// 获取根据平台适配的宽度
   static double adaptWidth(double width) {
     if (isDesktop()) {

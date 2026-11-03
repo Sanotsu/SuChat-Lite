@@ -1,45 +1,122 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/utils/simple_tools.dart';
+import '../../../../core/utils/screen_helper.dart';
+import '../../../ai_tool_page.dart';
 import '../../../../shared/widgets/toast_utils.dart';
 import '../../data/database/unified_chat_db_init.dart';
 import '../viewmodels/unified_chat_viewmodel.dart';
+import '../pages/chat_background_picker_page.dart';
+import '../pages/media_library_page.dart';
+import '../pages/mcp_servers_settings_page.dart';
+import '../pages/skills_settings_page.dart';
 import '../pages/search_tools_settings_page.dart';
+import 'appearance_tool_widgets.dart';
 
 /// 聊天页面顶部应用栏
 class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onMenuPressed;
 
-  const ChatAppBar({super.key, required this.onMenuPressed});
+  /// 桌面：内容区宽度切换回调(标准880限宽/宽屏铺满)；null=不显示切换按钮(移动端)
+  final VoidCallback? onToggleWidescreen;
+  final bool isWidescreen;
+
+  const ChatAppBar({
+    super.key,
+    required this.onMenuPressed,
+    this.onToggleWidescreen,
+    this.isWidescreen = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Consumer<UnifiedChatViewModel>(
       builder: (context, viewModel, child) {
+        // 当前对话是否正在使用搭档提示词
+        final bool isPartnerActive =
+            viewModel.isPartnerSelected && viewModel.currentPartner != null;
+        // 2026-11-03 移动端宽度有限：使用搭档时居中显示搭档名，隐藏标题避免重叠；
+        // 桌面端空间足够，两者都显示
+        final bool hideTitle = ScreenHelper.isMobile() && isPartnerActive;
         return AppBar(
-          // leading: IconButton(
-          //   onPressed: onMenuPressed,
-          //   icon: const Icon(Icons.menu),
-          // ),
+          // 背景图模式下AppBar透明，背景从页面顶层透出(对齐旧版)
+          backgroundColor: viewModel.hasBackgroundImage
+              ? Colors.transparent
+              : null,
+          // 首页即聊天页：左上角为对话历史抽屉入口(不再是返回按钮)
           leading: IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back),
+            onPressed: onMenuPressed,
+            icon: const Icon(Icons.menu),
+            tooltip: '对话历史',
           ),
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          title: Stack(
+            alignment: Alignment.center,
             children: [
-              Text(
-                viewModel.currentConversation?.title ?? '新对话',
-                style: const TextStyle(fontSize: 16),
-              ),
-              if (viewModel.currentModel != null)
-                Text(
-                  viewModel.currentModel!.modelName,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              if (!hideTitle)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        viewModel.currentConversation?.title ?? '新对话',
+                        style: const TextStyle(fontSize: 15),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (viewModel.currentModel != null)
+                        Text(
+                          viewModel.currentModel!.modelName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.7),
+                              ),
+                        ),
+                    ],
+                  ),
+                ),
+              // 2026-11-03 使用搭档时在居中位置显示搭档名称
+              if (isPartnerActive)
+                Container(
+                  padding: const EdgeInsets.fromLTRB(10, 2, 10, 2),
+                  decoration: BoxDecoration(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.7),
+                    ).colorScheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.auto_awesome,
+                        size: 13,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          viewModel.currentPartner!.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        Icons.auto_awesome,
+                        size: 13,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ],
                   ),
                 ),
             ],
@@ -78,56 +155,155 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
             //     icon: const Icon(Icons.stop),
             //     tooltip: '停止生成',
             //   ),
-            IconButton(onPressed: onMenuPressed, icon: const Icon(Icons.menu)),
+            // 用户设置入口已收敛到侧栏/抽屉底部(避免重复入口)，此处不再放设置图标
+
+            // 桌面：内容区宽度切换(对齐Chatbox的做法)
+            if (onToggleWidescreen != null)
+              IconButton(
+                onPressed: onToggleWidescreen,
+                icon: Icon(
+                  isWidescreen ? Icons.width_full : Icons.width_normal,
+                ),
+                tooltip: isWidescreen ? '切换为标准宽度' : '切换为宽屏模式',
+              ),
+
+            if (ScreenHelper.isMobile())
+              IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AIToolPage()),
+                  );
+                },
+                icon: Icon(Icons.apps),
+                tooltip: '更多功能',
+              ),
 
             // 更多操作菜单
-            PopupMenuButton<String>(
-              onSelected: (value) =>
-                  _handleMenuAction(context, value, viewModel),
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'search_tools',
-                  child: Row(
-                    children: [
-                      Icon(Icons.search),
-                      SizedBox(width: 8),
-                      Text('搜索工具设置'),
-                    ],
+            // 2026-09-05 桌面端不再显示：入口已由右侧功能工具栏承担
+            if (ScreenHelper.isMobile())
+              PopupMenuButton<String>(
+                onSelected: (value) =>
+                    _handleMenuAction(context, value, viewModel),
+                constraints: BoxConstraints(maxWidth: 130, minWidth: 130),
+                itemBuilder: (context) => [
+                  // const PopupMenuItem(
+                  //   value: 'more_tools',
+                  //   child: Row(
+                  //     children: [
+                  //       Icon(Icons.apps),
+                  //       SizedBox(width: 8),
+                  //       Text('更多功能'),
+                  //     ],
+                  //   ),
+                  // ),
+                  const PopupMenuItem(
+                    value: 'search_tools',
+                    child: Row(
+                      children: [
+                        Icon(Icons.search),
+                        SizedBox(width: 8),
+                        Text('搜索设置'),
+                      ],
+                    ),
                   ),
-                ),
-                const PopupMenuDivider(),
-                const PopupMenuItem(
-                  value: 'clear',
-                  child: Row(
-                    children: [
-                      Icon(Icons.clear_all),
-                      SizedBox(width: 8),
-                      Text('清空对话'),
-                    ],
+                  // MCP工具管理(2026-09-11 MCP集成P1-4)
+                  const PopupMenuItem(
+                    value: 'mcp_servers',
+                    child: Row(
+                      children: [
+                        Icon(Icons.extension),
+                        SizedBox(width: 8),
+                        Text('MCP 工具'),
+                      ],
+                    ),
                   ),
-                ),
-                const PopupMenuItem(
-                  value: 'new',
-                  child: Row(
-                    children: [
-                      Icon(Icons.add),
-                      SizedBox(width: 8),
-                      Text('新建对话'),
-                    ],
+                  // 技能管理(2026-09-16 SKILLS P1-5)
+                  const PopupMenuItem(
+                    value: 'skills',
+                    child: Row(
+                      children: [
+                        Icon(Icons.school_outlined),
+                        SizedBox(width: 8),
+                        Text('Skills 技能'),
+                      ],
+                    ),
                   ),
-                ),
-                const PopupMenuItem(
-                  value: 'export',
-                  child: Row(
-                    children: [
-                      Icon(Icons.download),
-                      SizedBox(width: 8),
-                      Text('导出数据'),
-                    ],
+                  const PopupMenuItem(
+                    value: 'media_library',
+                    child: Row(
+                      children: [
+                        Icon(Icons.perm_media),
+                        SizedBox(width: 8),
+                        Text('媒体面板'),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
+                  const PopupMenuDivider(),
+                  // ===== 外观设置(从旧版branch_chat移植) =====
+                  const PopupMenuItem(
+                    value: 'text_size',
+                    child: Row(
+                      children: [
+                        Icon(Icons.format_size),
+                        SizedBox(width: 8),
+                        Text('文字大小'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'background',
+                    child: const Row(
+                      children: [
+                        Icon(Icons.image),
+                        SizedBox(width: 8),
+                        Text('切换背景'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'brief_mode',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.visibility_off),
+                        const SizedBox(width: 8),
+                        Text(viewModel.isBriefDisplay ? '详细显示' : '简洁显示'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem(
+                    value: 'clear',
+                    child: Row(
+                      children: [
+                        Icon(Icons.clear_all),
+                        SizedBox(width: 8),
+                        Text('清空对话'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'new',
+                    child: Row(
+                      children: [
+                        Icon(Icons.add),
+                        SizedBox(width: 8),
+                        Text('新建对话'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'export',
+                    child: Row(
+                      children: [
+                        Icon(Icons.download),
+                        SizedBox(width: 8),
+                        Text('导出数据'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
           ],
         );
       },
@@ -140,8 +316,33 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
     UnifiedChatViewModel viewModel,
   ) {
     switch (action) {
+      case 'more_tools':
+        // 0.1.5: 旧版首页下拉手势入口迁移到聊天菜单
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const AIToolPage()),
+        );
+        break;
       case 'search_tools':
         _openSearchToolsSettings(context);
+        break;
+      case 'mcp_servers':
+        // 2026-09-16 设置页只写storage(路由不在聊天页局部provider子树，
+        // 回写会错实例)，返回后刷新viewmodel全局MCP态驱动按钮显隐
+        _openMcpServersSettings(context, viewModel);
+        break;
+      case 'skills':
+        _openSkillsSettings(context);
+        break;
+      case 'text_size':
+        _adjustTextScale(context, viewModel);
+        break;
+      case 'background':
+        _openBackgroundPicker(context, viewModel);
+        break;
+      case 'brief_mode':
+        viewModel.toggleBriefDisplay();
+        ToastUtils.showInfo(viewModel.isBriefDisplay ? '已切换为简洁显示' : '已切换为详细显示');
         break;
       case 'clear':
         _showClearConfirmDialog(context, viewModel);
@@ -152,7 +353,42 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
       case 'export':
         _exportConversation(context, viewModel);
         break;
+      case 'media_library':
+        Navigator.push(
+          context,
+          // 2026-09-09 传入聊天页局部viewModel实例(详见MediaLibraryPage注释)
+          MaterialPageRoute(
+            builder: (_) => MediaLibraryPage(viewModel: viewModel),
+          ),
+        );
+        break;
     }
+  }
+
+  /// 调整消息文字大小(复用旧版branch_chat的滑块弹窗，存储key共用)
+  void _adjustTextScale(BuildContext context, UnifiedChatViewModel viewModel) {
+    adjustTextScale(context, viewModel.textScaleFactor, (value) {
+      Navigator.of(context).pop();
+      viewModel.setTextScale(value);
+    });
+  }
+
+  /// 打开背景选择页(复用旧版branch_chat的背景选择页面，存储key共用)
+  void _openBackgroundPicker(
+    BuildContext context,
+    UnifiedChatViewModel viewModel,
+  ) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ChatBackgroundPickerPage(title: '聊天背景设置'),
+      ),
+    ).then((confirmed) {
+      // 保存返回true后重载背景与字体颜色配置
+      if (confirmed == true) {
+        viewModel.refreshBackgroundSettings();
+      }
+    });
   }
 
   void _showClearConfirmDialog(
@@ -186,12 +422,6 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
     UnifiedChatViewModel viewModel,
   ) async {
     try {
-      bool flag = await requestStoragePermission();
-      if (!flag) {
-        ToastUtils.showError("未授权访问设备外部存储，无法导出对话。");
-        return;
-      }
-
       final closeToast = ToastUtils.showLoading("正在导出对话数据...");
 
       // 导出数据库
@@ -201,8 +431,7 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
       closeToast();
 
       ToastUtils.showSuccess(
-        // 安卓写法
-        '数据已导出到: ${filePath.split("emulated/0").last}',
+        '数据已导出到: $filePath',
         duration: Duration(seconds: 5),
       );
 
@@ -227,6 +456,24 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const SearchToolsSettingsPage()),
+    );
+  }
+
+  void _openMcpServersSettings(
+    BuildContext context,
+    UnifiedChatViewModel viewModel,
+  ) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const McpServersSettingsPage()),
+    );
+    await viewModel.refreshMcpGlobalState();
+  }
+
+  void _openSkillsSettings(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SkillsSettingsPage()),
     );
   }
 

@@ -14,13 +14,12 @@ UnifiedConversation _$UnifiedConversationFromJson(Map<String, dynamic> json) =>
       platformId: json['platform_id'] as String,
       partnerId: json['partner_id'] as String?,
       systemPrompt: json['system_prompt'] as String?,
-      temperature: (json['temperature'] as num?)?.toDouble() ?? 0.7,
-      maxTokens: (json['max_tokens'] as num?)?.toInt() ?? 4096,
-      topP: (json['top_p'] as num?)?.toDouble() ?? 1.0,
+      temperature: (json['temperature'] as num?)?.toDouble(),
+      maxTokens: (json['max_tokens'] as num?)?.toInt(),
+      topP: (json['top_p'] as num?)?.toDouble(),
       frequencyPenalty: (json['frequency_penalty'] as num?)?.toDouble() ?? 0.0,
       presencePenalty: (json['presence_penalty'] as num?)?.toDouble() ?? 0.0,
-      contextMessageLength:
-          (json['context_message_length'] as num?)?.toInt() ?? 6,
+      contextMessageLength: (json['context_message_length'] as num?)?.toInt(),
       isStream: json['is_stream'] as bool? ?? true,
       extraParams: json['extra_params'] as Map<String, dynamic>?,
       messageCount: (json['message_count'] as num?)?.toInt() ?? 0,
@@ -28,6 +27,7 @@ UnifiedConversation _$UnifiedConversationFromJson(Map<String, dynamic> json) =>
       totalCost: (json['total_cost'] as num?)?.toDouble() ?? 0.0,
       isPinned: json['is_pinned'] as bool? ?? false,
       isArchived: json['is_archived'] as bool? ?? false,
+      currentBranchPath: json['current_branch_path'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -54,6 +54,7 @@ Map<String, dynamic> _$UnifiedConversationToJson(
   'total_cost': instance.totalCost,
   'is_pinned': instance.isPinned,
   'is_archived': instance.isArchived,
+  'current_branch_path': instance.currentBranchPath,
   'created_at': instance.createdAt.toIso8601String(),
   'updated_at': instance.updatedAt.toIso8601String(),
 };

@@ -1,4 +1,7 @@
 #!/bin/bash
+# [2026-09-01] 项目已改用 fastforge 统一打包(linux appimage: fastforge package --platform linux --targets appimage)。
+# 本脚本保留作为回退方案：fastforge 生成的 AppRun 不含 fcitx 输入法环境变量，
+# 若其产物无法切换中文输入法，改用本脚本打包(本脚本的 AppRun 带 fcitx env 配置)。
 # 构建 Flutter 应用
 flutter clean
 flutter build linux --release -v
@@ -24,7 +27,7 @@ export QT_IM_MODULE=fcitx
 export XMODIFIERS=@im=fcitx
 export LD_LIBRARY_PATH="${APPDIR}/usr/lib:${LD_LIBRARY_PATH}"
 # 启动应用
-exec "${APPDIR}/SuChat" "$@"
+exec "${APPDIR}/suchat_lite" "$@"
 EOF
 chmod +x AppDir/AppRun
 

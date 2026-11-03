@@ -34,11 +34,7 @@ class BgmParam {
   @JsonKey(name: 'filter')
   BGMFilter? filter;
 
-  BgmParam({
-    this.keyword,
-    this.sort = "rank",
-    this.filter,
-  });
+  BgmParam({this.keyword, this.sort = "rank", this.filter});
 
   // 从字符串转
   factory BgmParam.fromRawJson(String str) =>
@@ -124,12 +120,7 @@ class BGMSubjectResp {
   @JsonKey(name: 'offset')
   int? offset;
 
-  BGMSubjectResp({
-    this.data,
-    this.total,
-    this.limit,
-    this.offset,
-  });
+  BGMSubjectResp({this.data, this.total, this.limit, this.offset});
 
   // 从字符串转
   factory BGMSubjectResp.fromRawJson(String str) =>
@@ -277,10 +268,7 @@ class BGMTag {
   @JsonKey(name: 'count')
   int? count;
 
-  BGMTag({
-    this.name,
-    this.count,
-  });
+  BGMTag({this.name, this.count});
 
   // 从字符串转
   factory BGMTag.fromRawJson(String str) => BGMTag.fromJson(json.decode(str));
@@ -484,10 +472,7 @@ class BGMInfobox {
   @JsonKey(name: 'value')
   dynamic value;
 
-  BGMInfobox({
-    this.key,
-    this.value,
-  });
+  BGMInfobox({this.key, this.value});
 
   // 从字符串转
   factory BGMInfobox.fromRawJson(String str) =>
@@ -511,10 +496,7 @@ class BGMStat {
   @JsonKey(name: 'collects')
   int? collects;
 
-  BGMStat({
-    this.comments,
-    this.collects,
-  });
+  BGMStat({this.comments, this.collects});
 
   // 从字符串转
   factory BGMStat.fromRawJson(String str) => BGMStat.fromJson(json.decode(str));
@@ -736,10 +718,7 @@ class BGMLargeSubjectResp {
   @JsonKey(name: 'list')
   List<BGMSubject>? list;
 
-  BGMLargeSubjectResp({
-    this.results,
-    this.list,
-  });
+  BGMLargeSubjectResp({this.results, this.list});
 
   // 从字符串转
   factory BGMLargeSubjectResp.fromRawJson(String str) =>
@@ -767,12 +746,7 @@ class BGMLargeRating {
   @JsonKey(name: 'score')
   double? score;
 
-  BGMLargeRating({
-    this.rank,
-    this.total,
-    this.count,
-    this.score,
-  });
+  BGMLargeRating({this.rank, this.total, this.count, this.score});
 
   // 从字符串转
   factory BGMLargeRating.fromRawJson(String str) =>
@@ -803,13 +777,7 @@ class BGMImage {
   @JsonKey(name: 'grid')
   String? grid;
 
-  BGMImage({
-    this.large,
-    this.common,
-    this.medium,
-    this.small,
-    this.grid,
-  });
+  BGMImage({this.large, this.common, this.medium, this.small, this.grid});
 
   // 从字符串转
   factory BGMImage.fromRawJson(String str) =>
@@ -872,10 +840,7 @@ class BGMLargeCalendar {
   @JsonKey(name: 'items')
   List<BGMSubject>? items;
 
-  BGMLargeCalendar({
-    this.weekday,
-    this.items,
-  });
+  BGMLargeCalendar({this.weekday, this.items});
 
   // 从字符串转
   factory BGMLargeCalendar.fromRawJson(String str) =>
@@ -903,12 +868,7 @@ class BGMLargeWeekday {
   @JsonKey(name: 'id')
   int? id;
 
-  BGMLargeWeekday({
-    this.en,
-    this.cn,
-    this.ja,
-    this.id,
-  });
+  BGMLargeWeekday({this.en, this.cn, this.ja, this.id});
 
   // 从字符串转
   factory BGMLargeWeekday.fromRawJson(String str) =>
@@ -941,12 +901,7 @@ class BGMEpisodeResp {
   @JsonKey(name: 'offset')
   int? offset;
 
-  BGMEpisodeResp({
-    this.data,
-    this.total,
-    this.limit,
-    this.offset,
-  });
+  BGMEpisodeResp({this.data, this.total, this.limit, this.offset});
 
   factory BGMEpisodeResp.fromJson(Map<String, dynamic> srcJson) =>
       _$BGMEpisodeRespFromJson(srcJson);

@@ -7,28 +7,24 @@ import 'package:json_annotation/json_annotation.dart';
 part 'unified_model_spec.g.dart';
 
 /// 模型类型枚举
-enum UnifiedModelType {
-  cc,
-  embedding,
-  reranker,
-  tti,
-  iti,
-  tts,
-  asr,
-  // ttv, itv
-}
+/// 2026-09-02 媒体生成类型重构：图片/视频生成不再拆"文生/图生"两个标签
+/// (同一模型常同时支持两者)，统一为任务类型 image/video，
+/// 是否可接受参考图(图生图/首帧图)由能力标志 supports_image_input 表达；
+/// 旧值 tti/iti 仅作存量数据兼容映射(见 [type] getter)
+/// 2026-09-10 全面移除embedding/reranker类型：本应用为聊天客户端，
+/// 检索需求已由平台自带web_search与第三方搜索API覆盖，个人量级资料
+/// 直接进长上下文即可，这两类模型无任何调用流程(仅有分类壳)。
+/// DB存量行的'embedding'/'reranker'字符串经[type] getter兜底为cc，
+/// 并由DB升级v6清理该类存量行
+enum UnifiedModelType { cc, image, video, tts, asr }
 
 // 模型类型对应的中文名
 final Map<UnifiedModelType, String> UMT_NAME_MAP = {
   UnifiedModelType.cc: '对话',
-  UnifiedModelType.embedding: '嵌入',
-  UnifiedModelType.reranker: '重排',
-  UnifiedModelType.tti: '文生图',
-  UnifiedModelType.iti: '图生图',
+  UnifiedModelType.image: '图片生成',
+  UnifiedModelType.video: '视频生成',
   UnifiedModelType.tts: '语音合成',
   UnifiedModelType.asr: '语音识别',
-  // UnifiedModelType.ttv: '文生视频',
-  // UnifiedModelType.itv: '图生视频',
 };
 
 /// 统一模型规格模型
@@ -47,7 +43,7 @@ class UnifiedModelSpec {
   @JsonKey(name: 'display_name')
   final String displayName;
 
-  // 模型类型：cc对话模型、embedder嵌入模型、reranker重排模型
+  // 模型类型：cc对话模型、image图片生成、video视频生成、tts/asr语音
   @JsonKey(name: 'model_type')
   final String modelType;
 
@@ -59,6 +55,11 @@ class UnifiedModelSpec {
 
   @JsonKey(name: 'supports_tool_calling')
   final bool supportsToolCalling;
+
+  // 是否接受参考图输入：图片生成=图生图/局部重绘，视频生成=首帧图生视频
+  // 2026-09-02 新增，配合统一的 image/video 任务类型使用
+  @JsonKey(name: 'supports_image_input')
+  final bool supportsImageInput;
 
   // 列表展示时,未激活的可以不展示
   @JsonKey(name: 'is_active')
@@ -92,6 +93,7 @@ class UnifiedModelSpec {
     this.supportsThinking = false,
     this.supportsVision = false,
     this.supportsToolCalling = false,
+    this.supportsImageInput = false,
     this.isActive = true,
     this.isBuiltIn = false,
     this.isFavorite = false,
@@ -116,6 +118,7 @@ class UnifiedModelSpec {
       supportsThinking: (map['supports_thinking'] as int? ?? 0) == 1,
       supportsVision: (map['supports_vision'] as int? ?? 0) == 1,
       supportsToolCalling: (map['supports_tool_calling'] as int? ?? 0) == 1,
+      supportsImageInput: (map['supports_image_input'] as int? ?? 0) == 1,
       isActive: (map['is_active'] as int? ?? 0) == 1,
       isFavorite: (map['is_favorite'] as int? ?? 0) == 1,
       isBuiltIn: (map['is_built_in'] as int? ?? 0) == 1,
@@ -138,6 +141,7 @@ class UnifiedModelSpec {
       'supports_thinking': supportsThinking ? 1 : 0,
       'supports_vision': supportsVision ? 1 : 0,
       'supports_tool_calling': supportsToolCalling ? 1 : 0,
+      'supports_image_input': supportsImageInput ? 1 : 0,
       'is_active': isActive ? 1 : 0,
       'is_favorite': isFavorite ? 1 : 0,
       'is_built_in': isBuiltIn ? 1 : 0,
@@ -157,6 +161,7 @@ class UnifiedModelSpec {
     bool? supportsThinking,
     bool? supportsVision,
     bool? supportsToolCalling,
+    bool? supportsImageInput,
     bool? isActive,
     bool? isBuiltIn,
     bool? isFavorite,
@@ -174,6 +179,7 @@ class UnifiedModelSpec {
       supportsThinking: supportsThinking ?? this.supportsThinking,
       supportsVision: supportsVision ?? this.supportsVision,
       supportsToolCalling: supportsToolCalling ?? this.supportsToolCalling,
+      supportsImageInput: supportsImageInput ?? this.supportsImageInput,
       isActive: isActive ?? this.isActive,
       isBuiltIn: isBuiltIn ?? this.isBuiltIn,
       isFavorite: isFavorite ?? this.isFavorite,
@@ -198,27 +204,24 @@ class UnifiedModelSpec {
     return 'UnifiedModelSpec(id: $id, modelName: $modelName, displayName: $displayName)';
   }
 
-  /// 获取模型类型枚举
+  /// 获取模型类型枚举(旧值 tti/iti 兼容映射为 image；
+  /// 已移除的embedding/reranker存量值兜底为cc，由DB升级清理)
   UnifiedModelType get type {
     switch (modelType) {
       case 'cc':
         return UnifiedModelType.cc;
-      case 'embedding':
-        return UnifiedModelType.embedding;
-      case 'reranker':
-        return UnifiedModelType.reranker;
+      case 'image':
       case 'tti':
-        return UnifiedModelType.tti;
       case 'iti':
-        return UnifiedModelType.iti;
+        return UnifiedModelType.image;
+      case 'video':
+      case 'ttv':
+      case 'itv':
+        return UnifiedModelType.video;
       case 'tts':
         return UnifiedModelType.tts;
       case 'asr':
         return UnifiedModelType.asr;
-      // case 'ttv':
-      //   return UnifiedModelType.ttv;
-      // case 'itv':
-      //   return UnifiedModelType.itv;
       default:
         return UnifiedModelType.cc;
     }
@@ -233,6 +236,8 @@ class UnifiedModelSpec {
         return supportsVision;
       case 'function_calling':
         return supportsToolCalling;
+      case 'image_input':
+        return supportsImageInput;
       default:
         return false;
     }

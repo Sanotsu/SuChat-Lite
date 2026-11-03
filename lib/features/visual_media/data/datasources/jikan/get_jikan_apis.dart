@@ -6,7 +6,14 @@ import '../../models/jikan/jikan_data.dart';
 import '../../models/jikan/jikan_related_character_resp.dart';
 import '../../models/jikan/jikan_statistic.dart';
 
-var jikanBase = "https://api.jikan.moe/v4";
+/// 2026-10-13 原 Jikan 公共接口(api.jikan.moe)已停止服务(https://github.com/jikan-me/jikan-rest/issues/613)，
+/// 迁移至 Tenrai(https://tenrai.org/)：
+/// v1 schema 与 Jikan v4 同构(snake_case + pagination envelope，官方宣称覆盖 95% 端点)，模型类零改动。
+/// 另一候选 Jikan-Edge(jikan.lucashdo.com) 响应为camelCase 且 envelope 是 {data, meta}，非 drop-in，不采用。
+/// 实测差异仅一处：search 的 order_by 需显式传 sort 才生效(见getJikanSearch)；schedules 的 filter=monday 等参数与 v4 一致。
+///
+/// var jikanBase = "https://api.jikan.moe/v4";
+var jikanBase = "https://api.tenrai.org/v1";
 
 ///
 /// Jika非官方的 MyAnimeList(MAL) API 动漫排行榜接口返回的数据结构
@@ -158,12 +165,16 @@ Future<JikanResp> getJikanSearch({
     }
     var url = "$jikanBase/${type.name}";
 
+    // 2026-10-13 FIX：迁移 Tenrai 后必须显式传 sort——Tenrai 的
+    // order_by 不带 sort 时不生效(默认相关度排序)，Jikan v4 默认
+    // desc 所以此前没传；显式传对两者都兼容
     var respData = await HttpUtils.get(
       path: url,
       showLoading: false,
       queryParameters: {
         "q": q,
         "order_by": orderBy,
+        "sort": sort,
         "page": page,
         "limit": limit,
       },

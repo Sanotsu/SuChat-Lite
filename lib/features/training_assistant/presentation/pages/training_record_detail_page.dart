@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -86,15 +87,17 @@ class _TrainingRecordDetailPageState extends State<TrainingRecordDetailPage> {
   Widget build(BuildContext context) {
     // 显示加载状态
     if (_isLoading) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('训练记录详情'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.of(context).pop(),
+      return CusContentWidth(
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('训练记录详情'),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
           ),
+          body: const Center(child: CircularProgressIndicator()),
         ),
-        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -385,15 +388,14 @@ class _TrainingRecordDetailPageState extends State<TrainingRecordDetailPage> {
         // 查找对应的记录详情
         final recordDetail = _recordDetails!.firstWhere(
           (detail) => detail.detailId == exercise.detailId,
-          orElse:
-              () => TrainingRecordDetail(
-                recordId: _record!.recordId,
-                detailId: exercise.detailId,
-                exerciseName: exercise.exerciseName,
-                completed: false,
-                actualSets: 0,
-                actualReps: '0',
-              ),
+          orElse: () => TrainingRecordDetail(
+            recordId: _record!.recordId,
+            detailId: exercise.detailId,
+            exerciseName: exercise.exerciseName,
+            completed: false,
+            actualSets: 0,
+            actualReps: '0',
+          ),
         );
 
         widgets.add(_buildExerciseItem(context, exercise, recordDetail));
@@ -415,10 +417,9 @@ class _TrainingRecordDetailPageState extends State<TrainingRecordDetailPage> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
         side: BorderSide(
-          color:
-              isCompleted
-                  ? Colors.green.withValues(alpha: 0.5)
-                  : Colors.red.withValues(alpha: 0.3),
+          color: isCompleted
+              ? Colors.green.withValues(alpha: 0.5)
+              : Colors.red.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -444,10 +445,9 @@ class _TrainingRecordDetailPageState extends State<TrainingRecordDetailPage> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color:
-                        isCompleted
-                            ? Colors.green.withValues(alpha: 0.1)
-                            : Colors.red.withValues(alpha: 0.1),
+                    color: isCompleted
+                        ? Colors.green.withValues(alpha: 0.1)
+                        : Colors.red.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
@@ -522,10 +522,9 @@ class _TrainingRecordDetailPageState extends State<TrainingRecordDetailPage> {
                             : '未完成',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w500,
-                          color:
-                              isCompleted
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(context).colorScheme.error,
+                          color: isCompleted
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.error,
                         ),
                       ),
                     ],

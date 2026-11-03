@@ -32,20 +32,19 @@ class CategoryIcon extends StatelessWidget {
     final Color baseColor = category.type == 0 ? Colors.red : Colors.green;
 
     // 背景色（选中状态时颜色更深）
-    final Color backgroundColor =
-        showDefaultBgColor
-            ? (selected ? baseColor : baseColor.withValues(alpha: 0.5))
-            : Colors.transparent;
+    final Color backgroundColor = showDefaultBgColor
+        ? (selected ? baseColor : baseColor.withValues(alpha: 0.5))
+        : Colors.transparent;
 
     // 边框色（选中状态时颜色更深）
-    final Color borderColor =
-        showDefaultIconColor
-            ? (selected ? baseColor : baseColor.withValues(alpha: 0.5))
-            : Colors.transparent;
+    final Color borderColor = showDefaultIconColor
+        ? (selected ? baseColor : baseColor.withValues(alpha: 0.5))
+        : Colors.transparent;
 
     // 图标颜色（不显示时统一为白色）
-    final Color iconColor =
-        showDefaultIconColor ? category.getColor() : Colors.white;
+    final Color iconColor = showDefaultIconColor
+        ? category.getColor()
+        : Colors.white;
 
     // 获取图标
     IconData iconData = category.getIconData();

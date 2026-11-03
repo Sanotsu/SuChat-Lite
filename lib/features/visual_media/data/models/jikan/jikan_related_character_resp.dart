@@ -19,9 +19,7 @@ class JikanRelatedCharacterResp {
   @JsonKey(name: 'data')
   List<JKRelatedCharacter> data;
 
-  JikanRelatedCharacterResp(
-    this.data,
-  );
+  JikanRelatedCharacterResp(this.data);
 
   // 从字符串转
   factory JikanRelatedCharacterResp.fromRawJson(String str) =>
@@ -78,10 +76,7 @@ class JKVoiceActor {
   @JsonKey(name: 'language')
   String? language;
 
-  JKVoiceActor({
-    this.person,
-    this.language,
-  });
+  JKVoiceActor({this.person, this.language});
 
   // 从字符串转
   factory JKVoiceActor.fromRawJson(String str) =>

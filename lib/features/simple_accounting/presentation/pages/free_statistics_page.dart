@@ -65,6 +65,9 @@ class FreeStatisticsPageState extends State<FreeStatisticsPage>
 
   // 公开的刷新数据方法，供父组件调用
   void refreshData() {
+    // 防止在组件销毁后调用
+    if (!mounted) return;
+
     // 清除汇总数据缓存(其他缓存在加载数据中有清除)
     setState(() {
       _cachedMonthlySummary = null;
@@ -649,8 +652,9 @@ class FreeStatisticsPageState extends State<FreeStatisticsPage>
   // 获取按天的统计数据
   List<BarChartData> _getDailyChartData(BillStatistics stats) {
     final List<BarChartData> result = [];
-    final Map<String, double> dateData =
-        _selectedType == 0 ? stats.incomeByDate : stats.expenseByDate;
+    final Map<String, double> dateData = _selectedType == 0
+        ? stats.incomeByDate
+        : stats.expenseByDate;
 
     if (dateData.isEmpty) return [];
 
@@ -686,8 +690,9 @@ class FreeStatisticsPageState extends State<FreeStatisticsPage>
   // 获取按周的统计数据
   List<BarChartData> _getWeeklyChartData(BillStatistics stats) {
     final List<BarChartData> result = [];
-    final Map<String, double> dateData =
-        _selectedType == 0 ? stats.incomeByDate : stats.expenseByDate;
+    final Map<String, double> dateData = _selectedType == 0
+        ? stats.incomeByDate
+        : stats.expenseByDate;
 
     if (dateData.isEmpty) return [];
 
@@ -740,8 +745,9 @@ class FreeStatisticsPageState extends State<FreeStatisticsPage>
   // 获取按月的统计数据
   List<BarChartData> _getMonthlyChartData(BillStatistics stats) {
     final List<BarChartData> result = [];
-    final Map<String, double> dateData =
-        _selectedType == 0 ? stats.incomeByDate : stats.expenseByDate;
+    final Map<String, double> dateData = _selectedType == 0
+        ? stats.incomeByDate
+        : stats.expenseByDate;
 
     if (dateData.isEmpty) return [];
 
@@ -806,8 +812,9 @@ class FreeStatisticsPageState extends State<FreeStatisticsPage>
   // 获取按年的统计数据
   List<BarChartData> _getYearlyChartData(BillStatistics stats) {
     final List<BarChartData> result = [];
-    final Map<String, double> dateData =
-        _selectedType == 0 ? stats.incomeByDate : stats.expenseByDate;
+    final Map<String, double> dateData = _selectedType == 0
+        ? stats.incomeByDate
+        : stats.expenseByDate;
 
     if (dateData.isEmpty) return [];
 
