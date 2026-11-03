@@ -181,7 +181,15 @@ class CusMarkdownRenderer {
           ),
         );
 
-        return selectable ? SelectionArea(child: child) : child;
+        // 2026-11-03 屏蔽SelectionArea系统默认文本选择菜单：未选中状态下
+        // 右键(桌面)/长按(移动)会弹出仅含"全选"的系统工具条，与消息自定义
+        // 菜单(showMessageOptions)叠加造成困惑；文本选择能力仍保留
+        return selectable
+            ? SelectionArea(
+                contextMenuBuilder: (_, _) => const SizedBox.shrink(),
+                child: child,
+              )
+            : child;
       },
     );
   }

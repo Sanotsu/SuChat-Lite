@@ -31,7 +31,8 @@ android {
 
        // Android 16(API 37) - secure_storage 11 / permission_handler 13 要求
     compileSdk = 37
-    ndkVersion = "27.2.12479018"
+    // ndkVersion = "27.2.12479018"
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

@@ -32,6 +32,12 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return Consumer<UnifiedChatViewModel>(
       builder: (context, viewModel, child) {
+        // 当前对话是否正在使用搭档提示词
+        final bool isPartnerActive =
+            viewModel.isPartnerSelected && viewModel.currentPartner != null;
+        // 2026-11-03 移动端宽度有限：使用搭档时居中显示搭档名，隐藏标题避免重叠；
+        // 桌面端空间足够，两者都显示
+        final bool hideTitle = ScreenHelper.isMobile() && isPartnerActive;
         return AppBar(
           // 背景图模式下AppBar透明，背景从页面顶层透出(对齐旧版)
           backgroundColor: viewModel.hasBackgroundImage
@@ -43,20 +49,74 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
             icon: const Icon(Icons.menu),
             tooltip: '对话历史',
           ),
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          title: Stack(
+            alignment: Alignment.center,
             children: [
-              Text(
-                viewModel.currentConversation?.title ?? '新对话',
-                style: const TextStyle(fontSize: 15),
-              ),
-              if (viewModel.currentModel != null)
-                Text(
-                  viewModel.currentModel!.modelName,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              if (!hideTitle)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        viewModel.currentConversation?.title ?? '新对话',
+                        style: const TextStyle(fontSize: 15),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (viewModel.currentModel != null)
+                        Text(
+                          viewModel.currentModel!.modelName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.7),
+                              ),
+                        ),
+                    ],
+                  ),
+                ),
+              // 2026-11-03 使用搭档时在居中位置显示搭档名称
+              if (isPartnerActive)
+                Container(
+                  padding: const EdgeInsets.fromLTRB(10, 2, 10, 2),
+                  decoration: BoxDecoration(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.7),
+                    ).colorScheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.auto_awesome,
+                        size: 13,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          viewModel.currentPartner!.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        Icons.auto_awesome,
+                        size: 13,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ],
                   ),
                 ),
             ],
