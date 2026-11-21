@@ -45,7 +45,7 @@ class ImageGenerationService {
         requestBody = request.toVolcengineFormat();
         break;
       default:
-        requestBody = request.toSiliconCloudFormat();
+        requestBody = request.toOpenAIFormat();
     }
 
     final headers = <String, String>{

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../../../../shared/widgets/common_error_empty_widgets.dart';
 import '../../../../data/datasources/one_api_manager.dart';

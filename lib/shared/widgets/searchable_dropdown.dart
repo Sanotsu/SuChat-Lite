@@ -1,5 +1,5 @@
 import 'package:dropdown_button2/dropdown_button2.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// 可筛选的下拉框
 class SearchableDropdown<T> extends StatefulWidget {
@@ -41,10 +41,24 @@ class SearchableDropdown<T> extends StatefulWidget {
 
 class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
   final TextEditingController textEditingController = TextEditingController();
+  late final ValueNotifier<T?> _valueListenable;
+
+  @override
+  void initState() {
+    super.initState();
+    _valueListenable = ValueNotifier<T?>(widget.value);
+  }
+
+  @override
+  void didUpdateWidget(covariant SearchableDropdown<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _valueListenable.value = widget.value;
+  }
 
   @override
   void dispose() {
     textEditingController.dispose();
+    _valueListenable.dispose();
     super.dispose();
   }
 
@@ -57,8 +71,9 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
         hint: Text(widget.hintLable ?? '请选择', style: TextStyle(fontSize: 14)),
         items: widget.items
             .map(
-              (e) => DropdownMenuItem<T>(
+              (e) => DropdownItem<T>(
                 value: e,
+                height: 48, // 方便超过1行的模型名显示，所以设置高点
                 alignment: widget.alignment ?? AlignmentDirectional.center,
                 child: Text(
                   widget.itemToString != null
@@ -72,7 +87,7 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
               ),
             )
             .toList(),
-        value: widget.value,
+        valueListenable: _valueListenable,
         onChanged: widget.onChanged,
         // 默认的按钮的样式(下拉框旋转的样式)
         buttonStyleData: ButtonStyleData(
@@ -113,14 +128,13 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
         ),
         // 下拉选项单个选项的样式
         menuItemStyleData: MenuItemStyleData(
-          height: 48, // 方便超过1行的模型名显示，所有设置高点
           padding: EdgeInsets.symmetric(horizontal: 5),
         ),
         // 下拉搜索框的样式
         dropdownSearchData: DropdownSearchData(
           searchController: textEditingController,
-          searchInnerWidgetHeight: 50,
-          searchInnerWidget: Container(
+          searchBarWidgetHeight: 50,
+          searchBarWidget: Container(
             height: 50,
             padding: EdgeInsets.all(5),
             child: TextFormField(

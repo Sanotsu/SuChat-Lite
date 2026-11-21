@@ -4,7 +4,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:video_player_media_kit/video_player_media_kit.dart';
@@ -45,32 +45,34 @@ class AppCatchError {
     };
 
     // 受保护的代码块
-    runZonedGuarded(() async {
-      // 确保已经初始化绑定
-      WidgetsFlutterBinding.ensureInitialized();
+    runZonedGuarded(
+      () async {
+        // 确保已经初始化绑定
+        WidgetsFlutterBinding.ensureInitialized();
 
-      // 仅在移动端限制垂直方向
-      if (Platform.isAndroid || Platform.isIOS) {
-        SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-      }
+        // 仅在移动端限制垂直方向
+        if (Platform.isAndroid || Platform.isIOS) {
+          SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+        }
 
-      // 2026-09-04 容器文件收纳进私有区(直接以带path的工厂实例化并
-      // 初始化，init()静态方法不支持path参数)
-      final gsPath = (await getGetStorageDir()).path;
-      await GetStorage(CusGetStorage.storeName, gsPath).initStorage;
+        // 2026-09-04 容器文件收纳进私有区(直接以带path的工厂实例化并
+        // 初始化，init()静态方法不支持path参数)
+        final gsPath = (await getGetStorageDir()).path;
+        await GetStorage(CusGetStorage.storeName, gsPath).initStorage;
 
-      // 2026-10-12 权限引导门：Android 未授权时先挂引导页(说明框取得
-      // 用户同意后才请求系统权限)，授权/拒绝后再继续正常初始化。
-      // 未授权绝不静默弹权限、不探测旧目录、不标记完成
-      if (await UpgradeMigrator.needsPermissionGate()) {
-        final gateCompleter = Completer<bool>();
-        runApp(MigrationPermissionGate(completer: gateCompleter));
-        await gateCompleter.future;
-      }
+        // 2026-10-12 权限引导门：Android 未授权时先挂引导页(说明框取得
+        // 用户同意后才请求系统权限)，授权/拒绝后再继续正常初始化。
+        // 未授权绝不静默弹权限、不探测旧目录、不标记完成
+        if (await UpgradeMigrator.needsPermissionGate()) {
+          final gateCompleter = Completer<bool>();
+          runApp(MigrationPermissionGate(completer: gateCompleter));
+          await gateCompleter.future;
+        }
 
-      // 0.1.5 起零存储权限启动：核心数据在应用私有区，直接初始化应用
-      await initApp();
-    }, (error, stack) => catchError(error, stack),
+        // 0.1.5 起零存储权限启动：核心数据在应用私有区，直接初始化应用
+        await initApp();
+      },
+      (error, stack) => catchError(error, stack),
       // release 下吞掉 Zone 内所有裸 print 调用
       zoneSpecification: kReleaseMode
           ? ZoneSpecification(print: (self, parent, zone, line) {})
@@ -100,7 +102,7 @@ class AppCatchError {
     NetworkStatusService().initialize();
 
     // 桌面端窗口管理：最小尺寸约束 + 窗口大小/位置记忆
-    // （必须在 runApp 前完成 waitUntilReadyToShow，否则首帧会闪默认窗口）
+    // （在 runApp 前完成窗口属性设置并 show，避免首帧闪默认窗口）
     await DesktopWindowService.instance.init();
 
     // 单行初始化后，您可以正常在多个平台使用 video_player

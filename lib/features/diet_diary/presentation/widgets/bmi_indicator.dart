@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// BMI指示器组件
 /// 用于显示BMI值在不同健康范围区间的位置

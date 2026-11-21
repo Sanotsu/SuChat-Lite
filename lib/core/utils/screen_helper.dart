@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 /// 屏幕适配帮助类(避免与flutter_screenutil的ScreenUtil类冲突，所以使用helper后缀)

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:gpt_markdown/custom_widgets/selectable_adapter.dart';
@@ -28,45 +28,9 @@ class CusMarkdownRenderer {
   // 缓存大小限制
   static const int _maxCacheSize = 200;
 
-  // 预定义的所有组件列表
-  static final List<MarkdownComponent> _allComponents = [
-    CodeBlockMd(),
-    NewLines(),
-    BlockQuote(),
-    ImageMd(),
-    ATagMd(),
-    TableMd(),
-    HTag(),
-    UnOrderedList(),
-    OrderedList(),
-    RadioButtonMd(),
-    CheckBoxMd(),
-    HrLine(),
-    StrikeMd(),
-    BoldMd(),
-    ItalicMd(),
-    LatexMath(),
-    LatexMathMultiLine(),
-    HighlightedText(),
-    SourceTag(),
-    IndentMd(),
-  ];
-
-  // 预定义的所有内联组件
-  // 注意：传入自定义列表会整体替换包默认列表，默认列表含 AutolinkMd(裸URL自动成链接)，必须带上
-  static final List<MarkdownComponent> _allInlineComponents = [
-    ImageMd(),
-    ATagMd(),
-    AutolinkMd(),
-    TableMd(),
-    StrikeMd(),
-    BoldMd(),
-    ItalicMd(),
-    LatexMath(),
-    LatexMathMultiLine(),
-    HighlightedText(),
-    SourceTag(),
-  ];
+  // 2026-11-20 适配 gpt_markdown 1.4：新引擎内置 CommonMark 渲染，
+  // 旧的 components/inlineComponents(legacy regex 管线)整体移除；
+  // 裸URL自动成链接由 autolink:true(默认开启)承担，无需再传 AutolinkMd
 
   /// 渲染Markdown内容
   ///
@@ -120,6 +84,11 @@ class CusMarkdownRenderer {
         // 2025-04-23 我在21日提出issue (https://github.com/Infinitix-LLC/gpt_markdown/issues/56)，23日作者就修复了.
         // 表格中使用$$...$$、\[...\]包裹的LaTeX可以正常显示不抛错了，但是所有(不管是否表格内)使用 $...$ 还是无法正常显示
         // 所以需要再处理一次，检测到$...$包裹的LaTeX公式，替换为使用单行$...$来包裹
+
+        // 2026-11-20 适配 gpt_markdown 1.4：$$...$$/$...$ 默认不再按 LaTeX
+        // 解析(useDollarSignsForLatex 默认 false)，渲染前先归一化为
+        // \[...\] 与 \(...\)（注意必须先处理 $$ 再处理单 $）
+        text = convertDollarBlockToBracketsLatex(text);
         text = convertDollarToParenthesesLatex(text);
 
         // print("处理后的text:\n $text");
@@ -163,9 +132,10 @@ class CusMarkdownRenderer {
             },
             latexWorkaround: _processLatexText,
             imageBuilder: _buildImage,
-            latexBuilder: (context, tex, textStyle, inline) =>
-                _buildLatex(context, tex, textStyle, inline),
-            sourceTagBuilder: _buildSourceTag,
+            // 2026-11-20 latexBuilder 拆分为行内/块级两个 builder(1.4 新管线)
+            inlineLatexBuilder: (details) => _buildInlineLatexSpan(details),
+            blockLatexBuilder: _buildBlockLatex,
+            inlineSourceTagBuilder: _buildSourceTagSpan,
             codeBuilder: _buildCode,
             inlineCodeStyle: InlineCodeStyle(
               color: Theme.of(context).colorScheme.onSecondaryContainer,
@@ -176,8 +146,6 @@ class CusMarkdownRenderer {
                 context,
               ).colorScheme.secondary.withValues(alpha: 0.5),
             ),
-            components: _allComponents,
-            inlineComponents: _allInlineComponents,
           ),
         );
 
@@ -308,16 +276,30 @@ class CusMarkdownRenderer {
   }
 
   // LaTeX构建器
-  Widget _buildLatex(
-    BuildContext context,
-    String tex,
-    TextStyle? textStyle,
-    bool inline,
-  ) {
-    if (tex.contains(r"\begin{tabular}")) {
-      return _buildLatexTable(tex);
+  // 2026-11-20 适配 1.4 新管线：latexBuilder 拆为 inlineLatexBuilder(返回
+  // InlineSpan，用 details.asWidgetSpan 放置自定义widget保持基线/缩放/可选中)
+  // 与 blockLatexBuilder(返回Widget)。行内与块级的自定义渲染逻辑保持原样。
+  InlineSpan _buildInlineLatexSpan(InlineLatexBuildDetails details) {
+    if (details.tex.contains(r"\begin{tabular}")) {
+      return details.asWidgetSpan(_buildLatexTable(details.tex));
     }
+    return details.asWidgetSpan(
+      _buildLatexChild(details.tex, details.style, inline: true),
+    );
+  }
 
+  Widget _buildBlockLatex(BlockLatexBuildDetails details) {
+    if (details.tex.contains(r"\begin{tabular}")) {
+      return _buildLatexTable(details.tex);
+    }
+    return _buildLatexChild(details.tex, details.style, inline: false);
+  }
+
+  Widget _buildLatexChild(
+    String tex,
+    TextStyle? textStyle, {
+    required bool inline,
+  }) {
     final controller = ScrollController();
 
     final child = inline
@@ -357,26 +339,26 @@ class CusMarkdownRenderer {
   }
 
   // 源标签构建器
-  Widget _buildSourceTag(
-    BuildContext context,
-    String string,
-    TextStyle textStyle,
-  ) {
-    final value = (int.tryParse(string) ?? -1) + 1;
-    return SizedBox(
-      height: 20,
-      width: 20,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primary,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Center(
-          child: Text(
-            "$value",
-            style: textStyle.copyWith(
-              color: Theme.of(context).colorScheme.onPrimary,
-              fontSize: 12,
+  // 2026-11-20 适配 1.4 新管线：返回 InlineSpan，asWidgetSpan 会沿用默认
+  // chip 的对齐/内边距，并自动接线 onSourceTagTap/onLinkTap
+  InlineSpan _buildSourceTagSpan(SourceTagBuildDetails details) {
+    final value = (int.tryParse(details.id) ?? -1) + 1;
+    return details.asWidgetSpan(
+      SizedBox(
+        height: 20,
+        width: 20,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(details.context).colorScheme.primary,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Center(
+            child: Text(
+              "$value",
+              style: details.style.copyWith(
+                color: Theme.of(details.context).colorScheme.onPrimary,
+                fontSize: 12,
+              ),
             ),
           ),
         ),

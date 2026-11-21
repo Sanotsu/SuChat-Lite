@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// 外观设置辅助组件(2026-09-01 0.1.5 从旧版 branch_chat/_small_tool_widgets 迁入)
 /// 调整对话列表中显示的文本大小(存储key与旧版共用)

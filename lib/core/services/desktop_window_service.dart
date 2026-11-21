@@ -2,13 +2,18 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:nativeapi/nativeapi.dart' show Rectangle;
 import 'package:window_manager/window_manager.dart';
 
 import '../storage/cus_get_storage.dart';
 
 /// 桌面端窗口管理：最小尺寸约束、窗口大小/位置记忆。
 /// 移动端为空实现，调用方无需平台判断。
-class DesktopWindowService with WindowListener {
+///
+/// 基于 window_manager 0.7 的原生 API(nativeapi)：
+/// 0.5.x 的 ensureInitialized/waitUntilReadyToShow 已无对应物，
+/// 拿到窗口对象后直接设置属性并 show 即可。
+class DesktopWindowService {
   DesktopWindowService._();
 
   static final DesktopWindowService instance = DesktopWindowService._();
@@ -24,8 +29,14 @@ class DesktopWindowService with WindowListener {
     if (_initialized) return;
     _initialized = true;
 
-    await windowManager.ensureInitialized();
-    windowManager.addListener(this);
+    final Window? window = WindowManager.instance.getCurrent();
+    if (window == null) {
+      debugPrint('DesktopWindowService: 主窗口尚未就绪，跳过窗口初始化');
+      return;
+    }
+
+    window.title = 'SuChat';
+    window.minimumSize = _minSize.toNative();
 
     final box = CusGetStorage().box;
     final saved = box.read(_windowBoundsKey);
@@ -49,52 +60,50 @@ class DesktopWindowService with WindowListener {
       }
     }
 
-    await windowManager.waitUntilReadyToShow(
-      WindowOptions(
-        size: size,
-        minimumSize: _minSize,
-        center: position == null,
-        title: 'SuChat',
-        titleBarStyle: TitleBarStyle.normal,
-      ),
-      () async {
-        if (position != null) {
-          await windowManager.setPosition(position);
-        }
-        await windowManager.show();
-        await windowManager.focus();
-      },
-    );
+    // 应用窗口大小与位置(替代旧 waitUntilReadyToShow 的 options)
+    if (position != null) {
+      window.bounds = Rectangle(
+        x: position.dx,
+        y: position.dy,
+        width: size.width,
+        height: size.height,
+      );
+    } else {
+      window.bounds = Rectangle(
+        x: 0,
+        y: 0,
+        width: size.width,
+        height: size.height,
+      );
+      window.center();
+    }
+    window.show();
+    window.focus();
 
-    // 拦截关闭：先记录窗口边界再真正关闭
-    await windowManager.setPreventClose(true);
+    // 拦截关闭：先记录窗口边界再放行关闭
+    // (不调用 request.cancel()，回调正常结束后窗口继续关闭，
+    // 最后一个窗口关闭后由平台 runner 结束应用)
+    window.addListener((event) async {
+      if (event is WindowCloseRequestedEvent) {
+        try {
+          await _saveBounds(window).timeout(const Duration(milliseconds: 800));
+        } catch (_) {}
+      }
+    });
   }
 
-  Future<void> _saveBounds() async {
+  Future<void> _saveBounds(Window window) async {
     if (!_initialized) return;
     try {
-      final bounds = await windowManager.getBounds();
+      final rect = window.bounds.toRect();
       await CusGetStorage().box.write(_windowBoundsKey, {
-        'x': bounds.left,
-        'y': bounds.top,
-        'width': bounds.width,
-        'height': bounds.height,
+        'x': rect.left,
+        'y': rect.top,
+        'width': rect.width,
+        'height': rect.height,
       });
     } catch (e) {
       debugPrint('DesktopWindowService 保存窗口记忆失败: $e');
     }
-  }
-
-  @override
-  void onWindowClose() async {
-    // setPreventClose(true)下若此处异常/被阻塞(如media_kit native线程占用平台通道)，
-    // destroy不执行会导致窗口白屏无响应，故各步均加超时并最终exit兜底
-    try {
-      await _saveBounds().timeout(const Duration(milliseconds: 800));
-    } catch (_) {}
-    try {
-      await windowManager.destroy().timeout(const Duration(milliseconds: 800));
-    } catch (_) {}
-    exit(0);
   }
 }

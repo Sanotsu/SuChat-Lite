@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../data/models/tmdb/tmdb_mt_credit_resp.dart';
 import 'base_widgets.dart';

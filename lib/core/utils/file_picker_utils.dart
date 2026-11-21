@@ -107,6 +107,15 @@ class FilePickerUtils {
     }
   }
 
+  /// file_picker 13 起 pickDirectory() 返回 Uri：
+  /// 桌面端为 file:// URI 可转回本地路径；Android 为 content:// 树 URI，
+  /// dart:io 的 File/Directory 无法直接读取，此时返回 null 由调用方提示
+  static String? uriToDirectoryPath(Uri? uri) {
+    if (uri == null) return null;
+    if (uri.scheme == 'file' || uri.scheme.isEmpty) return uri.toFilePath();
+    return null;
+  }
+
   /// 获取目标目录
   static Future<Directory> _getTargetDirectory(String? customPath) async {
     Directory targetDir;

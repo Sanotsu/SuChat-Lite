@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../../../../shared/widgets/simple_tool_widget.dart';
 import '../../domain/entities/food_item.dart';
 import '../viewmodels/diet_diary_viewmodel.dart';

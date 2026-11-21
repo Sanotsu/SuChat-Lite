@@ -1,8 +1,9 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
+import '../../../../core/utils/file_picker_utils.dart';
 import '../../../../core/utils/screen_helper.dart';
 import '../../../../core/utils/simple_tools.dart';
 import '../../../../shared/widgets/cus_content_width.dart';
@@ -158,8 +159,15 @@ class _SkillsSettingsPageState extends State<SkillsSettingsPage> {
   }
 
   Future<void> _importDirectory() async {
-    final dirPath = await FilePicker.getDirectoryPath();
-    if (dirPath == null) return;
+    // file_picker 13: pickDirectory() 返回 Uri(目录导入仅面向桌面端的 file://)
+    final dirUri = await FilePicker.pickDirectory();
+    final dirPath = FilePickerUtils.uriToDirectoryPath(dirUri);
+    if (dirPath == null) {
+      if (dirUri != null) {
+        ToastUtils.showError('当前平台无法读取所选目录，请改用 zip 导入。');
+      }
+      return;
+    }
     await _doImport(() => _storage.importFromDirectory(Directory(dirPath)));
   }
 

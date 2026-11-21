@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:dio/dio.dart';
@@ -92,11 +92,8 @@ class AudioRecordManager {
     required this.onPlayerControllerChanged,
   }) {
     // 初始化RecorderController
-    _recorderController
-      ..androidEncoder = AndroidEncoder.aac
-      ..androidOutputFormat = AndroidOutputFormat.mpeg4
-      ..iosEncoder = IosEncoder.kAudioFormatMPEG4AAC
-      ..sampleRate = 44100;
+    // audio_waveforms 2.0 起，编码器/采样率等配置改由 record(recorderSettings:) 传入，
+    // 默认值(aacLc + MPEG4AAC + 44100Hz)与原配置一致，无需显式设置。
 
     // 监听录音状态变化
     _stateSubscription = _recorderController.onRecorderStateChanged.listen((

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../../shared/services/unified_llm_service.dart';
 import '../../../../core/entities/user_info.dart';

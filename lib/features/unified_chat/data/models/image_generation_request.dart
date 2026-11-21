@@ -307,6 +307,36 @@ class ImageGenerationRequest {
     return data;
   }
 
+  /// 转换为极简的 OpenAI 图片格式（聚焦 gpt-image-2 / 2.5）
+  Map<String, dynamic> toOpenAIFormat() {
+    final Map<String, dynamic> data = {'model': model, 'prompt': prompt};
+
+    if (size != null) {
+      data['size'] = size; // 接受 auto 或合规的 WIDTHxHEIGHT
+    }
+
+    if (quality != null) {
+      data['quality'] = quality; // 取值由调用方按模型分支保证
+    } else {
+      // 【本地测试用】
+      if (model.contains('2.5')) {
+        data['quality'] = 'max';
+      } else {
+        data['quality'] = 'high';
+      }
+    }
+
+    if (n != null) {
+      data['n'] = n; // 取值由调用方按模型分支保证
+    }
+
+    if (userId != null) {
+      data['safety_identifier'] = userId; // 优先使用新字段
+    }
+
+    return data;
+  }
+
   ImageGenerationRequest copyWith({
     String? model,
     String? prompt,

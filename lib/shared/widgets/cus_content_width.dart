@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// 2026-09-04 桌面端适配：内容限宽容器
 /// 宽屏时内容居中限宽，避免列表/卡片/正文在桌面全宽拉伸难读；

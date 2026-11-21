@@ -1,6 +1,5 @@
 import 'package:bot_toast/bot_toast.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:form_builder_validators/localization/l10n.dart';
 import 'package:provider/provider.dart';
@@ -48,9 +47,8 @@ class SuChatApp extends StatelessWidget {
           // 应用导航的观察者，导航有变化的时候可以做一些事？
           // navigatorObservers: [routeObserver],
           localizationsDelegates: const [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
+            // material_ui 自带的 Material/Cupertino/Widgets 本地化委托
+            ...GlobalMaterialLocalizations.delegates,
             // form builder表单验证的多国语言
             FormBuilderLocalizations.delegate,
             // flutter_quill 的本地化支持
@@ -78,13 +76,17 @@ class SuChatApp extends StatelessWidget {
           onGenerateRoute: AppRoutes.generateRoute,
 
           builder: (context, child) {
+            // 让尚未迁移到 material_ui 的第三方组件仍能读取 Theme/MaterialLocalizations
+            // ignore: deprecated_member_use
+            child = MaterialUiCompatibilityBridge(child: child!);
+
             // 根据平台调整字体缩放
             child = MediaQuery(
               ///设置文字大小不随系统设置改变
               data: MediaQuery.of(
                 context,
               ).copyWith(textScaler: const TextScaler.linear(1.0)),
-              child: child!,
+              child: child,
             );
 
             // 1 先初始化 bot_toast

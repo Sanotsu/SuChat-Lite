@@ -239,13 +239,13 @@ sudo apt install locate p7zip-full
 
 ```sh
 # Windows 安装包(Inno Setup 封装，带安装向导/桌面快捷方式/卸载器)
-fastforge package --platform windows --targets exe --artifact-name 'SuChat-{{version}}-{{platform}}-setup.exe'
+fastforge package --platform windows --targets exe --artifact-name 'SuChat-{{version}}-{{platform}}-setup-release.exe'
 
 # Windows 绿色版 zip(解压即用)
-fastforge package --platform windows --targets zip --artifact-name 'SuChat-{{version}}-{{platform}}.{{ext}}'
+fastforge package --platform windows --targets zip --artifact-name 'SuChat-{{version}}-{{platform}}-release.{{ext}}'
 
 # Linux AppImage(免安装单文件，在 Linux 环境执行)
-fastforge package --platform linux --targets appimage --artifact-name 'SuChat-{{version}}-{{platform}}.{{ext}}'
+fastforge package --platform linux --targets appimage --artifact-name 'SuChat-{{version}}-{{platform}}-release.{{ext}}'
 
 # 产物统一输出在 dist/<版本号>/ 下；已构建过时加 --skip-clean 跳过全量重建
 # --artifact-name 用于把产物名前缀从 pubspec 名(suchat_lite)改为 SuChat；

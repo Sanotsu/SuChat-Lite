@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:async';
 import 'dart:math';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../../../../shared/widgets/cus_content_width.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -361,14 +361,16 @@ class _BillListPageState extends State<BillListPage> {
       final fileName =
           '极简记账数据_${DateFormat(formatToYMD).format(DateTime.now())}.json';
 
-      String? selectedDirectory = await FilePicker.getDirectoryPath();
-      // 如果有选中文件夹，执行导出数据库的json文件，并添加到压缩档。
-      if (selectedDirectory != null) {
-        // 写入文件
-        final file = File("$selectedDirectory/$fileName");
-        await file.writeAsString(jsonData);
+      // file_picker 13: getDirectoryPath 已弃用且 Android 返回的 content:// URI
+      // 无法直接写文件，改用 saveFile 直接保存字节流(全平台一致)
+      final savedUri = await FilePicker.saveFile(
+        fileName: fileName,
+        bytes: utf8.encode(jsonData),
+        mimeType: 'application/json',
+      );
 
-        ToastUtils.showSuccess("已经保存到$selectedDirectory");
+      if (savedUri != null) {
+        ToastUtils.showSuccess("账单数据已保存");
       } else {
         debugPrint('保存操作已取消');
         return;

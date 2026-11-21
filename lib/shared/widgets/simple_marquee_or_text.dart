@@ -1,5 +1,5 @@
 // text文字超过一行则水平滚动(预设特性不可修改)，不超过一行则单纯Text显示
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:marquee/marquee.dart';
 
 class SimpleMarqueeOrText extends StatefulWidget {

@@ -4,7 +4,7 @@ import 'dart:io';
 
 import 'package:bot_toast/bot_toast.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -81,9 +81,9 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
       closeLoading?.call();
       final tmpZip = File(tmpZipPath);
       final Uri? saveUri = await FilePicker.saveFile(
+        // file_picker 13: saveFile 的 type/allowedExtensions 已废弃，
+        // 压缩格式由 fileName 后缀(.zip)决定
         fileName: zipName,
-        type: FileType.custom,
-        allowedExtensions: ['zip'],
         bytes: await tmpZip.readAsBytes(),
       );
       await tmpZip.delete();
@@ -148,9 +148,9 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
 
       // zip构建完成，经系统保存器写入用户选的位置
       final Uri? saveUri = await FilePicker.saveFile(
+        // file_picker 13: saveFile 的 type/allowedExtensions 已废弃，
+        // 压缩格式由 fileName 后缀(.zip)决定
         fileName: zipName,
-        type: FileType.custom,
-        allowedExtensions: ['zip'],
         bytes: await File(tmpZipPath).readAsBytes(),
       );
       if (File(tmpZipPath).existsSync()) File(tmpZipPath).deleteSync();
@@ -262,10 +262,19 @@ class _BackupAndRestorePageState extends State<BackupAndRestorePage> {
 
   /// 旧版统一聊天db_export文件夹导入
   Future<void> _restoreFromLegacyUnifiedFolder() async {
-    final String? dirPath = await FilePicker.getDirectoryPath(
+    // file_picker 13: pickDirectory() 返回 Uri(桌面端为 file://，Android 为
+    // content:// 树 URI 无法被 dart:io 读取)
+    final dirUri = await FilePicker.pickDirectory(
       dialogTitle: '选择 unified_chat/db_export 目录(或其任意上级目录)',
     );
-    if (dirPath == null || !mounted) return; // 用户取消
+    final dirPath = FilePickerUtils.uriToDirectoryPath(dirUri);
+    if (dirPath == null || !mounted) {
+      // 用户取消(dirUri 为 null)时不提示
+      if (dirUri != null && mounted) {
+        ToastUtils.showError('当前平台无法读取所选目录，请改用 zip 备份恢复。');
+      }
+      return;
+    }
 
     // 宽容匹配：优先扫所选目录根，若无json则扫一层子目录
     // (选db_export本身/unified_chat/backup_files均可命中)

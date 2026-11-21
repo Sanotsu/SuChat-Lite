@@ -260,6 +260,23 @@ String normalizeInlineMathLatex(String text) {
   return processedLines.join('\n');
 }
 
+/// 将 $$...$$ 块级公式统一替换为 \[...\] 包裹
+///
+/// gpt_markdown 1.4 起 $$...$$ / $...$ 默认不再按 LaTeX 解析
+/// (useDollarSignsForLatex 默认 false)，仅 \(...\) / \[...\] 始终生效，
+/// 渲染前统一归一化
+String convertDollarBlockToBracketsLatex(String text) {
+  // 匹配双美元符号包裹的LaTeX公式：$$...$$（可跨行）
+  // 注意: 确保不匹配转义的 \$
+  final blockLatexPattern = RegExp(r'(?<!\\)\$\$([\s\S]+?)(?<!\\)\$\$');
+
+  return text.replaceAllMapped(blockLatexPattern, (match) {
+    String? formulaContent = match.group(1);
+    if (formulaContent == null) return match.group(0) ?? '';
+    return '\\[$formulaContent\\]';
+  });
+}
+
 /// 将所有使用$...$包裹的单行LaTeX语法替换为\(...\)包裹
 String convertDollarToParenthesesLatex(String text) {
   // 匹配单个美元符号包裹的LaTeX公式：$...$

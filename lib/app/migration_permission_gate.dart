@@ -15,7 +15,7 @@
 // BotToast 未注册)，一切提示用页面内文案表达。
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../core/services/upgrade_migrator.dart';
 

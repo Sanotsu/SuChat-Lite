@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../core/utils/screen_helper.dart';
 import 'markdown_render/cus_markdown_renderer.dart';

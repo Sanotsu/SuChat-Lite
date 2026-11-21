@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 // 颜色配置类来管理所有颜色设置
 class MessageFontColor {
